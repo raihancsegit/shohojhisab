@@ -1085,61 +1085,64 @@ export default function PosPage() {
         style={{
           background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
           color: '#ffffff',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          borderRadius: '16px',
+          padding: '11px 14px',
+          marginBottom: '12px',
           cursor: 'pointer',
-          boxShadow: '0 6px 20px rgba(5, 150, 105, 0.25)',
+          boxShadow: '0 4px 14px rgba(5, 150, 105, 0.22)',
           transition: 'transform 0.15s ease'
         }}
         className="clickable-card"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            background: '#ffffff',
-            color: '#059669',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: '22px',
-            boxShadow: '0 0 0 6px rgba(255, 255, 255, 0.25)'
-          }}>
-            🎙️
-          </div>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              হ্যান্ডস-ফ্রি লাইভ ভয়েস মেমো ও ক্যালকুলেটর
-              <span style={{ fontSize: '10px', background: '#fef08a', color: '#854d0e', padding: '2px 8px', borderRadius: '99px', fontWeight: '900' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              color: '#059669',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '16px',
+              flexShrink: 0,
+              boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.2)'
+            }}>
+              🎙️
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+              <strong style={{ fontSize: 'clamp(13px, 3.8vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
+                ভয়েস মেমো ও বিলিং
+              </strong>
+              <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
                 AI Live
               </span>
             </div>
-            <div style={{ fontSize: '12.5px', color: '#a7f3d0', marginTop: '2px' }}>
-              ক্লিক করে শুধু মুখে বলুন: <em>&quot;চাল ১ কেজি ৬০, ডাল ১ কেজি ২০০, ১ লিটার তেল ১৯০&quot;</em>
-            </div>
           </div>
+
+          <span
+            style={{
+              background: '#ffffff',
+              color: '#047857',
+              padding: '5px 11px',
+              borderRadius: '8px',
+              fontWeight: '900',
+              fontSize: '11.5px',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            শুরু করুন ➔
+          </span>
         </div>
 
-        <button
-          type="button"
-          style={{
-            background: '#ffffff',
-            color: '#047857',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '12px',
-            fontWeight: '900',
-            fontSize: '13px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
-          ভয়েসে বিল শুরু করুন ➔
-        </button>
+        <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
+          মুখে বলুন: <em>&quot;চাল ১ কেজি ৬০, ডাল ১ কেজি ২০০, তেল ১৯০&quot;</em>
+        </div>
       </div>
 
       {/* 🔍 1. TOP SEARCH, BARCODE SCAN & VOICE BAR */}
