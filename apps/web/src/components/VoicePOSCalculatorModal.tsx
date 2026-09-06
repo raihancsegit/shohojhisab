@@ -36,6 +36,9 @@ export default function VoicePOSCalculatorModal({
   const isComponentMounted = useRef<boolean>(true);
   const itemsRef = useRef<ParsedVoiceItem[]>([]);
   itemsRef.current = items;
+  const debounceTimerRef = useRef<any>(null);
+  const lastProcessedRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
+  const accumulatedTranscriptRef = useRef<string>('');
 
   // Sound generator
   const playBeep = (freq = 880) => {
@@ -94,11 +97,32 @@ export default function VoicePOSCalculatorModal({
         const currentSaid = (finalChunk || interimText).trim();
         if (currentSaid) {
           setLiveTranscript(currentSaid);
+          accumulatedTranscriptRef.current = currentSaid;
         }
 
-        if (finalChunk.trim()) {
-          handleProcessVoiceInput(finalChunk.trim());
+        // Debounce: Wait for user to finish speaking the whole phrase before parsing
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
         }
+
+        const waitMs = finalChunk ? 450 : 750;
+        debounceTimerRef.current = setTimeout(() => {
+          const textToProcess = accumulatedTranscriptRef.current.trim();
+          if (!textToProcess) return;
+
+          const now = Date.now();
+          // Deduplicate if identical phrase repeated within 2.5s
+          if (
+            lastProcessedRef.current.text === textToProcess &&
+            now - lastProcessedRef.current.time < 2500
+          ) {
+            return;
+          }
+
+          lastProcessedRef.current = { text: textToProcess, time: now };
+          accumulatedTranscriptRef.current = '';
+          handleProcessVoiceInput(textToProcess);
+        }, waitMs);
       };
 
       recognition.onerror = (event: any) => {

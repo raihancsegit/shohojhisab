@@ -219,17 +219,24 @@ const COMMON_GROCERY_DEFAULTS: Record<string, { price: number; unit: string }> =
 
 // Background noise chit-chat detection
 const NON_COMMERCIAL_PATTERNS = [
-  /কেমন\s*আছেন|কেমন\s*আছো|ভালো\s*আছেন/,
+  /কেমন\s*আছেন|কেমন\s*আছো|ভালো\s*আছেন|ভালো\s*আছো/,
   /বাইরে\s*অনেক\s*গরম|বৃষ্টি\s*আসবে|বৃষ্টি\s*হচ্ছে/,
   /ভাংতি\s*নাই|ভাঙতি\s*নাই|খুচরা\s*নাই/,
   /টেবিলের\s*উপর|কোথায়\s*রাখব|ওখানে\s*রাখো/,
   /কখন\s*আসলেন|দেরি\s*হলো|যান\s*গা/,
-  /হ্যালো\s*হ্যালো|শোনা\s*যায়|মাইক\s*টেস্টিং/
+  /হ্যালো\s*হ্যালো|শোনা\s*যায়|মাইক\s*টেস্টিং|চেক\s*চেক/,
+  /এই\s*শুনুন|এই\s*যে|কিরে|আরে\s*ভাই|দোকানদার\s*ভাই|শুনছেন|আচ্ছা\s*শুনেন/,
+  /কোথায়\s*গেলা|কোথায়\s*আছো|পরে\s*কথা\s*বলি|ফোন\s*ধরো/
 ];
 
 export function isBackgroundNoise(text: string): boolean {
   const clean = text.trim();
   if (!clean || clean.length < 2) return true;
+
+  // Single filler words without numbers or units are noise
+  if (/^(হ্যাঁ|হাঁ|না|আচ্ছা|ওকে|থ্যাংক\s*ইউ|ধন্যবাদ|হ্যালো|শুনো|দেখি|দাঁড়াও|দাঁড়ান|একটু)$/i.test(clean)) {
+    return true;
+  }
 
   for (const pattern of NON_COMMERCIAL_PATTERNS) {
     if (pattern.test(clean)) {
@@ -530,15 +537,34 @@ function parseSingleVoiceItem(
     return null;
   }
 
-  // 5. Match with Existing Catalog or Known Staples
-  const matchedProd = existingProducts.find(p => {
-    const bName = (p.banglaName || p.name || '').toLowerCase();
-    const gName = (p.genericName || '').toLowerCase();
-    const brName = (p.brand || '').toLowerCase();
-    const qName = cleanedName.toLowerCase();
+  // 5. Match with Existing Catalog or Known Staples with Strict Prioritization
+  let matchedProd: any = null;
+  const qName = cleanedName.toLowerCase().trim();
 
-    return bName.includes(qName) || qName.includes(bName) || (gName && gName.includes(qName)) || (brName && brName.includes(qName));
+  // Tier 1: Exact Name Match
+  matchedProd = existingProducts.find(p => {
+    const bName = (p.banglaName || p.name || '').toLowerCase().trim();
+    return bName === qName || (p.name || '').toLowerCase().trim() === qName;
   });
+
+  // Tier 2: Match by longest matching compound phrase (e.g. "নাপা এক্সট্রা" before "নাপা")
+  if (!matchedProd) {
+    const candidateMatches = existingProducts.filter(p => {
+      const bName = (p.banglaName || p.name || '').toLowerCase().trim();
+      const gName = (p.genericName || '').toLowerCase().trim();
+      return (bName && (qName.includes(bName) || bName.includes(qName))) ||
+             (gName && (qName.includes(gName) || gName.includes(qName)));
+    });
+
+    if (candidateMatches.length > 0) {
+      candidateMatches.sort((a, b) => {
+        const aLen = (a.banglaName || a.name || '').length;
+        const bLen = (b.banglaName || b.name || '').length;
+        return bLen - aLen;
+      });
+      matchedProd = candidateMatches[0];
+    }
+  }
 
   // Preserve category and default unit
   const detected = detectProductCategory(cleanedName);
@@ -550,18 +576,11 @@ function parseSingleVoiceItem(
     }
   }
 
-  // If matched staple name (e.g. 'লবণ', 'চাল', 'ডাল', 'চিনি', 'তেল')
-  if (cleanedName.includes('লবণ') || cleanedName.includes('লবন')) cleanedName = 'লবণ';
-  if (cleanedName.includes('চাল') && !cleanedName.includes('মিনিকেট') && !cleanedName.includes('নাজিরশাইল')) cleanedName = 'চাল';
-  if (cleanedName.includes('ডাল') && !cleanedName.includes('মসুর') && !cleanedName.includes('মুগ')) cleanedName = 'ডাল';
-  if (cleanedName.includes('তেল') && !cleanedName.includes('সরিষা') && !cleanedName.includes('সয়াবিন')) cleanedName = 'তেল';
-  if (cleanedName.includes('চিনি')) cleanedName = 'চিনি';
-
   // 6. Precise Unit Rate & Line Total Calculations
   let finalUnitPrice = 0;
   let finalTotalPrice = 0;
 
-  const defaultItem = COMMON_GROCERY_DEFAULTS[cleanedName] || null;
+  const defaultItem = COMMON_GROCERY_DEFAULTS[cleanedName] || (matchedProd ? COMMON_GROCERY_DEFAULTS[matchedProd.banglaName || matchedProd.name] : null);
 
   if (isTakaForWeight && extractedPrice && matchedProd) {
     // e.g. "৫০ টাকার তেল"
