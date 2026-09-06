@@ -48,10 +48,10 @@ export default function DayEndPage() {
   const loadData = async () => {
     if (!currentTenantId) return;
     try {
-      const repRes = await fetch(`http://localhost:4005/api/reports/day-end?tenantId=${currentTenantId}`);
+      const repRes = await fetch(`/api/reports/day-end?tenantId=${currentTenantId}`);
       if (repRes.ok) setMetrics(await repRes.json());
 
-      const salesRes = await fetch(`http://localhost:4005/api/sales?tenantId=${currentTenantId}`);
+      const salesRes = await fetch(`/api/sales?tenantId=${currentTenantId}`);
       if (salesRes.ok) setSalesList(await salesRes.json());
     } catch (e) {}
   };

@@ -181,7 +181,7 @@ export default function VoicePOSCalculatorModal({
               stock: 50,
               unit: item.unit || 'পিস'
             };
-            const res = await fetch('http://localhost:4005/api/products', {
+            const res = await fetch('/api/products', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
@@ -283,7 +283,7 @@ export default function VoicePOSCalculatorModal({
     };
 
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -168,14 +168,14 @@ export default function StaffManagementPage() {
     try {
       setLoading(true);
       const [staffRes, branchRes, shiftActiveRes, shiftHistoryRes, attRes, salRes, advRes, auditRes] = await Promise.all([
-        fetch(`http://localhost:4005/api/staff?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/branches?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/staff/shifts/active?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/staff/shifts?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/staff/attendance?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/staff/salary-ledger?tenantId=${tenant.id}&month=${selectedMonth}`),
-        fetch(`http://localhost:4005/api/staff/advances?tenantId=${tenant.id}`),
-        fetch(`http://localhost:4005/api/staff/audit-logs?tenantId=${tenant.id}`)
+        fetch(`/api/staff?tenantId=${tenant.id}`),
+        fetch(`/api/branches?tenantId=${tenant.id}`),
+        fetch(`/api/staff/shifts/active?tenantId=${tenant.id}`),
+        fetch(`/api/staff/shifts?tenantId=${tenant.id}`),
+        fetch(`/api/staff/attendance?tenantId=${tenant.id}`),
+        fetch(`/api/staff/salary-ledger?tenantId=${tenant.id}&month=${selectedMonth}`),
+        fetch(`/api/staff/advances?tenantId=${tenant.id}`),
+        fetch(`/api/staff/audit-logs?tenantId=${tenant.id}`)
       ]);
 
       if (staffRes.ok) setStaffList(await staffRes.json());
@@ -297,7 +297,7 @@ export default function StaffManagementPage() {
         isActive: formIsActive ? 1 : 0
       };
 
-      const res = await fetch('http://localhost:4005/api/staff', {
+      const res = await fetch('/api/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -323,7 +323,7 @@ export default function StaffManagementPage() {
     if (!window.confirm(`আপনি কি নিশ্চিত যে "${name}" কে ডিলিট করতে চান?`)) return;
     try {
       triggerHaptic('warning');
-      const res = await fetch(`http://localhost:4005/api/staff/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
       if (res.ok) {
         speakAnnouncement(`${name} কে ডিলিট করা হয়েছে`);
         await loadData();
@@ -345,7 +345,7 @@ export default function StaffManagementPage() {
     if (!tenant?.id) return;
     try {
       triggerHaptic('success');
-      const res = await fetch('http://localhost:4005/api/staff/shifts/open', {
+      const res = await fetch('/api/staff/shifts/open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -368,7 +368,7 @@ export default function StaffManagementPage() {
     if (!activeShift?.id) return;
     try {
       triggerHaptic('success');
-      const res = await fetch('http://localhost:4005/api/staff/shifts/close', {
+      const res = await fetch('/api/staff/shifts/close', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +393,7 @@ export default function StaffManagementPage() {
     if (!tenant?.id || !selectedStaffForAtt) return;
     try {
       triggerHaptic('success');
-      const res = await fetch('http://localhost:4005/api/staff/attendance/check-in', {
+      const res = await fetch('/api/staff/attendance/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -419,7 +419,7 @@ export default function StaffManagementPage() {
     if (!window.confirm(`${item.staffName} এর ${item.month} মাসের মোট ৳${item.netPayable} টাকা বেতন পরিশোধ করতে চান?`)) return;
     try {
       triggerHaptic('success');
-      const res = await fetch('http://localhost:4005/api/staff/salary-ledger/pay', {
+      const res = await fetch('/api/staff/salary-ledger/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -445,7 +445,7 @@ export default function StaffManagementPage() {
     const staff = staffList.find(s => s.id === advStaffId);
     try {
       triggerHaptic('success');
-      const res = await fetch('http://localhost:4005/api/staff/advances', {
+      const res = await fetch('/api/staff/advances', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1068,7 +1068,7 @@ export default function StaffManagementPage() {
                   type="button"
                   onClick={async () => {
                     if (!selectedStaffForAtt) return;
-                    await fetch('http://localhost:4005/api/staff/attendance/check-out', {
+                    await fetch('/api/staff/attendance/check-out', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ tenantId: tenant?.id, staffId: selectedStaffForAtt })

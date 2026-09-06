@@ -92,7 +92,7 @@ export default function SubscriptionPage() {
   ];
 
   useEffect(() => {
-    fetch('http://localhost:4005/api/subscriptions/plans')
+    fetch('/api/subscriptions/plans')
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -124,7 +124,7 @@ export default function SubscriptionPage() {
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
     try {
-      const res = await fetch('http://localhost:4005/api/subscriptions/apply-coupon', {
+      const res = await fetch('/api/subscriptions/apply-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,7 +169,7 @@ export default function SubscriptionPage() {
       const planSlug = currentPlan.slug || currentPlan.id;
       
       // Call Instant PGW Checkout API
-      const res = await fetch('http://localhost:4005/api/subscriptions/instant-checkout', {
+      const res = await fetch('/api/subscriptions/instant-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

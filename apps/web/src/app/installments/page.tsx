@@ -41,7 +41,7 @@ export default function InstallmentsPage() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4005/api/installments?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/installments?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setInstallments(Array.isArray(data) ? data : []);
@@ -61,7 +61,7 @@ export default function InstallmentsPage() {
     triggerHaptic('success');
 
     try {
-      const res = await fetch('http://localhost:4005/api/installments', {
+      const res = await fetch('/api/installments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +100,7 @@ export default function InstallmentsPage() {
 
     const numAmount = Number(paymentAmount);
     try {
-      const res = await fetch(`http://localhost:4005/api/installments/${collectModalItem.id}/payments`, {
+      const res = await fetch(`/api/installments/${collectModalItem.id}/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -21,7 +21,7 @@ export default function ExpiryTrackerPage() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : []);
@@ -81,7 +81,7 @@ export default function ExpiryTrackerPage() {
     triggerHaptic('success');
 
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${editProduct.id}`, {
+      const res = await fetch(`/api/products/${editProduct.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

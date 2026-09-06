@@ -24,7 +24,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   // Load available staff for quick switch suggestions
   useEffect(() => {
     if (tenant?.id && showModeModal) {
-      fetch(`http://localhost:4005/api/staff?tenantId=${tenant.id}`)
+      fetch(`/api/staff?tenantId=${tenant.id}`)
         .then(res => res.json())
         .then(data => { if (Array.isArray(data)) setAvailableStaff(data); })
         .catch(() => {});

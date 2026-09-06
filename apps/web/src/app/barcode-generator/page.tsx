@@ -19,7 +19,7 @@ export default function BarcodeGeneratorPage() {
 
   useEffect(() => {
     if (!currentTenantId) return;
-    fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`)
+    fetch(`/api/products?tenantId=${currentTenantId}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {

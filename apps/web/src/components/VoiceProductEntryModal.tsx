@@ -153,7 +153,7 @@ export default function VoiceProductEntryModal({
     };
 
     try {
-      const res = await fetch('http://localhost:4005/api/products', {
+      const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

@@ -200,7 +200,7 @@ export default function PosPage() {
   const loadRunningTabs = async () => {
     if (!currentTenantId) return;
     try {
-      const res = await fetch(`http://localhost:4005/api/running-tabs?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/running-tabs?tenantId=${currentTenantId}`);
       if (res.ok) {
         const tabs = await res.json();
         setRunningTabs(Array.isArray(tabs) ? tabs : []);
@@ -212,7 +212,7 @@ export default function PosPage() {
   const loadData = async () => {
     if (!currentTenantId) return;
     try {
-      const prodRes = await fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`);
+      const prodRes = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (prodRes.ok) {
         const pList = await prodRes.json();
         setProducts(Array.isArray(pList) ? pList : []);
@@ -220,7 +220,7 @@ export default function PosPage() {
     } catch (e) {}
 
     try {
-      const custRes = await fetch(`http://localhost:4005/api/customers?tenantId=${currentTenantId}`);
+      const custRes = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (custRes.ok) {
         const cList = await custRes.json();
         setCustomers(Array.isArray(cList) ? cList : []);
@@ -411,7 +411,7 @@ export default function PosPage() {
 
   const savePriceToCatalog = async (product: any, newPrice: number) => {
     try {
-      await fetch(`http://localhost:4005/api/products/${product.id}`, {
+      await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellingPrice: newPrice })
@@ -459,7 +459,7 @@ export default function PosPage() {
     speakAnnouncement(`নতুন পণ্য ${quickAddName} ${price} টাকা মেমো ও স্টকে যুক্ত হয়েছে।`);
 
     try {
-      await fetch('http://localhost:4005/api/products', {
+      await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newProd)
@@ -481,7 +481,7 @@ export default function PosPage() {
     e.preventDefault();
     if (!newTabCustomerName || !currentTenantId) return;
     try {
-      const res = await fetch('http://localhost:4005/api/running-tabs', {
+      const res = await fetch('/api/running-tabs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -504,7 +504,7 @@ export default function PosPage() {
 
   const handleSettleTab = async (tab: any, paymentMethod: 'cash' | 'due') => {
     try {
-      const res = await fetch('http://localhost:4005/api/running-tabs/settle', {
+      const res = await fetch('/api/running-tabs/settle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -857,7 +857,7 @@ export default function PosPage() {
       speakAnnouncement(`${foundProd.banglaName} ${unitLabel} ${calculatedTotal} টাকা কার্টে যুক্ত হয়েছে।`);
 
       if (extractedPrice && extractedPrice > 0 && extractedPrice !== foundProd.sellingPrice) {
-        fetch(`http://localhost:4005/api/products/${foundProd.id}`, {
+        fetch(`/api/products/${foundProd.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sellingPrice: extractedPrice })
@@ -892,7 +892,7 @@ export default function PosPage() {
       speakAnnouncement(`নতুন পণ্য ${finalName} ${calcTot} টাকা মেমো ও স্টকে যুক্ত হয়েছে।`);
 
       try {
-        await fetch('http://localhost:4005/api/products', {
+        await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newProductObj)
@@ -978,7 +978,7 @@ export default function PosPage() {
     };
 
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -3526,7 +3526,7 @@ export default function PosPage() {
                 type="button"
                 onClick={async () => {
                   if (confirm('এই ট্যাবটি ডিলিট করতে চান?')) {
-                    await fetch(`http://localhost:4005/api/running-tabs/${showSettleModal.id}`, { method: 'DELETE' });
+                    await fetch(`/api/running-tabs/${showSettleModal.id}`, { method: 'DELETE' });
                     await loadRunningTabs();
                     setShowSettleModal(null);
                   }

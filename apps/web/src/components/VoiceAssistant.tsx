@@ -153,7 +153,7 @@ export default function VoiceAssistant() {
     setFeedback(`শোনা গেছে: "${rawText}"`);
 
     try {
-      const res = await fetch('http://localhost:4005/api/voice-action', {
+      const res = await fetch('/api/voice-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId: currentTenantId, text: rawText })

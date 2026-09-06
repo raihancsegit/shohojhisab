@@ -19,7 +19,7 @@ function DigitalCatalogContent() {
 
   useEffect(() => {
     // Load shop info
-    fetch(`http://localhost:4005/api/admin/tenants/${tenantId}/full-details`)
+    fetch(`/api/admin/tenants/${tenantId}/full-details`)
       .then(res => res.json())
       .then(data => {
         if (data.shop) setShop(data.shop);
@@ -28,7 +28,7 @@ function DigitalCatalogContent() {
       .catch(() => {});
 
     // Fallback load products directly
-    fetch(`http://localhost:4005/api/products?tenantId=${tenantId}`)
+    fetch(`/api/products?tenantId=${tenantId}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) setProducts(data);

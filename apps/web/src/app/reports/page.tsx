@@ -53,7 +53,7 @@ export default function ReportsPage() {
   const loadAnalytics = (selectedPeriod: 'today' | '3days' | 'week' | 'month') => {
     if (!currentTenantId) return;
     setLoading(true);
-    fetch(`http://localhost:4005/api/reports/analytics?tenantId=${currentTenantId}&period=${selectedPeriod}`)
+    fetch(`/api/reports/analytics?tenantId=${currentTenantId}&period=${selectedPeriod}`)
       .then(res => res.json())
       .then(data => {
         if (data && data.summary) {
@@ -68,7 +68,7 @@ export default function ReportsPage() {
     if (!currentTenantId) return;
     loadAnalytics(period);
 
-    fetch(`http://localhost:4005/api/sales?tenantId=${currentTenantId}`)
+    fetch(`/api/sales?tenantId=${currentTenantId}`)
       .then(res => res.json())
       .then(data => setSalesList(Array.isArray(data) ? data : []))
       .catch(() => {});

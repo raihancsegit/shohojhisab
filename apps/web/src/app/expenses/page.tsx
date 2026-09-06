@@ -20,7 +20,7 @@ export default function ExpensesPage() {
   const loadExpenses = async () => {
     if (!currentTenantId) return;
     try {
-      const res = await fetch(`http://localhost:4005/api/expenses?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/expenses?tenantId=${currentTenantId}`);
       if (res.ok) setExpenses(await res.json());
     } catch (e) {}
   };
@@ -44,7 +44,7 @@ export default function ExpensesPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:4005/api/expenses', {
+      const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -154,7 +154,7 @@ export default function SettingsHubPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${tenant?.id}/reset-pin`, {
+      const res = await fetch(`/api/admin/tenants/${tenant?.id}/reset-pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: newPin })

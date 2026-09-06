@@ -142,7 +142,7 @@ export default function SuperAdminPage() {
 
   const loadAdminData = async () => {
     try {
-      const res = await fetch('http://localhost:4005/api/admin/tenants');
+      const res = await fetch('/api/admin/tenants');
       if (res.ok) {
         const data = await res.json();
         setTenants(data.tenants || []);
@@ -150,7 +150,7 @@ export default function SuperAdminPage() {
     } catch (e) {}
 
     try {
-      const ovRes = await fetch('http://localhost:4005/api/admin/overview');
+      const ovRes = await fetch('/api/admin/overview');
       if (ovRes.ok) {
         const ovData = await ovRes.json();
         setOverview(ovData);
@@ -158,35 +158,35 @@ export default function SuperAdminPage() {
     } catch (e) {}
 
     try {
-      const detRes = await fetch('http://localhost:4005/api/admin/analytics-detailed');
+      const detRes = await fetch('/api/admin/analytics-detailed');
       if (detRes.ok) {
         setDetailedAnalytics(await detRes.json());
       }
     } catch (e) {}
 
     try {
-      const catRes = await fetch('http://localhost:4005/api/categories');
+      const catRes = await fetch('/api/categories');
       if (catRes.ok) {
         setCategories(await catRes.json());
       }
     } catch (e) {}
 
     try {
-      const coupRes = await fetch('http://localhost:4005/api/admin/coupons');
+      const coupRes = await fetch('/api/admin/coupons');
       if (coupRes.ok) {
         setCoupons(await coupRes.json());
       }
     } catch (e) {}
 
     try {
-      const logRes = await fetch('http://localhost:4005/api/admin/audit-logs');
+      const logRes = await fetch('/api/admin/audit-logs');
       if (logRes.ok) {
         setAuditLogs(await logRes.json());
       }
     } catch (e) {}
 
     try {
-      const setRes = await fetch('http://localhost:4005/api/admin/settings');
+      const setRes = await fetch('/api/admin/settings');
       if (setRes.ok) {
         setPlatformSettings(await setRes.json());
       }
@@ -242,7 +242,7 @@ export default function SuperAdminPage() {
   const handleChangeShopPlan = async (shopId: string, newPlanId: string) => {
     triggerHaptic('medium');
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${shopId}/plan`, {
+      const res = await fetch(`/api/admin/tenants/${shopId}/plan`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId: newPlanId })
@@ -259,7 +259,7 @@ export default function SuperAdminPage() {
   const handleExtendValidity = async (shopId: string, months: number) => {
     triggerHaptic('medium');
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${shopId}/extend`, {
+      const res = await fetch(`/api/admin/tenants/${shopId}/extend`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ months })
@@ -278,7 +278,7 @@ export default function SuperAdminPage() {
     const nextStatus = currentStatus === 'active' ? 'suspended' : 'active';
     triggerHaptic('medium');
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${shopId}/status`, {
+      const res = await fetch(`/api/admin/tenants/${shopId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
@@ -297,7 +297,7 @@ export default function SuperAdminPage() {
     if (!smsRechargeShop || !smsCountInput) return;
     triggerHaptic('medium');
     try {
-      const res = await fetch('http://localhost:4005/api/admin/sms/recharge', {
+      const res = await fetch('/api/admin/sms/recharge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,7 +322,7 @@ export default function SuperAdminPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${resetPinShop.id}/reset-pin`, {
+      const res = await fetch(`/api/admin/tenants/${resetPinShop.id}/reset-pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: newPinInput })
@@ -344,7 +344,7 @@ export default function SuperAdminPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${editModalShop.id}`, {
+      const res = await fetch(`/api/admin/tenants/${editModalShop.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -371,7 +371,7 @@ export default function SuperAdminPage() {
     }
     triggerHaptic('warning');
     try {
-      const res = await fetch(`http://localhost:4005/api/admin/tenants/${shop.id}`, {
+      const res = await fetch(`/api/admin/tenants/${shop.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -388,7 +388,7 @@ export default function SuperAdminPage() {
     setInspectShop(shop);
     setInspectData(null);
     try {
-      const res = await fetch(`http://localhost:4005/api/tenants/${shop.id}/subscription-status`);
+      const res = await fetch(`/api/tenants/${shop.id}/subscription-status`);
       if (res.ok) {
         setInspectData(await res.json());
       }
@@ -428,7 +428,7 @@ export default function SuperAdminPage() {
     triggerHaptic('success');
 
     try {
-      await fetch(`http://localhost:4005/api/admin/tenants/${featureModalShop.id}/features`, {
+      await fetch(`/api/admin/tenants/${featureModalShop.id}/features`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ features: shopFeatures })
@@ -447,7 +447,7 @@ export default function SuperAdminPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch('http://localhost:4005/api/admin/settings', {
+      const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(platformSettings)
@@ -468,7 +468,7 @@ export default function SuperAdminPage() {
     setIsDownloadingBackup(true);
     triggerHaptic('light');
     try {
-      const res = await fetch('http://localhost:4005/api/admin/backup/export');
+      const res = await fetch('/api/admin/backup/export');
       if (res.ok) {
         const data = await res.json();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -492,7 +492,7 @@ export default function SuperAdminPage() {
     setIsClearingCache(true);
     triggerHaptic('medium');
     try {
-      const res = await fetch('http://localhost:4005/api/admin/system/clear-cache', {
+      const res = await fetch('/api/admin/system/clear-cache', {
         method: 'POST'
       });
       if (res.ok) {
@@ -516,7 +516,7 @@ export default function SuperAdminPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch('http://localhost:4005/api/admin/tenants', {
+      const res = await fetch('/api/admin/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -567,7 +567,7 @@ export default function SuperAdminPage() {
     if (!couponCode) return;
     triggerHaptic('medium');
     try {
-      const res = await fetch('http://localhost:4005/api/admin/coupons', {
+      const res = await fetch('/api/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -593,7 +593,7 @@ export default function SuperAdminPage() {
   const handleDeleteCoupon = async (id: string) => {
     if (!confirm('কুপনটি ডিলিট করতে চান?')) return;
     try {
-      await fetch(`http://localhost:4005/api/admin/coupons/${id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/coupons/${id}`, { method: 'DELETE' });
       await loadAdminData();
       setNotice('✓ কুপন ডিলিট করা হয়েছে!');
       setTimeout(() => setNotice(''), 3500);

@@ -30,7 +30,7 @@ export default function ProductsPage() {
 
   const loadProducts = async () => {
     try {
-      const res = await fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) setProducts(await res.json());
     } catch (e) {}
   };
@@ -91,7 +91,7 @@ export default function ProductsPage() {
 
     try {
       if (editingProd) {
-        const res = await fetch(`http://localhost:4005/api/products/${editingProd.id}`, {
+        const res = await fetch(`/api/products/${editingProd.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -101,7 +101,7 @@ export default function ProductsPage() {
           setNotice(`✓ "${banglaName}" সফলভাবে আপডেট হয়েছে!`);
         }
       } else {
-        const res = await fetch('http://localhost:4005/api/products', {
+        const res = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -123,7 +123,7 @@ export default function ProductsPage() {
     if (!confirm(`আপনি কি নিশ্চিত যে "${name}" পণ্যটি মুছে ফেলতে চান?`)) return;
 
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${id}`, {
+      const res = await fetch(`/api/products/${id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

@@ -17,7 +17,7 @@ export default function LoyaltyPage() {
     if (!currentTenantId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4005/api/loyalty/customers?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/loyalty/customers?tenantId=${currentTenantId}`);
       if (res.ok) {
         setCustomers(await res.json());
       }
@@ -35,7 +35,7 @@ export default function LoyaltyPage() {
     triggerHaptic('success');
 
     try {
-      const res = await fetch('http://localhost:4005/api/loyalty/redeem', {
+      const res = await fetch('/api/loyalty/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -15,7 +15,7 @@ export default function CustomerPublicPassbookPage() {
     if (!customerId) return;
 
     // Load customer public passbook data
-    fetch(`http://localhost:4005/api/customers/${customerId}/passbook`)
+    fetch(`/api/customers/${customerId}/passbook`)
       .then(res => res.json())
       .then(data => {
         if (data.customer) setCustomer(data.customer);

@@ -152,7 +152,7 @@ export default function VoiceStockInModal({
           sellingPrice: parsedStock.sellingPrice || parsedStock.product.sellingPrice
         };
 
-        const res = await fetch(`http://localhost:4005/api/products/${parsedStock.product.id}`, {
+        const res = await fetch(`/api/products/${parsedStock.product.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -179,7 +179,7 @@ export default function VoiceStockInModal({
           unit: parsedStock.unit
         };
 
-        const res = await fetch('http://localhost:4005/api/products', {
+        const res = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

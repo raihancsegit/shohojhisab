@@ -140,7 +140,7 @@ export default function StockPage() {
 
         if (name && sellPrice > 0) {
           const newProdId = 'prod-' + Date.now().toString().slice(-5) + Math.floor(Math.random() * 900);
-          await fetch('http://localhost:4005/api/products', {
+          await fetch('/api/products', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -214,7 +214,7 @@ export default function StockPage() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : []);
@@ -248,7 +248,7 @@ export default function StockPage() {
     updatePayload[field] = numVal;
 
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${productId}`, {
+      const res = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload)
@@ -267,7 +267,7 @@ export default function StockPage() {
     triggerHaptic('medium');
     const newStock = Number(product.stock || 0) + addQty;
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: newStock })
@@ -306,7 +306,7 @@ export default function StockPage() {
     triggerHaptic('success');
 
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${editingProduct.id}`, {
+      const res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -343,7 +343,7 @@ export default function StockPage() {
     const barcode = addForm.barcode || '894' + Math.floor(10000000 + Math.random() * 90000000);
 
     try {
-      const res = await fetch('http://localhost:4005/api/products', {
+      const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -399,7 +399,7 @@ export default function StockPage() {
     triggerHaptic('warning');
 
     try {
-      const res = await fetch(`http://localhost:4005/api/products/${p.id}`, {
+      const res = await fetch(`/api/products/${p.id}`, {
         method: 'DELETE'
       });
       if (res.ok) {

@@ -19,7 +19,7 @@ export default function MarketingPage() {
     if (!currentTenantId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4005/api/customers?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setCustomers(Array.isArray(data) ? data : []);
@@ -27,7 +27,7 @@ export default function MarketingPage() {
     } catch (e) {}
 
     try {
-      const stRes = await fetch(`http://localhost:4005/api/tenants/${currentTenantId}/subscription-status`);
+      const stRes = await fetch(`/api/tenants/${currentTenantId}/subscription-status`);
       if (stRes.ok) {
         const stData = await stRes.json();
         if (stData.smsBalance !== undefined) setSmsBalance(stData.smsBalance);
@@ -67,7 +67,7 @@ export default function MarketingPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch('http://localhost:4005/api/marketing/send-bulk', {
+      const res = await fetch('/api/marketing/send-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

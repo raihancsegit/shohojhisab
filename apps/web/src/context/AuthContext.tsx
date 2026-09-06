@@ -165,13 +165,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       for (const item of queue) {
         try {
           if (item.actionType === 'CREATE_SALE') {
-            await fetch('http://localhost:4005/api/sales', {
+            await fetch('/api/sales', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(item.payload)
             });
           } else if (item.actionType === 'CREATE_EXPENSE') {
-            await fetch('http://localhost:4005/api/expenses', {
+            await fetch('/api/expenses', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(item.payload)
@@ -363,7 +363,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTenant(parsedTenant);
 
         // Verify status & updated features in background
-        fetch(`http://localhost:4005/api/tenants/${parsedTenant.id}/subscription-status`)
+        fetch(`/api/tenants/${parsedTenant.id}/subscription-status`)
           .then(res => res.json())
           .then(statusData => {
             if (statusData && statusData.shopId) {
@@ -393,7 +393,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Shopkeeper Login
   const loginShop = async (phone: string, pin: string) => {
     try {
-      const res = await fetch('http://localhost:4005/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'shop', phone, pin })
@@ -433,7 +433,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithPin = async (enteredPin: string) => {
     if (!tenant?.id) return { success: false, error: 'দোকান সিলেক্ট করা নেই' };
     try {
-      const res = await fetch('http://localhost:4005/api/staff/verify-pin', {
+      const res = await fetch('/api/staff/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId: tenant.id, pin: enteredPin })
@@ -460,7 +460,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Super Admin Login
   const loginAdmin = async (adminPasscode: string) => {
     try {
-      const res = await fetch('http://localhost:4005/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'admin', adminPasscode })

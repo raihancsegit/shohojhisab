@@ -27,7 +27,7 @@ export default function DealersPage() {
   const loadDealers = async () => {
     if (!currentTenantId) return;
     try {
-      const res = await fetch(`http://localhost:4005/api/dealers?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/dealers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setDealers(Array.isArray(data) ? data : []);
@@ -58,7 +58,7 @@ export default function DealersPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch('http://localhost:4005/api/dealers', {
+      const res = await fetch('/api/dealers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ export default function DealersPage() {
 
     const newDue = Math.max(0, Number(payModalDealer.payableDue || 0) - num);
     try {
-      const res = await fetch(`http://localhost:4005/api/dealers/${payModalDealer.id}`, {
+      const res = await fetch(`/api/dealers/${payModalDealer.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

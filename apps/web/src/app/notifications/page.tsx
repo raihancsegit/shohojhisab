@@ -18,10 +18,10 @@ export default function NotificationsPage() {
     const generated: any[] = [];
 
     Promise.all([
-      fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => []),
-      fetch(`http://localhost:4005/api/customers?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => []),
-      fetch(`http://localhost:4005/api/tenants/${currentTenantId}/subscription-status`).then(r => r.json()).catch(() => null),
-      fetch(`http://localhost:4005/api/installments?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => [])
+      fetch(`/api/products?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/customers?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/tenants/${currentTenantId}/subscription-status`).then(r => r.json()).catch(() => null),
+      fetch(`/api/installments?tenantId=${currentTenantId}`).then(r => r.json()).catch(() => [])
     ]).then(([products, customers, subStatus, installments]) => {
       // 1. Low stock alerts
       if (Array.isArray(products)) {

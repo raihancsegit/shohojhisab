@@ -22,14 +22,14 @@ function PassbookContent() {
     // Fetch customer details
     const fetchPassbookData = async () => {
       try {
-        const custRes = await fetch(`http://localhost:4005/api/customers?tenantId=${tenantId || ''}`);
+        const custRes = await fetch(`/api/customers?tenantId=${tenantId || ''}`);
         if (custRes.ok) {
           const cList = await custRes.json();
           const found = cList.find((c: any) => c.id === customerId);
           if (found) setCustomer(found);
         }
 
-        const salesRes = await fetch(`http://localhost:4005/api/sales?tenantId=${tenantId || ''}`);
+        const salesRes = await fetch(`/api/sales?tenantId=${tenantId || ''}`);
         if (salesRes.ok) {
           const sList = await salesRes.json();
           const cSales = sList.filter((s: any) => s.customerId === customerId || s.customer_id === customerId);

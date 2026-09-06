@@ -34,7 +34,7 @@ export default function BranchesPage() {
     if (!currentTenantId) return;
     setLoading(true);
     try {
-      const bRes = await fetch(`http://localhost:4005/api/branches?tenantId=${currentTenantId}`);
+      const bRes = await fetch(`/api/branches?tenantId=${currentTenantId}`);
       if (bRes.ok) {
         const bData = await bRes.json();
         setBranches(Array.isArray(bData) ? bData : []);
@@ -47,14 +47,14 @@ export default function BranchesPage() {
     } catch (e) {}
 
     try {
-      const trRes = await fetch(`http://localhost:4005/api/branches/transfers?tenantId=${currentTenantId}`);
+      const trRes = await fetch(`/api/branches/transfers?tenantId=${currentTenantId}`);
       if (trRes.ok) {
         setTransfers(await trRes.json());
       }
     } catch (e) {}
 
     try {
-      const pRes = await fetch(`http://localhost:4005/api/products?tenantId=${currentTenantId}`);
+      const pRes = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (pRes.ok) {
         setProducts(await pRes.json());
       }
@@ -72,7 +72,7 @@ export default function BranchesPage() {
     triggerHaptic('medium');
 
     try {
-      const res = await fetch('http://localhost:4005/api/branches', {
+      const res = await fetch('/api/branches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,7 +105,7 @@ export default function BranchesPage() {
     const toBranch = branches.find(b => b.id === transferTo)?.name || 'শাখা';
 
     try {
-      const res = await fetch('http://localhost:4005/api/branches/transfers', {
+      const res = await fetch('/api/branches/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

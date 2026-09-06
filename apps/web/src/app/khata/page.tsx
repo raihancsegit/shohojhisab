@@ -42,7 +42,7 @@ export default function KhataPage() {
     setLedgerLoading(true);
     setSelectedLedger({ customer, ledger: [] });
     try {
-      const res = await fetch(`http://localhost:4005/api/customers/${customer.id}/ledger`);
+      const res = await fetch(`/api/customers/${customer.id}/ledger`);
       if (res.ok) {
         const data = await res.json();
         setSelectedLedger(data);
@@ -58,7 +58,7 @@ export default function KhataPage() {
     e.preventDefault();
     if (!showPromiseModal?.id) return;
     try {
-      const res = await fetch(`http://localhost:4005/api/customers/${showPromiseModal.id}/promise-date`, {
+      const res = await fetch(`/api/customers/${showPromiseModal.id}/promise-date`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +85,7 @@ export default function KhataPage() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:4005/api/customers?tenantId=${currentTenantId}`);
+      const res = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const list = await res.json();
         setCustomers(Array.isArray(list) ? list : []);
@@ -114,7 +114,7 @@ export default function KhataPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('http://localhost:4005/api/customers', {
+      const res = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -175,7 +175,7 @@ export default function KhataPage() {
     if (!showPayModal || !payAmount) return;
 
     try {
-      const res = await fetch('http://localhost:4005/api/customers/due-payment', {
+      const res = await fetch('/api/customers/due-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

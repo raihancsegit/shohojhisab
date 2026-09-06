@@ -38,7 +38,7 @@ export default function AiAssistantPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4005/api/ai-assistant/query', {
+      const res = await fetch('/api/ai-assistant/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

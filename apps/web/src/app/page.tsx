@@ -210,14 +210,14 @@ export default function ShopkeeperDashboard() {
       }
 
       // 1. Fetch real Day-End live financials for this tenant
-      const repRes = await fetch(`http://localhost:4005/api/reports/day-end?tenantId=${tenant.id}`);
+      const repRes = await fetch(`/api/reports/day-end?tenantId=${tenant.id}`);
       if (repRes.ok) {
         const repData = await repRes.json();
         setMetrics(repData);
       }
 
       // 2. Fetch products to count low stock
-      const prodRes = await fetch(`http://localhost:4005/api/products?tenantId=${tenant.id}`);
+      const prodRes = await fetch(`/api/products?tenantId=${tenant.id}`);
       if (prodRes.ok) {
         const prods = await prodRes.json();
         setProducts(Array.isArray(prods) ? prods : []);
@@ -226,21 +226,21 @@ export default function ShopkeeperDashboard() {
       }
 
       // 3. Fetch recent sales
-      const salesRes = await fetch(`http://localhost:4005/api/sales?tenantId=${tenant.id}`);
+      const salesRes = await fetch(`/api/sales?tenantId=${tenant.id}`);
       if (salesRes.ok) {
         const sales = await salesRes.json();
         setRecentSales(Array.isArray(sales) ? sales.slice(0, 5) : []);
       }
 
       // 4. Fetch customers
-      const custRes = await fetch(`http://localhost:4005/api/customers?tenantId=${tenant.id}`);
+      const custRes = await fetch(`/api/customers?tenantId=${tenant.id}`);
       if (custRes.ok) {
         const cList = await custRes.json();
         setCustomers(Array.isArray(cList) ? cList : []);
       }
 
       // 5. Fetch dealers (for supplier payable metric)
-      const dealRes = await fetch(`http://localhost:4005/api/dealers?tenantId=${tenant.id}`);
+      const dealRes = await fetch(`/api/dealers?tenantId=${tenant.id}`);
       if (dealRes.ok) {
         const dList = await dealRes.json();
         setDealers(Array.isArray(dList) ? dList : []);
@@ -267,7 +267,7 @@ export default function ShopkeeperDashboard() {
   const handleFastCashSaleSubmit = async (amount: number) => {
     if (!amount || amount <= 0 || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -296,7 +296,7 @@ export default function ShopkeeperDashboard() {
     e.preventDefault();
     if (!fastTaka || fastTaka <= 0 || !fastDueCustomerName || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -327,7 +327,7 @@ export default function ShopkeeperDashboard() {
     if (!tenant?.id) return;
     triggerHaptic('medium');
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -427,7 +427,7 @@ export default function ShopkeeperDashboard() {
     const amt = parseFloat(quickCashAmount);
     if (!amt || amt <= 0 || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -459,7 +459,7 @@ export default function ShopkeeperDashboard() {
     const amt = parseFloat(quickDueAmount);
     if (!amt || amt <= 0 || !quickDueCustomerName || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -492,7 +492,7 @@ export default function ShopkeeperDashboard() {
     const amt = parseFloat(quickDuePayAmount);
     if (!amt || amt <= 0 || !quickDuePayCustomerId || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/customers/due-payment', {
+      const res = await fetch('/api/customers/due-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -516,7 +516,7 @@ export default function ShopkeeperDashboard() {
     const amt = parseFloat(quickExpenseAmount);
     if (!amt || amt <= 0 || !tenant?.id) return;
     try {
-      const res = await fetch('http://localhost:4005/api/expenses', {
+      const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
