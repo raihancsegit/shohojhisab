@@ -1,0 +1,454 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-border: #c7d2fe;
+  --primary-dark: #312e81;
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-border-subtle: #f1f5f9;
+  --card-shadow: 0 4px 20px -4px rgba(79, 70, 229, 0.08), 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+  --card-shadow-hover: 0 12px 28px -4px rgba(79, 70, 229, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* ==========================================================================
+   LIVE REAL-TIME DARK THEME ENGINE
+   ========================================================================== */
+html.dark, body.dark, .dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --surface: #1e293b;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --primary-border: #4338ca;
+  --primary-dark: #818cf8;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --card-border-subtle: #1e293b;
+  --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+  --card-shadow-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
+
+html.dark body, body.dark {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html.dark .ui-card,
+html.dark .mobile-card,
+html.dark .app-container > div,
+html.dark [style*="background: #ffffff"],
+html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background-color: #ffffff"] {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark div,
+html.dark span,
+html.dark p,
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6 {
+  /* Retain bright text for dark mode readability */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Hind Siliguri', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Typography & Numerals */
+.num-font {
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.01em;
+}
+
+/* Responsive App Container */
+.app-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+  position: relative;
+  padding: 24px 20px 80px 20px;
+}
+
+@media (max-width: 899px) {
+  .app-container {
+    max-width: 100%;
+    padding: 14px 12px 90px 12px;
+  }
+  .desktop-nav-menu {
+    display: none !important;
+  }
+}
+
+@media (min-width: 900px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
+/* Clean Responsive Header & Mobile Utility Rules */
+.header-shop-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.header-shop-text {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.header-shop-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.header-shop-meta {
+  margin: 1px 0 0;
+  font-size: 10.5px;
+  color: #c7d2fe;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+@media (min-width: 640px) {
+  .header-shop-title {
+    font-size: 17px;
+    max-width: 260px;
+  }
+  .header-shop-meta {
+    font-size: 11.5px;
+    max-width: 320px;
+  }
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.header-role-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: none;
+  padding: 5px 9px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.header-icon-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  min-width: 30px;
+  height: 30px;
+}
+
+/* Page Heading Scalability */
+.page-title {
+  font-size: clamp(19px, 5vw, 25px) !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+}
+
+.page-subtitle {
+  font-size: clamp(11.5px, 3.2vw, 13.5px) !important;
+  line-height: 1.45 !important;
+}
+
+/* Clean Crisp Card Style (Ultra Modern & Light) */
+.ui-card, .mobile-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.ui-card:hover, .mobile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: #cbd5e1;
+}
+
+.clickable-card {
+  cursor: pointer;
+}
+
+.clickable-card:active {
+  transform: scale(0.985);
+}
+
+/* Launcher Quick Action Circles */
+.launcher-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: #4f46e5;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  margin: 0 auto 8px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  border: 1px solid #c7d2fe;
+}
+
+.launcher-card:hover .launcher-icon-circle {
+  transform: scale(1.05);
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+/* Custom Clean Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Clean Form Elements */
+input[type="text"], input[type="number"], input[type="tel"], input[type="date"], select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3.5px rgba(79, 70, 229, 0.18) !important;
+}
+
+/* Print Rules - Isolates pure invoice and thermal receipts with zero page clutter */
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  header, nav, footer, aside, .no-print, .no-print *, .bottom-nav-mobile, .app-header-controls, .mobile-bottom-nav, .floating-voice-btn, .screen-lock-overlay, .ui-card, .launcher-card {
+    display: none !important;
+  }
+
+  .printable-receipt,
+  .printable-receipt *,
+  .printable-a4,
+  .printable-a4 *,
+  .printable-content,
+  .printable-content *,
+  .barcode-grid,
+  .barcode-grid *,
+  .sticker-label,
+  .sticker-label * {
+    visibility: visible !important;
+  }
+
+  .invoice-modal-backdrop,
+  .invoice-modal-card {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .printable-receipt {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 4mm 2mm !important;
+    font-family: 'Courier New', Courier, monospace, "Hind Siliguri", sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: block !important;
+    page-break-inside: avoid;
+  }
+
+  .printable-a4 {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    margin: 0 auto !important;
+    padding: 8mm !important;
+    font-family: "Hind Siliguri", sans-serif !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    display: block !important;
+    page-break-inside: avoid;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border-color: #000000 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  button, .clickable-card {
+    touch-action: manipulation;
+  }
+  button:active, .clickable-card:active {
+    transform: scale(0.97) !important;
+  }
+  .app-container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 120px !important;
+  }
+  main {
+    padding-bottom: 110px !important;
+  }
+}
+
+/* Hide Next.js Dev Indicator Badge & Overlay on mobile */
+nextjs-portal,
+#nextjs-dev-overlay,
+[data-nextjs-dev-tools-button],
+div[data-nextjs-toast="true"],
+nextjs-toast {
+  display: none !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes voicePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(79, 70, 229, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+  }
+}
+
+.voice-pulsing {
+  animation: voicePulse 1.5s infinite;
+}

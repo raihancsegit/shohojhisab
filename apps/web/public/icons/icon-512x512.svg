@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)" />
+  <g fill="#ffffff" transform="translate(96, 96) scale(0.625)">
+    <path d="M64 64h48l48 240h224l48-176H144" stroke="#ffffff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle cx="176" cy="384" r="32" fill="#ffffff" />
+    <circle cx="368" cy="384" r="32" fill="#ffffff" />
+    <!-- Shop lightning accent -->
+    <path d="M260 120 L220 220 L270 220 L240 310 L310 190 L260 190 Z" fill="#facc15" stroke="#047857" stroke-width="6"/>
+  </g>
+</svg>

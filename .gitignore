@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# SQLite WAL and temp files (keep primary database if needed)
+*.db-shm
+*.db-wal
+*.log
+
+# OS files
+.DS_Store
+*.pem
+
+# Local env files
+.env*.local
