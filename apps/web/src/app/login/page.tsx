@@ -106,32 +106,36 @@ function LoginFormContent() {
 
   return (
     <div style={{
-      minHeight: '92vh',
+      minHeight: '90vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px 16px 48px',
+      padding: '16px 12px 36px',
+      width: '100%',
+      maxWidth: '100vw',
+      boxSizing: 'border-box',
+      overflowX: 'hidden',
       fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
     }}>
       
       {/* Brand Header */}
-      <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '16px', maxWidth: '100%' }}>
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
           color: '#ffffff',
-          padding: '8px 18px',
+          padding: '6px 14px',
           borderRadius: '99px',
-          boxShadow: '0 8px 20px -4px rgba(79, 70, 229, 0.35)',
-          marginBottom: '8px'
+          boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+          marginBottom: '6px'
         }}>
-          <span style={{ fontSize: '20px' }}>🏪</span>
-          <span style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '-0.3px' }}>ShohojHisab</span>
+          <span style={{ fontSize: '18px' }}>🏪</span>
+          <span style={{ fontSize: '16px', fontWeight: '900', letterSpacing: '-0.3px' }}>ShohojHisab</span>
         </div>
-        <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+        <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
           স্মার্ট দোকান ও ব্যবসা সফটওয়্যার
         </p>
       </div>
@@ -139,34 +143,35 @@ function LoginFormContent() {
       {/* Main Container Card */}
       <div style={{
         width: '100%',
-        maxWidth: '430px',
+        maxWidth: '380px',
         background: '#ffffff',
-        borderRadius: '28px',
-        padding: '32px 24px',
-        boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0,0,0,0.05)',
+        borderRadius: '24px',
+        padding: '24px 18px',
+        boxShadow: '0 16px 36px -8px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0,0,0,0.05)',
         border: '1.5px solid #e2e8f0',
+        boxSizing: 'border-box',
         position: 'relative'
       }}>
 
         {tab === 'shop' ? (
           <>
             {/* Top Header */}
-            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
               <h2 style={{
-                fontSize: '21px',
+                fontSize: '18px',
                 fontWeight: '900',
                 color: '#0f172a',
-                margin: '0 0 6px'
+                margin: '0 0 4px'
               }}>
                 দোকান ও কর্মচারী লগইন
               </h2>
               <p style={{
-                fontSize: '13px',
+                fontSize: '12px',
                 color: '#64748b',
                 margin: 0,
                 lineHeight: 1.4
               }}>
-                মালিক অথবা কর্মচারীর মোবাইল নাম্বার ও ৪-ডিজিট পিন দিয়ে প্রবেশ করুন
+                মালিক অথবা কর্মচারীর মোবাইল ও ৪-ডিজিট পিন দিন
               </p>
             </div>
 
@@ -174,11 +179,11 @@ function LoginFormContent() {
               <div style={{
                 background: '#fef2f2',
                 color: '#dc2626',
-                padding: '10px 14px',
-                borderRadius: '12px',
-                fontSize: '13px',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontSize: '12px',
                 fontWeight: '700',
-                marginBottom: '18px',
+                marginBottom: '14px',
                 textAlign: 'center',
                 border: '1px solid #fecaca'
               }}>
@@ -186,41 +191,41 @@ function LoginFormContent() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '18px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
               
               {/* Step 1: Mobile / User ID Input */}
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#334155', marginBottom: '7px' }}>
+              <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '5px' }}>
                   📱 মোবাইল নাম্বার / ইউজার আইডি:
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="01XXXXXXXXX"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '13px 14px',
-                      borderRadius: '14px',
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: '#f8fafc',
-                      transition: 'border 0.2s ease'
-                    }}
-                  />
-                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  required
+                  style={{
+                    width: '100%',
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: '#f8fafc',
+                    transition: 'border 0.2s ease'
+                  }}
+                />
               </div>
 
               {/* Step 2: 4-Box PIN Input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#334155' }}>
+              <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
                     🔒 ৪-ডিজিট পিন কোড:
                   </label>
                   <button
@@ -230,7 +235,7 @@ function LoginFormContent() {
                       background: 'none',
                       border: 'none',
                       color: '#4f46e5',
-                      fontSize: '11.5px',
+                      fontSize: '11px',
                       fontWeight: '800',
                       cursor: 'pointer',
                       padding: 0
@@ -242,8 +247,10 @@ function LoginFormContent() {
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '10px'
+                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  gap: '8px',
+                  width: '100%',
+                  boxSizing: 'border-box'
                 }}>
                   {pinDigits.map((digit, index) => (
                     <input
@@ -256,17 +263,21 @@ function LoginFormContent() {
                       onChange={(e) => handlePinChange(index, e.target.value)}
                       onKeyDown={(e) => handlePinKeyDown(index, e)}
                       style={{
-                        height: '56px',
+                        width: '100%',
+                        minWidth: 0,
+                        maxWidth: '100%',
+                        height: '48px',
                         textAlign: 'center',
-                        fontSize: '22px',
+                        fontSize: '20px',
                         fontWeight: '900',
                         color: '#0f172a',
-                        borderRadius: '14px',
+                        borderRadius: '12px',
                         border: digit ? '2px solid #4f46e5' : '1.5px solid #cbd5e1',
                         background: digit ? '#eef2ff' : '#f8fafc',
                         outline: 'none',
                         transition: 'all 0.15s ease',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        padding: 0
                       }}
                     />
                   ))}
@@ -279,17 +290,18 @@ function LoginFormContent() {
                 disabled={loading}
                 style={{
                   width: '100%',
-                  padding: '14px',
-                  borderRadius: '16px',
+                  padding: '12px',
+                  borderRadius: '14px',
                   background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '900',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 8px 20px -4px rgba(79, 70, 229, 0.35)',
+                  boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
                   transition: 'transform 0.1s ease',
-                  marginTop: '4px'
+                  marginTop: '2px',
+                  boxSizing: 'border-box'
                 }}
               >
                 {loading ? 'লগইন হচ্ছে...' : 'দোকানে প্রবেশ করুন →'}
@@ -298,16 +310,18 @@ function LoginFormContent() {
 
             {/* Quick Multi-Category Demo Logins */}
             <div style={{
-              marginTop: '24px',
-              paddingTop: '18px',
-              borderTop: '1px dashed #e2e8f0'
+              marginTop: '18px',
+              paddingTop: '14px',
+              borderTop: '1px dashed #e2e8f0',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textAlign: 'center', marginBottom: '10px', textTransform: 'uppercase' }}>
-                ⚡ ১-ক্লিকে যেকোনো ক্যাটাগরির দোকান টেস্ট করুন:
+              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#94a3b8', textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
+                ⚡ ১-ক্লিকে যেকোনো দোকান টেস্ট করুন:
               </div>
 
               {/* Category Pills */}
-              <div style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ display: 'grid', gap: '6px', width: '100%', boxSizing: 'border-box' }}>
                 {/* 1. Grocery Shop */}
                 <div style={{
                   display: 'flex',
@@ -315,27 +329,29 @@ function LoginFormContent() {
                   justifyContent: 'space-between',
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
-                  padding: '7px 10px',
-                  borderRadius: '12px'
+                  padding: '5px 8px',
+                  borderRadius: '10px',
+                  gap: '4px',
+                  boxSizing: 'border-box'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>🛒</span>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>মুদি ও জেনারেল শপ</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: '14px' }}>🛒</span>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>মুদি শপ</div>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01986233234', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      👑 মালিক (1234)
+                      মালিক (1234)
                     </button>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01986233234', ['2', '2', '2', '2'])}
-                      style={{ background: '#dcfce7', color: '#15803d', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#dcfce7', color: '#15803d', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      🛒 স্টাফ (2222)
+                      স্টাফ (2222)
                     </button>
                   </div>
                 </div>
@@ -347,27 +363,29 @@ function LoginFormContent() {
                   justifyContent: 'space-between',
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
-                  padding: '7px 10px',
-                  borderRadius: '12px'
+                  padding: '5px 8px',
+                  borderRadius: '10px',
+                  gap: '4px',
+                  boxSizing: 'border-box'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>💊</span>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>ফার্মেসি ও ড্রাগস</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: '14px' }}>💊</span>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>ফার্মেসি</div>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01711223344', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      👑 মালিক (1234)
+                      মালিক (1234)
                     </button>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01711223344', ['4', '4', '4', '4'])}
-                      style={{ background: '#fef3c7', color: '#b45309', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#fef3c7', color: '#b45309', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      💊 ফার্মাসিস্ট (4444)
+                      স্টাফ (4444)
                     </button>
                   </div>
                 </div>
@@ -379,27 +397,29 @@ function LoginFormContent() {
                   justifyContent: 'space-between',
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
-                  padding: '7px 10px',
-                  borderRadius: '12px'
+                  padding: '5px 8px',
+                  borderRadius: '10px',
+                  gap: '4px',
+                  boxSizing: 'border-box'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>👗</span>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>কাপড় ও ফ্যাশন</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: '14px' }}>👗</span>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>ফ্যাশন/কাপড়</div>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01722334455', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      👑 মালিক (1234)
+                      মালিক (1234)
                     </button>
                     <button
                       type="button"
                       onClick={() => fillDemoLogin('01722334455', ['3', '3', '3', '3'])}
-                      style={{ background: '#fae8ff', color: '#86198f', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#fae8ff', color: '#86198f', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                     >
-                      💼 ম্যানেজার (3333)
+                      ম্যানেজার (3333)
                     </button>
                   </div>
                 </div>
@@ -411,26 +431,28 @@ function LoginFormContent() {
                   justifyContent: 'space-between',
                   background: '#f8fafc',
                   border: '1px solid #e2e8f0',
-                  padding: '7px 10px',
-                  borderRadius: '12px'
+                  padding: '5px 8px',
+                  borderRadius: '10px',
+                  gap: '4px',
+                  boxSizing: 'border-box'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '16px' }}>⚡</span>
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>ইলেকট্রনিক্স ও হার্ডওয়্যার</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                    <span style={{ fontSize: '14px' }}>⚡</span>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>হার্ডওয়্যার</div>
                   </div>
                   <button
                     type="button"
                     onClick={() => fillDemoLogin('01733445566', ['1', '2', '3', '4'])}
-                    style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', flexShrink: 0 }}
                   >
-                    👑 মালিক (1234)
+                    মালিক (1234)
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Subtle Footer Admin Portal Link */}
-            <div style={{ textAlign: 'center', marginTop: '18px' }}>
+            <div style={{ textAlign: 'center', marginTop: '14px' }}>
               <button
                 type="button"
                 onClick={() => { setTab('admin'); setError(''); triggerHaptic('light'); }}
@@ -438,7 +460,7 @@ function LoginFormContent() {
                   background: 'none',
                   border: 'none',
                   color: '#94a3b8',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: '700',
                   cursor: 'pointer',
                   textDecoration: 'underline'

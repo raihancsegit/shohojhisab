@@ -715,17 +715,17 @@ export default function StockPage() {
 
       {/* VIEW 1: COMPACT LIST / TABLE VIEW (Super easy to manage 100s of products) */}
       {viewMode === 'list' && (
-        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+        <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', fontWeight: '800' }}>
-                  <th style={{ padding: '14px 16px' }}>পণ্যের বিবরণ</th>
-                  <th style={{ padding: '14px 12px' }}>কেনার দাম (৳)</th>
-                  <th style={{ padding: '14px 12px' }}>বিক্রির দাম (৳)</th>
-                  <th style={{ padding: '14px 12px' }}>বর্তমান স্টক</th>
-                  <th style={{ padding: '14px 12px' }}>দ্রুত স্টক যোগ</th>
-                  <th style={{ padding: '14px 16px', textAlign: 'right' }}>অ্যাকশন</th>
+                  <th style={{ padding: '9px 12px' }}>পণ্যের বিবরণ</th>
+                  <th style={{ padding: '9px 8px' }}>কেনার দাম</th>
+                  <th style={{ padding: '9px 8px' }}>বিক্রির দাম</th>
+                  <th style={{ padding: '9px 8px' }}>বর্তমান স্টক</th>
+                  <th style={{ padding: '9px 8px' }}>দ্রুত স্টক যোগ</th>
+                  <th style={{ padding: '9px 12px', textAlign: 'right' }}>অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody>
@@ -741,32 +741,32 @@ export default function StockPage() {
                       }}
                     >
                       {/* Product Name & Info */}
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '24px' }}>{p.icon || '📦'}</span>
+                      <td style={{ padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>{p.icon || '📦'}</span>
                           <div>
-                            <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block' }}>
+                            <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
                               {p.banglaName || p.name}
                             </strong>
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '11px', color: '#94a3b8' }}>#{p.barcode}</span>
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '1px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>#{p.barcode}</span>
                               {p.genericName && (
-                                <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700' }}>• 🧪 {p.genericName}</span>
+                                <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '700' }}>• 🧪 {p.genericName}</span>
                               )}
                               {p.brand && (
-                                <span style={{ fontSize: '11px', color: '#0284c7', fontWeight: '700' }}>• 🏢 {p.brand}</span>
+                                <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700' }}>• 🏢 {p.brand}</span>
                               )}
                               {p.size && (
-                                <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700' }}>• 🏷️ {p.size}</span>
+                                <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700' }}>• 🏷️ {p.size}</span>
                               )}
                               {p.color && (
-                                <span style={{ fontSize: '11px', color: '#64748b' }}>• 🎨 {p.color}</span>
+                                <span style={{ fontSize: '10.5px', color: '#64748b' }}>• 🎨 {p.color}</span>
                               )}
                               {p.warranty && (
-                                <span style={{ fontSize: '10.5px', color: '#16a34a', fontWeight: '700' }}>• 🛡️ {p.warranty}</span>
+                                <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: '700' }}>• 🛡️ {p.warranty}</span>
                               )}
                               {p.expiryDate && (
-                                <span style={{ fontSize: '10.5px', color: '#d97706', fontWeight: '600' }}>• ⏳ {p.expiryDate}</span>
+                                <span style={{ fontSize: '10px', color: '#d97706', fontWeight: '600' }}>• ⏳ {p.expiryDate}</span>
                               )}
                             </div>
                           </div>
@@ -774,38 +774,38 @@ export default function StockPage() {
                       </td>
 
                       {/* Purchase Price (কেনার দাম) with 1-tap edit */}
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'purchasePrice' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <input
                               type="number"
                               value={inlineEdit.val}
                               onChange={(e) => handleInlineValChange(e.target.value)}
                               className="num-font"
                               autoFocus
-                              style={{ width: '65px', padding: '4px 6px', borderRadius: '6px', border: '1.5px solid #10b981', fontSize: '13px', outline: 'none' }}
+                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
                             />
                             <button
                               onClick={() => handleSaveInline(p.id, 'purchasePrice', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             >
                               ✓
                             </button>
                             <button
                               onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', cursor: 'pointer' }}
+                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span className="num-font" style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span className="num-font" style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>
                               ৳{p.purchasePrice || 0}
                             </span>
                             <button
                               onClick={() => { setInlineEdit({ id: p.id, field: 'purchasePrice', val: String(p.purchasePrice || 0) }); triggerHaptic('light'); }}
-                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 5px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}
+                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '700', cursor: 'pointer' }}
                               title="কেনার দাম পরিবর্তন করুন"
                             >
                               ✏️
@@ -815,86 +815,86 @@ export default function StockPage() {
                       </td>
 
                       {/* Selling Price (বিক্রির দাম) with 1-tap edit */}
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'sellingPrice' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <input
                               type="number"
                               value={inlineEdit.val}
                               onChange={(e) => handleInlineValChange(e.target.value)}
                               className="num-font"
                               autoFocus
-                              style={{ width: '65px', padding: '4px 6px', borderRadius: '6px', border: '1.5px solid #10b981', fontSize: '13px', outline: 'none' }}
+                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
                             />
                             <button
                               onClick={() => handleSaveInline(p.id, 'sellingPrice', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             >
                               ✓
                             </button>
                             <button
                               onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', cursor: 'pointer' }}
+                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span className="num-font" style={{ fontSize: '15px', fontWeight: '900', color: '#059669' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span className="num-font" style={{ fontSize: '13.5px', fontWeight: '900', color: '#059669' }}>
                               ৳{p.sellingPrice}
                             </span>
                             <button
                               onClick={() => { setInlineEdit({ id: p.id, field: 'sellingPrice', val: String(p.sellingPrice) }); triggerHaptic('light'); }}
-                              style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '2px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '800', cursor: 'pointer' }}
                               title="বিক্রয় মূল্য পরিবর্তন করুন"
                             >
-                              ✏️ দর
+                              ✏️
                             </button>
                           </div>
                         )}
                       </td>
 
                       {/* Stock Quantity */}
-                      <td style={{ padding: '12px 12px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'stock' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <input
                               type="number"
                               value={inlineEdit.val}
                               onChange={(e) => handleInlineValChange(e.target.value)}
                               className="num-font"
                               autoFocus
-                              style={{ width: '65px', padding: '4px 6px', borderRadius: '6px', border: '1.5px solid #10b981', fontSize: '13px', outline: 'none' }}
+                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
                             />
                             <button
                               onClick={() => handleSaveInline(p.id, 'stock', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             >
                               ✓
                             </button>
                             <button
                               onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '4px 6px', fontSize: '11px', cursor: 'pointer' }}
+                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <span
                               className="num-font"
                               style={{
-                                fontSize: '15px',
+                                fontSize: '13.5px',
                                 fontWeight: '900',
                                 color: isLow ? '#dc2626' : '#0f172a'
                               }}
                             >
-                              {p.stock} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
+                              {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
                             </span>
                             <button
                               onClick={() => { setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) }); triggerHaptic('light'); }}
-                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 5px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}
+                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '700', cursor: 'pointer' }}
                               title="স্টক সরাসরি সংশোধন করুন"
                             >
                               ✏️
@@ -904,25 +904,25 @@ export default function StockPage() {
                       </td>
 
                       {/* Quick Add Stock Chips (+10, +50, +100) */}
-                      <td style={{ padding: '12px 12px' }}>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <td style={{ padding: '8px 8px' }}>
+                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleQuickAddStock(p, 10)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             title="নতুন ১০ পিস স্টক যোগ করুন"
                           >
                             +১০
                           </button>
                           <button
                             onClick={() => handleQuickAddStock(p, 50)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             title="নতুন ৫০ পিস স্টক যোগ করুন"
                           >
                             +৫০
                           </button>
                           <button
                             onClick={() => handleQuickAddStock(p, 100)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
                             title="নতুন ১০০ পিস স্টক যোগ করুন"
                           >
                             +১০০
@@ -931,22 +931,22 @@ export default function StockPage() {
                       </td>
 
                       {/* Actions: Full Edit & Delete */}
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => openEditModal(p)}
                             style={{
                               background: '#eff6ff',
                               color: '#2563eb',
                               border: '1px solid #bfdbfe',
-                              padding: '6px 10px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
                               fontWeight: '800',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px'
+                              gap: '3px'
                             }}
                           >
                             <span>✏️</span> এডিট
@@ -957,9 +957,9 @@ export default function StockPage() {
                               background: '#fef2f2',
                               color: '#dc2626',
                               border: '1px solid #fecaca',
-                              padding: '6px 8px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
+                              padding: '4px 6px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
                               cursor: 'pointer'
                             }}
                             title="পণ্যটি মুছে ফেলুন"
