@@ -83,6 +83,11 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onresult = (event: any) => {
+        // Echo Prevention: Do not capture speech while the system itself is speaking TTS
+        if (typeof window !== 'undefined' && (window as any).speechSynthesis?.speaking) {
+          return;
+        }
+
         let interimText = '';
         let finalChunk = '';
 
@@ -188,7 +193,6 @@ export default function VoicePOSCalculatorModal({
       const spokenSummary = result.items.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
 
       setLastActionMessage(`✓ যোগ হয়েছে: ${spokenSummary} (মোট: ৳${newTotal})`);
-      speakAnnouncement(`${result.items[0].banglaName} ${result.items[0].totalPrice} টাকা যোগ হয়েছে। মোট ${newTotal} টাকা।`);
 
       // Auto-catalog any new/unknown product to database in background
       result.items.forEach(async (item) => {

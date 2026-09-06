@@ -217,7 +217,7 @@ const COMMON_GROCERY_DEFAULTS: Record<string, { price: number; unit: string }> =
   'সেক্লো': { price: 70, unit: 'পাতা' }
 };
 
-// Background noise chit-chat detection
+// Background noise & TTS echo prevention
 const NON_COMMERCIAL_PATTERNS = [
   /কেমন\s*আছেন|কেমন\s*আছো|ভালো\s*আছেন|ভালো\s*আছো/,
   /বাইরে\s*অনেক\s*গরম|বৃষ্টি\s*আসবে|বৃষ্টি\s*হচ্ছে/,
@@ -226,7 +226,8 @@ const NON_COMMERCIAL_PATTERNS = [
   /কখন\s*আসলেন|দেরি\s*হলো|যান\s*গা/,
   /হ্যালো\s*হ্যালো|শোনা\s*যায়|মাইক\s*টেস্টিং|চেক\s*চেক/,
   /এই\s*শুনুন|এই\s*যে|কিরে|আরে\s*ভাই|দোকানদার\s*ভাই|শুনছেন|আচ্ছা\s*শুনেন/,
-  /কোথায়\s*গেলা|কোথায়\s*আছো|পরে\s*কথা\s*বলি|ফোন\s*ধরো/
+  /কোথায়\s*গেলা|কোথায়\s*আছো|পরে\s*কথা\s*বলি|ফোন\s*ধরো/,
+  /যোগ\s*হয়েছে|যোগ\s*করা\s*হয়েছে|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে|ক্যালকুলেটর\s*চালু|স্বাগতম|চালু\s*হয়েছে|মোট\s*\d+\s*টাকা/
 ];
 
 export function isBackgroundNoise(text: string): boolean {
@@ -235,6 +236,11 @@ export function isBackgroundNoise(text: string): boolean {
 
   // Single filler words without numbers or units are noise
   if (/^(হ্যাঁ|হাঁ|না|আচ্ছা|ওকে|থ্যাংক\s*ইউ|ধন্যবাদ|হ্যালো|শুনো|দেখি|দাঁড়াও|দাঁড়ান|একটু)$/i.test(clean)) {
+    return true;
+  }
+
+  // Detect TTS echo (system announcing its own messages)
+  if (/যোগ\s*হয়েছে|টাকা\s*যোগ|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে/.test(clean)) {
     return true;
   }
 
