@@ -171,13 +171,6 @@ export default function ShopkeeperDashboard() {
     }
 
     try {
-      // 0. Load Opening Cash
-      const todayKey = new Date().toISOString().split('T')[0];
-      const savedOpening = localStorage.getItem(`lbos_opening_cash_${tenant.id}_${todayKey}`);
-      if (savedOpening) {
-        setOpeningCash(parseFloat(savedOpening) || 0);
-      }
-
       // 1. Fetch real Day-End live financials for this tenant
       const repRes = await fetch(`/api/reports/day-end?tenantId=${tenant.id}`);
       if (repRes.ok) {
@@ -387,50 +380,6 @@ export default function ShopkeeperDashboard() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {/* Mode Switcher Pill */}
-          <div style={{
-            background: '#f1f5f9',
-            padding: '3px',
-            borderRadius: '10px',
-            display: 'flex',
-            border: '1px solid #e2e8f0'
-          }}>
-            <button
-              type="button"
-              onClick={() => { setUiMode('easy'); triggerHaptic('light'); }}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '7px',
-                border: 'none',
-                background: uiMode === 'easy' ? '#4f46e5' : 'transparent',
-                color: uiMode === 'easy' ? '#fff' : '#64748b',
-                fontWeight: '800',
-                fontSize: '11.5px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ⚡ সহজ
-            </button>
-            <button
-              type="button"
-              onClick={() => { setUiMode('pro'); triggerHaptic('light'); }}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '7px',
-                border: 'none',
-                background: uiMode === 'pro' ? '#0f172a' : 'transparent',
-                color: uiMode === 'pro' ? '#fff' : '#64748b',
-                fontWeight: '800',
-                fontSize: '11.5px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              💼 সম্পূর্ণ
-            </button>
-          </div>
-
           <Link
             href="/pos"
             style={{
@@ -458,7 +407,7 @@ export default function ShopkeeperDashboard() {
          👑 HISABPATI-STYLE HERO BALANCE COCKPIT
          ========================================================================== */}
       {(() => {
-        const liveCashInHand = (metrics as any)?.cashInHand !== undefined ? Number((metrics as any).cashInHand) : (openingCash + (Number(metrics.cashSales) || 0) - (Number(metrics.expenses) || 0));
+        const liveCashInHand = (metrics as any)?.cashInHand !== undefined ? Number((metrics as any).cashInHand) : ((Number(metrics.cashSales) || 0) - (Number(metrics.expenses) || 0));
         const liveBankBalance = Number((metrics as any)?.digitalSales) || 0;
         const todayCashIn = (Number(metrics.cashSales) || 0) + (Number((metrics as any)?.dueCollected) || 0);
         const todayCashOut = (Number(metrics.expenses) || 0) + (Number((metrics as any)?.dealerPaid) || 0);
