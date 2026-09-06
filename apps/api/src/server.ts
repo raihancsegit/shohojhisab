@@ -2707,7 +2707,7 @@ fastify.post('/api/customers/due-payment', async (request, reply) => {
 });
 
 fastify.post('/api/customers/add-due', async (request, reply) => {
-  const { customerId, amount, itemsSummary, note } = request.body as any;
+  const { customerId, amount, items, itemsSummary, note } = request.body as any;
   const numAmount = Number(amount) || 0;
   if (!customerId || numAmount <= 0) {
     return reply.status(400).send({ error: 'Valid customerId and positive amount are required' });
@@ -2724,6 +2724,13 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
   const now = new Date().toISOString();
   const invoiceNo = 'BK-' + Date.now().toString().slice(-6);
 
+  // Generate summary from items if available
+  let finalSummary = itemsSummary || note || '';
+  if (Array.isArray(items) && items.length > 0) {
+    finalSummary = items.map((it: any) => `${it.name || it.productName} (${it.quantity || 1}${it.unit ? ` ${it.unit}` : 'টি'})`).join(', ');
+  }
+  if (!finalSummary) finalSummary = 'সরাসরি বাকি খাতা এন্ট্রি';
+
   try {
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, payment_method, note, created_at)
@@ -2738,26 +2745,50 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
       0,
       numAmount,
       'due',
-      itemsSummary || note || 'সরাসরি বাকি খাতা এন্ট্রি',
+      finalSummary,
       now
     );
 
-    const itemName = itemsSummary || 'বাকি পণ্য সামগ্রী';
-    const itemId = 'sitem-' + uuidv4().slice(0, 8);
-    db.prepare(`
-      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      itemId,
-      saleId,
-      itemName,
-      1,
-      numAmount,
-      numAmount
-    );
-  } catch (e) {}
+    const deductStock = db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?');
+    const findProductByName = db.prepare(`
+      SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ? OR ? LIKE '%' || bangla_name || '%') LIMIT 1
+    `);
 
-  return { success: true, message: 'বাকি সফলভাবে যোগ হয়েছে' };
+    if (Array.isArray(items) && items.length > 0) {
+      for (const it of items) {
+        const itemId = 'sitem-' + uuidv4().slice(0, 8);
+        const name = it.name || it.productName || 'বাকি পণ্য';
+        const qty = Number(it.quantity) || 1;
+        const price = Number(it.price || it.sellingPrice || it.totalPrice) || 0;
+        const total = Number(it.totalPrice) || (price * qty);
+
+        // Deduct inventory stock
+        if (it.productId) {
+          deductStock.run(qty, it.productId);
+        } else {
+          const matchedProd = findProductByName.get(customer.tenant_id, `%${name}%`, `%${name}%`, name) as any;
+          if (matchedProd) {
+            deductStock.run(qty, matchedProd.id);
+          }
+        }
+
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, name, qty, price, total);
+      }
+    } else {
+      const itemId = 'sitem-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, finalSummary, 1, numAmount, numAmount);
+    }
+  } catch (e) {
+    console.error('Error recording due sale:', e);
+  }
+
+  return { success: true, message: 'বাকি ও পণ্যের ফর্দ সফলভাবে সংরক্ষিত হয়েছে' };
 });
 
 // Customer Public Passbook API (Open for customer statement link)

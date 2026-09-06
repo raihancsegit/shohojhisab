@@ -19,8 +19,20 @@ export default function KhataPage() {
   const [showPayModal, setShowPayModal] = useState<any>(null);
   const [payAmount, setPayAmount] = useState('');
 
-  // Quick Add Due Modal state
+  // Quick Add Due Modal state with Stock Product Integration
+  const [products, setProducts] = useState<any[]>([]);
   const [showAddDueModal, setShowAddDueModal] = useState<any>(null);
+  const [dueMode, setDueMode] = useState<'stock' | 'custom'>('stock');
+  const [productSearch, setProductSearch] = useState('');
+  const [selectedDueProducts, setSelectedDueProducts] = useState<Array<{
+    productId?: string;
+    name: string;
+    quantity: number;
+    price: number;
+    unit?: string;
+    stock?: number;
+    icon?: string;
+  }>>([]);
   const [addDueAmount, setAddDueAmount] = useState('');
   const [addDueItems, setAddDueItems] = useState('');
   const [addDueSubmitting, setAddDueSubmitting] = useState(false);
@@ -43,28 +55,111 @@ export default function KhataPage() {
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const loadProducts = async () => {
+    if (!currentTenantId) return;
+    try {
+      const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
+      if (res.ok) {
+        const list = await res.json();
+        setProducts(Array.isArray(list) ? list : []);
+      }
+    } catch (e) {
+      console.error('Failed to load products', e);
+    }
+  };
+
+  const addProductToDue = (prod: any) => {
+    triggerHaptic('light');
+    setSelectedDueProducts(prev => {
+      const existing = prev.find(i => (i.productId && i.productId === prod.id) || i.name === (prod.banglaName || prod.name));
+      let updated;
+      if (existing) {
+        updated = prev.map(i => ((i.productId && i.productId === prod.id) || i.name === (prod.banglaName || prod.name))
+          ? { ...i, quantity: Math.round((i.quantity + 1) * 100) / 100 }
+          : i
+        );
+      } else {
+        updated = [...prev, {
+          productId: prod.id,
+          name: prod.banglaName || prod.name,
+          quantity: 1,
+          price: Number(prod.sellingPrice || prod.selling_price) || 0,
+          unit: prod.unit || 'পিস',
+          stock: Number(prod.stock) || 0,
+          icon: prod.icon || '📦'
+        }];
+      }
+      const total = updated.reduce((s, it) => s + (it.quantity * it.price), 0);
+      setAddDueAmount(total > 0 ? total.toString() : '');
+      setAddDueItems(updated.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', '));
+      return updated;
+    });
+  };
+
+  const updateDueItemQty = (index: number, delta: number) => {
+    triggerHaptic('light');
+    setSelectedDueProducts(prev => {
+      const item = prev[index];
+      if (!item) return prev;
+      let step = delta;
+      if (item.quantity <= 1 && Math.abs(delta) === 1) {
+        step = delta > 0 ? 0.25 : -0.25;
+      }
+      const newQty = Math.max(0.05, Math.round((item.quantity + step) * 1000) / 1000);
+      const updated = [...prev];
+      updated[index] = { ...item, quantity: newQty };
+      const total = updated.reduce((s, it) => s + (it.quantity * it.price), 0);
+      setAddDueAmount(total > 0 ? total.toString() : '');
+      setAddDueItems(updated.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', '));
+      return updated;
+    });
+  };
+
+  const removeDueItem = (index: number) => {
+    triggerHaptic('light');
+    setSelectedDueProducts(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      const total = updated.reduce((s, it) => s + (it.quantity * it.price), 0);
+      setAddDueAmount(total > 0 ? total.toString() : '');
+      setAddDueItems(updated.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', '));
+      return updated;
+    });
+  };
+
   const handleAddDueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showAddDueModal?.id || !addDueAmount) return;
     setAddDueSubmitting(true);
     try {
+      const summary = addDueItems || (selectedDueProducts.length > 0 ? selectedDueProducts.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', ') : 'বাকি পণ্য সামগ্রী');
+      const itemsPayload = selectedDueProducts.map(i => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+        unit: i.unit
+      }));
+
       const res = await fetch('/api/customers/add-due', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: showAddDueModal.id,
           amount: Number(addDueAmount) || 0,
-          itemsSummary: addDueItems || 'বাকি পণ্য সামগ্রী'
+          itemsSummary: summary,
+          items: itemsPayload
         })
       });
       if (res.ok) {
-        await loadCustomers();
-        speakAnnouncement(`${showAddDueModal.name} এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ করা হয়েছে।`);
+        await Promise.all([loadCustomers(), loadProducts()]);
+        speakAnnouncement(`${showAddDueModal.name} এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ ও স্টক মাইনাস হয়েছে।`);
         triggerHaptic('success');
-        setNotice(`✓ "${showAddDueModal.name}" এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ হয়েছে!`);
+        setNotice(`✓ "${showAddDueModal.name}" এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ হয়েছে (স্টক আপডেট সম্পন্ন)!`);
         setShowAddDueModal(null);
         setAddDueAmount('');
         setAddDueItems('');
+        setSelectedDueProducts([]);
+        setProductSearch('');
         setTimeout(() => setNotice(''), 4000);
       }
     } catch (e) {
@@ -134,9 +229,11 @@ export default function KhataPage() {
 
   useEffect(() => {
     loadCustomers();
+    loadProducts();
 
     const handleVoiceSuccess = () => {
       loadCustomers();
+      loadProducts();
     };
 
     window.addEventListener('voice-action-success', handleVoiceSuccess);
@@ -630,6 +727,9 @@ export default function KhataPage() {
                       setShowAddDueModal(c);
                       setAddDueAmount('');
                       setAddDueItems('');
+                      setSelectedDueProducts([]);
+                      setProductSearch('');
+                      setDueMode('stock');
                     }}
                     style={{
                       background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
@@ -645,7 +745,7 @@ export default function KhataPage() {
                       gap: '4px',
                       boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
                     }}
-                    title="গ্রাহকের খাতায় নতুন বাকি পণ্য যোগ করুন"
+                    title="গ্রাহকের খাতায় স্টক পণ্য থেকে বাকি মেমো যোগ করুন"
                   >
                     <span>➕</span> বাকি দিন
                   </button>
@@ -763,132 +863,415 @@ export default function KhataPage() {
         />
       )}
 
-      {/* Quick Add Due (বাকি দিন ও ফর্দ এন্ট্রি) Modal */}
+      {/* Quick Add Due (বাকি দিন ও স্টক ফর্দ এন্ট্রি) Modal */}
       {showAddDueModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
           zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
         }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '520px', maxHeight: '92vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '22px' }}>🛍️</span>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
-                  নতুন বাকি ও পণ্যের ফর্দ এন্ট্রি
-                </h3>
+                <span style={{ fontSize: '24px' }}>📦</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                    বাকি মেমো ও স্টক এন্ট্রি
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    স্টক পণ্য থেকে সরাসরি বাকি মেমো তৈরি
+                  </span>
+                </div>
               </div>
-              <button onClick={() => setShowAddDueModal(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowAddDueModal(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
-              <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block' }}>{showAddDueModal.name}</strong>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+            {/* Customer Info Pill */}
+            <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '14px', marginBottom: '14px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block' }}>{showAddDueModal.name}</strong>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>📱 {showAddDueModal.phone}</span>
-                <span style={{ fontSize: '12.5px', color: '#dc2626', fontWeight: '800' }}>
-                  বর্তমান বকেয়া: ৳{Number(showAddDueModal.totalDue || showAddDueModal.total_due || 0).toLocaleString('en-US')}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>বর্তমান বকেয়া</span>
+                <span style={{ fontSize: '14px', color: '#dc2626', fontWeight: '900' }}>
+                  ৳{Number(showAddDueModal.totalDue || showAddDueModal.total_due || 0).toLocaleString('en-US')}
                 </span>
               </div>
             </div>
 
-            <form onSubmit={handleAddDueSubmit} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-                    বাকি টাকার পরিমাণ: *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => startVoiceInputForField(setAddDueAmount, true)}
-                    style={{
-                      background: '#fee2e2',
-                      border: '1px solid #fca5a5',
-                      borderRadius: '8px',
-                      padding: '3px 8px',
-                      fontSize: '11.5px',
-                      color: '#dc2626',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontWeight: '800'
-                    }}
-                    title="টাকা মুখে বলুন"
-                  >
-                    <span>🎙️</span>
-                    <span>মুখে বলুন</span>
-                  </button>
-                </div>
-                <input
-                  type="number"
-                  value={addDueAmount}
-                  onChange={(e) => setAddDueAmount(e.target.value)}
-                  className="num-font"
-                  required
-                  autoFocus
-                  placeholder="যেমন: ৭৫০"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    border: '1.5px solid #ef4444',
-                    fontSize: '18px',
-                    fontWeight: '900',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
+            {/* Mode Toggle */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#f1f5f9', padding: '4px', borderRadius: '12px', marginBottom: '14px', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setDueMode('stock')}
+                style={{
+                  background: dueMode === 'stock' ? '#fff' : 'transparent',
+                  color: dueMode === 'stock' ? '#dc2626' : '#64748b',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: '9px',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: dueMode === 'stock' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px'
+                }}
+              >
+                <span>📦</span> স্টক পণ্য বাছাই
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueMode('custom')}
+                style={{
+                  background: dueMode === 'custom' ? '#fff' : 'transparent',
+                  color: dueMode === 'custom' ? '#0f172a' : '#64748b',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: '9px',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: dueMode === 'custom' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '5px'
+                }}
+              >
+                <span>✍️</span> সাধারণ নোট
+              </button>
+            </div>
 
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-                    কী কী পণ্য নিয়েছে / কিসের বাকি (ফর্দ):
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => startVoiceInputForField(setAddDueItems, false)}
-                    style={{
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      borderRadius: '8px',
-                      padding: '3px 8px',
-                      fontSize: '11.5px',
-                      color: '#2563eb',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontWeight: '800'
-                    }}
-                    title="পণ্যের নাম মুখে বলুন"
-                  >
-                    <span>🎙️</span>
-                    <span>মুখে বলুন</span>
-                  </button>
-                </div>
-                <textarea
-                  value={addDueItems}
-                  onChange={(e) => setAddDueItems(e.target.value)}
-                  rows={3}
-                  placeholder="যেমন: তীর তেল ১ লিটার, চিনি ২ কেজি, সাবান ২টি"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: '1.5px solid #cbd5e1',
-                    fontSize: '13.5px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit',
-                    resize: 'none'
-                  }}
-                />
-              </div>
+            <form onSubmit={handleAddDueSubmit} style={{ display: 'grid', gap: '14px' }}>
+              {dueMode === 'stock' ? (
+                <>
+                  {/* Stock Product Search & Quick Picker */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>
+                        📦 স্টক থেকে পণ্য সার্চ ও বাছাই করুন:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField(setProductSearch, false)}
+                        style={{
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '8px',
+                          padding: '3px 8px',
+                          fontSize: '11.5px',
+                          color: '#2563eb',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: '800'
+                        }}
+                        title="পণ্যের নাম মুখে বলুন"
+                      >
+                        <span>🎙️</span>
+                        <span>মুখে বলুন</span>
+                      </button>
+                    </div>
+
+                    <div style={{ position: 'relative', marginBottom: '8px' }}>
+                      <input
+                        type="text"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="পণ্য খুঁজুন (যেমন: তেল, চিনি, সাবান, চাল...)"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: '13.5px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                      {productSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setProductSearch('')}
+                          style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtered Products Horizontal Scroll / Grid */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                      gap: '8px',
+                      maxHeight: '140px',
+                      overflowY: 'auto',
+                      padding: '4px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1px dashed #cbd5e1'
+                    }}>
+                      {products
+                        .filter(p => !productSearch || (p.banglaName || p.name || '').toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch)))
+                        .slice(0, 12)
+                        .map(p => {
+                          const stockCount = Number(p.stock || 0);
+                          const isOutOfStock = stockCount <= 0;
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => addProductToDue(p)}
+                              style={{
+                                background: '#fff',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '16px' }}>{p.icon || '📦'}</span>
+                                <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {p.banglaName || p.name}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                                <span style={{ color: '#16a34a', fontWeight: '800' }}>৳{p.sellingPrice || p.selling_price}</span>
+                                <span style={{ color: isOutOfStock ? '#ef4444' : '#64748b', fontWeight: '600' }}>
+                                  {isOutOfStock ? 'মজুত শেষ' : `মজুত: ${stockCount}`}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {products.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                          কোনো পণ্য পাওয়া যায়নি
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selected Items Memo List */}
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', display: 'block', marginBottom: '6px' }}>
+                      📋 নির্বাচিত বাকি পণ্যের তালিকা ({selectedDueProducts.length}টি):
+                    </label>
+
+                    {selectedDueProducts.length === 0 ? (
+                      <div style={{ padding: '16px', background: '#fff1f2', border: '1px dashed #fecdd3', borderRadius: '12px', textAlign: 'center', color: '#9f1239', fontSize: '12.5px' }}>
+                        👆 উপরের তালিকা থেকে পণ্য সিলেক্ট করুন। সিলেক্ট করা পণ্যের দাম অনুযায়ী স্বয়ংক্রিয়ভাবে বাকি হিসাব হবে এবং ইনভেন্টরি স্টক মাইনাস হবে।
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '2px' }}>
+                        {selectedDueProducts.map((item, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0',
+                              padding: '8px 10px',
+                              borderRadius: '10px'
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0, marginRight: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{item.icon || '📦'}</span>
+                                <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {item.name}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                ৳{item.price}/{item.unit || 'পিস'} | মজুত: {item.stock ?? '-'}
+                              </div>
+                            </div>
+
+                            {/* Qty Controls */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '10px' }}>
+                              <button
+                                type="button"
+                                onClick={() => updateDueItemQty(idx, -1)}
+                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                              >
+                                -
+                              </button>
+                              <span style={{ fontSize: '13px', fontWeight: '800', minWidth: '32px', textAlign: 'center' }}>
+                                {item.quantity} {item.unit || ''}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateDueItemQty(idx, 1)}
+                                style={{ width: '26px', height: '26px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Total Price & Remove */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '900', color: '#dc2626', minWidth: '55px', textAlign: 'right' }}>
+                                ৳{Math.round(item.quantity * item.price)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeDueItem(idx)}
+                                style={{ background: '#fee2e2', border: 'none', color: '#ef4444', width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary & Price Display */}
+                  <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', padding: '12px 14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#991b1b', fontWeight: '700', display: 'block' }}>
+                        মোট বাকি হিসাব (স্টক মাইনাস হবে)
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#dc2626' }}>
+                        {selectedDueProducts.length}টি পণ্য নির্বাচিত
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '800', color: '#dc2626' }}>৳</span>
+                      <input
+                        type="number"
+                        value={addDueAmount}
+                        onChange={(e) => setAddDueAmount(e.target.value)}
+                        required
+                        style={{
+                          width: '100px',
+                          padding: '6px 8px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #ef4444',
+                          fontSize: '16px',
+                          fontWeight: '900',
+                          color: '#dc2626',
+                          background: '#fff',
+                          textAlign: 'right'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                        বাকি টাকার পরিমাণ: *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField(setAddDueAmount, true)}
+                        style={{
+                          background: '#fee2e2',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '8px',
+                          padding: '3px 8px',
+                          fontSize: '11.5px',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: '800'
+                        }}
+                        title="টাকা মুখে বলুন"
+                      >
+                        <span>🎙️</span>
+                        <span>মুখে বলুন</span>
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={addDueAmount}
+                      onChange={(e) => setAddDueAmount(e.target.value)}
+                      className="num-font"
+                      required
+                      placeholder="যেমন: ৭৫০"
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #ef4444',
+                        fontSize: '18px',
+                        fontWeight: '900',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                        কী কী পণ্য নিয়েছে / কিসের বাকি (ফর্দ):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField(setAddDueItems, false)}
+                        style={{
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '8px',
+                          padding: '3px 8px',
+                          fontSize: '11.5px',
+                          color: '#2563eb',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: '800'
+                        }}
+                        title="পণ্যের নাম মুখে বলুন"
+                      >
+                        <span>🎙️</span>
+                        <span>মুখে বলুন</span>
+                      </button>
+                    </div>
+                    <textarea
+                      value={addDueItems}
+                      onChange={(e) => setAddDueItems(e.target.value)}
+                      rows={3}
+                      placeholder="যেমন: তীর তেল ১ লিটার, চিনি ২ কেজি, সাবান ২টি"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13.5px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        fontFamily: 'inherit',
+                        resize: 'none'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
 
               <button
                 type="submit"
-                disabled={addDueSubmitting}
+                disabled={addDueSubmitting || !addDueAmount || Number(addDueAmount) <= 0}
                 style={{
                   background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   color: '#fff',
@@ -897,11 +1280,16 @@ export default function KhataPage() {
                   borderRadius: '12px',
                   fontWeight: '800',
                   fontSize: '14.5px',
-                  cursor: addDueSubmitting ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
+                  cursor: (addDueSubmitting || !addDueAmount) ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
                 }}
               >
-                {addDueSubmitting ? 'যোগ হচ্ছে...' : '✓ বাকি খাতায় যোগ করুন'}
+                <span>✓</span>
+                <span>{addDueSubmitting ? 'যোগ হচ্ছে ও স্টক আপডেট হচ্ছে...' : `বাকি মেমো নিশ্চিত করুন (৳${Number(addDueAmount || 0).toLocaleString('en-US')})`}</span>
               </button>
             </form>
           </div>
