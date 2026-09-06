@@ -4,9 +4,15 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+import fs from 'fs';
+
 const fastify = Fastify({ logger: true });
 
-const dbPath = path.resolve(__dirname, '../../../local-business-os.db');
+// Resolve DB path safely for both local monorepo and standalone cloud deployments (Render/Railway/Docker)
+const candidate1 = path.resolve(__dirname, '../../../local-business-os.db');
+const candidate2 = path.resolve(process.cwd(), 'local-business-os.db');
+const dbPath = process.env.DB_PATH || (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1)) ? candidate1 : candidate2);
+console.log(`[DB] Using SQLite Database at: ${dbPath}`);
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 

@@ -1,6 +1,7 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { apiUrl } from '../lib/config';
 
 export interface ShopFeatures {
   enableInstallments?: boolean;
@@ -363,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTenant(parsedTenant);
 
         // Verify status & updated features in background
-        fetch(`/api/tenants/${parsedTenant.id}/subscription-status`)
+        fetch(apiUrl(`/api/tenants/${parsedTenant.id}/subscription-status`))
           .then(res => res.json())
           .then(statusData => {
             if (statusData && statusData.shopId) {
@@ -393,7 +394,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Shopkeeper Login
   const loginShop = async (phone: string, pin: string) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'shop', phone, pin })
@@ -433,7 +434,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithPin = async (enteredPin: string) => {
     if (!tenant?.id) return { success: false, error: 'দোকান সিলেক্ট করা নেই' };
     try {
-      const res = await fetch('/api/staff/verify-pin', {
+      const res = await fetch(apiUrl('/api/staff/verify-pin'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId: tenant.id, pin: enteredPin })
@@ -460,7 +461,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Super Admin Login
   const loginAdmin = async (adminPasscode: string) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'admin', adminPasscode })
