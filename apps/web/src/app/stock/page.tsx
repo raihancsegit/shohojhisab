@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceStockInModal from '../../components/VoiceStockInModal';
+import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -1255,21 +1256,11 @@ export default function StockPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
-                  <select
+                  <IndustryUnitSelect
                     value={editForm.unit}
-                    onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', background: '#fff' }}
-                  >
-                    <option value="পিস">পিস</option>
-                    <option value="কেজি">কেজি</option>
-                    <option value="লিটার">লিটার</option>
-                    <option value="পাতা">পাতা (ফার্মেসি)</option>
-                    <option value="বোতল">বোতল</option>
-                    <option value="হালি">হালি (ডিম)</option>
-                    <option value="বক্স">বক্স</option>
-                    <option value="বস্তা">বস্তা</option>
-                    <option value="গজ">গজ</option>
-                  </select>
+                    onChange={(val) => setEditForm({ ...editForm, unit: val })}
+                    industryId={indId}
+                  />
                 </div>
               </div>
 
@@ -1462,38 +1453,11 @@ export default function StockPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
-                  <select
+                  <IndustryUnitSelect
                     value={addForm.unit}
-                    onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', background: '#fff' }}
-                  >
-                    <option value="পিস">পিস (Pieces)</option>
-                    <option value="কেজি">কেজি (Kilogram)</option>
-                    <option value="গ্রাম">গ্রাম (Gram)</option>
-                    <option value="লিটার">লিটার (Liter)</option>
-                    <option value="পাতা">পাতা (Strip - ফার্মেসি)</option>
-                    <option value="ট্যাবলেট">ট্যাবলেট (খুচরা ট্যাবলেট)</option>
-                    <option value="বোতল">বোতল (সিরাপ/ড্রপ)</option>
-                    <option value="বক্স">বক্স / কার্টন</option>
-                    <option value="টিউব">টিউব (মলম)</option>
-                    <option value="ড্রপ">ড্রপ</option>
-                    <option value="জোড়া">জোড়া (জুতা ও মোজা)</option>
-                    <option value="সেট">সেট (পোশাক)</option>
-                    <option value="গজ">গজ (কাপড়)</option>
-                    <option value="ফুট">ফুট (পাইপ ও তার)</option>
-                    <option value="ইঞ্চি">ইঞ্চি</option>
-                    <option value="মিটার">মিটার</option>
-                    <option value="রোল">রোল (টেপ)</option>
-                    <option value="বান্ডিল">বান্ডিল</option>
-                    <option value="বস্তা">বস্তা (সিমেন্ট/চাল)</option>
-                    <option value="প্লেট">প্লেট (খাবার)</option>
-                    <option value="হাফ প্লেট">হাফ প্লেট</option>
-                    <option value="কাপ">কাপ (চা/কফি)</option>
-                    <option value="গ্লাস">গ্লাস</option>
-                    <option value="হালি">হালি (ডিম/কলা)</option>
-                    <option value="শলা">শলা (সিগারেট)</option>
-                    <option value="খিলি">খিলি (পান)</option>
-                  </select>
+                    onChange={(val) => setAddForm({ ...addForm, unit: val })}
+                    industryId={indId}
+                  />
                 </div>
               </div>
 

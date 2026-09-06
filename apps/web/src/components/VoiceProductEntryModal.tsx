@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceProductEntry, VoiceProductEntryResult } from '../lib/voicePOSParser';
+import IndustryUnitSelect from './IndustryUnitSelect';
 
 interface VoiceProductEntryModalProps {
   isOpen: boolean;
@@ -446,11 +447,11 @@ export default function VoiceProductEntryModal({
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>একক (Unit)</label>
-                  <input
-                    type="text"
+                  <IndustryUnitSelect
                     value={parsedProduct.unit}
-                    onChange={e => setParsedProduct({ ...parsedProduct, unit: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontWeight: '800', fontSize: '13px' }}
+                    onChange={val => setParsedProduct({ ...parsedProduct, unit: val })}
+                    industryId={tenant?.industryId}
+                    style={{ padding: '8px 10px', borderRadius: '8px', fontSize: '12.5px' }}
                   />
                 </div>
 

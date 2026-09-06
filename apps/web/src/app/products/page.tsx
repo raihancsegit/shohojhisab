@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
+import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 
 export default function ProductsPage() {
   const { tenant, speakAnnouncement } = useAuth();
@@ -360,20 +361,11 @@ export default function ProductsPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>পরিমাপ ইউনিট:</label>
-                  <select
+                  <IndustryUnitSelect
                     value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', background: '#fff' }}
-                  >
-                    <option value="পিস">পিস</option>
-                    <option value="কেজি">কেজি</option>
-                    <option value="লিটার">লিটার</option>
-                    <option value="বস্তা">বস্তা</option>
-                    <option value="হালি">হালি</option>
-                    <option value="পাতা">পাতা (ওষুধ)</option>
-                    <option value="বক্স">বক্স</option>
-                    <option value="ফুট">ফুট</option>
-                  </select>
+                    onChange={setUnit}
+                    industryId={tenant?.industryId}
+                  />
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import { getIndustryTheme } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
+import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -3302,45 +3303,11 @@ export default function PosPage() {
 
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>একক (Unit)</label>
-                  <select
+                  <IndustryUnitSelect
                     value={quickAddUnit}
-                    onChange={(e) => setQuickAddUnit(e.target.value)}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px', fontWeight: '700' }}
-                  >
-                    {industryId === 'cat-pharmacy' ? (
-                      <>
-                        <option value="পাতা">পাতা (Strip)</option>
-                        <option value="পিস">পিস (Piece)</option>
-                        <option value="বোতল">বোতল (Bottle)</option>
-                        <option value="বক্স">বক্স (Box)</option>
-                        <option value="টিউব">টিউব (Tube)</option>
-                        <option value="প্যাকেট">প্যাকেট (Packet)</option>
-                      </>
-                    ) : industryId === 'cat-clothing' ? (
-                      <>
-                        <option value="পিস">পিস</option>
-                        <option value="সেট">সেট</option>
-                        <option value="জোড়া">জোড়া</option>
-                      </>
-                    ) : industryId === 'cat-hardware' ? (
-                      <>
-                        <option value="ফুট">ফুট</option>
-                        <option value="ইঞ্চি">ইঞ্চি</option>
-                        <option value="পিস">পিস</option>
-                        <option value="কেজি">কেজি</option>
-                        <option value="রোল">রোল</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="পিস">পিস</option>
-                        <option value="কেজি">কেজি</option>
-                        <option value="লিটার">লিটার</option>
-                        <option value="হালি">হালি</option>
-                        <option value="বস্তা">বস্তা</option>
-                        <option value="প্যাকেট">প্যাকেট</option>
-                      </>
-                    )}
-                  </select>
+                    onChange={setQuickAddUnit}
+                    industryId={industryId}
+                  />
                 </div>
               </div>
 
