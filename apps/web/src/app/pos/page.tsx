@@ -2011,100 +2011,196 @@ export default function PosPage() {
         gap: '12px',
         marginBottom: '20px'
       }}>
-        {paginatedProducts.map(p => (
-          <div
-            key={p.id}
-            onClick={() => addToCart(p)}
-            className="mobile-card clickable-card"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '12px 14px',
-              borderRadius: '18px',
-              border: '1.5px solid #f1f5f9',
-              background: '#ffffff',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '20px'
-                }}>
-                  {p.icon || '📦'}
-                </div>
-                <span style={{
-                  fontSize: '10.5px',
-                  fontWeight: '800',
-                  padding: '2px 8px',
-                  borderRadius: '8px',
-                  background: p.stock <= 5 ? '#fee2e2' : '#f8fafc',
-                  color: p.stock <= 5 ? '#dc2626' : '#64748b',
-                  border: `1px solid ${p.stock <= 5 ? '#fca5a5' : '#e2e8f0'}`
-                }}>
-                  স্টক: {p.stock} {p.unit}
-                </span>
-              </div>
+        {paginatedProducts.map(p => {
+          const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date();
+          const isExpiringSoon = p.expiryDate && !isExpired && (new Date(p.expiryDate).getTime() - new Date().getTime()) < 30 * 24 * 60 * 60 * 1000;
 
-              <h4 style={{ margin: '0 0 2px', fontSize: '13.5px', fontWeight: '800', color: '#0f172a', lineHeight: 1.25 }}>
-                {p.banglaName || p.name}
-              </h4>
-              <span style={{ fontSize: '10.5px', color: '#94a3b8', display: 'block' }}>
-                #{p.barcode}
-              </span>
-              {p.genericName && (
-                <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px' }}>
-                  🧪 {p.genericName}
-                </span>
-              )}
-              {p.size && (
-                <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
-                  🏷️ সাইজ: {p.size} {p.color ? `• ${p.color}` : ''}
-                </span>
-              )}
-              {p.expiryDate && (
-                <span style={{ fontSize: '10px', color: '#d97706', fontWeight: '600', display: 'block', marginTop: '2px' }}>
-                  ⏳ মেয়াদ: {p.expiryDate}
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #f1f5f9' }}>
+          return (
+            <div
+              key={p.id}
+              onClick={() => addToCart(p)}
+              className="mobile-card clickable-card"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '18px',
+                border: isExpired ? '1.5px solid #fca5a5' : '1.5px solid #f1f5f9',
+                background: '#ffffff',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
+              }}
+            >
               <div>
-                <span className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: '#059669' }}>
-                  ৳{p.sellingPrice}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '20px'
+                  }}>
+                    {p.icon || '📦'}
+                  </div>
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    padding: '2px 8px',
+                    borderRadius: '8px',
+                    background: p.stock <= 5 ? '#fee2e2' : '#f8fafc',
+                    color: p.stock <= 5 ? '#dc2626' : '#64748b',
+                    border: `1px solid ${p.stock <= 5 ? '#fca5a5' : '#e2e8f0'}`
+                  }}>
+                    স্টক: {p.stock} {p.unit}
+                  </span>
+                </div>
+
+                <h4 style={{ margin: '0 0 2px', fontSize: '13.5px', fontWeight: '800', color: '#0f172a', lineHeight: 1.25 }}>
+                  {p.banglaName || p.name}
+                </h4>
+                <span style={{ fontSize: '10.5px', color: '#94a3b8', display: 'block' }}>
+                  #{p.barcode}
                 </span>
-                {activeRoleMode === 'owner' && p.purchasePrice && (
-                  <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>
-                    কেনা: ৳{p.purchasePrice}
+                {p.genericName && (
+                  <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                    🧪 {p.genericName}
                   </span>
                 )}
+                {p.size && (
+                  <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                    🏷️ সাইজ: {p.size} {p.color ? `• ${p.color}` : ''}
+                  </span>
+                )}
+                {isExpired ? (
+                  <span style={{ fontSize: '9.5px', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                    🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
+                  </span>
+                ) : isExpiringSoon ? (
+                  <span style={{ fontSize: '9.5px', background: '#fef3c7', color: '#b45309', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                    ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
+                  </span>
+                ) : p.expiryDate ? (
+                  <span style={{ fontSize: '10px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    ⏳ মেয়াদ: {p.expiryDate}
+                  </span>
+                ) : null}
               </div>
-              <span style={{
-                background: '#ecfdf5',
-                color: '#059669',
-                border: '1px solid #a7f3d0',
-                width: '30px',
-                height: '30px',
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                fontWeight: '900',
-                fontSize: '16px'
-              }}>
-                +
-              </span>
+
+              <div>
+                {/* Industry-tailored Quick Sub-unit Chips on Product Card */}
+                {p.unit === 'পাতা' ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.1)}
+                      style={{
+                        flex: 1,
+                        background: '#ecfdf5',
+                        border: '1px solid #a7f3d0',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#065f46',
+                        cursor: 'pointer'
+                      }}
+                      title="১টি ট্যাবলেট বিক্রি করুন"
+                    >
+                      💊 ১ পিস
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#15803d',
+                        cursor: 'pointer'
+                      }}
+                      title="১ পুরো পাতা বিক্রি করুন"
+                    >
+                      ১ পাতা
+                    </button>
+                  </div>
+                ) : (p.unit === 'কেজি' || p.unit === 'লিটার') ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.25)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#166534',
+                        cursor: 'pointer'
+                      }}
+                      title="২৫০ গ্রাম (১ পোয়া)"
+                    >
+                      ১ পোয়া
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.5)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#166534',
+                        cursor: 'pointer'
+                      }}
+                      title="৫০০ গ্রাম (হাফ কেজি)"
+                    >
+                      হাফ কেজি
+                    </button>
+                  </div>
+                ) : null}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #f1f5f9' }}>
+                  <div>
+                    <span className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: '#059669' }}>
+                      ৳{p.sellingPrice}
+                    </span>
+                    {activeRoleMode === 'owner' && p.purchasePrice && (
+                      <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>
+                        কেনা: ৳{p.purchasePrice}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    border: '1px solid #a7f3d0',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: '900',
+                    fontSize: '15px'
+                  }}>
+                    +
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* POS Products Pagination */}

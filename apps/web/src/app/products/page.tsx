@@ -24,8 +24,11 @@ export default function ProductsPage() {
   const [stock, setStock] = useState('10');
   const [unit, setUnit] = useState('পিস');
   const [genericName, setGenericName] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
+  const [brand, setBrand] = useState('');
+  const [warranty, setWarranty] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -48,10 +51,13 @@ export default function ProductsPage() {
     setPurchasePrice('');
     setSellingPrice('');
     setStock('15');
-    setUnit(tenant?.industryId === 'cat-pharmacy' ? 'পাতা' : (tenant?.industryId === 'cat-hardware' ? 'ফুট' : 'পিস'));
+    setUnit(tenant?.industryId === 'cat-pharmacy' ? 'পাতা' : (tenant?.industryId === 'cat-hardware' ? 'ফুট' : tenant?.industryId === 'cat-shoes' ? 'জোড়া' : tenant?.industryId === 'cat-grocery' ? 'কেজি' : 'পিস'));
     setGenericName('');
+    setExpiryDate('');
     setSize('');
     setColor('');
+    setBrand('');
+    setWarranty('');
     setShowModal(true);
   };
 
@@ -65,8 +71,11 @@ export default function ProductsPage() {
     setStock(String(p.stock || '0'));
     setUnit(p.unit || 'পিস');
     setGenericName(p.genericName || '');
+    setExpiryDate(p.expiryDate || '');
     setSize(p.size || '');
     setColor(p.color || '');
+    setBrand(p.brand || '');
+    setWarranty(p.warranty || '');
     setShowModal(true);
   };
 
@@ -86,8 +95,11 @@ export default function ProductsPage() {
       stock: Number(stock) || 0,
       unit,
       genericName: genericName || null,
+      expiryDate: expiryDate || null,
       size: size || null,
-      color: color || null
+      color: color || null,
+      brand: brand || null,
+      warranty: warranty || null
     };
 
     try {
@@ -140,7 +152,15 @@ export default function ProductsPage() {
 
   const filtered = products.filter(p => {
     const q = search.toLowerCase();
-    return (p.banglaName && p.banglaName.toLowerCase().includes(q)) || (p.name && p.name.toLowerCase().includes(q)) || (p.barcode && p.barcode.includes(q)) || (p.genericName && p.genericName.toLowerCase().includes(q));
+    return (
+      (p.banglaName && p.banglaName.toLowerCase().includes(q)) ||
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.barcode && p.barcode.includes(q)) ||
+      (p.genericName && p.genericName.toLowerCase().includes(q)) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      (p.size && p.size.toLowerCase().includes(q)) ||
+      (p.color && p.color.toLowerCase().includes(q))
+    );
   });
 
   return (
@@ -225,7 +245,7 @@ export default function ProductsPage() {
       <div style={{ marginBottom: '14px' }}>
         <input
           type="text"
-          placeholder="🔍 পণ্য বা বারকোড খুঁজুন..."
+          placeholder="🔍 পণ্য, জেনেরিক বা বারকোড খুঁজুন..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '1.5px solid #cbd5e1', outline: 'none', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}
@@ -236,6 +256,9 @@ export default function ProductsPage() {
       <div style={{ display: 'grid', gap: '10px' }}>
         {filtered.map(p => {
           const isLow = p.stock <= (p.lowStockThreshold || 5);
+          const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date();
+          const isExpiringSoon = p.expiryDate && !isExpired && (new Date(p.expiryDate).getTime() - new Date().getTime()) < 30 * 24 * 60 * 60 * 1000;
+
           return (
             <div
               key={p.id}
@@ -255,7 +278,31 @@ export default function ProductsPage() {
                   <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>
                     {p.banglaName || p.name}
                   </h4>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                  {p.genericName && (
+                    <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '1px' }}>
+                      🧪 {p.genericName}
+                    </span>
+                  )}
+                  {p.size && (
+                    <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                      🏷️ সাইজ: {p.size} {p.color ? `• ${p.color}` : ''}
+                    </span>
+                  )}
+                  {isExpired ? (
+                    <span style={{ fontSize: '10px', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                      🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
+                    </span>
+                  ) : isExpiringSoon ? (
+                    <span style={{ fontSize: '10px', background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                      ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
+                    </span>
+                  ) : p.expiryDate ? (
+                    <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
+                      ⏳ মেয়াদ: {p.expiryDate}
+                    </span>
+                  ) : null}
+
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
                     <span>কেনা: ৳{p.purchasePrice} • </span>
                     <span style={{ color: '#16a34a', fontWeight: '800' }}>বিক্রি: ৳{p.sellingPrice}</span>
                     <span style={{ color: '#059669', display: 'block', fontSize: '11px' }}>
@@ -292,7 +339,7 @@ export default function ProductsPage() {
       {/* Add / Edit Product Modal */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px' }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 14px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
               {editingProd ? 'পণ্য এডিট ও আপডেট' : 'নতুন পণ্য যুক্ত করুন'}
             </h3>
@@ -302,7 +349,7 @@ export default function ProductsPage() {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম (বাংলা): *</label>
                 <input
                   type="text"
-                  placeholder="যেমন: তীর সয়াবিন তেল ১ লিটার"
+                  placeholder="যেমন: নাপা এক্সট্রা, চিনি ১ কেজি, সুতি শার্ট"
                   value={banglaName}
                   onChange={(e) => setBanglaName(e.target.value)}
                   required
@@ -369,40 +416,88 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {/* 💊 PHARMACY SPECIFIC FIELDS */}
               {tenant?.industryId === 'cat-pharmacy' && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#0284c7', marginBottom: '4px' }}>জেনেরিক নাম (ঔষধের উপাদান):</label>
-                  <input
-                    type="text"
-                    placeholder="যেমন: Paracetamol + Caffeine"
-                    value={genericName}
-                    onChange={(e) => setGenericName(e.target.value)}
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #38bdf8', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              )}
-
-              {tenant?.industryId === 'cat-clothing' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#db2777', marginBottom: '4px' }}>সাইজ (L, XL, 32):</label>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম (উপাদান):</label>
                     <input
                       type="text"
-                      placeholder="L / XL / 32"
-                      value={size}
-                      onChange={(e) => setSize(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                      placeholder="যেমন: Paracetamol + Caffeine"
+                      value={genericName}
+                      onChange={(e) => setGenericName(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#db2777', marginBottom: '4px' }}>রং (Color):</label>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণ তারিখ:</label>
                     <input
-                      type="text"
-                      placeholder="সাদা / নীল"
-                      value={color}
-                      onChange={(e) => setColor(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* 👗 CLOTHING & SHOES SPECIFIC FIELDS */}
+              {(tenant?.industryId === 'cat-clothing' || tenant?.industryId === 'cat-shoes') && (
+                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#5b21b6' }}>
+                    {tenant?.industryId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
+                      <input
+                        type="text"
+                        placeholder={tenant?.industryId === 'cat-shoes' ? '40, 41, 42' : 'M, L, XL, 32'}
+                        value={size}
+                        onChange={(e) => setSize(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
+                      <input
+                        type="text"
+                        placeholder="কালো / নীল / লাল"
+                        value={color}
+                        onChange={(e) => setColor(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 📱 MOBILE SPECIFIC FIELDS */}
+              {tenant?.industryId === 'cat-mobile' && (
+                <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 গ্যাজেট ব্র্যান্ড ও ওয়ারেন্টি:</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                      <input
+                        type="text"
+                        placeholder="Samsung, Xiaomi"
+                        value={brand}
+                        onChange={(e) => setBrand(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি:</label>
+                      <input
+                        type="text"
+                        placeholder="১ বছর"
+                        value={warranty}
+                        onChange={(e) => setWarranty(e.target.value)}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
