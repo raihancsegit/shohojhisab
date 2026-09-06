@@ -254,44 +254,44 @@ export default function KhataPage() {
         style={{
           background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
           border: '1.5px solid #fca5a5',
-          borderRadius: '18px',
-          padding: '14px 16px',
-          marginBottom: '18px',
+          borderRadius: '14px',
+          padding: '10px 12px',
+          marginBottom: '14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(239, 68, 68, 0.12)',
+          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.1)',
           transition: 'transform 0.15s ease'
         }}
         className="clickable-card"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
-            width: '42px',
-            height: '42px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
             background: '#ef4444',
             color: '#fff',
             display: 'grid',
             placeItems: 'center',
-            fontSize: '20px',
-            boxShadow: '0 0 0 6px rgba(239, 68, 68, 0.2)'
+            fontSize: '16px',
+            flexShrink: 0
           }}>
             🎙️
           </div>
           <div>
-            <div style={{ fontWeight: '800', fontSize: '15px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              ভয়েস দিয়ে সরাসরি বাকি খাতা এন্ট্রি করুন
-              <span style={{ fontSize: '10px', background: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Live AI</span>
+            <div style={{ fontWeight: '800', fontSize: '13px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ভয়েসে বাকি খাতা এন্ট্রি
+              <span style={{ fontSize: '9px', background: '#ef4444', color: '#fff', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase' }}>AI</span>
             </div>
-            <div style={{ fontSize: '12.5px', color: '#b91c1c', marginTop: '2px' }}>
-              ক্লিক করে বলুন: <em>"রহিম এর খাতায় ৫০০ টাকা বাকি লেখো"</em> বা <em>"করিম ভাই ১০০০ টাকা জমা দিল"</em>
+            <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '1px' }}>
+              বলুন: <em>"রহিম এর খাতায় ৫০০ টাকা বাকি লেখো"</em>
             </div>
           </div>
         </div>
-        <span style={{ fontSize: '12px', fontWeight: '800', color: '#b91c1c', background: '#fff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #fca5a5' }}>
-          শুরু করুন ➔
+        <span style={{ fontSize: '11px', fontWeight: '800', color: '#b91c1c', background: '#fff', padding: '4px 8px', borderRadius: '6px', border: '1px solid #fca5a5', flexShrink: 0 }}>
+          শুরু ➔
         </span>
       </div>
 
@@ -301,40 +301,40 @@ export default function KhataPage() {
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '14px',
-        marginBottom: '20px'
+        gap: '10px',
+        marginBottom: '16px'
       }}>
         <div>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: theme.textPrimary, background: theme.headerBadgeBg, padding: '3px 10px', borderRadius: '99px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: theme.textPrimary, background: theme.headerBadgeBg, padding: '2px 8px', borderRadius: '99px' }}>
             {theme.icon} {theme.khataLabel}
           </span>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px' }}>
+          <h1 style={{ fontSize: 'clamp(17px, 4.5vw, 22px)', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px' }}>
             {theme.khataLabel} ও বকেয়া আদায়
           </h1>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-            বাকি হিসাব রাখুন এবং ১-ক্লিকে কাস্টমারদের হোয়াটসঅ্যাপে তাগাদা পাঠান
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+            বাকি হিসাব রাখুন ও হোয়াটসঅ্যাপে তাগাদা পাঠান
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button
             onClick={handleExportKhata}
             style={{
               background: '#047857',
               color: '#fff',
               border: 'none',
-              padding: '12px 18px',
-              borderRadius: '12px',
+              padding: '8px 12px',
+              borderRadius: '10px',
               fontWeight: '800',
-              fontSize: '13.5px',
+              fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(4, 120, 87, 0.2)',
+              boxShadow: '0 2px 8px rgba(4, 120, 87, 0.2)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px'
             }}
           >
-            <span>📥</span> এক্সেল / CSV ডাউনলোড
+            <span>📥</span> এক্সেল / CSV
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -342,18 +342,18 @@ export default function KhataPage() {
               background: theme.primaryGradient,
               color: '#fff',
               border: 'none',
-              padding: '12px 20px',
-              borderRadius: '12px',
+              padding: '8px 12px',
+              borderRadius: '10px',
               fontWeight: '800',
-              fontSize: '13.5px',
+              fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px'
             }}
           >
-            <span>➕</span> নতুন বাকি খাতা এন্ট্রি
+            <span>➕</span> নতুন বাকি খাতা
           </button>
         </div>
       </div>

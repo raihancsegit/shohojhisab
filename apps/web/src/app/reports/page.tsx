@@ -159,22 +159,22 @@ export default function ReportsPage() {
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '14px',
-        marginBottom: '20px'
+        gap: '10px',
+        marginBottom: '16px'
       }}>
         <div>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', background: '#ecfdf5', padding: '3px 10px', borderRadius: '99px' }}>
-            📊 পূর্ণাঙ্গ বিজনেস ইন্টেলিজেন্স ও লাভ-ক্ষতি
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '99px' }}>
+            📊 পূর্ণাঙ্গ বিজনেস অ্যানালিটিক্স
           </span>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '6px 0 2px' }}>
+          <h1 style={{ fontSize: 'clamp(17px, 4.5vw, 22px)', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px' }}>
             দোকানের সার্বিক রিপোর্ট ও অ্যানালিটিক্স
           </h1>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-            {tenant?.shopName} • লাভ-ক্ষতি, পিক-আওয়ার, সেরা/পড়ে থাকা পণ্য ও ক্যাশ মেলানো
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+            {tenant?.shopName} • লাভ-ক্ষতি, পিক-আওয়ার, সেরা পণ্য ও ক্যাশ মেলানো
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {/* Day-End Cash Closing Slip Button */}
           <button
             onClick={() => { setShowDayEndModal(true); triggerHaptic('light'); }}
@@ -182,18 +182,18 @@ export default function ReportsPage() {
               background: '#0f172a',
               color: '#fff',
               border: 'none',
-              padding: '12px 18px',
-              borderRadius: '14px',
+              padding: '8px 12px',
+              borderRadius: '10px',
               fontWeight: '800',
-              fontSize: '13.5px',
+              fontSize: '12px',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.15)'
             }}
           >
-            <span>🖨️</span> দিন শেষের ক্যাশ মেলানো
+            <span>🖨️</span> দিন শেষের ক্যাশ
           </button>
 
           <button
@@ -202,18 +202,18 @@ export default function ReportsPage() {
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#fff',
               border: 'none',
-              padding: '12px 18px',
-              borderRadius: '14px',
+              padding: '8px 12px',
+              borderRadius: '10px',
               fontWeight: '800',
-              fontSize: '13.5px',
+              fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '4px'
             }}
           >
-            <span>📥</span> Excel / CSV ডাউনলোড
+            <span>📥</span> Excel / CSV
           </button>
         </div>
       </div>
@@ -222,19 +222,19 @@ export default function ReportsPage() {
       <div style={{
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
-        borderRadius: '16px',
-        padding: '8px',
-        marginBottom: '22px',
-        display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+        borderRadius: '14px',
+        padding: '5px',
+        marginBottom: '16px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '6px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
       }}>
         {[
-          { key: 'today', label: '⚡ আজকের হিসাব', icon: '☀️' },
-          { key: '3days', label: '📅 গত ৩ দিনের', icon: '🕒' },
-          { key: 'week', label: '📊 সাপ্তাহিক (৭ দিন)', icon: '📈' },
-          { key: 'month', label: '🗓️ মাসিক (৩০ দিন)', icon: '🗓️' },
+          { key: 'today', label: 'আজকের হিসাব', icon: '☀️' },
+          { key: '3days', label: 'গত ৩ দিনের', icon: '🕒' },
+          { key: 'week', label: 'সাপ্তাহিক (৭ দিন)', icon: '📈' },
+          { key: 'month', label: 'মাসিক (৩০ দিন)', icon: '🗓️' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -244,21 +244,18 @@ export default function ReportsPage() {
               triggerHaptic('light');
             }}
             style={{
-              flex: 1,
-              minWidth: '130px',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '7px 8px',
+              borderRadius: '9px',
               border: 'none',
               background: period === tab.key ? '#10b981' : '#f8fafc',
               color: period === tab.key ? '#ffffff' : '#475569',
               fontWeight: '800',
-              fontSize: '13px',
+              fontSize: '11.5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              boxShadow: period === tab.key ? '0 4px 12px rgba(16, 185, 129, 0.25)' : 'none',
+              gap: '4px',
               transition: 'all 0.15s ease'
             }}
           >

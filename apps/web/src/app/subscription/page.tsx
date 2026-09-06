@@ -209,50 +209,52 @@ export default function SubscriptionPage() {
     <div className="app-container" style={{ maxWidth: '1120px', margin: '0 auto', paddingBottom: '60px' }}>
       
       {/* Header Banner */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '5px',
           background: '#ecfdf5',
           color: '#059669',
-          padding: '6px 16px',
+          padding: '4px 12px',
           borderRadius: '99px',
-          fontSize: '13px',
+          fontSize: '11.5px',
           fontWeight: '800',
           border: '1px solid #a7f3d0'
         }}>
           <span>💎 ShohojHisab সাবস্ক্রিপশন ও লাইসেন্স</span>
         </div>
 
-        <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', marginTop: '12px', marginBottom: '6px', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: 'clamp(18px, 4.5vw, 26px)', fontWeight: '900', color: '#0f172a', marginTop: '8px', marginBottom: '4px', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
           আপনার ব্যবসার পরিধি অনুযায়ী সঠিক প্ল্যান বেছে নিন
         </h1>
-        <p style={{ fontSize: '15px', color: '#64748b', maxWidth: '580px', margin: '0 auto' }}>
+        <p style={{ fontSize: '12.5px', color: '#64748b', maxWidth: '520px', margin: '0 auto', lineHeight: 1.4 }}>
           বিকাশ বা নগদ দিয়ে সহজে ১ মিনিটে লাইসেন্স সক্রিয় করুন। কোনো অতিরিক্ত বা লুকানো চার্জ নেই।
         </p>
 
         {/* Current Active Plan Status Pill */}
         {tenant && (
           <div style={{
-            marginTop: '16px',
+            marginTop: '10px',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             background: '#f8fafc',
-            border: '1.5px solid #e2e8f0',
-            padding: '6px 16px',
-            borderRadius: '12px',
-            fontSize: '13.5px',
-            color: '#334155'
+            border: '1px solid #e2e8f0',
+            padding: '4px 12px',
+            borderRadius: '10px',
+            fontSize: '12px',
+            color: '#334155',
+            flexWrap: 'wrap',
+            justifyContent: 'center'
           }}>
-            <span>🏬 বর্তমান দোকান: <strong>{tenant.shopName}</strong></span>
+            <span>🏬 দোকান: <strong>{tenant.shopName}</strong></span>
             <span>•</span>
-            <span>বর্তমান প্ল্যান: <strong style={{ color: '#4f46e5' }}>{tenant.planName || tenant.planId || 'প্রো শপ'}</strong></span>
+            <span>প্ল্যান: <strong style={{ color: '#4f46e5' }}>{tenant.planName || tenant.planId || 'প্রো শপ'}</strong></span>
             {tenant.paidTill && (
               <>
                 <span>•</span>
-                <span>মেয়াদ: <strong>{tenant.paidTill}</strong> পর্যন্ত</span>
+                <span>মেয়াদ: <strong>{tenant.paidTill}</strong></span>
               </>
             )}
           </div>
@@ -263,24 +265,24 @@ export default function SubscriptionPage() {
           display: 'inline-flex',
           alignItems: 'center',
           background: '#f1f5f9',
-          padding: '4px',
-          borderRadius: '14px',
-          marginTop: '24px',
-          border: '1.5px solid #e2e8f0'
+          padding: '3px',
+          borderRadius: '12px',
+          marginTop: '16px',
+          border: '1px solid #e2e8f0'
         }}>
           <button
             type="button"
             onClick={() => { setBillingCycle('monthly'); setPromoDiscount(0); }}
             style={{
-              padding: '8px 20px',
-              borderRadius: '10px',
-              fontSize: '14px',
+              padding: '6px 14px',
+              borderRadius: '9px',
+              fontSize: '12.5px',
               fontWeight: '800',
               border: 'none',
               cursor: 'pointer',
               background: billingCycle === 'monthly' ? '#ffffff' : 'transparent',
               color: billingCycle === 'monthly' ? '#0f172a' : '#64748b',
-              boxShadow: billingCycle === 'monthly' ? '0 2px 8px rgba(15, 23, 42, 0.08)' : 'none',
+              boxShadow: billingCycle === 'monthly' ? '0 2px 6px rgba(15, 23, 42, 0.08)' : 'none',
               transition: 'all 0.2s ease'
             }}
           >
@@ -291,28 +293,28 @@ export default function SubscriptionPage() {
             type="button"
             onClick={() => { setBillingCycle('yearly'); setPromoDiscount(0); }}
             style={{
-              padding: '8px 20px',
-              borderRadius: '10px',
-              fontSize: '14px',
+              padding: '6px 14px',
+              borderRadius: '9px',
+              fontSize: '12.5px',
               fontWeight: '800',
               border: 'none',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               background: billingCycle === 'yearly' ? '#059669' : 'transparent',
               color: billingCycle === 'yearly' ? '#ffffff' : '#64748b',
-              boxShadow: billingCycle === 'yearly' ? '0 2px 10px rgba(5, 150, 105, 0.25)' : 'none',
+              boxShadow: billingCycle === 'yearly' ? '0 2px 8px rgba(5, 150, 105, 0.25)' : 'none',
               transition: 'all 0.2s ease'
             }}
           >
             <span>বাৎসরিক বিলিং (Yearly)</span>
             <span style={{
               background: billingCycle === 'yearly' ? '#ffffff' : '#ecfdf5',
-              color: billingCycle === 'yearly' ? '#059669' : '#059669',
-              padding: '2px 8px',
+              color: '#059669',
+              padding: '1px 6px',
               borderRadius: '99px',
-              fontSize: '11px',
+              fontSize: '10px',
               fontWeight: '900'
             }}>
               ২ মাস ফ্রি 🔥
