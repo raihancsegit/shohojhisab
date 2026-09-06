@@ -1611,53 +1611,101 @@ export default function KhataPage() {
               {ledgerLoading ? (
                 <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>ফর্দ লোড হচ্ছে...</div>
               ) : selectedLedger.ledger && selectedLedger.ledger.length > 0 ? (
-                selectedLedger.ledger.map((entry: any) => (
-                  <div 
-                    key={entry.id} 
-                    style={{ 
-                      background: '#f8fafc', 
-                      border: '1.5px solid #e2e8f0', 
-                      borderRadius: '16px', 
-                      padding: '14px 16px' 
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563eb', background: '#dbeafe', padding: '2px 8px', borderRadius: '6px' }}>
-                        #{entry.invoiceNo}
-                      </span>
-                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
-                        🕒 {entry.date}, {entry.time}
-                      </span>
-                    </div>
-
-                    {/* Items taken in this memo */}
-                    <div style={{ background: '#ffffff', borderRadius: '10px', padding: '8px 12px', border: '1px solid #f1f5f9', marginBottom: '10px' }}>
-                      <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>
-                        🛒 নেওয়া পণ্যের ফর্দ:
+                selectedLedger.ledger.map((entry: any) => {
+                  const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
+                  return (
+                    <div 
+                      key={entry.id} 
+                      style={{ 
+                        background: isPayment ? '#f0fdf4' : '#fff', 
+                        border: isPayment ? '1.5px solid #bbf7d0' : '1.5px solid #e2e8f0', 
+                        borderRadius: '16px', 
+                        padding: '14px 16px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: isPayment ? '#166534' : '#b45309',
+                            background: isPayment ? '#dcfce7' : '#fef3c7',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            {isPayment ? '🟢 বাকি টাকা জমা' : `🔴 বাকি ক্রয় #${entry.invoiceNo}`}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700' }}>
+                          🕒 {entry.date}, {entry.time}
+                        </span>
                       </div>
-                      {entry.items && entry.items.length > 0 ? (
-                        entry.items.map((it: any, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '3px 0', borderBottom: idx < entry.items.length - 1 ? '1px dashed #f1f5f9' : 'none' }}>
-                            <span style={{ color: '#0f172a', fontWeight: '700' }}>• {it.name} ({it.quantity}টি)</span>
-                            <span className="num-font" style={{ color: '#64748b', fontWeight: '700' }}>৳{it.total}</span>
+
+                      {isPayment ? (
+                        /* Payment Entry */
+                        <div style={{ background: '#ffffff', borderRadius: '10px', padding: '10px 12px', border: '1px solid #dcfce7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#166534', display: 'block' }}>
+                              ক্যাশ / আদায় জমা
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>
+                              {entry.note || 'বাকি হিসাব পরিশোধ'}
+                            </span>
                           </div>
-                        ))
+                          <div style={{ textAlign: 'right' }}>
+                            <strong className="num-font" style={{ fontSize: '16px', color: '#16a34a' }}>
+                              -৳{entry.paidAmount}
+                            </strong>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#15803d', fontWeight: '700' }}>
+                              বাকি কমেছে
+                            </span>
+                          </div>
+                        </div>
                       ) : (
-                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>সরাসরি বাকি এন্ট্রি</span>
+                        /* Sale Memo with Itemized Breakdown */
+                        <div>
+                          <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '10px 12px', border: '1px solid #f1f5f9', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#475569', marginBottom: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
+                              <span>🛒 নেওয়া পণ্য ও পরিমাণ</span>
+                              <span>দর ও মোট</span>
+                            </div>
+                            {entry.items && entry.items.length > 0 ? (
+                              entry.items.map((it: any, idx: number) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', padding: '4px 0', borderBottom: idx < entry.items.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
+                                  <div>
+                                    <span style={{ color: '#0f172a', fontWeight: '700' }}>{it.name}</span>
+                                    <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>
+                                      ({it.quantity} {it.unit || 'টি'} × ৳{it.unitPrice || it.price})
+                                    </span>
+                                  </div>
+                                  <span className="num-font" style={{ color: '#0f172a', fontWeight: '700' }}>
+                                    ৳{it.total}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#94a3b8' }}>সরাসরি বাকি এন্ট্রি</span>
+                            )}
+                          </div>
+
+                          {/* Memo financial summary */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', paddingTop: '2px', color: '#475569' }}>
+                            <span>
+                              মেমো মোট: <strong className="num-font">৳{entry.totalAmount}</strong> | জমা: <strong className="num-font" style={{ color: '#059669' }}>৳{entry.paidAmount}</strong>
+                            </span>
+                            <span style={{ fontWeight: '800', color: '#dc2626' }}>
+                              যোগ হওয়া বাকি: ৳{entry.dueAmount}
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
-
-                    {/* Bottom breakdown */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', paddingTop: '4px' }}>
-                      <span style={{ color: '#475569' }}>
-                        মোট: <strong className="num-font">৳{entry.totalAmount}</strong> | জমা: <strong className="num-font" style={{ color: '#059669' }}>৳{entry.paidAmount}</strong>
-                      </span>
-                      <span style={{ fontWeight: '800', color: entry.dueAmount > 0 ? '#dc2626' : '#059669' }}>
-                        বকেয়া: ৳{entry.dueAmount}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div style={{ textAlign: 'center', padding: '40px 14px', color: '#94a3b8' }}>
                   <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>🧾</span>

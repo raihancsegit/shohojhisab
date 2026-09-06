@@ -2701,9 +2701,51 @@ fastify.post('/api/customers', async (request, reply) => {
 });
 
 fastify.post('/api/customers/due-payment', async (request, reply) => {
-  const { customerId, amount } = request.body as any;
-  db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(Number(amount) || 0, customerId);
-  return { success: true, message: 'বাকি আদায় সফল' };
+  const { customerId, amount, note } = request.body as any;
+  const numAmount = Number(amount) || 0;
+  if (!customerId || numAmount <= 0) {
+    return reply.status(400).send({ error: 'Valid customerId and positive amount are required' });
+  }
+
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId) as any;
+  if (!customer) return reply.status(404).send({ error: 'Customer not found' });
+
+  // Update customer's total due
+  db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(numAmount, customerId);
+
+  // Record a payment ledger entry in sales
+  const paymentId = 'pay-' + uuidv4().slice(0, 8);
+  const now = new Date().toISOString();
+  const invoiceNo = 'PAY-' + Date.now().toString().slice(-6);
+
+  try {
+    db.prepare(`
+      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, payment_method, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      paymentId,
+      customer.tenant_id,
+      invoiceNo,
+      customer.id,
+      customer.name,
+      numAmount,
+      numAmount,
+      0,
+      'due_payment',
+      note || 'নগদ বাকি টাকা জমা পরিশোধ',
+      now
+    );
+
+    const itemId = 'sitem-' + uuidv4().slice(0, 8);
+    db.prepare(`
+      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(itemId, paymentId, 'নগদ বাকি আদায় জমা', 1, numAmount, numAmount);
+  } catch (e) {
+    console.error('Error recording payment ledger entry:', e);
+  }
+
+  return { success: true, message: 'বাকি আদায় সফল এবং খতিয়ানে জমা এন্ট্রি হয়েছে' };
 });
 
 fastify.post('/api/customers/add-due', async (request, reply) => {
@@ -2796,15 +2838,16 @@ fastify.get('/api/customers/:id/passbook', async (request, reply) => {
   const { id } = request.params as { id: string };
   let customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
   if (!customer) {
-    // Try to find first customer or dummy
     customer = db.prepare('SELECT * FROM customers LIMIT 1').get() as any;
   }
 
   let tenant = null;
   let sales: any[] = [];
+  const getItems = db.prepare('SELECT product_name, quantity, selling_price, total_price FROM sale_items WHERE sale_id = ?');
+
   if (customer) {
     tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(customer.tenant_id) as any;
-    sales = db.prepare('SELECT * FROM sales WHERE customer_id = ? ORDER BY created_at DESC LIMIT 20').all(customer.id) as any[];
+    sales = db.prepare('SELECT * FROM sales WHERE (customer_id = ? OR (customer_name = ? AND customer_name != "")) AND tenant_id = ? ORDER BY created_at DESC LIMIT 30').all(customer.id, customer.name, customer.tenant_id) as any[];
   } else {
     tenant = db.prepare('SELECT * FROM tenants LIMIT 1').get() as any;
   }
@@ -2824,14 +2867,25 @@ fastify.get('/api/customers/:id/passbook', async (request, reply) => {
       phone: tenant.phone,
       location: tenant.bazaar_location
     } : null,
-    sales: sales.map(s => ({
-      id: s.id,
-      invoiceNo: s.invoice_no,
-      totalAmount: Number(s.total_amount) || 0,
-      paidAmount: Number(s.paid_amount) || 0,
-      dueAmount: Number(s.due_amount) || 0,
-      createdAt: s.created_at
-    }))
+    sales: sales.map(s => {
+      const items = getItems.all(s.id) as any[];
+      return {
+        id: s.id,
+        invoiceNo: s.invoice_no,
+        totalAmount: Number(s.total_amount) || 0,
+        paidAmount: Number(s.paid_amount) || 0,
+        dueAmount: Number(s.due_amount) || 0,
+        paymentMethod: s.payment_method,
+        note: s.note || '',
+        createdAt: s.created_at,
+        items: items.map(it => ({
+          name: it.product_name,
+          quantity: Number(it.quantity) || 1,
+          price: Number(it.selling_price) || 0,
+          total: Number(it.total_price) || 0
+        }))
+      };
+    })
   };
 });
 
@@ -3045,21 +3099,30 @@ fastify.post('/api/sales', async (request, reply) => {
       dueAmount = totalAmount;
     }
 
+    let finalCustomerId = customerId && customerId !== 'none' ? customerId : null;
     let finalCustomerName = customerName;
-    if (customerId && customerId !== 'none') {
-      const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId) as any;
+
+    if (finalCustomerId) {
+      const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(finalCustomerId) as any;
       if (customer) {
         finalCustomerName = customer.name;
         if (dueAmount > 0) {
-          db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(dueAmount, customerId);
+          db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(dueAmount, finalCustomerId);
         }
       }
-    } else if (paymentMethod === 'due' && customerName) {
-      const newCustId = 'cust-' + uuidv4().slice(0, 8);
-      db.prepare(`
-        INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, avatar, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(newCustId, tenantId, customerName, customerPhone || '', '', dueAmount, 5000, '👤', new Date().toISOString());
+    } else if (dueAmount > 0 && customerName && customerName !== 'নগদ কাস্টমার') {
+      const existingCust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name = ? OR (phone != "" AND phone = ?))').get(tenantId, customerName, customerPhone || '') as any;
+      if (existingCust) {
+        finalCustomerId = existingCust.id;
+        finalCustomerName = existingCust.name;
+        db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(dueAmount, existingCust.id);
+      } else {
+        finalCustomerId = 'cust-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, avatar, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(finalCustomerId, tenantId, customerName, customerPhone || '', '', dueAmount, 5000, '👤', new Date().toISOString());
+      }
     }
 
     const saleCount = (db.prepare('SELECT COUNT(*) as count FROM sales WHERE tenant_id = ?').get(tenantId) as any).count;
@@ -3071,7 +3134,7 @@ fastify.post('/api/sales', async (request, reply) => {
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, is_offline, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(saleId, tenantId, invoiceNo, subtotal, Number(discount), totalAmount, paidAmount, dueAmount, netProfit, paymentMethod, customerId || null, finalCustomerName || null, cashier, 0, now);
+    `).run(saleId, tenantId, invoiceNo, subtotal, Number(discount), totalAmount, paidAmount, dueAmount, netProfit, paymentMethod, finalCustomerId, finalCustomerName || null, cashier, 0, now);
 
     const insertItem = db.prepare(`
       INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
@@ -3512,12 +3575,12 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
   if (!customer) return reply.status(404).send({ error: 'Customer not found' });
 
-  // Get sales with matching customerId or customerName
+  // Get sales with matching customerId or customerName within tenant
   const sales = db.prepare(`
     SELECT * FROM sales 
-    WHERE (customer_id = ? OR customer_name = ?)
+    WHERE (customer_id = ? OR (customer_name = ? AND customer_name != '' AND customer_name != 'নগদ কাস্টমার')) AND tenant_id = ?
     ORDER BY created_at DESC
-  `).all(id, customer.name) as any[];
+  `).all(id, customer.name, customer.tenant_id) as any[];
 
   const getItems = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?');
 
@@ -3529,10 +3592,13 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
       invoiceNo: s.invoice_no,
       date: dateObj.toLocaleDateString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric' }),
       time: dateObj.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+      rawCreatedAt: s.created_at,
       totalAmount: Number(s.total_amount) || 0,
       paidAmount: Number(s.paid_amount) || 0,
       dueAmount: Number(s.due_amount) || 0,
       paymentMethod: s.payment_method,
+      note: s.note || '',
+      isPayment: s.payment_method === 'due_payment',
       items: saleItems.map(it => ({
         name: it.product_name,
         quantity: Number(it.quantity) || 1,
@@ -3547,6 +3613,8 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
       id: customer.id,
       name: customer.name,
       phone: customer.phone,
+      address: customer.address,
+      creditLimit: Number(customer.credit_limit) || 5000,
       totalDue: Number(customer.total_due) || 0
     },
     ledger: ledgerEntries

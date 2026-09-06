@@ -131,6 +131,9 @@ export default function PosPage() {
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('none');
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [showNewCustFields, setShowNewCustFields] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bkash' | 'nagad' | 'due'>('cash');
   const [discount, setDiscount] = useState('0');
   const [cashTendered, setCashTendered] = useState('');
@@ -978,21 +981,32 @@ export default function PosPage() {
   // Fast Checkout
   const handleCheckout = async () => {
     if (cart.length === 0 || !currentTenantId) return;
-    setSubmitting(true);
 
     const custObj = customers.find(c => c.id === selectedCustomer);
+    const isNewCust = showNewCustFields || selectedCustomer === 'none';
+    const finalCustName = selectedCustomer !== 'none' ? (custObj?.name || 'কাস্টমার') : newCustName.trim();
+    const finalCustPhone = selectedCustomer !== 'none' ? (custObj?.phone || '') : newCustPhone.trim();
+
+    if (paymentMethod === 'due' && !finalCustName) {
+      alert('⚠️ বাকি বিক্রির জন্য গ্রাহক নির্বাচন করুন অথবা নতুন গ্রাহকের নাম লিখুন!');
+      return;
+    }
+
+    setSubmitting(true);
+
     const paid = paymentMethod === 'due' ? 0 : (tenderedNum > 0 && tenderedNum < finalPayable ? tenderedNum : finalPayable);
     const due = Math.max(0, finalPayable - paid);
 
     const payload = {
       tenantId: currentTenantId,
       customerId: selectedCustomer !== 'none' ? selectedCustomer : null,
-      customerName: custObj ? custObj.name : 'নগদ কাস্টমার',
+      customerName: finalCustName || 'নগদ কাস্টমার',
+      customerPhone: finalCustPhone || '',
       items: cart.map(i => ({
         productId: i.product.id,
         productName: i.product.banglaName || i.product.name,
         quantity: i.quantity,
-        sellingPrice: i.product.sellingPrice,
+        sellingPrice: i.unitPrice !== undefined ? i.unitPrice : i.product.sellingPrice,
         purchasePrice: i.product.purchasePrice,
         totalPrice: i.totalPrice
       })),
@@ -1015,7 +1029,7 @@ export default function PosPage() {
         const data = await res.json();
         playBeep(1200);
         triggerHaptic('success');
-        speakAnnouncement(`${finalPayable} টাকা ${paymentMethod === 'cash' ? 'নগদ' : paymentMethod === 'due' ? 'বাকি' : 'ডিজিটাল'} বিক্রি সম্পন্ন হয়েছে।`);
+        speakAnnouncement(`${finalPayable} টাকা ${paymentMethod === 'cash' ? 'নগদ' : paymentMethod === 'due' ? `${finalCustName} এর বাকি` : 'ডিজিটাল'} বিক্রি সম্পন্ন হয়েছে।`);
 
         const indTheme = getIndustryTheme(tenant?.industryId);
 
@@ -1038,8 +1052,8 @@ export default function PosPage() {
           cashTendered: tenderedNum,
           changeReturned: changeToReturn,
           paymentMethod,
-          customerName: custObj ? custObj.name : 'নগদ কাস্টমার',
-          customerPhone: custObj ? custObj.phone : '',
+          customerName: finalCustName || 'নগদ কাস্টমার',
+          customerPhone: finalCustPhone || '',
           orderType,
           tableNumber,
           imei: imeiInput,
@@ -1053,6 +1067,9 @@ export default function PosPage() {
         setCashTendered('');
         setDiscount('0');
         setSelectedCustomer('none');
+        setNewCustName('');
+        setNewCustPhone('');
+        setShowNewCustFields(false);
         loadData();
       } else {
         alert('বিক্রি সম্পন্ন হতে সমস্যা হয়েছে!');
@@ -2540,21 +2557,138 @@ export default function PosPage() {
               )}
             </div>
 
-            {/* Customer Select (for Due Khata) */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                গ্রাহক নির্বাচন (বাকি বিক্রির জন্য আবশ্যক):
-              </label>
-              <select
-                value={selectedCustomer}
-                onChange={(e) => setSelectedCustomer(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', background: '#fff' }}
-              >
-                <option value="none">সাধারণ নগদ ক্রেতা (নামহীন)</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>{c.name} • {c.phone} (পূর্বের বাকি: ৳{c.totalDue || 0})</option>
-                ))}
-              </select>
+            {/* Customer Select (for Due Khata & Memo) */}
+            <div style={{
+              marginBottom: '14px',
+              padding: paymentMethod === 'due' ? '12px' : '0px',
+              borderRadius: '12px',
+              background: paymentMethod === 'due' ? '#fffbeb' : 'transparent',
+              border: paymentMethod === 'due' ? '1.5px solid #fde68a' : 'none'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '800', color: paymentMethod === 'due' ? '#b45309' : '#475569' }}>
+                  {paymentMethod === 'due' ? '📖 বাকি খাতার গ্রাহক (আবশ্যক):' : 'গ্রাহক নির্বাচন:'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewCustFields(!showNewCustFields);
+                    if (!showNewCustFields) {
+                      setSelectedCustomer('none');
+                    }
+                  }}
+                  style={{
+                    background: showNewCustFields ? '#f1f5f9' : '#e0f2fe',
+                    color: showNewCustFields ? '#475569' : '#0369a1',
+                    border: '1px solid #bae6fd',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {showNewCustFields ? '✖ তালিকা থেকে বাছুন' : '➕ নতুন গ্রাহক'}
+                </button>
+              </div>
+
+              {!showNewCustFields ? (
+                <select
+                  value={selectedCustomer}
+                  onChange={(e) => {
+                    setSelectedCustomer(e.target.value);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '10px',
+                    border: paymentMethod === 'due' && selectedCustomer === 'none' ? '2px solid #f59e0b' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    outline: 'none',
+                    background: '#fff'
+                  }}
+                >
+                  <option value="none">
+                    {paymentMethod === 'due' ? '⚠️ গ্রাহক নির্বাচন করুন (নামহীন বাকি সম্ভব নয়)' : 'সাধারণ নগদ ক্রেতা (নামহীন)'}
+                  </option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} • {c.phone || 'ফোন নেই'} (পূর্বের বাকি: ৳{(c.totalDue || 0).toLocaleString('en-US')})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '2px', fontWeight: '600' }}>
+                      গ্রাহকের পুরো নাম:
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustName}
+                      onChange={(e) => setNewCustName(e.target.value)}
+                      placeholder="উদা: মো: রফিক উদ্দিন"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #93c5fd', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '2px', fontWeight: '600' }}>
+                      মোবাইল নম্বর:
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustPhone}
+                      onChange={(e) => setNewCustPhone(e.target.value)}
+                      placeholder="০১৭১১..."
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #93c5fd', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Due Balance Calculation Card if Due selected */}
+              {paymentMethod === 'due' && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  background: '#fef3c7',
+                  border: '1px dashed #f59e0b',
+                  fontSize: '12px',
+                  color: '#92400e'
+                }}>
+                  {selectedCustomer !== 'none' ? (() => {
+                    const cust = customers.find(c => c.id === selectedCustomer);
+                    const prevDue = cust?.totalDue || 0;
+                    const newDue = prevDue + finalTotalCart;
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                          <span>পূর্বের বকেয়া হিসাব:</span>
+                          <strong>৳{prevDue.toLocaleString('en-US')}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span>বর্তমান মেমো যোগ:</span>
+                          <strong style={{ color: '#b45309' }}>+ ৳{finalTotalCart.toLocaleString('en-US')}</strong>
+                        </div>
+                        <div style={{ borderTop: '1px solid #fde68a', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: '#78350f' }}>
+                          <span>খাতায় নতুন মোট বকেয়া:</span>
+                          <span style={{ fontSize: '13.5px' }}>৳{newDue.toLocaleString('en-US')}</span>
+                        </div>
+                      </div>
+                    );
+                  })() : showNewCustFields && newCustName.trim() ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700' }}>
+                      <span>নতুন গ্রাহকের খাতে যোগ হবে:</span>
+                      <strong style={{ color: '#b45309' }}>৳{finalTotalCart.toLocaleString('en-US')}</strong>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#d97706', fontWeight: '600' }}>
+                      ⚠️ বাকি মেমো সংরক্ষণ করতে একজন গ্রাহক নির্বাচন করুন অথবা নতুন গ্রাহকের নাম লিখুন।
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Payment Method Selector */}
@@ -2571,6 +2705,7 @@ export default function PosPage() {
                 ].map(m => (
                   <button
                     key={m.id}
+                    type="button"
                     onClick={() => { setPaymentMethod(m.id as any); triggerHaptic('light'); }}
                     style={{
                       padding: '10px 4px',
