@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '../context/AuthContext';
-import VoiceAssistant from '../components/VoiceAssistant';
 import PWAInstaller from '../components/PWAInstaller';
 import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
 import { getIndustryTheme } from '../lib/industryConfig';
@@ -1497,7 +1496,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main style={{ minHeight: 'calc(100vh - 130px)', paddingBottom: '80px' }}>
             {children}
           </main>
-          <VoiceAssistant />
           <GlobalShortcutsModal />
           <BottomMobileNav onOpenActionSheet={() => setIsActionSheetOpen(true)} />
           <SideMenuDrawer isOpen={isMenuDrawerOpen} onClose={() => setIsMenuDrawerOpen(false)} />
