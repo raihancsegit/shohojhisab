@@ -120,6 +120,10 @@ export default function VoiceStockInModal({
   };
 
   const handleProcessVoiceInput = (spokenText: string) => {
+    // Cancel any active speech output
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     const result = parseVoiceStockIn(spokenText, products);
     console.log('Voice Stock-In Parsed:', result);
 
@@ -128,7 +132,6 @@ export default function VoiceStockInModal({
       triggerHaptic('success');
       setParsedStock(result);
       setLastActionMessage(`✓ শনাক্ত হয়েছে: ${result.explanation}`);
-      speakAnnouncement(`শনাক্ত হয়েছে: ${result.productName} এ ${result.quantityToAdd} ${result.unit} স্টক যোগ হবে`);
     } else {
       setLastActionMessage(`⚠️ "${spokenText}" থেকে পণ্যের স্টক বোঝা যায়নি`);
     }
@@ -160,7 +163,6 @@ export default function VoiceStockInModal({
 
         if (res.ok) {
           playBeep(1200);
-          speakAnnouncement(`${parsedStock.productName} এর নতুন স্টক ${newStock} ${parsedStock.unit} আপডেট হয়েছে`);
           onStockUpdated();
           setParsedStock(null);
           setLastActionMessage(`✓ "${parsedStock.productName}" এর স্টক আপডেট হয়েছে! (মোট: ${newStock} ${parsedStock.unit})`);
@@ -187,7 +189,6 @@ export default function VoiceStockInModal({
 
         if (res.ok) {
           playBeep(1200);
-          speakAnnouncement(`নতুন পণ্য ${parsedStock.productName} স্টকে সেভ হয়েছে`);
           onStockUpdated();
           setParsedStock(null);
           setLastActionMessage(`✓ নতুন পণ্য "${parsedStock.productName}" স্টকে যুক্ত হয়েছে!`);

@@ -228,7 +228,6 @@ export default function VoicePOSCalculatorModal({
     if (result.type === 'cash_checkout') {
       if (itemsRef.current.length === 0) {
         setLastActionMessage('⚠️ কার্টে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
-        speakAnnouncement('কার্টে কোনো পণ্য নেই।');
         return;
       }
       handleFinalizeSale('cash');
@@ -239,7 +238,6 @@ export default function VoicePOSCalculatorModal({
     if (result.type === 'due_checkout') {
       if (itemsRef.current.length === 0) {
         setLastActionMessage('⚠️ কার্টে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
-        speakAnnouncement('কার্টে কোনো পণ্য নেই।');
         return;
       }
       const targetCustomer = result.customerName || selectedCustomerName || 'বাকি গ্রাহক';
@@ -253,7 +251,6 @@ export default function VoicePOSCalculatorModal({
       setDiscount(result.discountAmount);
       playBeep(900);
       setLastActionMessage(`✓ ৳${result.discountAmount} ছাড় কার্যকর হয়েছে!`);
-      speakAnnouncement(`${result.discountAmount} টাকা ছাড় দেওয়া হয়েছে।`);
       return;
     }
 
@@ -264,7 +261,6 @@ export default function VoicePOSCalculatorModal({
       setItems(updated);
       playBeep(700);
       setLastActionMessage(`✓ "${result.removeItemName}" মেমো থেকে বাদ দেওয়া হয়েছে`);
-      speakAnnouncement(`${result.removeItemName} বাদ দেওয়া হয়েছে।`);
       return;
     }
 
@@ -275,7 +271,6 @@ export default function VoicePOSCalculatorModal({
       setSelectedCustomerName('');
       playBeep(600);
       setLastActionMessage('✓ মেমো ক্লিয়ার করা হয়েছে। নতুন হিসাব শুরু করুন।');
-      speakAnnouncement('মেমো ক্লিয়ার হয়েছে।');
       return;
     }
   };
@@ -321,12 +316,6 @@ export default function VoicePOSCalculatorModal({
         const data = await res.json();
         playBeep(1250);
         triggerHaptic('success');
-        
-        const announcement = method === 'cash'
-          ? `আলহামদুলিল্লাহ! মোট ${finalAmount} টাকা নগদ বিক্রি সম্পন্ন হয়েছে।`
-          : `${customer} এর বাকি খাতায় ${finalAmount} টাকা লেখা হয়েছে।`;
-
-        speakAnnouncement(announcement);
         
         // Pass data to parent to show receipt
         onCompleteSale({
@@ -377,8 +366,10 @@ export default function VoicePOSCalculatorModal({
     if (isOpen) {
       isComponentMounted.current = true;
       setIsMuted(false);
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
       startContinuousListening();
-      speakAnnouncement('ভয়েস ক্যালকুলেটর চালু হয়েছে। সরাসরি পণ্যের নাম ও দাম বলুন।');
     }
 
     return () => {

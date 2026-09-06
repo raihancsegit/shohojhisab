@@ -118,6 +118,10 @@ export default function VoiceProductEntryModal({
   };
 
   const handleProcessVoiceInput = (spokenText: string) => {
+    // Cancel any active speech output
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     const result = parseVoiceProductEntry(spokenText);
     console.log('Voice Product Parsed:', result);
 
@@ -126,7 +130,6 @@ export default function VoiceProductEntryModal({
       triggerHaptic('success');
       setParsedProduct(result);
       setLastActionMessage(`✓ শনাক্ত হয়েছে: ${result.explanation}`);
-      speakAnnouncement(`শনাক্ত হয়েছে: ${result.banglaName}, বিক্রয় মূল্য ${result.sellingPrice} টাকা`);
     } else {
       setLastActionMessage(`⚠️ "${spokenText}" থেকে পণ্যের নাম ও দাম বোঝা যায়নি`);
     }
@@ -162,7 +165,6 @@ export default function VoiceProductEntryModal({
       if (res.ok) {
         const created = await res.json();
         playBeep(1200);
-        speakAnnouncement(`নতুন পণ্য ${parsedProduct.banglaName} সফলভাবে সেভ হয়েছে`);
         onProductCreated(created);
         setParsedProduct(null);
         setLastActionMessage(`✓ "${parsedProduct.banglaName}" সফলভাবে ক্যাটালগে যুক্ত হয়েছে!`);

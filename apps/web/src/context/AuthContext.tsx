@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [activeRoleMode, setActiveRoleMode] = useState<'owner' | 'staff'>('owner');
   const [currentStaffUser, setCurrentStaffUser] = useState<StaffUser | null>(null);
   const [isScreenLocked, setIsScreenLocked] = useState<boolean>(false);
-  const [isSoundboxEnabled, setIsSoundboxEnabled] = useState<boolean>(true);
+  const [isSoundboxEnabled, setIsSoundboxEnabled] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [cachedPin, setCachedPin] = useState<string>('1234');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -136,6 +136,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Load soundbox preference from localStorage (defaults to false/disabled)
+  useEffect(() => {
+    try {
+      const savedSoundbox = localStorage.getItem('lbos_soundbox');
+      if (savedSoundbox === 'true') {
+        setIsSoundboxEnabled(true);
+      } else {
+        setIsSoundboxEnabled(false);
+      }
+    } catch (e) {}
+  }, []);
 
   // Save offline action to local queue
   const saveOfflineAction = (actionType: string, payload: any) => {
@@ -183,36 +195,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       localStorage.removeItem('lbos_offline_queue');
       setPendingSyncCount(0);
-      speakAnnouncement('অফলাইনের সকল হিসাব সফলভাবে সিঙ্ক সম্পন্ন হয়েছে');
     } catch (e) {}
   };
 
-  // Online / Offline listener
+  // Online / Offline Auto Detection
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsOnline(navigator.onLine);
-      const queue = JSON.parse(localStorage.getItem('lbos_offline_queue') || '[]');
-      setPendingSyncCount(queue.length);
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineQueue();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
 
-      const handleOnline = () => {
-        setIsOnline(true);
-        triggerHaptic('success');
-        speakAnnouncement('ইন্টারনেট সংযোগ চালু হয়েছে');
-        syncOfflineQueue();
-      };
-      const handleOffline = () => {
-        setIsOnline(false);
-        triggerHaptic('warning');
-        speakAnnouncement('অফলাইন মোড। ইন্টারনেট ছাড়াও সকল হিসাব চলবে');
-      };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setIsOnline(false);
     }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Haptic feedback trigger for mobile
@@ -227,10 +233,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   };
 
-  // Digital Bengali Voice Soundbox
+  // Digital Bengali Voice Soundbox (Strictly opt-in only to avoid microphone feedback)
   const speakAnnouncement = (text: string) => {
     try {
-      if (!isSoundboxEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      // If soundbox is disabled, strictly cancel and do not speak
+      if (!isSoundboxEnabled) {
+        window.speechSynthesis.cancel();
+        return;
+      }
       window.speechSynthesis.cancel();
 
       // Convert English digits to Bengali digits and clean symbols
@@ -279,6 +290,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     triggerHaptic('light');
     if (nextState) {
       speakAnnouncement('সাউন্ডবক্স চালু হয়েছে');
+    } else {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     }
   };
 

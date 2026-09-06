@@ -150,6 +150,10 @@ export default function VoiceAssistant() {
     if (!rawText || !tenant?.id) return;
     const currentTenantId = tenant.id;
 
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     setFeedback(`শোনা গেছে: "${rawText}"`);
 
     try {
@@ -163,7 +167,6 @@ export default function VoiceAssistant() {
         const result = await res.json();
         if (result.success) {
           setFeedback(`✓ ${result.speech}`);
-          speakAnnouncement(result.speech);
           triggerHaptic('success');
 
           // Trigger live refresh event across active pages
@@ -191,12 +194,11 @@ export default function VoiceAssistant() {
 
           setTimeout(() => {
             setFeedback('');
-          }, 6000);
+          }, 4000);
           return;
         } else {
           setFeedback(result.speech || 'কথাটি বুঝতে পারিনি। আবার চেষ্টা করুন।');
-          speakAnnouncement(result.speech || 'কথাটি বুঝতে পারিনি');
-          setTimeout(() => setFeedback(''), 5000);
+          setTimeout(() => setFeedback(''), 4000);
           return;
         }
       }
@@ -208,14 +210,13 @@ export default function VoiceAssistant() {
     if (/নাপা|ঔষধ|ট্যাবলেট|সিরাপ|ব্যান্ডেজ|ওরস্যালাইন|চিনি|ডাল|তেল|সাবান|সিগারেট|চাল|মেমো|বিক্রি|পাঞ্জাবি|শার্ট|প্যান্ট|লুঙ্গি|টি-শার্ট|পাইপ|বাল্ব|ট্যাপ|কলা|পরোটা|চা|আড্ডা|খাতা/i.test(rawText) && pathname !== '/pos') {
       triggerHaptic('medium');
       setFeedback(`✓ পিওএস কাউন্টারে যাচ্ছি: "${rawText}"`);
-      speakAnnouncement(`পিওএস কাউন্টারে মেমো প্রস্তুত করছি`);
       router.push(`/pos?voiceQuery=${encodeURIComponent(rawText)}`);
-      setTimeout(() => setFeedback(''), 3500);
+      setTimeout(() => setFeedback(''), 3000);
       return;
     }
 
     setFeedback(`শোনা গেছে: "${rawText}"`);
-    setTimeout(() => setFeedback(''), 4000);
+    setTimeout(() => setFeedback(''), 3000);
   };
 
   if (!isSupported || userRole === 'admin' || pathname === '/pos') return null;
