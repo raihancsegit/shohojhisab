@@ -689,6 +689,79 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
   }
 }
 
+// Seed Multi-Industry Demo Shops & Staff if empty
+try {
+  const tenantCount = (db.prepare('SELECT COUNT(*) as c FROM tenants').get() as any)?.c || 0;
+  if (tenantCount === 0) {
+    const insertTenant = db.prepare(`
+      INSERT OR REPLACE INTO tenants (id, shop_name, owner_name, phone, bazaar_location, industry_category_id, plan_id, pin, status, monthly_fee, start_date, paid_till, sms_balance, features, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertStaff = db.prepare(`
+      INSERT OR REPLACE INTO staff_users (id, tenant_id, name, phone, pin, role, permissions, branch_id, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `);
+    const now = new Date().toISOString();
+    const paidTill = '2028-12-31';
+
+    const defaultTenants = [
+      { id: 'tenant-1', shopName: 'ভাই ভাই জেনারেল স্টোর', owner: 'মোঃ রফিকুল ইসলাম', phone: '01986233234', location: 'বড় বাজার, ঢাকা', cat: 'cat-grocery', pin: '1234' },
+      { id: 'tenant-2', shopName: 'পপুলার ড্রাগস ও ফার্মেসি', owner: 'ডাঃ আশরাফুল হক', phone: '01711223344', location: 'হাসপাতাল মোড়, ঢাকা', cat: 'cat-pharmacy', pin: '1234' },
+      { id: 'tenant-3', shopName: 'ফ্যাশন পয়েন্ট ক্লথিং', owner: 'মাহমুদুল হাসান', phone: '01722334455', location: 'নিউ মার্কেট, চট্টগ্রাম', cat: 'cat-clothing', pin: '1234' },
+      { id: 'tenant-4', shopName: 'নিউ ইলেকট্রনিক্স ও হার্ডওয়্যার', owner: 'স্বপন চৌধুরী', phone: '01733445566', location: 'স্টেশন রোড, সিলেট', cat: 'cat-hardware', pin: '1234' },
+      { id: 'tenant-5', shopName: 'কাচ্চি ডাইন রেস্তোরাঁ', owner: 'মোস্তফা কামাল', phone: '01744556677', location: 'ধানমন্ডি, ঢাকা', cat: 'cat-restaurant', pin: '1234' }
+    ];
+
+    for (const dt of defaultTenants) {
+      insertTenant.run(
+        dt.id,
+        dt.shopName,
+        dt.owner,
+        dt.phone,
+        dt.location,
+        dt.cat,
+        'plan-pro',
+        dt.pin,
+        'active',
+        149,
+        now,
+        paidTill,
+        100,
+        JSON.stringify({
+          enableInstallments: true,
+          enableWholesale: true,
+          enableDealerKhata: true,
+          enableBarcodePrinter: true,
+          enableCashDrawer: true,
+          enableExpiryTracker: true,
+          enableWhatsAppReceipts: true,
+          enableCameraScanner: true,
+          enableKitchenKOT: true,
+          enableWarrantyCard: true,
+          enableMultiBranch: false,
+          enableChallanOcr: true,
+          enableSMS: true,
+          enablePassbook: true,
+          enableWhatsAppCatalog: true,
+          enableSoundbox: true
+        }),
+        now
+      );
+
+      // Auto import starter products for each category
+      autoImportStarterPack(dt.id, dt.cat);
+
+      // Seed Staff for each shop
+      insertStaff.run('staff-' + dt.id + '-cashier', dt.id, 'সাকিব হাসান (ক্যাশিয়ার)', dt.phone, '2222', 'cashier', JSON.stringify(['pos', 'khata_view', 'khata_collect', 'expenses_create', 'soundbox']), null, now);
+      insertStaff.run('staff-' + dt.id + '-mgr', dt.id, 'তানভীর আহমেদ (ম্যানেজার)', dt.phone, '3333', 'manager', JSON.stringify(['pos', 'stock', 'khata_view', 'khata_collect', 'dealers', 'expenses_create', 'expenses_view', 'reports_view', 'expiry', 'discount', 'soundbox']), null, now);
+      insertStaff.run('staff-' + dt.id + '-sales', dt.id, 'হাসান মাহমুদ (স্টাফ)', dt.phone, '4444', 'salesman', JSON.stringify(['pos', 'products_search', 'stock_view', 'soundbox']), null, now);
+    }
+    console.log('✅ Default Multi-Industry Tenants & Staff seeded');
+  }
+} catch (e) {
+  console.error('Error seeding default tenants', e);
+}
+
 // Routes
 fastify.get('/api/health', async () => ({ status: 'healthy', time: new Date().toISOString() }));
 

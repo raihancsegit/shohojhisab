@@ -1,17 +1,19 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const { userRole, tenant, loginShop, loginAdmin, triggerHaptic } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<'shop' | 'admin'>('shop');
-  const [step, setStep] = useState<'phone' | 'pin'>('pin');
+  const initialRole = searchParams.get('role') === 'admin' || searchParams.get('admin') === 'true' ? 'admin' : 'shop';
+  const [tab, setTab] = useState<'shop' | 'admin'>(initialRole);
   const [phone, setPhone] = useState('01986233234');
   
-  // 4-box PIN states (Matching Image 1)
+  // 4-box PIN states
   const [pinDigits, setPinDigits] = useState(['1', '2', '3', '4']);
   const pinInputRefs = [
     useRef<HTMLInputElement>(null),
@@ -24,6 +26,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('role') === 'admin' || searchParams.get('admin') === 'true') {
+      setTab('admin');
+    }
+  }, [searchParams]);
 
   // Handle individual PIN box typing & auto-focus jump
   const handlePinChange = (index: number, value: string) => {
@@ -62,6 +70,11 @@ export default function LoginPage() {
     triggerHaptic('medium');
 
     if (tab === 'shop') {
+      if (!phone.trim()) {
+        setError('দয়া করে মোবাইল নাম্বার অথবা ইউজার আইডি দিন!');
+        setLoading(false);
+        return;
+      }
       if (fullPin.length < 4) {
         setError('দয়া করে ৪-ডিজিটের পিন কোড সম্পূর্ণ লিখুন!');
         setLoading(false);
@@ -84,34 +97,49 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const handleQuickDemo = (type: 'shop' | 'admin') => {
+  const fillDemoLogin = (demoPhone: string, demoPin: string[]) => {
     triggerHaptic('light');
-    setTab(type);
+    setPhone(demoPhone);
+    setPinDigits(demoPin);
     setError('');
-    if (type === 'shop') {
-      setPhone('01986233234');
-      setPinDigits(['1', '2', '3', '4']);
-      setStep('pin');
-    } else {
-      setAdminPasscode('admin');
-    }
   };
 
   return (
     <div style={{
-      minHeight: '90vh',
+      minHeight: '92vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px 16px 40px',
+      padding: '24px 16px 48px',
       fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
     }}>
       
+      {/* Brand Header */}
+      <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+          color: '#ffffff',
+          padding: '8px 18px',
+          borderRadius: '99px',
+          boxShadow: '0 8px 20px -4px rgba(79, 70, 229, 0.35)',
+          marginBottom: '8px'
+        }}>
+          <span style={{ fontSize: '20px' }}>🏪</span>
+          <span style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '-0.3px' }}>ShohojHisab</span>
+        </div>
+        <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+          স্মার্ট দোকান ও ব্যবসা সফটওয়্যার
+        </p>
+      </div>
+
       {/* Main Container Card */}
       <div style={{
         width: '100%',
-        maxWidth: '420px',
+        maxWidth: '430px',
         background: '#ffffff',
         borderRadius: '28px',
         padding: '32px 24px',
@@ -120,244 +148,341 @@ export default function LoginPage() {
         position: 'relative'
       }}>
 
-        {/* Tab Selection (Shopkeeper vs Super Admin) */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '6px',
-          background: '#f1f5f9',
-          padding: '5px',
-          borderRadius: '16px',
-          marginBottom: '24px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <button
-            type="button"
-            onClick={() => { setTab('shop'); setError(''); triggerHaptic('light'); }}
-            style={{
-              padding: '9px 12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: tab === 'shop' ? '#ffffff' : 'transparent',
-              color: tab === 'shop' ? '#4f46e5' : '#64748b',
-              fontWeight: '800',
-              fontSize: '13px',
-              cursor: 'pointer',
-              boxShadow: tab === 'shop' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            🏪 দোকানদার
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab('admin'); setError(''); triggerHaptic('light'); }}
-            style={{
-              padding: '9px 12px',
-              borderRadius: '12px',
-              border: 'none',
-              background: tab === 'admin' ? '#ffffff' : 'transparent',
-              color: tab === 'admin' ? '#be123c' : '#64748b',
-              fontWeight: '800',
-              fontSize: '13px',
-              cursor: 'pointer',
-              boxShadow: tab === 'admin' ? '0 4px 12px rgba(0,0,0,0.06)' : 'none',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            👑 অ্যাডমিন
-          </button>
-        </div>
-
         {tab === 'shop' ? (
           <>
-            {/* Top Illustration Graphic (Matching Image 1) */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '20px'
-            }}>
-              <div style={{
-                width: '130px',
-                height: '130px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {/* Phone & Lock Representation */}
-                <div style={{
-                  width: '64px',
-                  height: '92px',
-                  background: '#1e1b4b',
-                  borderRadius: '14px',
-                  border: '3px solid #ffffff',
-                  boxShadow: '0 8px 16px rgba(30, 27, 75, 0.2)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: '6px 4px',
-                  position: 'relative'
-                }}>
-                  {/* Lock Badge */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-10px',
-                    left: '-10px',
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '50%',
-                    background: '#6366f1',
-                    border: '2px solid #ffffff',
-                    display: 'grid',
-                    placeItems: 'center',
-                    color: '#ffffff',
-                    fontSize: '14px'
-                  }}>
-                    🔒
-                  </div>
-
-                  {/* Pin grid preview inside illustration */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', width: '100%', marginTop: '16px' }}>
-                    {[...Array(9)].map((_, i) => (
-                      <div key={i} style={{ width: '10px', height: '10px', background: i === 4 ? '#818cf8' : 'rgba(255,255,255,0.2)', borderRadius: '2px', margin: 'auto' }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Title Matching Image 1 */}
+            {/* Top Header */}
+            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
               <h2 style={{
-                fontSize: '20px',
+                fontSize: '21px',
                 fontWeight: '900',
-                color: '#475569',
-                margin: '18px 0 6px',
-                textAlign: 'center',
-                letterSpacing: '-0.3px'
+                color: '#0f172a',
+                margin: '0 0 6px'
               }}>
-                আপনার পিন কোড টাইপ করুন
+                দোকান ও কর্মচারী লগইন
               </h2>
-              
-              <div style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '700' }}>
-                দোকান মোবাইল: <strong>{phone}</strong>
-              </div>
+              <p style={{
+                fontSize: '13px',
+                color: '#64748b',
+                margin: 0,
+                lineHeight: 1.4
+              }}>
+                মালিক অথবা কর্মচারীর মোবাইল নাম্বার ও ৪-ডিজিট পিন দিয়ে প্রবেশ করুন
+              </p>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div style={{
                 background: '#fef2f2',
-                border: '1.5px solid #fecaca',
                 color: '#dc2626',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                fontSize: '12.5px',
+                fontSize: '13px',
                 fontWeight: '700',
-                marginBottom: '16px',
-                textAlign: 'center'
+                marginBottom: '18px',
+                textAlign: 'center',
+                border: '1px solid #fecaca'
               }}>
                 {error}
               </div>
             )}
 
-            {/* 4 Interactive PIN Input Boxes (Matching Image 1) */}
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '18px' }}>
+              
+              {/* Step 1: Mobile / User ID Input */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#334155', marginBottom: '7px' }}>
+                  📱 মোবাইল নাম্বার / ইউজার আইডি:
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '13px 14px',
+                      borderRadius: '14px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      color: '#0f172a',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: '#f8fafc',
+                      transition: 'border 0.2s ease'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Step 2: 4-Box PIN Input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#334155' }}>
+                    🔒 ৪-ডিজিট পিন কোড:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#4f46e5',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    পিন ভুলে গেছেন?
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '10px'
+                }}>
+                  {pinDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={pinInputRefs[index]}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handlePinChange(index, e.target.value)}
+                      onKeyDown={(e) => handlePinKeyDown(index, e)}
+                      style={{
+                        height: '56px',
+                        textAlign: 'center',
+                        fontSize: '22px',
+                        fontWeight: '900',
+                        color: '#0f172a',
+                        borderRadius: '14px',
+                        border: digit ? '2px solid #4f46e5' : '1.5px solid #cbd5e1',
+                        background: digit ? '#eef2ff' : '#f8fafc',
+                        outline: 'none',
+                        transition: 'all 0.15s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '900',
+                  fontSize: '15px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 8px 20px -4px rgba(79, 70, 229, 0.35)',
+                  transition: 'transform 0.1s ease',
+                  marginTop: '4px'
+                }}
+              >
+                {loading ? 'লগইন হচ্ছে...' : 'দোকানে প্রবেশ করুন →'}
+              </button>
+            </form>
+
+            {/* Quick Multi-Category Demo Logins */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '14px',
-              margin: '16px 0 24px'
+              marginTop: '24px',
+              paddingTop: '18px',
+              borderTop: '1px dashed #e2e8f0'
             }}>
-              {pinDigits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={pinInputRefs[idx]}
-                  type="password"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handlePinChange(idx, e.target.value)}
-                  onKeyDown={(e) => handlePinKeyDown(idx, e)}
-                  autoFocus={idx === 0}
-                  className="num-font"
-                  style={{
-                    width: '60px',
-                    height: '64px',
-                    borderRadius: '16px',
-                    border: digit ? '2px solid #6366f1' : '2px solid #e2e8f0',
-                    background: digit ? '#f5f7ff' : '#ffffff',
-                    fontSize: '28px',
-                    textAlign: 'center',
-                    fontWeight: '900',
-                    color: '#312e81',
-                    outline: 'none',
-                    boxShadow: digit ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                />
-              ))}
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textAlign: 'center', marginBottom: '10px', textTransform: 'uppercase' }}>
+                ⚡ ১-ক্লিকে যেকোনো ক্যাটাগরির দোকান টেস্ট করুন:
+              </div>
+
+              {/* Category Pills */}
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {/* 1. Grocery Shop */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '7px 10px',
+                  borderRadius: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>🛒</span>
+                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>মুদি ও জেনারেল শপ</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01986233234', ['1', '2', '3', '4'])}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      👑 মালিক (1234)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01986233234', ['2', '2', '2', '2'])}
+                      style={{ background: '#dcfce7', color: '#15803d', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      🛒 স্টাফ (2222)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Pharmacy */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '7px 10px',
+                  borderRadius: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>💊</span>
+                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>ফার্মেসি ও ড্রাগস</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01711223344', ['1', '2', '3', '4'])}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      👑 মালিক (1234)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01711223344', ['4', '4', '4', '4'])}
+                      style={{ background: '#fef3c7', color: '#b45309', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      💊 ফার্মাসিস্ট (4444)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Clothing Shop */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '7px 10px',
+                  borderRadius: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>👗</span>
+                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>কাপড় ও ফ্যাশন</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01722334455', ['1', '2', '3', '4'])}
+                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      👑 মালিক (1234)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillDemoLogin('01722334455', ['3', '3', '3', '3'])}
+                      style={{ background: '#fae8ff', color: '#86198f', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      💼 ম্যানেজার (3333)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Electronics & Hardware */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  padding: '7px 10px',
+                  borderRadius: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>⚡</span>
+                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#1e293b' }}>ইলেকট্রনিক্স ও হার্ডওয়্যার</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fillDemoLogin('01733445566', ['1', '2', '3', '4'])}
+                    style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '4px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    👑 মালিক (1234)
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* "নিশ্চিত করুন" Button (Matching Image 1) */}
-            <button
-              type="button"
-              onClick={() => handleSubmit()}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                color: '#ffffff',
-                border: 'none',
-                fontWeight: '900',
-                fontSize: '16px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 8px 24px -4px rgba(79, 70, 229, 0.45)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {loading ? 'যাচাই করা হচ্ছে...' : 'নিশ্চিত করুন'}
-            </button>
-
-            {/* "আপনার পিন ভুলে গেছেন?" Link (Matching Image 1) */}
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            {/* Subtle Footer Admin Portal Link */}
+            <div style={{ textAlign: 'center', marginTop: '18px' }}>
               <button
                 type="button"
-                onClick={() => setShowForgotModal(true)}
+                onClick={() => { setTab('admin'); setError(''); triggerHaptic('light'); }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#64748b',
-                  fontSize: '13.5px',
+                  color: '#94a3b8',
+                  fontSize: '11px',
                   fontWeight: '700',
                   cursor: 'pointer',
-                  textDecoration: 'none'
+                  textDecoration: 'underline'
                 }}
               >
-                আপনার পিন ভুলে গেছেন?
+                🔐 সুপার অ্যাডমিন প্রবেশ
               </button>
             </div>
           </>
         ) : (
-          /* Admin Form */
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '16px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>👑</div>
-              <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
+          /* Super Admin Passcode Screen */
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '20px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: '#fee2e2',
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                margin: '0 auto 12px',
+                fontSize: '28px',
+                color: '#be123c'
+              }}>
+                👑
+              </div>
+              <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
                 সুপার অ্যাডমিন পাসকোড
               </h2>
+              <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
+                প্ল্যাটফর্ম মালিক ও সিস্টেম কনট্রোল প্যানেল
+              </p>
             </div>
 
             {error && (
-              <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px', borderRadius: '10px', fontSize: '12.5px', fontWeight: '700', textAlign: 'center' }}>
+              <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
                 {error}
               </div>
             )}
 
             <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#334155', marginBottom: '7px' }}>
+                পাসকোড (Passcode):
+              </label>
               <input
                 type="password"
                 value={adminPasscode}
@@ -365,8 +490,14 @@ export default function LoginPage() {
                 placeholder="অ্যাডমিন পাসকোড (admin)"
                 required
                 style={{
-                  width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #cbd5e1',
-                  fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box'
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '14px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  outline: 'none',
+                  boxSizing: 'border-box'
                 }}
               />
             </div>
@@ -375,127 +506,39 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               style={{
-                width: '100%', padding: '14px', borderRadius: '14px', background: '#be123c',
-                color: '#ffffff', border: 'none', fontWeight: '900', fontSize: '15px', cursor: 'pointer'
+                width: '100%',
+                padding: '14px',
+                borderRadius: '14px',
+                background: '#be123c',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: '900',
+                fontSize: '15px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(190, 18, 60, 0.3)'
               }}
             >
               {loading ? 'লগইন হচ্ছে...' : 'অ্যাডমিন পোর্টালে প্রবেশ'}
             </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => { setTab('shop'); setError(''); triggerHaptic('light'); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                ← সাধারণ দোকান লগইনে ফিরুন
+              </button>
+            </div>
           </form>
         )}
-
-        {/* Quick Demo Footer Action */}
-        <div style={{
-          marginTop: '20px',
-          paddingTop: '16px',
-          borderTop: '1px solid #f1f5f9'
-        }}>
-          <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
-            ⚡ টেস্ট ডেমো লগইন (১-ক্লিক):
-          </div>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '6px'
-          }}>
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setTab('shop');
-                setPhone('01986233234');
-                setPinDigits(['1', '2', '3', '4']);
-                setError('');
-              }}
-              style={{
-                background: '#eef2ff',
-                border: '1px solid #c7d2fe',
-                padding: '5px 10px',
-                borderRadius: '99px',
-                fontSize: '11px',
-                fontWeight: '800',
-                color: '#4338ca',
-                cursor: 'pointer'
-              }}
-              title="মালিক মোড (PIN: 1234)"
-            >
-              👑 মালিক (1234)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setTab('shop');
-                setPhone('01986233234');
-                setPinDigits(['2', '2', '2', '2']);
-                setError('');
-              }}
-              style={{
-                background: '#dcfce7',
-                border: '1px solid #bbf7d0',
-                padding: '5px 10px',
-                borderRadius: '99px',
-                fontSize: '11px',
-                fontWeight: '800',
-                color: '#15803d',
-                cursor: 'pointer'
-              }}
-              title="ক্যাশিয়ার মোড (PIN: 2222)"
-            >
-              🛒 ক্যাশিয়ার (2222)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setTab('shop');
-                setPhone('01986233234');
-                setPinDigits(['3', '3', '3', '3']);
-                setError('');
-              }}
-              style={{
-                background: '#fef3c7',
-                border: '1px solid #fde68a',
-                padding: '5px 10px',
-                borderRadius: '99px',
-                fontSize: '11px',
-                fontWeight: '800',
-                color: '#b45309',
-                cursor: 'pointer'
-              }}
-              title="ম্যানেজার মোড (PIN: 3333)"
-            >
-              💼 ম্যানেজার (3333)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setTab('shop');
-                setPhone('01986233234');
-                setPinDigits(['4', '4', '4', '4']);
-                setError('');
-              }}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #e2e8f0',
-                padding: '5px 10px',
-                borderRadius: '99px',
-                fontSize: '11px',
-                fontWeight: '800',
-                color: '#334155',
-                cursor: 'pointer'
-              }}
-              title="ফার্মাসিস্ট / সেলসম্যান (PIN: 4444)"
-            >
-              💊 ফার্মাসিস্ট (4444)
-            </button>
-          </div>
-        </div>
 
       </div>
 
@@ -546,5 +589,13 @@ export default function LoginPage() {
       )}
 
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>লোড হচ্ছে...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }
