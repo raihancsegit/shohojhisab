@@ -3816,25 +3816,16 @@ fastify.post('/api/voice-action', async (request, reply) => {
   }
 
   // ----------------------------------------------------
-  // INTENT 1.5: VOICE ADD-TO-CART & CHECKOUT FOR POS
+  // INTENT 1.4: STOCK INCREMENT / RESTOCK VIA VOICE
+  // E.g. "চিনিতে ৫০ কেজি স্টক যোগ করো" / "তীর তেলে ১০ বোতল যোগ করো"
   // ----------------------------------------------------
-  if (/কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|বিল|বিক্রি|সম্পন্ন|চেকআউট/.test(rawText) && !/বাকি\s*নিল|খরচ|আজকে\s*কত/.test(rawText)) {
-    // Check if voice command is checkout
-    if (/বিল\s*করো|বিক্রি\s*সম্পন্ন|নগদ\s*বিক্রি|ক্যাশে\s*বিল|চেকআউট|সম্পন্ন\s*করো/.test(rawText) && !/\d+/.test(rawText)) {
-      return {
-        success: true,
-        action: 'checkout_cash',
-        speech: 'নগদ বিক্রি সম্পন্ন করা হচ্ছে।'
-      };
-    }
-
-    // Otherwise it's add to cart! E.g. "নাপা ২ পাতা কার্টে নাও" / "চিনি ১ কেজি দাও" / "ওরস্যালাইন ৫ টা"
+  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ/.test(rawText)) {
     const numbersMatch = normalized.match(/(\d+(\.\d+)?)/);
-    const qty = numbersMatch ? parseFloat(numbersMatch[1]) : 1;
+    const addQty = numbersMatch ? parseFloat(numbersMatch[1]) : 10;
 
     let cleanProd = rawText
       .replace(/(\d+|[০-৯]+)/g, '')
-      .replace(/(কার্টে\s*নাও|কার্টে\s*রাখো|কার্টে\s*যোগ|কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|পিস|পাতা|কেজি|লিটার|প্যাকেট|বোতল|টাকা|টাকার|\?)/gi, '')
+      .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|তে|এ)/gi, '')
       .trim();
 
     if (cleanProd) {
@@ -3845,12 +3836,102 @@ fastify.post('/api/voice-action', async (request, reply) => {
       `).get(tenantId, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, cleanProd) as any;
 
       if (product) {
-        const speech = `${product.bangla_name || product.name} ${qty} ${product.unit || 'পিস'} কার্টে যোগ করা হয়েছে।`;
+        const newStock = (Number(product.stock) || 0) + addQty;
+        db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+        const speech = `✓ ${product.bangla_name || product.name}-এ +${addQty} ${product.unit || 'পিস'} স্টক যোগ করা হয়েছে। বর্তমান মোট স্টক: ${newStock} ${product.unit || 'পিস'}।`;
         return {
           success: true,
-          action: 'add_to_cart',
+          action: 'stock_incremented',
           speech,
-          data: { product, quantity: qty }
+          data: { productId: product.id, name: product.bangla_name || product.name, addedQty: addQty, totalStock: newStock }
+        };
+      }
+    }
+  }
+
+  // ----------------------------------------------------
+  // INTENT 1.5: MULTI-ITEM OR SINGLE ITEM VOICE ADD-TO-CART & CHECKOUT FOR POS
+  // ----------------------------------------------------
+  if (/কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|বিল|বিক্রি|সম্পন্ন|চেকআউট|কেজি|লিটার|পিস|পাতা|প্যাকেট|ডজন/.test(rawText) && !/বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|খরচ|আজকে\s*কত|কত\s*লাভ|দাম\s*কত|স্টক\s*কত/.test(rawText)) {
+    // Check if voice command is checkout
+    if (/বিল\s*করো|বিক্রি\s*সম্পন্ন|নগদ\s*বিক্রি|ক্যাশে\s*বিল|চেকআউট|সম্পন্ন\s*করো/.test(rawText) && !/\d+/.test(rawText)) {
+      return {
+        success: true,
+        action: 'checkout_cash',
+        speech: 'নগদ বিক্রি সম্পন্ন করা হচ্ছে।'
+      };
+    }
+
+    // Split multiple items if comma, 'এবং', or 'আর' is present
+    const itemPhrases = rawText.split(/,|\s+এবং\s+|\s+আর\s+/).map(s => s.trim()).filter(Boolean);
+    const addedItems: any[] = [];
+
+    for (const phrase of itemPhrases) {
+      const phraseNorm = toEnDigits(parseSpokenBengaliNumbers(phrase.toLowerCase()));
+      const numbersMatch = phraseNorm.match(/(\d+(\.\d+)?)/);
+      const qty = numbersMatch ? parseFloat(numbersMatch[1]) : 1;
+
+      let cleanProd = phrase
+        .replace(/(\d+|[০-৯]+)/g, '')
+        .replace(/(কার্টে\s*নাও|কার্টে\s*রাখো|কার্টে\s*যোগ|কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|পিস|পাতা|কেজি|লিটার|প্যাকেট|বোতল|টাকা|টাকার|বিল\s*করো|\?)/gi, '')
+        .trim();
+
+      if (cleanProd && cleanProd.length >= 2) {
+        const product = db.prepare(`
+          SELECT * FROM products WHERE tenant_id = ? AND (
+            bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
+          ) LIMIT 1
+        `).get(tenantId, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, cleanProd) as any;
+
+        if (product) {
+          addedItems.push({ product, quantity: qty });
+        }
+      }
+    }
+
+    if (addedItems.length > 0) {
+      const names = addedItems.map(it => `${it.product.bangla_name || it.product.name} (${it.quantity} ${it.product.unit || 'পিস'})`).join(', ');
+      const speech = `${names} কার্টে যোগ করা হয়েছে।`;
+      return {
+        success: true,
+        action: 'multi_items_add',
+        speech,
+        data: { items: addedItems },
+        navigateTo: '/pos'
+      };
+    }
+  }
+
+  // ----------------------------------------------------
+  // INTENT 1.8: DEALER PAYMENT VIA VOICE (ডিলার মিজানকে ৫০০ টাকা দিলাম)
+  // ----------------------------------------------------
+  if ((/ডিলার|মহাজন|সাপ্লায়ার/.test(rawText) && /টাকা\s*দিলাম|পেমেন্ট|পরিশোধ|জমা/.test(rawText)) || /ডিলার\s*পেমেন্ট/.test(rawText)) {
+    const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
+    const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+
+    if (amount > 0) {
+      let cleanDealerName = rawText
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+        .replace(/(ডিলার|মহাজন|সাপ্লায়ার|ভাইকে|ভাই|কে|টাকা\s*দিলাম|পেমেন্ট\s*করলাম|পরিশোধ\s*করলাম|দিলাম|পেমেন্ট|পরিশোধ)/gi, '')
+        .trim();
+
+      let dealer = db.prepare('SELECT * FROM dealers WHERE tenant_id = ? AND (company_name LIKE ? OR representative_name LIKE ?)').get(tenantId, `%${cleanDealerName}%`, `%${cleanDealerName}%`) as any;
+
+      if (!dealer) {
+        dealer = db.prepare('SELECT * FROM dealers WHERE tenant_id = ? ORDER BY payable_due DESC LIMIT 1').get(tenantId) as any;
+      }
+
+      if (dealer) {
+        const currentDue = Number(dealer.payable_due) || 0;
+        const newDue = Math.max(0, currentDue - amount);
+        db.prepare('UPDATE dealers SET payable_due = ? WHERE id = ?').run(newDue, dealer.id);
+
+        const speech = `ডিলার ${dealer.company_name || dealer.representative_name}-কে ৳${amount} টাকা পরিশোধ রেকর্ড করা হয়েছে। অবশিষ্ট দেনা ৳${newDue} টাকা।`;
+        return {
+          success: true,
+          action: 'dealer_payment',
+          speech,
+          data: { dealerName: dealer.company_name, amount, remainingDue: newDue }
         };
       }
     }

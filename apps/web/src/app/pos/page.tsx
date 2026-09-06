@@ -269,6 +269,30 @@ export default function PosPage() {
       }
     };
 
+    const handleVoiceMultiItemsAdd = (e: any) => {
+      const { items } = e.detail || {};
+      if (Array.isArray(items) && items.length > 0) {
+        items.forEach(({ product, quantity }: any) => {
+          if (product) {
+            const prod = {
+              id: product.id,
+              name: product.name,
+              banglaName: product.bangla_name || product.name,
+              sellingPrice: Number(product.selling_price || product.sellingPrice) || 50,
+              purchasePrice: Number(product.purchase_price || product.purchasePrice) || 40,
+              unit: product.unit || 'পিস',
+              stock: Number(product.stock) || 10,
+              icon: product.icon || '📦'
+            };
+            addToCart(prod, Number(quantity) || 1);
+          }
+        });
+        triggerHaptic('success');
+        playBeep(1100);
+        setVoiceNotice(`✓ ভয়েসে ফর্দ থেকে ${items.length}টি পণ্য কার্টে যুক্ত হয়েছে!`);
+      }
+    };
+
     const handleVoiceCheckout = () => {
       if (cart.length > 0) {
         setPaymentMethod('cash');
@@ -279,10 +303,12 @@ export default function PosPage() {
     };
 
     window.addEventListener('voice-add-to-cart', handleVoiceAddToCart);
+    window.addEventListener('voice-multi-items-add', handleVoiceMultiItemsAdd);
     window.addEventListener('voice-checkout-cash', handleVoiceCheckout);
 
     return () => {
       window.removeEventListener('voice-add-to-cart', handleVoiceAddToCart);
+      window.removeEventListener('voice-multi-items-add', handleVoiceMultiItemsAdd);
       window.removeEventListener('voice-checkout-cash', handleVoiceCheckout);
     };
   }, [cart, currentTenantId, customers, selectedCustomer, discount, paymentMethod]);

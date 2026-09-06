@@ -179,6 +179,13 @@ export default function VoiceAssistant() {
             window.dispatchEvent(new CustomEvent('voice-add-to-cart', { detail: result.data }));
           }
 
+          if (result.action === 'multi_items_add') {
+            if (pathname !== '/pos') {
+              router.push('/pos');
+            }
+            window.dispatchEvent(new CustomEvent('voice-multi-items-add', { detail: result.data }));
+          }
+
           if (result.action === 'checkout_cash') {
             window.dispatchEvent(new CustomEvent('voice-checkout-cash', { detail: result.data }));
           }
@@ -219,15 +226,15 @@ export default function VoiceAssistant() {
     setTimeout(() => setFeedback(''), 3000);
   };
 
-  if (!isSupported || userRole === 'admin' || pathname === '/pos') return null;
+  if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
 
   return (
     <>
       {/* Floating Smart Voice Button (Carefully positioned above the bottom dock) */}
       <div style={{
         position: 'fixed',
-        bottom: pathname === '/pos' ? '140px' : '76px',
-        right: '12px',
+        bottom: pathname === '/pos' ? '180px' : '76px',
+        right: '14px',
         zIndex: 55,
         display: 'flex',
         flexDirection: 'column',
@@ -401,18 +408,56 @@ export default function VoiceAssistant() {
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
               borderRadius: '14px',
-              padding: '10px 12px',
+              padding: '12px',
               textAlign: 'left',
-              display: 'grid',
-              gap: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
               fontSize: '11.5px',
               color: '#334155'
             }}>
-              <span style={{ fontWeight: '800', color: '#059669' }}>💡 উদাহরণ:</span>
-              <span>• <em>"স্বপন ভাই ৫০ টাকা বাকি নিল"</em></span>
-              <span>• <em>"করিম চাচা বাকি ২০০ টাকা জমা দিল"</em></span>
-              <span>• <em>"স্বপন ভাইয়ের বাকি কত?"</em> বা <em>"চিনির দাম কত?"</em></span>
-              <span>• <em>"চা নাস্তা ৬০ টাকা খরচ"</em> বা <em>"আজকে কত লাভ হলো?"</em></span>
+              <span style={{ fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                💡 মুখে বলুন অথবা ট্যাপ করুন:
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
+                {[
+                  'কালাম ভাই ৫০০ টাকা বাকি নিল',
+                  'রহিম ভাই ২০০ টাকা বাকি দিল',
+                  'চা নাস্তা ৬০ টাকা খরচ',
+                  'চিনি ২ কেজি, ডাল ১ কেজি',
+                  'আজকে কত বিক্রি হলো?',
+                  'আজকে কত লাভ হলো?',
+                  'তীর তেলের স্টক কত আছে?',
+                  'চিনিতে আরও ৫০ কেজি স্টক যোগ করো'
+                ].map((eg, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+                      isListeningRef.current = false;
+                      setIsListening(false);
+                      if (recognitionRef.current) {
+                        try { recognitionRef.current.stop(); } catch (e) {}
+                      }
+                      processUniversalVoiceCommand(eg);
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: '#1e293b',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                    }}
+                  >
+                    💬 {eg}
+                  </button>
+                ))}
+              </div>
             </div>
 
           </div>
