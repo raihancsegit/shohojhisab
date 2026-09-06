@@ -2625,17 +2625,52 @@ fastify.get('/api/customers', async (request) => {
   if (!tenantId) return [];
 
   const rows = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY total_due DESC').all(tenantId) as any[];
-  return rows.map(r => ({
-    id: r.id,
-    tenantId: r.tenant_id,
-    name: r.name,
-    phone: r.phone,
-    address: r.address,
-    totalDue: Number(r.total_due) || 0,
-    creditLimit: Number(r.credit_limit) || 5000,
-    avatar: r.avatar || '👤',
-    createdAt: r.created_at
-  }));
+
+  const getLastSale = db.prepare(`
+    SELECT s.id, s.invoice_no, s.created_at, s.due_amount, s.total_amount
+    FROM sales s
+    WHERE (s.customer_id = ? OR s.customer_name = ?) AND s.tenant_id = ?
+    ORDER BY s.created_at DESC LIMIT 1
+  `);
+
+  const getSaleItems = db.prepare('SELECT product_name, quantity, total_price FROM sale_items WHERE sale_id = ?');
+
+  return rows.map(r => {
+    let lastItemsSummary = '';
+    let lastDateFormatted = '';
+    let lastInvoiceNo = '';
+
+    try {
+      const lastSale = getLastSale.get(r.id, r.name, tenantId) as any;
+      if (lastSale) {
+        lastInvoiceNo = lastSale.invoice_no || '';
+        const items = getSaleItems.all(lastSale.id) as any[];
+        if (items && items.length > 0) {
+          lastItemsSummary = items.map(it => `${it.product_name} (${it.quantity}টি)`).join(', ');
+        }
+        if (lastSale.created_at) {
+          const d = new Date(lastSale.created_at);
+          lastDateFormatted = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      }
+    } catch (e) {}
+
+    return {
+      id: r.id,
+      tenantId: r.tenant_id,
+      name: r.name,
+      phone: r.phone,
+      address: r.address,
+      totalDue: Number(r.total_due) || 0,
+      creditLimit: Number(r.credit_limit) || 5000,
+      avatar: r.avatar || '👤',
+      promiseDate: r.promise_date || '',
+      createdAt: r.created_at,
+      lastDate: lastDateFormatted,
+      lastItemsSummary: lastItemsSummary || (Number(r.total_due) > 0 ? 'পূর্বের বকেয়া খাতা' : 'কোনো বকেয়া নেই'),
+      lastInvoiceNo
+    };
+  });
 });
 
 fastify.post('/api/customers', async (request, reply) => {
@@ -2669,6 +2704,60 @@ fastify.post('/api/customers/due-payment', async (request, reply) => {
   const { customerId, amount } = request.body as any;
   db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(Number(amount) || 0, customerId);
   return { success: true, message: 'বাকি আদায় সফল' };
+});
+
+fastify.post('/api/customers/add-due', async (request, reply) => {
+  const { customerId, amount, itemsSummary, note } = request.body as any;
+  const numAmount = Number(amount) || 0;
+  if (!customerId || numAmount <= 0) {
+    return reply.status(400).send({ error: 'Valid customerId and positive amount are required' });
+  }
+
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(customerId) as any;
+  if (!customer) return reply.status(404).send({ error: 'Customer not found' });
+
+  // Update customer's total due
+  db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(numAmount, customerId);
+
+  // Record a sale for ledger tracking
+  const saleId = 'sale-' + uuidv4().slice(0, 8);
+  const now = new Date().toISOString();
+  const invoiceNo = 'BK-' + Date.now().toString().slice(-6);
+
+  try {
+    db.prepare(`
+      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, payment_method, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      saleId,
+      customer.tenant_id,
+      invoiceNo,
+      customer.id,
+      customer.name,
+      numAmount,
+      0,
+      numAmount,
+      'due',
+      itemsSummary || note || 'সরাসরি বাকি খাতা এন্ট্রি',
+      now
+    );
+
+    const itemName = itemsSummary || 'বাকি পণ্য সামগ্রী';
+    const itemId = 'sitem-' + uuidv4().slice(0, 8);
+    db.prepare(`
+      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      itemId,
+      saleId,
+      itemName,
+      1,
+      numAmount,
+      numAmount
+    );
+  } catch (e) {}
+
+  return { success: true, message: 'বাকি সফলভাবে যোগ হয়েছে' };
 });
 
 // Customer Public Passbook API (Open for customer statement link)

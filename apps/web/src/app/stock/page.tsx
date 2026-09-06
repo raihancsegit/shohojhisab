@@ -262,10 +262,10 @@ export default function StockPage() {
     } catch (e) {}
   };
 
-  // Quick Stock Increment Button (+10, +50, +100)
-  const handleQuickAddStock = async (product: any, addQty: number) => {
+  // Quick Stock Increment / Decrement Button
+  const handleQuickAddStock = async (product: any, deltaQty: number) => {
     triggerHaptic('medium');
-    const newStock = Number(product.stock || 0) + addQty;
+    const newStock = Math.max(0, Number(product.stock || 0) + deltaQty);
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
@@ -273,8 +273,9 @@ export default function StockPage() {
         body: JSON.stringify({ stock: newStock })
       });
       if (res.ok) {
-        setNotice(`✓ ${product.banglaName || product.name}-এ +${addQty} ${product.unit} স্টক যোগ হয়েছে (মোট: ${newStock})`);
-        speakAnnouncement(`${product.banglaName || product.name} এ ${addQty} ${product.unit} স্টক যোগ হয়েছে`);
+        const sign = deltaQty > 0 ? `+${deltaQty}` : `${deltaQty}`;
+        setNotice(`✓ ${product.banglaName || product.name}-এ ${sign} ${product.unit} স্টক আপডেট হয়েছে (মোট: ${newStock})`);
+        speakAnnouncement(`${product.banglaName || product.name} এ ${sign} ${product.unit} স্টক আপডেট হয়েছে`);
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
       }
@@ -691,224 +692,278 @@ export default function StockPage() {
 
       {/* VIEW 1: COMPACT LIST / TABLE VIEW (Super easy to manage 100s of products) */}
       {viewMode === 'list' && (
-        <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+        <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', fontWeight: '800' }}>
-                  <th style={{ padding: '9px 12px' }}>পণ্যের বিবরণ</th>
-                  <th style={{ padding: '9px 8px' }}>কেনার দাম</th>
-                  <th style={{ padding: '9px 8px' }}>বিক্রির দাম</th>
-                  <th style={{ padding: '9px 8px' }}>বর্তমান স্টক</th>
-                  <th style={{ padding: '9px 8px' }}>দ্রুত স্টক যোগ</th>
-                  <th style={{ padding: '9px 12px', textAlign: 'right' }}>অ্যাকশন</th>
+                  <th style={{ padding: '10px 14px' }}>📦 পণ্যের বিবরণ ও ব্র্যান্ড</th>
+                  <th style={{ padding: '10px 10px' }}>💰 ক্রয় ও বিক্রয় মূল্য (লাভ)</th>
+                  <th style={{ padding: '10px 10px' }}>📊 বর্তমান স্টক ও অবস্থা</th>
+                  <th style={{ padding: '10px 10px' }}>⚡ দ্রুত স্টক পরিবর্তন</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right' }}>⚙️ অ্যাকশন</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedProducts.map((p, idx) => {
-                  const isLow = p.stock <= (p.lowStockThreshold || 5);
+                  const buyPrice = Number(p.purchasePrice) || 0;
+                  const sellPrice = Number(p.sellingPrice) || 0;
+                  const profit = sellPrice - buyPrice;
+                  const profitMargin = sellPrice > 0 ? Math.round((profit / sellPrice) * 100) : 0;
+                  const isZero = p.stock === 0;
+                  const isLow = p.stock > 0 && p.stock <= (p.lowStockThreshold || 5);
+
                   return (
                     <tr
                       key={p.id}
                       style={{
                         borderBottom: '1px solid #f1f5f9',
-                        background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                        background: isZero ? '#fff7ed' : idx % 2 === 0 ? '#ffffff' : '#fafafa',
                         transition: 'background 0.15s'
                       }}
                     >
-                      {/* Product Name & Info */}
-                      <td style={{ padding: '8px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '20px' }}>{p.icon || '📦'}</span>
+                      {/* Column 1: Product Name, Icon & Tags */}
+                      <td style={{ padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '22px', flexShrink: 0 }}>{p.icon || '📦'}</span>
                           <div>
-                            <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
+                            <strong style={{ fontSize: '13.5px', color: '#0f172a', display: 'block', fontWeight: '800' }}>
                               {p.banglaName || p.name}
                             </strong>
-                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '1px', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>#{p.barcode}</span>
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '3px', flexWrap: 'wrap' }}>
+                              {p.barcode && (
+                                <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                  #{p.barcode}
+                                </span>
+                              )}
                               {p.genericName && (
-                                <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '700' }}>• 🧪 {p.genericName}</span>
+                                <span style={{ fontSize: '10px', color: '#4f46e5', background: '#eef2ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #c7d2fe' }}>
+                                  🧪 {p.genericName}
+                                </span>
                               )}
                               {p.brand && (
-                                <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700' }}>• 🏢 {p.brand}</span>
+                                <span style={{ fontSize: '10px', color: '#0369a1', background: '#f0f9ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #bae6fd' }}>
+                                  🏢 {p.brand}
+                                </span>
                               )}
                               {p.size && (
-                                <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700' }}>• 🏷️ {p.size}</span>
+                                <span style={{ fontSize: '10px', color: '#6d28d9', background: '#f5f3ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #ddd6fe' }}>
+                                  🏷️ {p.size}
+                                </span>
                               )}
                               {p.color && (
-                                <span style={{ fontSize: '10.5px', color: '#64748b' }}>• 🎨 {p.color}</span>
-                              )}
-                              {p.warranty && (
-                                <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: '700' }}>• 🛡️ {p.warranty}</span>
+                                <span style={{ fontSize: '10px', color: '#475569', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px' }}>
+                                  🎨 {p.color}
+                                </span>
                               )}
                               {p.expiryDate && (
-                                <span style={{ fontSize: '10px', color: '#d97706', fontWeight: '600' }}>• ⏳ {p.expiryDate}</span>
+                                <span style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', fontWeight: '600', border: '1px solid #fde68a' }}>
+                                  ⏳ {p.expiryDate}
+                                </span>
                               )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Purchase Price (কেনার দাম) with 1-tap edit */}
-                      <td style={{ padding: '8px 8px' }}>
-                        {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'purchasePrice' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <input
-                              type="number"
-                              value={inlineEdit.val}
-                              onChange={(e) => handleInlineValChange(e.target.value)}
-                              className="num-font"
-                              autoFocus
-                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
-                            />
-                            <button
-                              onClick={() => handleSaveInline(p.id, 'purchasePrice', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
-                            >
-                              ✕
-                            </button>
+                      {/* Column 2: Buy / Sell Price & Profit Margin */}
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                            <span style={{ color: '#64748b' }}>ক্রয়:</span>
+                            {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'purchasePrice' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <input
+                                  type="number"
+                                  value={inlineEdit.val}
+                                  onChange={(e) => handleInlineValChange(e.target.value)}
+                                  className="num-font"
+                                  autoFocus
+                                  style={{ width: '52px', padding: '2px 4px', borderRadius: '4px', border: '1.5px solid #10b981', fontSize: '11.5px', outline: 'none' }}
+                                />
+                                <button
+                                  onClick={() => handleSaveInline(p.id, 'purchasePrice', inlineEdit.val)}
+                                  style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => setInlineEdit(null)}
+                                  style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', cursor: 'pointer' }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span className="num-font" style={{ fontWeight: '700', color: '#475569' }}>
+                                  ৳{p.purchasePrice || 0}
+                                </span>
+                                <button
+                                  onClick={() => { setInlineEdit({ id: p.id, field: 'purchasePrice', val: String(p.purchasePrice || 0) }); triggerHaptic('light'); }}
+                                  style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0px 3px', fontSize: '9px', cursor: 'pointer' }}
+                                  title="কেনার দাম এডিট করুন"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span className="num-font" style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                              ৳{p.purchasePrice || 0}
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                            <span style={{ color: '#059669', fontWeight: '700' }}>বিক্রয়:</span>
+                            {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'sellingPrice' ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <input
+                                  type="number"
+                                  value={inlineEdit.val}
+                                  onChange={(e) => handleInlineValChange(e.target.value)}
+                                  className="num-font"
+                                  autoFocus
+                                  style={{ width: '52px', padding: '2px 4px', borderRadius: '4px', border: '1.5px solid #10b981', fontSize: '11.5px', outline: 'none' }}
+                                />
+                                <button
+                                  onClick={() => handleSaveInline(p.id, 'sellingPrice', inlineEdit.val)}
+                                  style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => setInlineEdit(null)}
+                                  style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', cursor: 'pointer' }}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span className="num-font" style={{ fontWeight: '900', color: '#059669', fontSize: '13px' }}>
+                                  ৳{p.sellingPrice}
+                                </span>
+                                <button
+                                  onClick={() => { setInlineEdit({ id: p.id, field: 'sellingPrice', val: String(p.sellingPrice) }); triggerHaptic('light'); }}
+                                  style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '4px', padding: '0px 3px', fontSize: '9px', cursor: 'pointer' }}
+                                  title="বিক্রির দাম এডিট করুন"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Profit Pill */}
+                          {profit > 0 ? (
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '1px 5px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              +৳{profit} ({profitMargin}%) লাভ
                             </span>
-                            <button
-                              onClick={() => { setInlineEdit({ id: p.id, field: 'purchasePrice', val: String(p.purchasePrice || 0) }); triggerHaptic('light'); }}
-                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '700', cursor: 'pointer' }}
-                              title="কেনার দাম পরিবর্তন করুন"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )}
+                          ) : profit === 0 ? (
+                            <span style={{ fontSize: '10px', color: '#64748b', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              সমান সমান (০% লাভ)
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', padding: '1px 5px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              -৳{Math.abs(profit)} ক্ষতি
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Selling Price (বিক্রির দাম) with 1-tap edit */}
-                      <td style={{ padding: '8px 8px' }}>
-                        {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'sellingPrice' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <input
-                              type="number"
-                              value={inlineEdit.val}
-                              onChange={(e) => handleInlineValChange(e.target.value)}
-                              className="num-font"
-                              autoFocus
-                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
-                            />
-                            <button
-                              onClick={() => handleSaveInline(p.id, 'sellingPrice', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span className="num-font" style={{ fontSize: '13.5px', fontWeight: '900', color: '#059669' }}>
-                              ৳{p.sellingPrice}
+                      {/* Column 3: Stock Quantity & Level Status */}
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'stock' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                              <input
+                                type="number"
+                                value={inlineEdit.val}
+                                onChange={(e) => handleInlineValChange(e.target.value)}
+                                className="num-font"
+                                autoFocus
+                                style={{ width: '52px', padding: '2px 4px', borderRadius: '4px', border: '1.5px solid #10b981', fontSize: '11.5px', outline: 'none' }}
+                              />
+                              <button
+                                onClick={() => handleSaveInline(p.id, 'stock', inlineEdit.val)}
+                                style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() => setInlineEdit(null)}
+                                style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '4px', padding: '2px 4px', fontSize: '10px', cursor: 'pointer' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="num-font" style={{ fontSize: '14px', fontWeight: '900', color: isZero ? '#dc2626' : isLow ? '#d97706' : '#0f172a' }}>
+                                {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
+                              </span>
+                              <button
+                                onClick={() => { setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) }); triggerHaptic('light'); }}
+                                style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0px 3px', fontSize: '9px', cursor: 'pointer' }}
+                                title="স্টক সরাসরি সংশোধন করুন"
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Stock Status Badge */}
+                          {isZero ? (
+                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '1px 6px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              🚨 স্টক শেষ
                             </span>
-                            <button
-                              onClick={() => { setInlineEdit({ id: p.id, field: 'sellingPrice', val: String(p.sellingPrice) }); triggerHaptic('light'); }}
-                              style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '800', cursor: 'pointer' }}
-                              title="বিক্রয় মূল্য পরিবর্তন করুন"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )}
+                          ) : isLow ? (
+                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '1px 6px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              ⚠️ কম স্টক
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                              ✓ পর্যাপ্ত স্টক
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Stock Quantity */}
-                      <td style={{ padding: '8px 8px' }}>
-                        {inlineEdit && inlineEdit.id === p.id && inlineEdit.field === 'stock' ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <input
-                              type="number"
-                              value={inlineEdit.val}
-                              onChange={(e) => handleInlineValChange(e.target.value)}
-                              className="num-font"
-                              autoFocus
-                              style={{ width: '55px', padding: '3px 5px', borderRadius: '5px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
-                            />
-                            <button
-                              onClick={() => handleSaveInline(p.id, 'stock', inlineEdit.val)}
-                              style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={() => setInlineEdit(null)}
-                              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '5px', padding: '3px 5px', fontSize: '10px', cursor: 'pointer' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <span
-                              className="num-font"
-                              style={{
-                                fontSize: '13.5px',
-                                fontWeight: '900',
-                                color: isLow ? '#dc2626' : '#0f172a'
-                              }}
-                            >
-                              {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
-                            </span>
-                            <button
-                              onClick={() => { setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) }); triggerHaptic('light'); }}
-                              style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '5px', padding: '1px 4px', fontSize: '9.5px', fontWeight: '700', cursor: 'pointer' }}
-                              title="স্টক সরাসরি সংশোধন করুন"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Quick Add Stock Chips (+10, +50, +100) */}
-                      <td style={{ padding: '8px 8px' }}>
-                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+                      {/* Column 4: Quick Stock Increment / Decrement */}
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleQuickAddStock(p, -1)}
+                            disabled={p.stock <= 0}
+                            style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '2px 5px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: p.stock <= 0 ? 'not-allowed' : 'pointer' }}
+                            title="১ পিস কমান"
+                          >
+                            -১
+                          </button>
+                          <button
+                            onClick={() => handleQuickAddStock(p, 1)}
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                            title="+১ পিস যোগ করুন"
+                          >
+                            +১
+                          </button>
                           <button
                             onClick={() => handleQuickAddStock(p, 10)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            title="নতুন ১০ পিস স্টক যোগ করুন"
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                            title="+১০ পিস যোগ করুন"
                           >
                             +১০
                           </button>
                           <button
                             onClick={() => handleQuickAddStock(p, 50)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            title="নতুন ৫০ পিস স্টক যোগ করুন"
+                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '4px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                            title="+৫০ পিস যোগ করুন"
                           >
                             +৫০
-                          </button>
-                          <button
-                            onClick={() => handleQuickAddStock(p, 100)}
-                            style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                            title="নতুন ১০০ পিস স্টক যোগ করুন"
-                          >
-                            +১০০
                           </button>
                         </div>
                       </td>
 
-                      {/* Actions: Full Edit & Delete */}
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                      {/* Column 5: Actions */}
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
                           <button
                             onClick={() => openEditModal(p)}
                             style={{

@@ -19,6 +19,12 @@ export default function KhataPage() {
   const [showPayModal, setShowPayModal] = useState<any>(null);
   const [payAmount, setPayAmount] = useState('');
 
+  // Quick Add Due Modal state
+  const [showAddDueModal, setShowAddDueModal] = useState<any>(null);
+  const [addDueAmount, setAddDueAmount] = useState('');
+  const [addDueItems, setAddDueItems] = useState('');
+  const [addDueSubmitting, setAddDueSubmitting] = useState(false);
+
   // Detailed Due Ledger History Modal state
   const [selectedLedger, setSelectedLedger] = useState<any | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
@@ -36,6 +42,37 @@ export default function KhataPage() {
   const [address, setAddress] = useState('');
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const handleAddDueSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showAddDueModal?.id || !addDueAmount) return;
+    setAddDueSubmitting(true);
+    try {
+      const res = await fetch('/api/customers/add-due', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: showAddDueModal.id,
+          amount: Number(addDueAmount) || 0,
+          itemsSummary: addDueItems || 'বাকি পণ্য সামগ্রী'
+        })
+      });
+      if (res.ok) {
+        await loadCustomers();
+        speakAnnouncement(`${showAddDueModal.name} এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ করা হয়েছে।`);
+        triggerHaptic('success');
+        setNotice(`✓ "${showAddDueModal.name}" এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ হয়েছে!`);
+        setShowAddDueModal(null);
+        setAddDueAmount('');
+        setAddDueItems('');
+        setTimeout(() => setNotice(''), 4000);
+      }
+    } catch (e) {
+      console.error('Failed to add due', e);
+    } finally {
+      setAddDueSubmitting(false);
+    }
+  };
 
   const loadCustomerLedger = async (customer: any) => {
     if (!customer?.id) return;
@@ -438,7 +475,7 @@ export default function KhataPage() {
           কোনো গ্রাহক পাওয়া যায়নি। "নতুন বাকি খাতা এন্ট্রি" বাটনে ক্লিক করে খরিদ্দার যুক্ত করুন।
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '10px' }}>
+        <div style={{ display: 'grid', gap: '12px' }}>
           {paginatedCustomers.map(c => {
             const due = Number(c.totalDue || c.total_due || 0);
             return (
@@ -446,188 +483,257 @@ export default function KhataPage() {
                 key={c.id}
                 className="ui-card"
                 style={{
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  border: due > 0 ? '1.5px solid #fecdd3' : '1px solid #e2e8f0',
+                  boxShadow: due > 0 ? '0 2px 10px rgba(239, 68, 68, 0.05)' : '0 2px 6px rgba(0, 0, 0, 0.02)',
+                  borderRadius: '16px'
+                }}
+              >
+                {/* Top Row: Customer Info & Due Balance */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      background: due > 0 ? '#fef2f2' : '#ecfdf5',
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: '20px',
+                      flexShrink: 0
+                    }}>
+                      {c.avatar || '👤'}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
+                          {c.name}
+                        </h4>
+                        {due > Number(c.creditLimit || c.credit_limit || 5000) && (
+                          <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '2px 7px', borderRadius: '6px' }}>
+                            🚨 বাকি সীমা পার (লিমিট ৳{Number(c.creditLimit || c.credit_limit || 5000)})
+                          </span>
+                        )}
+                        {(c.promiseDate || c.promise_date) && (
+                          <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#eff6ff', color: '#2563eb', padding: '2px 7px', borderRadius: '6px' }}>
+                            📅 দেওয়ার তারিখ: {c.promiseDate || c.promise_date}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                        <span>📱 {c.phone}</span>
+                        {c.address && <span>• 📍 {c.address}</span>}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Due Amount Badge */}
+                  <div style={{
+                    background: due > 0 ? '#fff1f2' : '#ecfdf5',
+                    border: due > 0 ? '1.5px solid #fca5a5' : '1.5px solid #a7f3d0',
+                    padding: '6px 14px',
+                    borderRadius: '12px',
+                    textAlign: 'right',
+                    alignSelf: 'center'
+                  }}>
+                    <span style={{ fontSize: '11px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '700', display: 'block' }}>
+                      বর্তমান বকেয়া বাকি
+                    </span>
+                    <div className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
+                      ৳{due.toLocaleString('en-US')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle Row: কিসের বাকি ও শেষ ক্রয়ের তারিখ / ফর্দ প্যানেল */}
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '9px 12px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   flexWrap: 'wrap',
-                  gap: '12px',
-                  padding: '16px 20px'
-                }}
-              >
-                {/* Left Customer Info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '14px',
-                    background: due > 0 ? '#fef2f2' : '#ecfdf5',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '22px'
-                  }}>
-                    {c.avatar || '👤'}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
-                        {c.name}
-                      </h4>
-                      {due > Number(c.creditLimit || c.credit_limit || 5000) && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '2px 7px', borderRadius: '6px' }}>
-                          🚨 বাকি সীমা পার (লিমিট ৳{Number(c.creditLimit || c.credit_limit || 5000)})
-                        </span>
-                      )}
-                      {(c.promiseDate || c.promise_date) && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', background: '#eff6ff', color: '#2563eb', padding: '2px 7px', borderRadius: '6px' }}>
-                          📅 দেওয়ার তারিখ: {c.promiseDate || c.promise_date}
-                        </span>
-                      )}
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
+                    <span style={{ fontSize: '16px' }}>🛍️</span>
+                    <div>
+                      <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                        কিসের বাকি / নেওয়া পণ্যের ফর্দ:
+                      </div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#1e293b', marginTop: '1px' }}>
+                        {c.lastItemsSummary || 'পূর্বের বাকি খাতা'}
+                      </div>
                     </div>
-                    <span style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <span>📱 {c.phone}</span>
-                      {c.address && <span>• {c.address}</span>}
-                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#64748b', background: '#ffffff', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <span>📅</span>
+                    <span><strong>তারিখ:</strong> {c.lastDate || 'পূর্বের হিসাব'} {c.lastInvoiceNo ? `(#${c.lastInvoiceNo})` : ''}</span>
                   </div>
                 </div>
 
-                {/* Right Balance & Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block' }}>বকেয়া বাকি</span>
-                    <div className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: due > 0 ? '#dc2626' : '#059669' }}>
-                      ৳{due.toLocaleString('en-US')}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') && (
-                      <a
-                        href={`tel:${c.phone}`}
-                        style={{
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          border: '1px solid #a7f3d0',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        title="সরাসরি মোবাইলে কল দিন"
-                      >
-                        <span>📞</span> কল
-                      </a>
-                    )}
-
-                    {due > 0 && (
-                      <button
-                        onClick={() => sendWhatsAppReminder(c)}
-                        style={{
-                          background: '#25d366',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '8px 12px',
-                          borderRadius: '10px',
-                          fontSize: '12.5px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        title="WhatsApp-এ বকেয়া পরিশোধের তাগাদা মেসেজ পাঠান"
-                      >
-                        <span>💬</span> তাগাদা
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setShowPromiseModal(c);
-                        setPromiseDateInput(c.promiseDate || c.promise_date || '');
-                        setPromiseNotesInput(c.address || '');
-                      }}
+                {/* Bottom Row: Comprehensive Action Buttons Toolbar */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', paddingTop: '4px' }}>
+                  {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') && (
+                    <a
+                      href={`tel:${c.phone}`}
                       style={{
-                        background: '#f8fafc',
-                        color: '#475569',
-                        border: '1.5px solid #cbd5e1',
-                        padding: '8px 10px',
-                        borderRadius: '10px',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      title="টাকা পরিশোধের প্রতিশ্রুত তারিখ সেট করুন"
-                    >
-                      <span>📅</span> তারিখ
-                    </button>
-
-                    <button
-                      onClick={() => loadCustomerLedger(c)}
-                      style={{
-                        background: '#f8fafc',
-                        color: '#334155',
-                        border: '1.5px solid #cbd5e1',
-                        padding: '8px 11px',
-                        borderRadius: '10px',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      title="কখন কোন তারিখে কি কি পণ্য নিয়েছে তার বিস্তারিত ফর্দ দেখুন"
-                    >
-                      <span>📜</span> ফর্দ ও সময়
-                    </button>
-
-                    <Link
-                      href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
-                      target="_blank"
-                      style={{
-                        background: '#eff6ff',
-                        color: '#2563eb',
-                        border: '1px solid #bfdbfe',
-                        padding: '8px 10px',
-                        borderRadius: '10px',
-                        fontSize: '12px',
+                        background: '#ecfdf5',
+                        color: '#059669',
+                        border: '1px solid #a7f3d0',
+                        padding: '6px 10px',
+                        borderRadius: '9px',
+                        fontSize: '11.5px',
                         fontWeight: '800',
                         textDecoration: 'none',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px'
                       }}
-                      title="গ্রাহকের লাইভ ডিজিটাল পাসবুক দেখুন ও লিঙ্ক কপি করুন"
+                      title="সরাসরি মোবাইলে কল দিন"
                     >
-                      <span>📖</span> পাসবুক
-                    </Link>
+                      <span>📞</span> কল
+                    </a>
+                  )}
 
+                  {due > 0 && (
                     <button
-                      onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
+                      onClick={() => sendWhatsAppReminder(c)}
                       style={{
-                        background: '#10b981',
+                        background: '#25d366',
                         color: '#fff',
                         border: 'none',
-                        padding: '8px 14px',
-                        borderRadius: '10px',
-                        fontSize: '12.5px',
+                        padding: '6px 11px',
+                        borderRadius: '9px',
+                        fontSize: '11.5px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '4px',
+                        boxShadow: '0 2px 6px rgba(37, 211, 102, 0.2)'
                       }}
+                      title="WhatsApp-এ বকেয়া পরিশোধের তাগাদা মেসেজ পাঠান"
                     >
-                      <span>💵</span> টাকা আদায়
+                      <span>💬</span> তাগাদা
                     </button>
-                  </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setShowAddDueModal(c);
+                      setAddDueAmount('');
+                      setAddDueItems('');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
+                    }}
+                    title="গ্রাহকের খাতায় নতুন বাকি পণ্য যোগ করুন"
+                  >
+                    <span>➕</span> বাকি দিন
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowPromiseModal(c);
+                      setPromiseDateInput(c.promiseDate || c.promise_date || '');
+                      setPromiseNotesInput(c.address || '');
+                    }}
+                    style={{
+                      background: '#f8fafc',
+                      color: '#475569',
+                      border: '1px solid #cbd5e1',
+                      padding: '6px 9px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px'
+                    }}
+                    title="টাকা পরিশোধের প্রতিশ্রুত তারিখ সেট করুন"
+                  >
+                    <span>📅</span> তারিখ
+                  </button>
+
+                  <button
+                    onClick={() => loadCustomerLedger(c)}
+                    style={{
+                      background: '#f8fafc',
+                      color: '#334155',
+                      border: '1px solid #cbd5e1',
+                      padding: '6px 10px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="কখন কোন তারিখে কি কি পণ্য নিয়েছে তার বিস্তারিত ফর্দ দেখুন"
+                  >
+                    <span>📜</span> ফর্দ ও সময়
+                  </button>
+
+                  <Link
+                    href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
+                    target="_blank"
+                    style={{
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      padding: '6px 9px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px'
+                    }}
+                    title="গ্রাহকের লাইভ ডিজিটাল পাসবুক দেখুন ও লিঙ্ক কপি করুন"
+                  >
+                    <span>📖</span> পাসবুক
+                  </Link>
+
+                  <button
+                    onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
+                    style={{
+                      background: '#10b981',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
+                    }}
+                  >
+                    <span>💵</span> টাকা আদায়
+                  </button>
                 </div>
               </div>
             );
@@ -655,6 +761,151 @@ export default function KhataPage() {
           itemLabel="গ্রাহক"
           themeColor={theme.primaryColor}
         />
+      )}
+
+      {/* Quick Add Due (বাকি দিন ও ফর্দ এন্ট্রি) Modal */}
+      {showAddDueModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+          zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '22px' }}>🛍️</span>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                  নতুন বাকি ও পণ্যের ফর্দ এন্ট্রি
+                </h3>
+              </div>
+              <button onClick={() => setShowAddDueModal(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
+              <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block' }}>{showAddDueModal.name}</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>📱 {showAddDueModal.phone}</span>
+                <span style={{ fontSize: '12.5px', color: '#dc2626', fontWeight: '800' }}>
+                  বর্তমান বকেয়া: ৳{Number(showAddDueModal.totalDue || showAddDueModal.total_due || 0).toLocaleString('en-US')}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddDueSubmit} style={{ display: 'grid', gap: '14px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                    বাকি টাকার পরিমাণ: *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => startVoiceInputForField(setAddDueAmount, true)}
+                    style={{
+                      background: '#fee2e2',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '8px',
+                      padding: '3px 8px',
+                      fontSize: '11.5px',
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: '800'
+                    }}
+                    title="টাকা মুখে বলুন"
+                  >
+                    <span>🎙️</span>
+                    <span>মুখে বলুন</span>
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  value={addDueAmount}
+                  onChange={(e) => setAddDueAmount(e.target.value)}
+                  className="num-font"
+                  required
+                  autoFocus
+                  placeholder="যেমন: ৭৫০"
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #ef4444',
+                    fontSize: '18px',
+                    fontWeight: '900',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
+                    কী কী পণ্য নিয়েছে / কিসের বাকি (ফর্দ):
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => startVoiceInputForField(setAddDueItems, false)}
+                    style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '8px',
+                      padding: '3px 8px',
+                      fontSize: '11.5px',
+                      color: '#2563eb',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontWeight: '800'
+                    }}
+                    title="পণ্যের নাম মুখে বলুন"
+                  >
+                    <span>🎙️</span>
+                    <span>মুখে বলুন</span>
+                  </button>
+                </div>
+                <textarea
+                  value={addDueItems}
+                  onChange={(e) => setAddDueItems(e.target.value)}
+                  rows={3}
+                  placeholder="যেমন: তীর তেল ১ লিটার, চিনি ২ কেজি, সাবান ২টি"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                    resize: 'none'
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={addDueSubmitting}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '14.5px',
+                  cursor: addDueSubmitting ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                {addDueSubmitting ? 'যোগ হচ্ছে...' : '✓ বাকি খাতায় যোগ করুন'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Collect Due Payment Modal */}
