@@ -490,30 +490,30 @@ export default function StaffManagementPage() {
       {/* Top Banner & Header */}
       <div style={{
         background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
-        borderRadius: '24px',
-        padding: '28px 24px',
+        borderRadius: '16px',
+        padding: '14px 16px',
         color: '#ffffff',
-        marginBottom: '20px',
-        boxShadow: '0 10px 30px rgba(49, 46, 129, 0.25)',
+        marginBottom: '14px',
+        boxShadow: '0 4px 16px rgba(49, 46, 129, 0.2)',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', position: 'relative', zIndex: 2 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', position: 'relative', zIndex: 2 }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: '800', marginBottom: '10px' }}>
-              <span>👥 স্মার্ট কর্মচারী ও ক্যাশিয়ার প্ল্যাটফর্ম</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.15)', padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '800', marginBottom: '6px' }}>
+              <span>👥 কর্মচারী ও ক্যাশিয়ার প্ল্যাটফর্ম</span>
               <span>•</span>
               <span>{tenant?.shopName || 'দোকান'}</span>
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 6px', color: '#ffffff' }}>
+            <h1 style={{ fontSize: 'clamp(17px, 4.5vw, 22px)', fontWeight: '900', margin: '0 0 4px', color: '#ffffff' }}>
               স্টাফ ম্যানেজমেন্ট, শিফট ও পেরোল খাতা
             </h1>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#c7d2fe', maxWidth: '700px', lineHeight: 1.5 }}>
-              কর্মচারীদের ৪-ডিজিটের লগইন পিন, ক্যাশিয়ার শিফট হস্তান্তর ও ক্যাশ ড্রয়ার মিলানো (Z-Report), ডিজিটাল হাজিরা, মাসিক বেতন ও বিক্রয় কমিশন খাতা।
+            <p style={{ margin: 0, fontSize: 'clamp(11px, 3.2vw, 12.5px)', color: '#c7d2fe', maxWidth: '700px', lineHeight: 1.4 }}>
+              কর্মচারীদের ৪-ডিজিটের লগইন পিন, ক্যাশিয়ার শিফট হস্তান্তর ও ক্যাশ ড্রয়ার মিলানো (Z-Report), ডিজিটাল হাজিরা, মাসিক বেতন ও কমিশন।
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {activeShift ? (
               <button
                 onClick={() => { triggerHaptic('light'); setShowCloseShiftModal(true); }}
@@ -521,18 +521,18 @@ export default function StaffManagementPage() {
                   background: '#f59e0b',
                   color: '#ffffff',
                   border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
+                  padding: '7px 13px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
                   fontWeight: '900',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
+                  gap: '5px',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
                 }}
               >
-                <span>🌙</span> শিফট শেষ ও ক্যাশ মেলান
+                <span>🌙</span> শিফট শেষ ও মেলান
               </button>
             ) : (
               <button
@@ -541,17 +541,17 @@ export default function StaffManagementPage() {
                   background: 'rgba(255, 255, 255, 0.15)',
                   color: '#ffffff',
                   border: '1px solid rgba(255, 255, 255, 0.25)',
-                  padding: '10px 18px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
+                  padding: '7px 13px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
                   fontWeight: '800',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '5px'
                 }}
               >
-                <span>☀️</span> নতুন শিফট ওপেন করুন
+                <span>☀️</span> নতুন শিফট ওপেন
               </button>
             )}
 
@@ -561,18 +561,18 @@ export default function StaffManagementPage() {
                 background: '#10b981',
                 color: '#ffffff',
                 border: 'none',
-                padding: '10px 20px',
-                borderRadius: '12px',
-                fontSize: '13.5px',
+                padding: '7px 14px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
                 fontWeight: '900',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
               }}
             >
-              <span>➕</span> নতুন কর্মচারী যুক্ত করুন
+              <span>➕</span> নতুন কর্মচারী
             </button>
           </div>
         </div>
@@ -581,45 +581,45 @@ export default function StaffManagementPage() {
       {/* Main Navigation Tabs */}
       <div style={{
         display: 'flex',
-        gap: '6px',
+        gap: '4px',
         background: '#ffffff',
-        padding: '6px',
-        borderRadius: '16px',
+        padding: '4px',
+        borderRadius: '14px',
         border: '1.5px solid #e2e8f0',
-        marginBottom: '20px',
+        marginBottom: '14px',
         overflowX: 'auto',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
       }}>
         {[
           { id: 'staff', label: '👥 কর্মচারী ও পারমিশন', count: totalStaffCount },
-          { id: 'shifts', label: '💵 ক্যাশিয়ার শিফট ও হ্যান্ডওভার', badge: activeShift ? '🟢 শিফট চালু' : null },
-          { id: 'attendance', label: '🕒 ডিজিটাল হাজিরা ও ডিউটি লগ' },
-          { id: 'commission', label: '🎯 সেলস কমিশন ও লিডারবোর্ড' },
-          { id: 'salary', label: '📒 বেতন ও অগ্রিম খাতা' },
-          { id: 'audit', label: '📜 সিকিউরিটি অডিট ট্রেইল' }
+          { id: 'shifts', label: '💵 শিফট ও হ্যান্ডওভার', badge: activeShift ? '🟢 चालू' : null },
+          { id: 'attendance', label: '🕒 হাজিরা ও ডিউটি লগ' },
+          { id: 'commission', label: '🎯 কমিশন ও লিডারবোর্ড' },
+          { id: 'salary', label: '📒 বেতন ও অগ্রিম' },
+          { id: 'audit', label: '📜 অডিট ট্রেইল' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => { triggerHaptic('light'); setActiveTab(tab.id as any); }}
             style={{
-              padding: '10px 16px',
-              borderRadius: '12px',
+              padding: '7px 12px',
+              borderRadius: '10px',
               border: 'none',
               background: activeTab === tab.id ? '#4f46e5' : 'transparent',
               color: activeTab === tab.id ? '#ffffff' : '#64748b',
               fontWeight: '800',
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               whiteSpace: 'nowrap',
               transition: 'all 0.15s ease'
             }}
           >
             <span>{tab.label}</span>
             {tab.badge && (
-              <span style={{ background: '#10b981', color: '#fff', fontSize: '10.5px', padding: '1px 6px', borderRadius: '99px', fontWeight: '900' }}>
+              <span style={{ background: '#10b981', color: '#fff', fontSize: '9.5px', padding: '1px 5px', borderRadius: '99px', fontWeight: '900' }}>
                 {tab.badge}
               </span>
             )}
@@ -635,19 +635,19 @@ export default function StaffManagementPage() {
           {/* KPI Stats Grid */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
-            marginBottom: '24px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+            gap: '8px',
+            marginBottom: '14px'
           }}>
-            <div style={{ background: '#ffffff', borderRadius: '18px', padding: '18px', border: '1.5px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#64748b' }}>মোট স্টাফ সংখ্যা</span>
-                <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '5px 8px', borderRadius: '8px', fontSize: '15px' }}>👥</span>
+            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>মোট স্টাফ</span>
+                <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '3px 6px', borderRadius: '6px', fontSize: '12px' }}>👥</span>
               </div>
-              <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a' }} className="num-font">
+              <div style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#0f172a' }} className="num-font">
                 {totalStaffCount} জন
               </div>
-              <p style={{ margin: '3px 0 0', fontSize: '11.5px', color: '#10b981', fontWeight: '700' }}>✓ সকল সক্রিয় কর্মচারী</p>
+              <p style={{ margin: '2px 0 0', fontSize: '10.5px', color: '#10b981', fontWeight: '700' }}>✓ সকল সক্রিয়</p>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '18px', padding: '18px', border: '1.5px solid #e2e8f0' }}>

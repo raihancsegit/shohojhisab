@@ -659,53 +659,53 @@ export default function ShopkeeperDashboard() {
       <div style={{
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
-        borderRadius: '20px',
-        padding: '18px 22px',
-        marginBottom: '18px',
+        borderRadius: '16px',
+        padding: '12px 14px',
+        marginBottom: '12px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '14px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+        gap: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', background: theme.headerBadgeBg, color: theme.headerBadgeText, padding: '3px 10px', borderRadius: '6px', border: `1px solid ${theme.accentBorder}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', background: theme.headerBadgeBg, color: theme.headerBadgeText, padding: '2px 8px', borderRadius: '6px', border: `1px solid ${theme.accentBorder}` }}>
               {theme.icon} {theme.name}
             </span>
             <span style={{
-              fontSize: '11.5px',
+              fontSize: '11px',
               color: isOnline ? '#059669' : '#d97706',
               background: isOnline ? '#ecfdf5' : '#fffbeb',
               border: isOnline ? '1px solid #a7f3d0' : '1px solid #fde68a',
-              padding: '3px 8px',
+              padding: '2px 7px',
               borderRadius: '6px',
               fontWeight: '700',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px'
+              gap: '4px'
             }}>
-              <span className={isOnline ? "live-dot" : ""} style={{ width: '7px', height: '7px', borderRadius: '50%', background: isOnline ? '#10b981' : '#f59e0b', display: 'inline-block' }}></span>
-              {isOnline ? '🟢 অনলাইন সচল' : '⚡ অফলাইন মোড (হিসাব সচল)'}
-              {pendingSyncCount > 0 && <span style={{ background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: '99px', fontSize: '10px' }}>{pendingSyncCount} সিঙ্ক বাকি</span>}
+              <span className={isOnline ? "live-dot" : ""} style={{ width: '6px', height: '6px', borderRadius: '50%', background: isOnline ? '#10b981' : '#f59e0b', display: 'inline-block' }}></span>
+              {isOnline ? '🟢 অনলাইন' : '⚡ অফলাইন'}
+              {pendingSyncCount > 0 && <span style={{ background: '#ef4444', color: '#fff', padding: '1px 5px', borderRadius: '99px', fontSize: '9.5px' }}>{pendingSyncCount}</span>}
             </span>
           </div>
 
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px' }}>
+          <h2 style={{ fontSize: 'clamp(16px, 4.2vw, 22px)', fontWeight: '800', color: '#0f172a', margin: '3px 0 1px' }}>
             {greeting}, {tenant.ownerName || 'দোকান মালিক'}!
           </h2>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-            <strong style={{ color: '#0f172a' }}>{tenant.shopName}</strong> • 📍 {tenant.location || 'বাজার'} • {currentDateString}
+          <p style={{ margin: 0, fontSize: 'clamp(11px, 3.2vw, 12.5px)', color: '#64748b' }}>
+            <strong style={{ color: '#0f172a' }}>{tenant.shopName}</strong> • 📍 {tenant.location || 'বাজার'}
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {/* Mode Switcher Pill */}
           <div style={{
             background: '#f1f5f9',
-            padding: '4px',
-            borderRadius: '12px',
+            padding: '3px',
+            borderRadius: '10px',
             display: 'flex',
             border: '1px solid #e2e8f0'
           }}>
@@ -713,35 +713,35 @@ export default function ShopkeeperDashboard() {
               type="button"
               onClick={() => { setUiMode('easy'); triggerHaptic('light'); }}
               style={{
-                padding: '8px 14px',
-                borderRadius: '9px',
+                padding: '5px 10px',
+                borderRadius: '7px',
                 border: 'none',
                 background: uiMode === 'easy' ? '#4f46e5' : 'transparent',
                 color: uiMode === 'easy' ? '#fff' : '#64748b',
                 fontWeight: '800',
-                fontSize: '12.5px',
+                fontSize: '11.5px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
             >
-              ⚡ সহজ মোড
+              ⚡ সহজ
             </button>
             <button
               type="button"
               onClick={() => { setUiMode('pro'); triggerHaptic('light'); }}
               style={{
-                padding: '8px 14px',
-                borderRadius: '9px',
+                padding: '5px 10px',
+                borderRadius: '7px',
                 border: 'none',
                 background: uiMode === 'pro' ? '#0f172a' : 'transparent',
                 color: uiMode === 'pro' ? '#fff' : '#64748b',
                 fontWeight: '800',
-                fontSize: '12.5px',
+                fontSize: '11.5px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
             >
-              💼 সম্পূর্ণ মোড
+              💼 সম্পূর্ণ
             </button>
           </div>
 
@@ -750,15 +750,15 @@ export default function ShopkeeperDashboard() {
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
               color: '#ffffff',
-              padding: '12px 20px',
-              borderRadius: '14px',
+              padding: '8px 14px',
+              borderRadius: '10px',
               fontWeight: '900',
-              fontSize: '14px',
+              fontSize: '12.5px',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.28)',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
               transition: 'transform 0.15s ease'
             }}
             className="clickable-card"

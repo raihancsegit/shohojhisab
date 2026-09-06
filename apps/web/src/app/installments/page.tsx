@@ -156,13 +156,13 @@ export default function InstallmentsPage() {
     <div className="app-container" style={{ paddingBottom: '90px' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: 'clamp(18px, 4.5vw, 24px)', fontWeight: '900', color: '#0f172a', margin: '0 0 2px' }}>
             📅 কিস্তি ও ইএমআই (EMI) খাতা
           </h1>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            {tenant?.shopName} • মোবাইল, ফ্রিজ ও সকল পণ্যের সহজ মাসিক কিস্তি হিসাব
+          <span style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', color: '#64748b' }}>
+            {tenant?.shopName} • মোবাইল, ফ্রিজ ও পণ্যের সহজ মাসিক কিস্তি
           </span>
         </div>
 
@@ -172,15 +172,15 @@ export default function InstallmentsPage() {
             background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
             color: '#fff',
             border: 'none',
-            padding: '10px 18px',
-            borderRadius: '12px',
+            padding: '7px 13px',
+            borderRadius: '10px',
             fontWeight: '800',
-            fontSize: '13.5px',
+            fontSize: '12.5px',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)'
+            gap: '5px',
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
           }}
         >
           <span>➕</span> নতুন কিস্তি বিক্রি
@@ -188,49 +188,49 @@ export default function InstallmentsPage() {
       </div>
 
       {notice && (
-        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '12px 16px', borderRadius: '14px', marginBottom: '16px', fontSize: '13.5px', fontWeight: '800' }}>
+        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '800' }}>
           {notice}
         </div>
       )}
 
       {/* Summary Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '18px' }}>
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>চলমান কিস্তি</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#4f46e5', marginTop: '2px' }}>
-            {activeItems.length} <span style={{ fontSize: '12px', fontWeight: '600' }}>জন</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '14px' }}>
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>চলমান কিস্তি</span>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#4f46e5', marginTop: '2px' }}>
+            {activeItems.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>জন</span>
           </div>
         </div>
 
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>মোট কিস্তির বাকি</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#dc2626', marginTop: '2px' }}>
-            ৳{totalDueAmount.toLocaleString('bn-BD')}
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #fee2e2', borderLeft: '3.5px solid #ef4444', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>মোট বাকি</span>
+          <div className="num-font" style={{ fontSize: 'clamp(17px, 3.8vw, 21px)', fontWeight: '900', color: '#dc2626', marginTop: '2px' }}>
+            ৳{totalDueAmount.toLocaleString('en-US')}
           </div>
         </div>
 
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>সফল সমাপ্ত কিস্তি</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#059669', marginTop: '2px' }}>
-            {completedItems.length} <span style={{ fontSize: '12px', fontWeight: '600' }}>জন</span>
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #dcfce7', borderLeft: '3.5px solid #10b981', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>পরিশোধিত</span>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#059669', marginTop: '2px' }}>
+            {completedItems.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>জন</span>
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '220px' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '180px' }}>
           <input
             type="text"
-            placeholder="🔍 গ্রাহকের নাম, মোবাইল নম্বর বা পণ্যের নাম দিয়ে খুঁজুন..."
+            placeholder="🔍 গ্রাহক, ফোন বা পণ্যের নাম..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
               width: '100%',
-              padding: '12px 14px',
-              borderRadius: '14px',
+              padding: '9px 12px',
+              borderRadius: '10px',
               border: '1.5px solid #cbd5e1',
-              fontSize: '14px',
+              fontSize: '13px',
               outline: 'none',
               background: '#fff',
               boxSizing: 'border-box'
@@ -238,22 +238,22 @@ export default function InstallmentsPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => { setStatusFilter('all'); triggerHaptic('light'); }}
-            style={{ background: statusFilter === 'all' ? '#4f46e5' : 'transparent', color: statusFilter === 'all' ? '#fff' : '#475569', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer' }}
+            style={{ background: statusFilter === 'all' ? '#4f46e5' : 'transparent', color: statusFilter === 'all' ? '#fff' : '#475569', border: 'none', padding: '6px 9px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             সকল ({installments.length})
           </button>
           <button
             onClick={() => { setStatusFilter('active'); triggerHaptic('light'); }}
-            style={{ background: statusFilter === 'active' ? '#ea580c' : 'transparent', color: statusFilter === 'active' ? '#fff' : '#475569', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer' }}
+            style={{ background: statusFilter === 'active' ? '#ea580c' : 'transparent', color: statusFilter === 'active' ? '#fff' : '#475569', border: 'none', padding: '6px 9px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             চলমান ({activeItems.length})
           </button>
           <button
             onClick={() => { setStatusFilter('completed'); triggerHaptic('light'); }}
-            style={{ background: statusFilter === 'completed' ? '#059669' : 'transparent', color: statusFilter === 'completed' ? '#fff' : '#475569', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer' }}
+            style={{ background: statusFilter === 'completed' ? '#059669' : 'transparent', color: statusFilter === 'completed' ? '#fff' : '#475569', border: 'none', padding: '6px 9px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             পরিশোধিত ({completedItems.length})
           </button>

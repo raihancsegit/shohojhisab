@@ -98,14 +98,14 @@ export default function DayEndPage() {
     <div className="app-container" style={{ paddingBottom: '90px' }}>
       
       {/* Header */}
-      <div style={{ marginBottom: '16px' }}>
-        <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#059669', background: '#ecfdf5', padding: '3px 10px', borderRadius: '99px' }}>
+      <div style={{ marginBottom: '12px' }}>
+        <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '99px' }}>
           🌙 ক্যাশ ড্রয়ার ও দিন ক্লোজিং
         </span>
-        <h1 className="page-title" style={{ color: '#0f172a', margin: '6px 0 2px' }}>
+        <h1 className="page-title" style={{ color: '#0f172a', margin: '4px 0 2px', fontSize: 'clamp(18px, 4.5vw, 22px)', fontWeight: '900' }}>
           দিন শেষের ক্যাশ মিলানো ও হিসাব
         </h1>
-        <p className="page-subtitle" style={{ margin: 0, color: '#64748b' }}>
+        <p className="page-subtitle" style={{ margin: 0, color: '#64748b', fontSize: 'clamp(11px, 3.2vw, 12.5px)' }}>
           {tenant?.shopName} • দোকান বন্ধ করার আগে ক্যাশের টাকা মিলিয়ে দিন সমাপ্ত করুন
         </p>
       </div>
@@ -113,45 +113,45 @@ export default function DayEndPage() {
       {/* Main Net Profit & Sales Hero */}
       <div style={{
         background: 'linear-gradient(135deg, #064e3b 0%, #047857 60%, #059669 100%)',
-        borderRadius: '24px',
-        padding: '24px 22px',
+        borderRadius: '16px',
+        padding: '14px 16px',
         color: '#fff',
-        marginBottom: '20px',
-        boxShadow: '0 10px 25px rgba(5, 150, 105, 0.25)'
+        marginBottom: '14px',
+        boxShadow: '0 4px 14px rgba(5, 150, 105, 0.2)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '12.5px', background: 'rgba(255,255,255,0.2)', padding: '3px 12px', borderRadius: '99px', fontWeight: '700' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ fontSize: '11.5px', background: 'rgba(255,255,255,0.2)', padding: '2px 10px', borderRadius: '99px', fontWeight: '700' }}>
             📅 আজকের খাঁটি হিসাব
           </span>
-          <span style={{ fontSize: '12px', color: '#a7f3d0' }}>
-            মোট {metrics.orderCount}টি বিক্রয় সম্পন্ন
+          <span style={{ fontSize: '11px', color: '#a7f3d0' }}>
+            মোট {metrics.orderCount}টি বিক্রয়
           </span>
         </div>
 
-        <span style={{ fontSize: '13.5px', color: '#a7f3d0', display: 'block' }}>আজকের আসল নিট লাভ (খরচ বাদে):</span>
-        <div className="num-font" style={{ fontSize: '36px', fontWeight: '900', margin: '2px 0 16px' }}>
+        <span style={{ fontSize: '12px', color: '#a7f3d0', display: 'block' }}>আজকের আসল নিট লাভ (খরচ বাদে):</span>
+        <div className="num-font" style={{ fontSize: 'clamp(24px, 5.5vw, 32px)', fontWeight: '900', margin: '2px 0 10px' }}>
           ৳{metrics.netProfit.toLocaleString('en-US')}
         </div>
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '10px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))',
+          gap: '8px',
           background: 'rgba(0, 0, 0, 0.22)',
-          borderRadius: '16px',
-          padding: '12px 16px'
+          borderRadius: '12px',
+          padding: '8px 12px'
         }}>
           <div>
-            <span style={{ fontSize: '11px', color: '#cbd5e1', display: 'block' }}>মোট বিক্রি</span>
-            <strong className="num-font" style={{ fontSize: '16px', color: '#fff' }}>৳{metrics.totalSales.toLocaleString('en-US')}</strong>
+            <span style={{ fontSize: '10px', color: '#cbd5e1', display: 'block' }}>মোট বিক্রি</span>
+            <strong className="num-font" style={{ fontSize: 'clamp(13px, 3.5vw, 15px)', color: '#fff' }}>৳{metrics.totalSales.toLocaleString('en-US')}</strong>
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: '#cbd5e1', display: 'block' }}>নগদ বিক্রি</span>
-            <strong className="num-font" style={{ fontSize: '16px', color: '#86efac' }}>৳{metrics.cashSales.toLocaleString('en-US')}</strong>
+            <span style={{ fontSize: '10px', color: '#cbd5e1', display: 'block' }}>নগদ বিক্রি</span>
+            <strong className="num-font" style={{ fontSize: 'clamp(13px, 3.5vw, 15px)', color: '#86efac' }}>৳{metrics.cashSales.toLocaleString('en-US')}</strong>
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: '#cbd5e1', display: 'block' }}>দোকান খরচ</span>
-            <strong className="num-font" style={{ fontSize: '16px', color: '#fca5a5' }}>৳{metrics.expenses.toLocaleString('en-US')}</strong>
+            <span style={{ fontSize: '10px', color: '#cbd5e1', display: 'block' }}>দোকান খরচ</span>
+            <strong className="num-font" style={{ fontSize: 'clamp(13px, 3.5vw, 15px)', color: '#fca5a5' }}>৳{metrics.expenses.toLocaleString('en-US')}</strong>
           </div>
         </div>
       </div>

@@ -111,79 +111,84 @@ export default function ExpensesPage() {
         style={{
           background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
           border: '1.5px solid #fca5a5',
-          borderRadius: '18px',
-          padding: '14px 16px',
-          marginBottom: '16px',
+          borderRadius: '14px',
+          padding: '10px 14px',
+          marginBottom: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(239, 68, 68, 0.12)',
+          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.1)',
           transition: 'transform 0.15s ease'
         }}
         className="clickable-card"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{
-            width: '42px',
-            height: '42px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
             background: '#ef4444',
             color: '#fff',
             display: 'grid',
             placeItems: 'center',
-            fontSize: '20px',
-            boxShadow: '0 0 0 6px rgba(239, 68, 68, 0.2)'
+            fontSize: '16px',
+            boxShadow: '0 0 0 4px rgba(239, 68, 68, 0.15)',
+            flexShrink: 0
           }}>
             🎙️
           </div>
           <div>
-            <strong style={{ fontSize: '13.5px', color: '#991b1b', display: 'block' }}>
+            <strong style={{ fontSize: '12.5px', color: '#991b1b', display: 'block' }}>
               মুখে বলে খরচের এন্ট্রি করুন
             </strong>
-            <span style={{ fontSize: '11.5px', color: '#b91c1c' }}>
-              ট্যাপ করে বলুন: <em>"চা নাস্তা ৬০ টাকা"</em> বা <em>"দোকান ভাড়া ৫০০০ টাকা"</em>
+            <span style={{ fontSize: '11px', color: '#b91c1c' }}>
+              বলুন: <em>"চা নাস্তা ৬০ টাকা"</em> বা <em>"দোকান ভাড়া ৫০০০"</em>
             </span>
           </div>
         </div>
-        <span style={{ background: '#ef4444', color: '#fff', padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
-          মুখে বলুন ➔
+        <span style={{ background: '#ef4444', color: '#fff', padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800', flexShrink: 0 }}>
+          বলুন ➔
         </span>
       </div>
       <div style={{
         background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)',
-        borderRadius: '24px',
-        padding: '22px 18px',
+        borderRadius: '16px',
+        padding: '14px 16px',
         color: '#fff',
-        marginBottom: '16px'
+        marginBottom: '12px'
       }}>
-        <h1 style={{ fontSize: '22px', fontWeight: '900', margin: '0 0 2px' }}>💸 দৈনিক খরচ খাতা</h1>
-        <span style={{ fontSize: '13px', color: '#fecaca', display: 'block' }}>দোকানের মোট খরচ:</span>
-        <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', margin: '2px 0 12px' }}>
-          ৳{totalExpense.toLocaleString('en-US')}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <h1 style={{ fontSize: 'clamp(16px, 4.5vw, 20px)', fontWeight: '900', margin: '0 0 2px' }}>💸 দৈনিক খরচ খাতা</h1>
+            <span style={{ fontSize: '11.5px', color: '#fecaca', display: 'block' }}>দোকানের মোট খরচ:</span>
+            <div className="num-font" style={{ fontSize: 'clamp(22px, 5.5vw, 28px)', fontWeight: '900', margin: '2px 0 0' }}>
+              ৳{totalExpense.toLocaleString('en-US')}
+            </div>
+          </div>
+          <button onClick={() => setShowAddModal(true)} style={{ background: '#fff', color: '#991b1b', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '900', fontSize: '12.5px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            ➕ নতুন খরচ এন্ট্রি
+          </button>
         </div>
-        <button onClick={() => setShowAddModal(true)} style={{ width: '100%', background: '#fff', color: '#991b1b', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-          ➕ নতুন খরচ এন্ট্রি
-        </button>
       </div>
 
-      {notice && <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '12px', borderRadius: '12px', marginBottom: '14px', fontSize: '13.5px', fontWeight: '800' }}>{notice}</div>}
+      {notice && <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '800' }}>{notice}</div>}
 
       {expenses.length === 0 ? (
-        <div className="mobile-card" style={{ textAlign: 'center', padding: '36px 16px' }}>
-          <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>💸</span>
-          <h4 style={{ margin: '0 0 4px', color: '#0f172a' }}>কোনো খরচ এন্ট্রি নেই</h4>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>দোকানের ভাড়া, বিদ্যুৎ বিল বা চা-নাস্তা খরচ যোগ করুন।</p>
+        <div className="mobile-card" style={{ textAlign: 'center', padding: '28px 14px' }}>
+          <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>💸</span>
+          <h4 style={{ margin: '0 0 3px', color: '#0f172a', fontSize: '14px' }}>কোনো খরচ এন্ট্রি নেই</h4>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>দোকানের ভাড়া, বিদ্যুৎ বিল বা চা-নাস্তা খরচ যোগ করুন।</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '8px' }}>
+        <div style={{ display: 'grid', gap: '6px' }}>
           {paginatedExpenses.map(e => (
-            <div key={e.id} className="mobile-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+            <div key={e.id} className="mobile-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderRadius: '12px' }}>
               <div>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{e.title}</strong>
-                <span style={{ display: 'block', fontSize: '11.5px', color: '#64748b' }}>{e.category}</span>
+                <strong style={{ fontSize: '13px', color: '#0f172a' }}>{e.title}</strong>
+                <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>{e.category}</span>
               </div>
-              <strong className="num-font" style={{ fontSize: '16px', color: '#dc2626' }}>৳{e.amount}</strong>
+              <strong className="num-font" style={{ fontSize: '14.5px', color: '#dc2626' }}>৳{e.amount}</strong>
             </div>
           ))}
         </div>

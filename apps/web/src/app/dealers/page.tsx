@@ -128,30 +128,30 @@ export default function DealersPage() {
   const paginatedDealers = dealers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="app-container" style={{ paddingBottom: '90px' }}>
+    <div className="app-container" style={{ paddingBottom: '80px' }}>
       
       {/* Header Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        borderRadius: '24px',
-        padding: '24px 20px',
+        borderRadius: '16px',
+        padding: '14px 16px',
         color: '#fff',
-        marginBottom: '20px',
+        marginBottom: '14px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '14px'
+        gap: '10px'
       }}>
         <div>
-          <span style={{ fontSize: '11.5px', background: 'rgba(255,255,255,0.15)', padding: '3px 10px', borderRadius: '99px', fontWeight: '800' }}>
+          <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
             🏢 সাপ্লায়ার ও মহাজন খাতা
           </span>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '8px 0 2px' }}>
+          <h1 style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: '900', margin: '4px 0 2px' }}>
             ডিলার ও কোম্পানি সাপ্লাই খাতা
           </h1>
-          <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
-            {tenant?.shopName} • কোম্পানি প্রতিনিধিদের অর্ডার শিডিউল ও চালান রসিদ
+          <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            {tenant?.shopName} • প্রতিনিধিদের অর্ডার শিডিউল ও চালান রসিদ
           </p>
         </div>
 
@@ -161,32 +161,32 @@ export default function DealersPage() {
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#fff',
             border: 'none',
-            padding: '12px 20px',
-            borderRadius: '14px',
+            padding: '8px 14px',
+            borderRadius: '10px',
             fontWeight: '800',
-            fontSize: '14px',
+            fontSize: '12px',
             cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
           }}
         >
-          ➕ নতুন ডিলার ও চালান যুক্ত করুন
+          ➕ নতুন ডিলার ও চালান
         </button>
       </div>
 
       {notice && (
-        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '12px 16px', borderRadius: '14px', marginBottom: '16px', fontSize: '13.5px', fontWeight: '800' }}>
+        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '14px', fontSize: '12.5px', fontWeight: '800' }}>
           {notice}
         </div>
       )}
 
       {dealers.length === 0 ? (
-        <div className="ui-card" style={{ textAlign: 'center', padding: '40px 16px' }}>
-          <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>🏢</span>
-          <h4 style={{ margin: '0 0 4px', color: '#0f172a' }}>কোনো ডিলার যুক্ত নেই</h4>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>নতুন ডিলার যুক্ত করতে উপরের বাটনে চাপ দিন।</p>
+        <div className="ui-card" style={{ textAlign: 'center', padding: '30px 14px' }}>
+          <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>🏢</span>
+          <h4 style={{ margin: '0 0 4px', color: '#0f172a', fontSize: '15px' }}>কোনো ডিলার যুক্ত নেই</h4>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>নতুন ডিলার যুক্ত করতে উপরের বাটনে চাপ দিন।</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '12px' }}>
+        <div style={{ display: 'grid', gap: '8px' }}>
           {paginatedDealers.map(d => (
             <div
               key={d.id}
@@ -196,41 +196,42 @@ export default function DealersPage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '14px',
-                padding: '18px 20px'
+                gap: '8px',
+                padding: '12px 14px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
                 <div style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '14px',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
                   background: '#f1f5f9',
                   display: 'grid',
                   placeItems: 'center',
-                  fontSize: '22px'
+                  fontSize: '18px',
+                  flexShrink: 0
                 }}>
                   🏢
                 </div>
 
                 <div>
-                  <h4 style={{ margin: '0 0 3px', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
                     {d.companyName}
                   </h4>
-                  <span style={{ fontSize: '12.5px', color: '#64748b', display: 'block' }}>
+                  <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block' }}>
                     প্রতিনিধি: <strong>{d.representativeName}</strong> • 📱 {d.phone}
                   </span>
-                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700', marginTop: '3px', display: 'inline-block' }}>
-                    🗓️ অর্ডার দিন: {d.orderDay || 'সোমবার'} • ডেলিভারি: {d.deliveryDay || 'মঙ্গলবার'}
+                  <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700', marginTop: '2px', display: 'inline-block' }}>
+                    🗓️ অর্ডার: {d.orderDay || 'সোম'} • ডেলিভারি: {d.deliveryDay || 'মঙ্গল'}
                   </span>
                 </div>
               </div>
 
               {/* Right Balance & Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>কোম্পানি দেনা</span>
-                  <strong className="num-font" style={{ fontSize: '20px', color: Number(d.payableDue) > 0 ? '#dc2626' : '#059669' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ textAlign: 'right', minWidth: '70px' }}>
+                  <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>কোম্পানি দেনা</span>
+                  <strong className="num-font" style={{ fontSize: '15px', color: Number(d.payableDue) > 0 ? '#dc2626' : '#059669' }}>
                     ৳{Number(d.payableDue || 0).toLocaleString('en-US')}
                   </strong>
                 </div>
@@ -242,15 +243,15 @@ export default function DealersPage() {
                       background: '#eff6ff',
                       color: '#2563eb',
                       border: '1px solid #bfdbfe',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      fontSize: '12px',
+                      padding: '5px 8px',
+                      borderRadius: '7px',
+                      fontSize: '11px',
                       fontWeight: '800',
                       cursor: 'pointer'
                     }}
                     title="চালানের ছবি দেখুন"
                   >
-                    📄 চালান ছবি
+                    📄 চালান
                   </button>
                 )}
 
@@ -265,9 +266,9 @@ export default function DealersPage() {
                       background: '#10b981',
                       color: '#fff',
                       border: 'none',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      fontSize: '12px',
+                      padding: '5px 8px',
+                      borderRadius: '7px',
+                      fontSize: '11px',
                       fontWeight: '800',
                       cursor: 'pointer'
                     }}
@@ -282,14 +283,14 @@ export default function DealersPage() {
                     background: '#25d366',
                     color: '#fff',
                     border: 'none',
-                    padding: '8px 14px',
-                    borderRadius: '10px',
-                    fontSize: '12.5px',
+                    padding: '5px 10px',
+                    borderRadius: '7px',
+                    fontSize: '11px',
                     fontWeight: '800',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '3px'
                   }}
                 >
                   <span>💬</span> WhatsApp

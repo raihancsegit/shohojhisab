@@ -103,12 +103,12 @@ export default function ExpiryTrackerPage() {
     <div className="app-container" style={{ paddingBottom: '90px' }}>
       
       {/* Header */}
-      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: 'clamp(18px, 4.5vw, 24px)', fontWeight: '900', color: '#0f172a', margin: '0 0 2px' }}>
             ⏳ মেয়াদোত্তীর্ণ ও ব্যাচ ট্র্যাকার
           </h1>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
+          <span style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', color: '#64748b' }}>
             {tenant?.shopName} • ফার্মেসি, খাদ্য ও কসমেটিক্সের অগ্রিম মেয়াদ সতর্কতা
           </span>
         </div>
@@ -119,67 +119,67 @@ export default function ExpiryTrackerPage() {
             background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
             color: '#fff',
             border: 'none',
-            padding: '10px 18px',
-            borderRadius: '12px',
+            padding: '7px 13px',
+            borderRadius: '10px',
             fontWeight: '800',
-            fontSize: '13.5px',
+            fontSize: '12.5px',
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)'
+            gap: '5px',
+            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.25)'
           }}
         >
-          <span>📋</span> ডিলার ফেরত চালান ফর্দ
+          <span>📋</span> ডিলার ফেরত চালান
         </button>
       </div>
 
       {notice && (
-        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '12px 16px', borderRadius: '14px', marginBottom: '16px', fontSize: '13.5px', fontWeight: '800' }}>
+        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '800' }}>
           {notice}
         </div>
       )}
 
       {/* Metric Cards */}
-      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '18px' }}>
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #fee2e2', borderLeft: '4px solid #ef4444' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>মেয়াদ শেষ (অবিলম্বে সরান)</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#dc2626', marginTop: '2px' }}>
-            {expiredList.length} <span style={{ fontSize: '12px', fontWeight: '600' }}>আইটেম</span>
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '14px' }}>
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #fee2e2', borderLeft: '3.5px solid #ef4444' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>মেয়াদ শেষ</span>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#dc2626', marginTop: '2px' }}>
+            {expiredList.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>টি</span>
           </div>
         </div>
 
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #ffedd5', borderLeft: '4px solid #ea580c' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>৩০ দিনের মধ্যে শেষ</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#ea580c', marginTop: '2px' }}>
-            {criticalList.length} <span style={{ fontSize: '12px', fontWeight: '600' }}>আইটেম</span>
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #ffedd5', borderLeft: '3.5px solid #ea580c' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>৩০ দিনে শেষ</span>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#ea580c', marginTop: '2px' }}>
+            {criticalList.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>টি</span>
           </div>
         </div>
 
-        <div style={{ background: '#ffffff', borderRadius: '16px', padding: '14px', border: '1px solid #fef9c3', borderLeft: '4px solid #ca8a04' }}>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>৬০ দিনের মধ্যে শেষ</span>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#ca8a04', marginTop: '2px' }}>
-            {warningList.length} <span style={{ fontSize: '12px', fontWeight: '600' }}>আইটেম</span>
+        <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #fef9c3', borderLeft: '3.5px solid #ca8a04' }}>
+          <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>৬০ দিনে শেষ</span>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#ca8a04', marginTop: '2px' }}>
+            {warningList.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>টি</span>
           </div>
         </div>
       </div>
 
       {/* Search & Filter bar */}
-      <div className="no-print" style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '220px' }}>
+      <div className="no-print" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '180px' }}>
           <input
             type="text"
-            placeholder="🔍 ওষুধের নাম, জেনেরিক বা ব্র্যান্ড দিয়ে খুঁজুন..."
+            placeholder="🔍 ওষুধের নাম, জেনেরিক বা ব্র্যান্ড..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '10px', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: 'সকল' },
-            { id: 'expired', label: '⚠️ মেয়াদ শেষ' },
+            { id: 'expired', label: '⚠️ শেষ' },
             { id: '30', label: '⏳ <৩০ দিন' },
             { id: '60', label: '⚡ <৬০ দিন' },
           ].map(f => (
@@ -190,10 +190,10 @@ export default function ExpiryTrackerPage() {
                 background: filterDays === f.id ? '#0f172a' : 'transparent',
                 color: filterDays === f.id ? '#fff' : '#475569',
                 border: 'none',
-                padding: '8px 12px',
-                borderRadius: '10px',
+                padding: '6px 9px',
+                borderRadius: '8px',
                 fontWeight: '700',
-                fontSize: '12px',
+                fontSize: '11.5px',
                 cursor: 'pointer'
               }}
             >
@@ -204,7 +204,7 @@ export default function ExpiryTrackerPage() {
       </div>
 
       {/* Expiry Items List */}
-      <div style={{ display: 'grid', gap: '10px' }}>
+      <div style={{ display: 'grid', gap: '8px' }}>
         {filtered.map(p => {
           const isExp = p.isExpired;
           const isCrit = p.isCritical;
@@ -218,49 +218,49 @@ export default function ExpiryTrackerPage() {
               key={p.id}
               style={{
                 background: '#ffffff',
-                borderRadius: '16px',
-                padding: '14px 18px',
+                borderRadius: '14px',
+                padding: '10px 14px',
                 border: `1.5px solid ${isExp ? '#fca5a5' : isCrit ? '#fdba74' : '#e2e8f0'}`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: '12px'
+                gap: '8px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>{p.icon || '💊'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '180px' }}>
+                <span style={{ fontSize: '20px' }}>{p.icon || '💊'}</span>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <strong style={{ fontSize: '15px', color: '#0f172a' }}>{p.banglaName || p.name}</strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{p.banglaName || p.name}</strong>
                     {p.genericName && (
-                      <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '10.5px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '5px' }}>
                         {p.genericName}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    স্টক: <strong className="num-font" style={{ color: '#0f172a' }}>{p.stock} {p.unit || 'পিস'}</strong> • কেনা দর: ৳{p.purchasePrice} • ব্র্যান্ড: {p.brand || 'N/A'}
+                  <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                    স্টক: <strong className="num-font" style={{ color: '#0f172a' }}>{p.stock} {p.unit || 'পিস'}</strong> • কেনা দর: ৳{p.purchasePrice} • {p.brand || 'N/A'}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{
-                    fontSize: '11px',
+                    fontSize: '10.5px',
                     fontWeight: '800',
-                    padding: '3px 8px',
+                    padding: '2px 7px',
                     borderRadius: '99px',
                     background: badgeBg,
                     color: badgeColor,
                     display: 'inline-block',
-                    marginBottom: '2px'
+                    marginBottom: '1px'
                   }}>
-                    {isExp ? '⚠️ মেয়াদ উত্তীর্ণ' : isCrit ? `⏳ আর ${p.daysRemaining} দিন বাকি` : isWarn ? `⚡ আর ${p.daysRemaining} দিন বাকি` : '✓ নিরাপদ'}
+                    {isExp ? '⚠️ মেয়াদ উত্তীর্ণ' : isCrit ? `⏳ ${p.daysRemaining} দিন বাকি` : isWarn ? `⚡ ${p.daysRemaining} দিন বাকি` : '✓ নিরাপদ'}
                   </span>
-                  <div className="num-font" style={{ fontSize: '12px', color: '#475569', fontWeight: '700' }}>
-                    📅 {p.expiryDate || p.expiry_date || 'মেয়াদ উল্লেখ নেই'}
+                  <div className="num-font" style={{ fontSize: '11px', color: '#475569', fontWeight: '700' }}>
+                    📅 {p.expiryDate || p.expiry_date || 'মেয়াদ নেই'}
                   </div>
                 </div>
 
@@ -273,9 +273,9 @@ export default function ExpiryTrackerPage() {
                   style={{
                     background: '#f1f5f9',
                     border: '1px solid #cbd5e1',
-                    padding: '6px 12px',
+                    padding: '5px 10px',
                     borderRadius: '8px',
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: '700',
                     cursor: 'pointer'
                   }}

@@ -447,38 +447,58 @@ export default function StockPage() {
   const paginatedProducts = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="app-container" style={{ paddingBottom: '90px' }}>
+    <div className="app-container" style={{ paddingBottom: '80px' }}>
       
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: '900', color: '#0f172a', margin: '0 0 2px' }}>
             📦 পণ্য তালিকা ও লাইভ স্টক
           </h1>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            {tenant?.shopName} • মোট {products.length}টি পণ্য (কেনার দাম, বিক্রির দাম ও স্টক এডিট করুন)
+          <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+            {tenant?.shopName} • মোট {products.length}টি পণ্য
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
-            onClick={() => { setShowVoiceStockModal(true); triggerHaptic('medium'); }}
+            onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
             style={{
-              background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#fff',
               border: 'none',
-              padding: '10px 16px',
-              borderRadius: '12px',
-              fontWeight: '900',
-              fontSize: '13px',
+              padding: '6px 12px',
+              borderRadius: '9px',
+              fontWeight: '800',
+              fontSize: '11.5px',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
             }}
           >
-            <span>🎙️</span> মুখে বলে স্টক ইন (Voice Stock)
+            <span>➕</span> নতুন পণ্য
+          </button>
+
+          <button
+            onClick={() => { setShowVoiceStockModal(true); triggerHaptic('medium'); }}
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '6px 10px',
+              borderRadius: '9px',
+              fontWeight: '800',
+              fontSize: '11.5px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+            }}
+          >
+            <span>🎙️</span> ভয়েস স্টক
           </button>
 
           <button
@@ -487,18 +507,17 @@ export default function StockPage() {
               background: '#047857',
               color: '#fff',
               border: 'none',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '6px 9px',
+              borderRadius: '9px',
               fontWeight: '800',
-              fontSize: '13px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(4, 120, 87, 0.25)'
+              gap: '3px'
             }}
           >
-            <span>📥</span> এক্সেল / CSV
+            <span>📥</span> CSV
           </button>
 
           <button
@@ -507,80 +526,37 @@ export default function StockPage() {
               background: '#0284c7',
               color: '#fff',
               border: 'none',
-              padding: '10px 14px',
-              borderRadius: '12px',
+              padding: '6px 9px',
+              borderRadius: '9px',
               fontWeight: '800',
-              fontSize: '13px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+              gap: '3px'
             }}
           >
-            <span>📤</span> বাল্ক ইমপোর্ট
+            <span>📤</span> ইমপোর্ট
           </button>
-
-          <button
-            onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#fff',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '12px',
-              fontWeight: '800',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
-            }}
-          >
-            <span>➕</span> নতুন পণ্য যুক্ত করুন
-          </button>
-
-          {lowStockItems.length > 0 && (
-            <button
-              onClick={generateReorderSheet}
-              style={{
-                background: '#25d366',
-                color: '#fff',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: '12px',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
-              }}
-            >
-              <span>📋</span> ডিলার WhatsApp অর্ডার ({lowStockItems.length})
-            </button>
-          )}
 
           {/* View Mode Switcher (List vs Grid) */}
-          <div style={{ display: 'flex', gap: '4px', background: '#e2e8f0', padding: '3px', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', gap: '2px', background: '#e2e8f0', padding: '2px', borderRadius: '9px' }}>
             <button
               onClick={() => { setViewMode('list'); triggerHaptic('light'); }}
               style={{
                 background: viewMode === 'list' ? '#ffffff' : 'transparent',
                 color: viewMode === 'list' ? '#0f172a' : '#64748b',
                 border: 'none',
-                padding: '6px 12px',
-                borderRadius: '9px',
+                padding: '4px 8px',
+                borderRadius: '7px',
                 fontWeight: '800',
-                fontSize: '12.5px',
+                fontSize: '11px',
                 cursor: 'pointer',
-                boxShadow: viewMode === 'list' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'
+                boxShadow: viewMode === 'list' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
               }}
-              title="কমপ্যাক্ট টেবিল ও লিস্ট ভিউ"
+              title="লিস্ট ভিউ"
             >
-              📋 লিস্ট ভিউ
+              📋
             </button>
             <button
               onClick={() => { setViewMode('grid'); triggerHaptic('light'); }}
@@ -588,62 +564,62 @@ export default function StockPage() {
                 background: viewMode === 'grid' ? '#ffffff' : 'transparent',
                 color: viewMode === 'grid' ? '#0f172a' : '#64748b',
                 border: 'none',
-                padding: '6px 12px',
-                borderRadius: '9px',
+                padding: '4px 8px',
+                borderRadius: '7px',
                 fontWeight: '800',
-                fontSize: '12.5px',
+                fontSize: '11px',
                 cursor: 'pointer',
-                boxShadow: viewMode === 'grid' ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'
+                boxShadow: viewMode === 'grid' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
               }}
               title="কার্ড ভিউ"
             >
-              🗂️ কার্ড ভিউ
+              🗂️
             </button>
           </div>
         </div>
       </div>
 
       {notice && (
-        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '12px 16px', borderRadius: '14px', marginBottom: '16px', fontSize: '13.5px', fontWeight: '800' }}>
+        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '8px 12px', borderRadius: '10px', marginBottom: '12px', fontSize: '12px', fontWeight: '800' }}>
           {notice}
         </div>
       )}
 
       {/* Filter and Search Toolbar */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '180px', position: 'relative' }}>
           <input
             type="text"
-            placeholder="🔍 পণ্যের নাম, বারকোড বা জেনেরিক দিয়ে খুঁজুন..."
+            placeholder="🔍 পণ্যের নাম বা বারকোড খুঁজুন..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
               width: '100%',
-              padding: '12px 44px 12px 14px',
-              borderRadius: '14px',
+              padding: '8px 40px 8px 12px',
+              borderRadius: '10px',
               border: '1.5px solid #cbd5e1',
-              fontSize: '14px',
+              fontSize: '12.5px',
               outline: 'none',
               background: '#fff',
               boxSizing: 'border-box'
             }}
           />
-          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <div style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '4px', alignItems: 'center' }}>
             <button
               type="button"
               onClick={() => { setShowCameraScanner(true); triggerHaptic('medium'); }}
               style={{
                 background: '#eef2ff',
                 border: '1px solid #c7d2fe',
-                borderRadius: '8px',
-                padding: '4px 8px',
+                borderRadius: '6px',
+                padding: '3px 6px',
                 color: '#4f46e5',
                 cursor: 'pointer',
-                fontSize: '13.5px',
+                fontSize: '12px',
                 display: 'grid',
                 placeItems: 'center'
               }}
-              title="ক্যামেরা দিয়ে বারকোড স্ক্যান করুন"
+              title="ক্যামেরা স্ক্যানার"
             >
               📷
             </button>
@@ -653,31 +629,31 @@ export default function StockPage() {
               style={{
                 background: '#ecfdf5',
                 border: '1px solid #a7f3d0',
-                borderRadius: '8px',
-                padding: '4px 8px',
+                borderRadius: '6px',
+                padding: '3px 6px',
                 color: '#059669',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '12px',
                 display: 'grid',
                 placeItems: 'center'
               }}
-              title="মুখে বলে পণ্য খুঁজুন"
+              title="মুখে বলে খুঁজুন"
             >
               🎙️
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
           <button
             onClick={() => { setFilter('all'); triggerHaptic('light'); }}
-            style={{ background: filter === 'all' ? '#10b981' : 'transparent', color: filter === 'all' ? '#fff' : '#475569', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer' }}
+            style={{ background: filter === 'all' ? '#10b981' : 'transparent', color: filter === 'all' ? '#fff' : '#475569', border: 'none', padding: '5px 10px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             সব ({products.length})
           </button>
           <button
             onClick={() => { setFilter('low'); triggerHaptic('light'); }}
-            style={{ background: filter === 'low' ? '#dc2626' : 'transparent', color: filter === 'low' ? '#fff' : '#dc2626', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '700', fontSize: '12.5px', cursor: 'pointer' }}
+            style={{ background: filter === 'low' ? '#dc2626' : 'transparent', color: filter === 'low' ? '#fff' : '#dc2626', border: 'none', padding: '5px 10px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             কম স্টক ({lowStockItems.length})
           </button>
