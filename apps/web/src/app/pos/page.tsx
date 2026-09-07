@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination';
 import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
+import DataLoader from '../../components/DataLoader';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -245,6 +246,7 @@ export default function PosPage() {
   // Camera Barcode Scanner state
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [loading, setLoading] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -279,7 +281,10 @@ export default function PosPage() {
 
   // Load products, customers & running tabs strictly for active store
   const loadData = async () => {
-    if (!currentTenantId) return;
+    if (!currentTenantId) {
+      setLoading(false);
+      return;
+    }
     try {
       const prodRes = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (prodRes.ok) {
@@ -297,6 +302,7 @@ export default function PosPage() {
     } catch (e) {}
 
     await loadRunningTabs();
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -2093,6 +2099,9 @@ export default function PosPage() {
       )}
 
       {/* Product Cards Grid */}
+      {loading ? (
+        <DataLoader type="skeleton-grid" count={8} text="কাউন্টার পণ্য ও ক্যাটালগ লোড হচ্ছে..." />
+      ) : (
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
@@ -2290,6 +2299,7 @@ export default function PosPage() {
           );
         })}
       </div>
+      )}
 
       {/* POS Products Pagination */}
       {totalPosProducts > 0 && (

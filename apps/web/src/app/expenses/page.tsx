@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
+import DataLoader from '../../components/DataLoader';
 
 export default function ExpensesPage() {
   const { tenant, triggerHaptic } = useAuth();
   const currentTenantId = tenant?.id;
 
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -18,11 +20,17 @@ export default function ExpensesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadExpenses = async () => {
-    if (!currentTenantId) return;
+    if (!currentTenantId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/expenses?tenantId=${currentTenantId}`);
       if (res.ok) setExpenses(await res.json());
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -174,7 +182,9 @@ export default function ExpensesPage() {
 
       {notice && <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '800' }}>{notice}</div>}
 
-      {expenses.length === 0 ? (
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="খরচের হিসাব তালিকা লোড হচ্ছে..." />
+      ) : expenses.length === 0 ? (
         <div className="mobile-card" style={{ textAlign: 'center', padding: '28px 14px' }}>
           <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>💸</span>
           <h4 style={{ margin: '0 0 3px', color: '#0f172a', fontSize: '14px' }}>কোনো খরচ এন্ট্রি নেই</h4>

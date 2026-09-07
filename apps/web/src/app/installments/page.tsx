@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import FeatureGate from '../../components/FeatureGate';
+import DataLoader from '../../components/DataLoader';
 
 export default function InstallmentsPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -261,7 +262,9 @@ export default function InstallmentsPage() {
       </div>
 
       {/* Installments List */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="কিস্তির হিসাব তালিকা লোড হচ্ছে..." />
+      ) : filtered.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: '18px', padding: '40px 20px', textAlign: 'center', border: '1px dashed #cbd5e1' }}>
           <span style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>📅</span>
           <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#0f172a' }}>কোনো কিস্তির হিসাব পাওয়া যায়নি</h3>

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme } from '../../lib/industryConfig';
+import DataLoader from '../../components/DataLoader';
 
 interface StaffMember {
   id: string;
@@ -743,6 +744,9 @@ export default function StaffManagementPage() {
             </div>
 
             {/* Table */}
+            {loading ? (
+              <DataLoader type="table" count={4} text="কর্মচারী তালিকা লোড হচ্ছে..." />
+            ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
@@ -868,6 +872,7 @@ export default function StaffManagementPage() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </>
       )}

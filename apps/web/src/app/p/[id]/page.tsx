@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import DataLoader from '../../../components/DataLoader';
 
 export default function CustomerPublicPassbookPage() {
   const params = useParams();
@@ -42,6 +43,19 @@ export default function CustomerPublicPassbookPage() {
       })
       .finally(() => setLoading(false));
   }, [customerId]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '60px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <DataLoader
+          type="full"
+          text="ডিজিটাল পাসবুক লোড হচ্ছে..."
+          subText="দোকানের বাকি হিসাব ও কাস্টমার খতিয়ান প্রস্তুত হচ্ছে"
+          icon="💳"
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '20px 14px 60px', fontFamily: "'Hind Siliguri', sans-serif" }}>

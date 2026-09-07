@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import FeatureGate from '../../components/FeatureGate';
 import { useAuth } from '../../context/AuthContext';
+import DataLoader from '../../components/DataLoader';
 
 export default function BranchesPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -212,6 +213,9 @@ export default function BranchesPage() {
             🏪 আপনার সকল শাখা ({branches.length} টি)
           </h3>
 
+          {loading ? (
+            <DataLoader type="skeleton-grid" count={3} text="শাখা তালিকা লোড হচ্ছে..." />
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             {branches.map((b) => (
               <div
@@ -262,6 +266,7 @@ export default function BranchesPage() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Stock Transfers History */}

@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
+import DataLoader from '../../components/DataLoader';
 
 export default function ProductsPage() {
   const { tenant, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id || 'tenant-1';
 
   const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showVoiceProductModal, setShowVoiceProductModal] = useState(false);
@@ -36,7 +38,10 @@ export default function ProductsPage() {
     try {
       const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) setProducts(await res.json());
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -253,6 +258,9 @@ export default function ProductsPage() {
       </div>
 
       {/* Product List Cards (Mobile Touch Friendly) */}
+      {loading ? (
+        <DataLoader type="skeleton-list" count={5} text="পণ্য তালিকা ও স্টক লোড হচ্ছে..." />
+      ) : (
       <div style={{ display: 'grid', gap: '10px' }}>
         {filtered.map(p => {
           const isLow = p.stock <= (p.lowStockThreshold || 5);
@@ -335,6 +343,7 @@ export default function ProductsPage() {
           );
         })}
       </div>
+      )}
 
       {/* Add / Edit Product Modal */}
       {showModal && (

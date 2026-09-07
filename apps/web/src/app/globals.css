@@ -633,3 +633,49 @@ nextjs-toast {
 .voice-pulsing {
   animation: voicePulse 1.5s infinite;
 }
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmerProgress {
+  0% {
+    left: -45%;
+  }
+  50% {
+    left: 40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmerSweep 1.6s infinite;
+  pointer-events: none;
+}
+
+html.dark .shimmer-sweep {
+  background: linear-gradient(90deg, rgba(30,41,59,0) 0%, rgba(51,65,85,0.5) 50%, rgba(30,41,59,0) 100%);
+}
+

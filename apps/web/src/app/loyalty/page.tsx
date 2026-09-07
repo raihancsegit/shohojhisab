@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import DataLoader from '../../components/DataLoader';
 
 export default function LoyaltyPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -100,6 +101,9 @@ export default function LoyaltyPage() {
       )}
 
       {/* Member Cards */}
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="লয়্যালটি মেম্বার তালিকা লোড হচ্ছে..." />
+      ) : (
       <div style={{ display: 'grid', gap: '14px' }}>
         {customers.map((c) => (
           <div
@@ -157,6 +161,7 @@ export default function LoyaltyPage() {
           </div>
         ))}
       </div>
+      )}
 
       {/* Redeem Modal */}
       {activeCust && (

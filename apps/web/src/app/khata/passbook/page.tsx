@@ -2,6 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import DataLoader from '../../../components/DataLoader';
 
 function PassbookContent() {
   const searchParams = useSearchParams();
@@ -55,9 +56,13 @@ function PassbookContent() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-        <div style={{ fontSize: '36px', marginBottom: '8px', animation: 'soft-pulse 1.5s infinite' }}>📖</div>
-        <strong>ডিজিটাল পাসবুক স্টেটমেন্ট লোড হচ্ছে...</strong>
+      <div style={{ maxWidth: '540px', margin: '0 auto', padding: '40px 16px' }}>
+        <DataLoader
+          type="full"
+          text="ডিজিটাল পাসবুক স্টেটমেন্ট লোড হচ্ছে..."
+          subText="গ্রাহকের বকেয়া ও জমার হিসাব একত্র করা হচ্ছে"
+          icon="📖"
+        />
       </div>
     );
   }

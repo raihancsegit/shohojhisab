@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme } from '../lib/industryConfig';
+import DataLoader from '../components/DataLoader';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
@@ -230,11 +231,15 @@ export default function ShopkeeperDashboard() {
     }
   }, [tenant?.id]);
 
-  if (isLoading) {
+  if (isLoading || (loading && recentSales.length === 0)) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 20px', color: '#64748b' }}>
-        <div style={{ fontSize: '40px', marginBottom: '12px', animation: 'soft-pulse 1.5s infinite' }}>🏪</div>
-        <strong style={{ fontSize: '17px', color: '#0f172a' }}>দোকানের লাইভ হিসাব লোড হচ্ছে...</strong>
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="দোকানের লাইভ হিসাব ও ড্যাশবোর্ড লোড হচ্ছে..."
+          subText="আজকের বিক্রয়, ক্যাশ ও খতিয়ান প্রস্তুত করা হচ্ছে"
+          icon="🏪"
+        />
       </div>
     );
   }

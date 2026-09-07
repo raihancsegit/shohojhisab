@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import DataLoader from '../../components/DataLoader';
 
 export default function MarketingPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -223,7 +224,9 @@ export default function MarketingPage() {
           </div>
         </div>
 
-        {targetCustomers.length === 0 ? (
+        {loading ? (
+          <DataLoader type="skeleton-list" count={3} text="কাস্টমার তালিকা লোড হচ্ছে..." />
+        ) : targetCustomers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8' }}>
             কোনো কাস্টমার পাওয়া যায়নি। <Link href="/khata" style={{ color: '#059669', fontWeight: '800' }}>খাতায় নতুন কাস্টমার যুক্ত করুন →</Link>
           </div>

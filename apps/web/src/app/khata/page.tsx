@@ -4,16 +4,21 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
-import { exportToCSV } from '../../lib/exportUtils';
+import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceKhataModal from '../../components/VoiceKhataModal';
+import DataLoader from '../../components/DataLoader';
 
 export default function KhataPage() {
-  const { tenant, speakAnnouncement, triggerHaptic } = useAuth();
+  const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
   const theme = getIndustryTheme(tenant?.industryId);
+  const indId = tenant?.industryId || 'cat-grocery';
 
-  const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -21,7 +26,6 @@ export default function KhataPage() {
   const [payAmount, setPayAmount] = useState('');
 
   // Quick Add Due Modal state with Stock Product Integration
-  const [products, setProducts] = useState<any[]>([]);
   const [showAddDueModal, setShowAddDueModal] = useState<any>(null);
   const [dueMode, setDueMode] = useState<'stock' | 'custom'>('stock');
   const [productSearch, setProductSearch] = useState('');
@@ -58,7 +62,6 @@ export default function KhataPage() {
   const [initialDue, setInitialDue] = useState('0');
   const [creditLimit, setCreditLimit] = useState('5000');
   const [address, setAddress] = useState('');
-  const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const loadProducts = async () => {
@@ -278,6 +281,7 @@ export default function KhataPage() {
   const loadCustomers = async () => {
     if (!currentTenantId) {
       setCustomers([]);
+      setLoading(false);
       return;
     }
     try {
@@ -288,6 +292,8 @@ export default function KhataPage() {
       }
     } catch (e) {
       console.error('Failed to load customers', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -631,7 +637,9 @@ export default function KhataPage() {
       </div>
 
       {/* Customer List Cards */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <DataLoader type="skeleton-list" count={5} text="বাকি খাতার গ্রাহক তালিকা লোড হচ্ছে..." />
+      ) : filtered.length === 0 ? (
         <div className="ui-card" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
           কোনো গ্রাহক পাওয়া যায়নি। "নতুন বাকি খাতা এন্ট্রি" বাটনে ক্লিক করে খরিদ্দার যুক্ত করুন।
         </div>
@@ -1736,10 +1744,7 @@ export default function KhataPage() {
             {/* Transaction & Items Ledger List Grouped by Date */}
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {ledgerLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  <span className="animate-spin" style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>⏳</span>
-                  ফর্দ ও তারিখভিত্তিক হিসাব লোড হচ্ছে...
-                </div>
+                <DataLoader type="skeleton-list" count={3} text="তারিখভিত্তিক ফর্দ ও খতিয়ান প্রস্তুত হচ্ছে..." />
               ) : selectedLedger.ledger && selectedLedger.ledger.length > 0 ? (
                 Object.entries(groupLedgerByDate(selectedLedger.ledger)).map(([dateStr, dayEntries]) => {
                   const dayTotalDue = dayEntries.filter(e => !e.isPayment && e.paymentMethod !== 'due_payment').reduce((acc, e) => acc + (e.dueAmount || 0), 0);

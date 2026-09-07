@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
+import DataLoader from '../../components/DataLoader';
 
 export default function ReportsPage() {
   const { tenant, activeRoleMode, triggerHaptic } = useAuth();
@@ -266,7 +267,16 @@ export default function ReportsPage() {
       </div>
 
       {/* 4 CORE KPI SUMMARY CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+      {loading ? (
+        <DataLoader
+          type="full"
+          text="রিপোর্ট ও অ্যানালিটিক্স লোড হচ্ছে..."
+          subText="নির্বাচিত সময়ের লাভ-ক্ষতি ও বিক্রয় হিসাব প্রস্তুত হচ্ছে"
+          icon="📊"
+        />
+      ) : (
+        <>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
         {/* Total Sales / Revenue */}
         <div className="ui-card" style={{ borderLeft: '5px solid #3b82f6', padding: '18px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -805,6 +815,8 @@ export default function ReportsPage() {
           />
         )}
       </div>
+      </>
+      )}
 
       {/* 🖨️ DAY-END CASH DRAWER CLOSING SLIP MODAL */}
       {showDayEndModal && (

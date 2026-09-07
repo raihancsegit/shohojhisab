@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
+import DataLoader from '../../components/DataLoader';
 
 export default function DealersPage() {
   const { tenant, triggerHaptic } = useAuth();
   const currentTenantId = tenant?.id;
 
   const [dealers, setDealers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -25,14 +27,20 @@ export default function DealersPage() {
   const [payAmount, setPayAmount] = useState('');
 
   const loadDealers = async () => {
-    if (!currentTenantId) return;
+    if (!currentTenantId) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/dealers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
         setDealers(Array.isArray(data) ? data : []);
       }
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -179,7 +187,9 @@ export default function DealersPage() {
         </div>
       )}
 
-      {dealers.length === 0 ? (
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="ডিলার ও কোম্পানি তালিকা লোড হচ্ছে..." />
+      ) : dealers.length === 0 ? (
         <div className="ui-card" style={{ textAlign: 'center', padding: '30px 14px' }}>
           <span style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}>🏢</span>
           <h4 style={{ margin: '0 0 4px', color: '#0f172a', fontSize: '15px' }}>কোনো ডিলার যুক্ত নেই</h4>

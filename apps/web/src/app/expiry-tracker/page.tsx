@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import DataLoader from '../../components/DataLoader';
 
 export default function ExpiryTrackerPage() {
   const { tenant, triggerHaptic, speakAnnouncement } = useAuth();
@@ -204,6 +205,9 @@ export default function ExpiryTrackerPage() {
       </div>
 
       {/* Expiry Items List */}
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="ওষুধ ও পণ্যের মেয়াদ তালিকা লোড হচ্ছে..." />
+      ) : (
       <div style={{ display: 'grid', gap: '8px' }}>
         {filtered.map(p => {
           const isExp = p.isExpired;
@@ -287,6 +291,7 @@ export default function ExpiryTrackerPage() {
           );
         })}
       </div>
+      )}
 
       {/* RETURN TO DEALER MODAL */}
       {showReturnModal && (

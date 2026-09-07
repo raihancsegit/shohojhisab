@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import DataLoader from '../../components/DataLoader';
 
 export default function NotificationsPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -160,6 +161,9 @@ export default function NotificationsPage() {
       </div>
 
       {/* Notifications List */}
+      {loading ? (
+        <DataLoader type="skeleton-list" count={4} text="বিজ্ঞপ্তি ও অ্যালার্ট তালিকা প্রস্তুত হচ্ছে..." />
+      ) : (
       <div style={{ display: 'grid', gap: '10px' }}>
         {filtered.map(item => (
           <div
@@ -219,6 +223,7 @@ export default function NotificationsPage() {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

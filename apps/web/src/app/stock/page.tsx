@@ -8,6 +8,7 @@ import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModa
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceStockInModal from '../../components/VoiceStockInModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
+import DataLoader from '../../components/DataLoader';
 
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -699,6 +700,9 @@ export default function StockPage() {
 
       {/* VIEW 1: COMPACT LIST / TABLE VIEW (Super easy to manage 100s of products) */}
       {viewMode === 'list' && (
+        loading ? (
+          <DataLoader type="table" count={7} text="স্টক ও ইনভেন্টরি পণ্য লোড হচ্ছে..." />
+        ) : (
         <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
@@ -1013,10 +1017,14 @@ export default function StockPage() {
             </table>
           </div>
         </div>
+        )
       )}
 
       {/* VIEW 2: CARD GRID VIEW */}
       {viewMode === 'grid' && (
+        loading ? (
+          <DataLoader type="skeleton-grid" count={8} text="পণ্য কার্ড লোড হচ্ছে..." />
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
           {paginatedProducts.map(p => {
             const isLow = p.stock <= (p.lowStockThreshold || 5);
@@ -1170,6 +1178,7 @@ export default function StockPage() {
             );
           })}
         </div>
+        )
       )}
 
       {/* Pagination Component */}
