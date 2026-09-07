@@ -23,15 +23,11 @@ export default function IndustryUnitSelect({
   name,
   id
 }: IndustryUnitSelectProps) {
-  const { categories } = useMemo(() => getIndustryUnits(industryId), [industryId]);
+  const { primaryUnits } = useMemo(() => getIndustryUnits(industryId), [industryId]);
 
-  const allKnownValues = useMemo(() => {
-    const set = new Set<string>();
-    categories.forEach((cat) => {
-      cat.units.forEach((u) => set.add(u.value));
-    });
-    return set;
-  }, [categories]);
+  const hasCurrentValue = useMemo(() => {
+    return primaryUnits.some(u => u.value === value);
+  }, [primaryUnits, value]);
 
   return (
     <select
@@ -61,29 +57,19 @@ export default function IndustryUnitSelect({
         ...style
       }}
     >
-      {categories.map((cat) => (
-        <optgroup
-          key={cat.id}
-          label={cat.name}
-          style={{ fontWeight: '800', color: '#4338ca', background: '#f8fafc', padding: '4px' }}
+      {primaryUnits.map((u) => (
+        <option
+          key={u.value}
+          value={u.value}
+          style={{ fontWeight: '600', color: '#0f172a', background: '#fff', padding: '6px' }}
         >
-          {cat.units.map((u) => (
-            <option
-              key={`${cat.id}-${u.value}`}
-              value={u.value}
-              style={{ fontWeight: '600', color: '#0f172a', background: '#fff', padding: '6px' }}
-            >
-              {u.label}
-            </option>
-          ))}
-        </optgroup>
+          {u.label}
+        </option>
       ))}
-      {value && !allKnownValues.has(value) && (
-        <optgroup label="✨ অন্যান্য / কাস্টম একক" style={{ fontWeight: '800', color: '#64748b' }}>
-          <option value={value} style={{ fontWeight: '600', color: '#0f172a' }}>
-            {value} (বর্তমান কাস্টম)
-          </option>
-        </optgroup>
+      {value && !hasCurrentValue && (
+        <option value={value} style={{ fontWeight: '600', color: '#0f172a' }}>
+          {value} (কাস্টম একক)
+        </option>
       )}
     </select>
   );
