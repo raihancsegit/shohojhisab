@@ -174,6 +174,10 @@ export default function VoiceAssistant() {
           // Trigger live refresh event across active pages
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
 
+          if (data.navigateTo) {
+            router.push(data.navigateTo);
+          }
+
           if (data.action === 'trigger_print') {
             window.dispatchEvent(new CustomEvent('voice-trigger-print'));
             setTimeout(() => window.print(), 600);

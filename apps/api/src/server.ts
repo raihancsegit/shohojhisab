@@ -2508,21 +2508,93 @@ function executeAiShopCommand(tenantId: string, text: string): {
   const now = new Date().toISOString();
   const todayDate = now.split('T')[0];
 
-  // 1. Navigation & Page Switches
-  if (/খাতা\s*খোলো|বাকি\s*খাতা|খাতায়\s*যাও|কাস্টমার\s*খাতা/.test(rawText)) {
-    return { success: true, action: 'navigate', navigateTo: '/khata', speech: 'ডিজিটাল বাকি খাতা ওপেন করছি।', reply: '📖 ডিজিটাল বাকি খাতা ওপেন করা হচ্ছে...', actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' } };
+  // 1. Proactive Navigation & Voice Narration
+  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText)) {
+    const totalProdRow = db.prepare('SELECT COUNT(*) as total FROM products WHERE tenant_id = ?').get(tenantId) as any;
+    const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
+    const totalCount = Number(totalProdRow?.total) || 0;
+    const lowCount = lowStockRows.length;
+
+    let stockSummarySpeech = '';
+    if (lowCount > 0) {
+      const topLow = lowStockRows.slice(0, 3).map(p => `${p.bangla_name || p.name} (${p.stock} ${p.unit || 'টি'})`).join(', ');
+      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম—যেমন: ${topLow}।`;
+    } else {
+      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে।`;
+    }
+
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/stock',
+      speech: stockSummarySpeech,
+      reply: `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`,
+      actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
+    };
   }
-  if (/রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|লাভ\s*ক্ষতি\s*দেখাও|অ্যানালিটিক্স/.test(rawText)) {
-    return { success: true, action: 'navigate', navigateTo: '/reports', speech: 'দোকানের লাভ ও বিক্রয় রিপোর্ট ওপেন করছি।', reply: '📊 ব্যবসার লাভ-ক্ষতি ও সেলস রিপোর্ট ওপেন করা হচ্ছে...', actionLink: { text: 'রিপোর্ট দেখুন →', href: '/reports' } };
+
+  if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|লাভ\s*ক্ষতি\s*দেখাও/.test(rawText) && !/কত\s*টাকা|টাকা/.test(rawText)) {
+    const todaySales = db.prepare(`
+      SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash
+      FROM sales WHERE tenant_id = ? AND created_at LIKE ?
+    `).get(tenantId, `${todayDate}%`) as any;
+
+    const s = Number(todaySales?.s) || 0;
+    const p = Number(todaySales?.p) || 0;
+    const count = Number(todaySales?.count) || 0;
+    const speech = `আজকের রিপোর্ট পেজে এসেছি। আজকে মোট বিক্রি ৳${s} টাকা (${count}টি ইনভয়েস) এবং খাঁটি নিট লাভ ৳${p} টাকা।`;
+
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/day-end',
+      speech,
+      reply: `📊 **আজকের লাইভ ক্লোজিং রিপোর্ট:**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${(Number(todaySales?.cash) || 0).toLocaleString('en-US')}**\n• আসল নিট লাভ: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
+      actionLink: { text: 'রিপোর্ট দেখুন →', href: '/day-end' }
+    };
   }
-  if (/কাউন্টার|মেমো\s*খোলো|পিওএস|বিক্রি\s*কাউন্টার/.test(rawText)) {
-    return { success: true, action: 'navigate', navigateTo: '/pos', speech: 'পিওএস ক্যাশ কাউন্টার খুলছি।', reply: '⚡ পিওএস ক্যাশ কাউন্টার খুলছি...', actionLink: { text: 'ক্যাশ কাউন্টার ওপেন →', href: '/pos' } };
+
+  if (/বাকি\s*খাতায়\s*যান|বাকি\s*খাতায়\s*যাও|বাকি\s*খাতা\s*খোলো|বাকি\s*খাতা|খাতায়\s*যাও|কাস্টমার\s*খাতা|কাস্টমারদের\s*তালিকা/.test(rawText) && !/\d+/.test(normalized)) {
+    const dueStats = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
+    const debtorCount = Number(dueStats?.count) || 0;
+    const marketDue = Number(dueStats?.totalDue) || 0;
+    const speech = `ডিজিটাল বাকি খাতা খুলেছি। বর্তমানে ${debtorCount} জন কাস্টমারের কাছে মোট ৳${marketDue} টাকা বাকি পাওনা রয়েছে।`;
+
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/khata',
+      speech,
+      reply: `📖 **ডিজিটাল বাকি খাতা:**\n• মোট বাকিদার: **${debtorCount} জন**\n• মোট মার্কেট বাকি: **৳${marketDue.toLocaleString('en-US')}**\n\nবাকি খাতা ওপেন করা হচ্ছে...`,
+      actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' }
+    };
   }
-  if (/খরচের\s*খাতা|খরচ\s*দেখাও|খরচ\s*পেজ/.test(rawText)) {
-    return { success: true, action: 'navigate', navigateTo: '/expenses', speech: 'দোকান খরচের তালিকা খুলছি।', reply: '💸 খরচের খাতা ওপেন করা হচ্ছে...', actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' } };
+
+  if (/কাউন্টার|মেমো\s*কাটার\s*পেজ|পিওএস|ক্যাশ\s*কাউন্টার|বিক্রি\s*কাউন্টার/.test(rawText) && !/\d+/.test(normalized)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/pos',
+      speech: 'পিওএস ক্যাশ কাউন্টারে এসেছি। নতুন মেমো বা বিক্রয় এন্ট্রি করার জন্য প্রস্তুত।',
+      reply: '⚡ **পিওএস ক্যাশ কাউন্টার প্রস্তুত!**\nনতুন মেমো কাটতে আইটেম যোগ করুন...',
+      actionLink: { text: 'ক্যাশ কাউন্টার ওপেন →', href: '/pos' }
+    };
   }
-  if (/স্টক\s*দেখাও|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText)) {
-    return { success: true, action: 'navigate', navigateTo: '/stock', speech: 'মালের স্টক ক্যাটালগ খুলছি।', reply: '📦 পণ্যের স্টক ও ইনভেন্টরি পেজ ওপেন করা হচ্ছে...', actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' } };
+
+  if (/খরচের\s*খাতায়\s*যাও|খরচ\s*পেজে\s*যাও|খরচের\s*খাতা|খরচ\s*দেখাও|খরচ\s*পেজ/.test(rawText) && !/\d+/.test(normalized)) {
+    const expStats = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as totalExp FROM expenses WHERE tenant_id = ? AND created_at LIKE ?').get(tenantId, `${todayDate}%`) as any;
+    const expCount = Number(expStats?.count) || 0;
+    const totalExp = Number(expStats?.totalExp) || 0;
+    const speech = `দোকান খরচের তালিকায় এসেছি। আজকে ${expCount}টি খাতে মোট ৳${totalExp} টাকা খরচ হয়েছে।`;
+
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/expenses',
+      speech,
+      reply: `💸 **দোকানের খরচের খাতা:**\n• আজকের মোট খরচ: **৳${totalExp.toLocaleString('en-US')}** (${expCount}টি খাত)\n\nখরচের পেজে নিয়ে যাওয়া হচ্ছে...`,
+      actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' }
+    };
   }
 
   // 2. Stock Restock ("চিনিতে ৫০ কেজি স্টক যোগ করো")
@@ -2558,7 +2630,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
   }
 
   // 3. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
-  if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText) && !/কত|রিপোর্ট|লাভ/.test(rawText)) {
+  if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText) && !/কত|রিপোর্ট|লাভ|খোলো|যান|যাও/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
@@ -2606,11 +2678,60 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
+  // Robust Customer Matching Helper across SQLite customers
+  const findCustomerInDB = (spokenNameQuery: string) => {
+    if (!spokenNameQuery) return null;
+    const allCustomers = db.prepare('SELECT id, name, phone, total_due FROM customers WHERE tenant_id = ?').all(tenantId) as any[];
+    if (allCustomers.length === 0) return null;
+
+    const cleanSpoken = spokenNameQuery
+      .replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী|এর|কে|রে)/gi, '')
+      .trim()
+      .toLowerCase();
+
+    // 1. Direct or substring match
+    for (const c of allCustomers) {
+      const cName = String(c.name || '').toLowerCase();
+      const cleanC = cName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/gi, '').trim();
+      if (cName === cleanSpoken || cleanC === cleanSpoken || cName.includes(cleanSpoken) || cleanSpoken.includes(cleanC)) {
+        return c;
+      }
+    }
+
+    // 2. Fuzzy Levenshtein match
+    let bestMatch: any = null;
+    let highestScore = 0;
+    for (const c of allCustomers) {
+      const cName = String(c.name || '').toLowerCase();
+      const cleanC = cName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/gi, '').trim();
+      
+      const dist = (a: string, b: string) => {
+        if (!a || !b) return 0;
+        if (a === b) return 1.0;
+        let longer = a.length > b.length ? a : b;
+        let shorter = a.length > b.length ? b : a;
+        if (longer.includes(shorter)) return 0.88;
+        return 0;
+      };
+
+      const score = Math.max(dist(cleanSpoken, cleanC), dist(spokenNameQuery.toLowerCase(), cName));
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = c;
+      }
+    }
+
+    if (highestScore >= 0.8 && bestMatch) {
+      return bestMatch;
+    }
+    return null;
+  };
+
   // 4. Due Payment Received ("কালাম ২০০ টাকা জমা দিল", "রহিম ৩০০ টাকা শোধ করল")
   const isPaymentIntent = /বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|শোধ\s*দিল|জমা|পরিশোধ|শোধ/.test(rawText) ||
                           (/(দিল|দিলো|দিছে|পাইছি|পেয়েছি)/.test(rawText) && /\d+/.test(normalized));
 
-  if (isPaymentIntent && !/বাকি\s*কত|খরচ|ভাড়া|বিল|লাভ|রিপোর্ট/.test(rawText)) {
+  if (isPaymentIntent && !/বাকি\s*কত|খরচ|ভাড়া|বিল|লাভ|রিপোর্ট|যান|যাও|খোলো/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
@@ -2618,10 +2739,10 @@ function executeAiShopCommand(tenantId: string, text: string): {
       let cleanName = rawText
         .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
         .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|জমা|পরিশোধ|শোধ|দিল|দিলো|দিছে|পাইছি|পেয়েছি|এর|থেকে|ভাই|চাচা|মামা)/gi, '')
+        .replace(/(বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|জমা|পরিশোধ|শোধ|দিল|দিলো|দিছে|পাইছি|পেয়েছি|এর|থেকে|ভাই|চাচা|মামা|আরও|আগে|যোগ\s*হবে|যোগ|এড\s*হবে|এড|add)/gi, '')
         .trim();
 
-      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE "%" || name || "%")').get(tenantId, `%${cleanName}%`, cleanName) as any;
+      let customer = findCustomerInDB(cleanName);
       if (!customer) {
         customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND total_due > 0 ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
       }
@@ -2657,31 +2778,35 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 5. Due Given ("রহিম ভাই ৫০০ টাকা বাকি নিল", "কালামের খাতায় ১০০০ টাকা বাকি লেখো", "স্বপন ১০০ টাকা")
+  // 5. Due Given ("রহিম ভাই ৫০০ টাকা বাকি নিল", "রিয়ানের আরও ৩০ টাকা বাকি যোগ হবে", "স্বপন ১০০ টাকা")
   const hasAmount = /\d+/.test(normalized);
-  const isDueIntent = /বাকি|বাকিতে/.test(rawText) || (hasAmount && !/কত|দাম|দর|স্টক|রিপোর্ট|লাভ|খোলো|বিক্রি|ক্যাশ|লাভ|খরচ|ভাড়া|বিল/.test(rawText));
+  const isDueIntent = /বাকি|বাকিতে|বাকি\s*যোগ|বাকি\s*হবে|বাকি\s*এড|add/.test(rawText) || (hasAmount && !/কত|দাম|দর|স্টক|রিপোর্ট|লাভ|খোলো|বিক্রি|ক্যাশ|লাভ|খরচ|ভাড়া|বিল|যান|যাও/.test(rawText));
 
   if (isDueIntent && hasAmount) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
+      // Clean candidate customer name by removing all instruction and verb words
       let cleanName = rawText
         .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
         .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
-        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|চাচার|চাচাকে|চাচারে|মামার)/gi, '')
+        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি\s*যোগ\s*হবে|বাকি\s*যোগ|বাকি\s*এড\s*হবে|বাকি\s*এড|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
+        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|চাচার|চাচাকে|চাচারে|মামার|আরও|আগে|পরে|নতুন|যোগ\s*হবে|যোগ\s*করো|যোগ|যুক্ত|এড\s*হবে|এড|add|হবে|আছে|হলো|নিল|দিলাম|দিব|দাও|লেখো|লিখুন)/gi, '')
         .trim();
 
       cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
       if (!cleanName || cleanName.length < 2) {
-        const words = rawText.split(/\s+/).filter(w => !w.match(/বাকি|টাকা|নিল|দিলাম|লেখো|\d+|দেড়|আড়াই|পাঁচশ|একশ/));
+        const words = rawText.split(/\s+/).filter(w => !w.match(/বাকি|টাকা|নিল|দিলাম|লেখো|\d+|দেড়|আড়াই|পাঁচশ|একশ|যোগ|হবে|আরও|এড/));
         cleanName = words[0] || 'সম্মানিত কাস্টমার';
       }
       cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').trim();
 
-      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE "%" || name || "%")').get(tenantId, `%${cleanName}%`, cleanName) as any;
+      // Look up existing customer using intelligent fuzzy matching
+      let customer = findCustomerInDB(cleanName);
+
       if (!customer) {
+        // Create new customer only if no existing customer matched
         const custDisplayName = cleanName.includes('ভাই') || cleanName.includes('চাচা') ? cleanName : `${cleanName} ভাই`;
         const custId = 'cust-' + uuidv4().slice(0, 8);
         db.prepare(`
@@ -2690,6 +2815,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
         `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
         customer = { id: custId, name: custDisplayName, total_due: amount };
       } else {
+        // Update existing customer due
         const newDue = (Number(customer.total_due) || 0) + amount;
         db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
         customer.total_due = newDue;
@@ -2704,12 +2830,12 @@ function executeAiShopCommand(tenantId: string, text: string): {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
 
-      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
+      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
       return {
         success: true,
         action: 'due_given',
         speech,
-        reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• নতুন বাকি: **৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**`,
+        reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• যোগকৃত নতুন বাকি: **+৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**`,
         actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
         data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo }
       };
