@@ -166,6 +166,10 @@ export default function VoiceAssistant() {
           setFeedback(`✓ ${result.speech}`);
           triggerHaptic('success');
 
+          if (result.speech) {
+            speakAnnouncement(result.speech);
+          }
+
           // Trigger live refresh event across active pages
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: result }));
 

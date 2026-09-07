@@ -1,33 +1,61 @@
 /**
  * Universal Bengali Speech Cleaner & Parser Utilities
- * Handles mobile Android/Chrome SpeechRecognition quirks and deduplication
+ * Handles mobile Android/Chrome SpeechRecognition quirks, deduplication, and TTS echo suppression
  */
 
+/**
+ * Universal phrase and word deduplication for Bengali speech recognition
+ */
 export function cleanSpokenBengali(text: string): string {
   if (!text) return '';
   let s = String(text).trim();
 
-  // 1. Remove obvious continuous repetitions of single words: "রহিম রহিম রহিম" -> "রহিম"
-  const words = s.split(/\s+/);
+  // 1. Remove continuous repetitions of single words: "রহিম রহিম রহিম" -> "রহিম"
+  const words = s.split(/\s+/).filter(Boolean);
   const dedupedWords: string[] = [];
   for (let i = 0; i < words.length; i++) {
     const current = words[i];
     const prev = dedupedWords[dedupedWords.length - 1];
-    if (current && current !== prev) {
+    if (current && current.toLowerCase() !== prev?.toLowerCase()) {
       dedupedWords.push(current);
     }
   }
   s = dedupedWords.join(' ');
 
-  // 2. Remove multi-word repeated phrases:
-  // e.g. "রহিম ভাই রহিম ভাই রহিম ভাই" -> "রহিম ভাই"
-  // e.g. "৫০ টাকা ৫০ টাকা" -> "৫০ টাকা"
-  for (let len = 4; len >= 1; len--) {
+  // 2. Remove multi-word repeated phrases (e.g. "চা নাস্তা ৫০ টাকা চা নাস্তা ৫০ টাকা" -> "চা নাস্তা ৫০ টাকা")
+  for (let len = 6; len >= 1; len--) {
     const pattern = new RegExp(`((?:\\S+\\s+){${len - 1}}\\S+)(?:\\s+\\1)+`, 'gi');
     s = s.replace(pattern, '$1');
   }
 
+  // 3. Clean repetitive tails e.g. "রহিম ভাই ৫০ টাকা ৫০ টাকা"
+  s = s.replace(/(\d+\s*টাকা)(?:\s+\1)+/gi, '$1');
+
   return s.trim();
+}
+
+/**
+ * Detects if the spoken transcript is the device speaker's own TTS output echoed back into the microphone
+ */
+export function isEchoedTTSResponse(text: string): boolean {
+  if (!text) return false;
+  const s = text.trim().toLowerCase();
+
+  // Check if TTS is currently active
+  if (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__) {
+    return true;
+  }
+
+  // Check against last spoken TTS text
+  if (typeof window !== 'undefined' && (window as any).__LAST_TTS_TEXT__) {
+    const lastTTS = String((window as any).__LAST_TTS_TEXT__).trim().toLowerCase();
+    if (lastTTS && (s.includes(lastTTS) || lastTTS.includes(s) || getBengaliStringSimilarity(s, lastTTS) > 0.65)) {
+      return true;
+    }
+  }
+
+  // Known confirmation keywords from system TTS speech
+  return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা|বর্তমান\s*মোট\s*বকেয়া|সাউন্ডবক্স|সফলভাবে/i.test(s);
 }
 
 /**
@@ -37,18 +65,36 @@ export function cleanSpokenBengali(text: string): string {
 export function extractTranscriptFromEvent(event: any): { fullTranscript: string; isFinal: boolean } {
   if (!event || !event.results) return { fullTranscript: '', isFinal: false };
 
-  let full = '';
+  // If TTS is actively speaking, drop the microphone event immediately to prevent feedback loop
+  if (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__) {
+    return { fullTranscript: '', isFinal: false };
+  }
+
+  let finalTranscript = '';
+  let interimTranscript = '';
   let hasFinal = false;
 
   for (let i = 0; i < event.results.length; i++) {
     const result = event.results[i];
     if (result && result[0] && result[0].transcript) {
-      full += result[0].transcript + ' ';
-      if (result.isFinal) hasFinal = true;
+      const trans = result[0].transcript.trim();
+      if (result.isFinal) {
+        finalTranscript += (finalTranscript ? ' ' : '') + trans;
+        hasFinal = true;
+      } else {
+        interimTranscript += (interimTranscript ? ' ' : '') + trans;
+      }
     }
   }
 
-  const cleaned = cleanSpokenBengali(full);
+  const rawCombined = (finalTranscript || interimTranscript).trim();
+
+  // Check if this is an echo of the assistant's own voice
+  if (isEchoedTTSResponse(rawCombined)) {
+    return { fullTranscript: '', isFinal: false };
+  }
+
+  const cleaned = cleanSpokenBengali(rawCombined);
   return { fullTranscript: cleaned, isFinal: hasFinal };
 }
 
@@ -172,13 +218,3 @@ export function findBestFuzzyMatch<T extends { name?: string; banglaName?: strin
 
   return { match: null, confidence: highestScore };
 }
-
-/**
- * Detects if the spoken transcript is the device speaker's own TTS output echoed back into the microphone
- */
-export function isEchoedTTSResponse(text: string): boolean {
-  if (!text) return false;
-  const s = text.trim();
-  return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা\s*হয়েছে|বর্তমান\s*মোট\s*বকেয়া/i.test(s);
-}
-

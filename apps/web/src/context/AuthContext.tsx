@@ -243,6 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If soundbox is disabled, strictly cancel and do not speak
       if (!isSoundboxEnabled) {
         window.speechSynthesis.cancel();
+        (window as any).__IS_TTS_SPEAKING__ = false;
         if (onComplete) onComplete();
         return;
       }
@@ -264,9 +265,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .trim();
 
       if (!cleanText) {
+        (window as any).__IS_TTS_SPEAKING__ = false;
         if (onComplete) onComplete();
         return;
       }
+
+      // Set global anti-echo TTS lock
+      (window as any).__IS_TTS_SPEAKING__ = true;
+      (window as any).__LAST_TTS_TEXT__ = cleanText;
+      window.dispatchEvent(new CustomEvent('tts-speaking-state', { detail: { isSpeaking: true, text: cleanText } }));
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'bn-BD';
@@ -285,16 +292,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         utterance.voice = bnVoice;
       }
 
-      utterance.onend = () => {
-        if (onComplete) onComplete();
+      const finishTTS = () => {
+        // Keep lock for 800ms to allow room acoustic reverb to dissipate completely
+        setTimeout(() => {
+          (window as any).__IS_TTS_SPEAKING__ = false;
+          window.dispatchEvent(new CustomEvent('tts-speaking-state', { detail: { isSpeaking: false } }));
+          if (onComplete) onComplete();
+        }, 800);
       };
-      utterance.onerror = () => {
-        if (onComplete) onComplete();
-      };
+
+      utterance.onend = finishTTS;
+      utterance.onerror = finishTTS;
 
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.error('Speech synthesis error', e);
+      (window as any).__IS_TTS_SPEAKING__ = false;
       if (onComplete) onComplete();
     }
   };
