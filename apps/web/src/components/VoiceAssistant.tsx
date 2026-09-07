@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -16,7 +17,7 @@ export default function VoiceAssistant() {
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
-  const accumulatedTranscriptRef = useRef<string>('');
+  const latestTranscriptRef = useRef<string>('');
   const isListeningRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function VoiceAssistant() {
       } catch (e) {}
     }
 
-    const finalSpoken = accumulatedTranscriptRef.current.trim();
+    const finalSpoken = latestTranscriptRef.current.trim();
     if (finalSpoken) {
       processUniversalVoiceCommand(finalSpoken);
     } else {
@@ -63,7 +64,7 @@ export default function VoiceAssistant() {
 
     triggerHaptic('medium');
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    accumulatedTranscriptRef.current = '';
+    latestTranscriptRef.current = '';
     setLiveTranscript('');
     setFeedback('🎙️ শুনছি... পরিষ্কার বাংলায় বলুন');
     isListeningRef.current = true;
@@ -81,34 +82,19 @@ export default function VoiceAssistant() {
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        let interim = '';
-        let finalChunk = '';
+        const { fullTranscript } = extractTranscriptFromEvent(event);
+        if (!fullTranscript) return;
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
+        latestTranscriptRef.current = fullTranscript;
+        setLiveTranscript(fullTranscript);
 
-        if (finalChunk) {
-          accumulatedTranscriptRef.current += finalChunk;
-        }
-
-        const currentFull = (accumulatedTranscriptRef.current + ' ' + interim).trim();
-        setLiveTranscript(currentFull);
-
-        // Reset and start 1.6-second smart silence timer
+        // Reset and start 1.3-second smart silence timer
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          if (isListeningRef.current && (accumulatedTranscriptRef.current.trim() || interim.trim())) {
-            if (interim.trim() && !accumulatedTranscriptRef.current.includes(interim.trim())) {
-              accumulatedTranscriptRef.current += ' ' + interim.trim();
-            }
+          if (isListeningRef.current && latestTranscriptRef.current.trim()) {
             stopAndProcess();
           }
-        }, 1600);
+        }, 1300);
       };
 
       recognition.onerror = (err: any) => {

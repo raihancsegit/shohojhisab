@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
 
 interface VoiceKhataModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export default function VoiceKhataModal({
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
-  const accumulatedTextRef = useRef<string>('');
+  const latestTranscriptRef = useRef<string>('');
   const isMountedRef = useRef<boolean>(false);
 
   const voiceConfig = getIndustryVoiceConfig(industryId);
@@ -65,7 +66,7 @@ export default function VoiceKhataModal({
     }
 
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    accumulatedTextRef.current = '';
+    latestTranscriptRef.current = '';
     setLiveTranscript('');
     setLastActionMessage('🎙️ শুনছি... কাস্টমারের নাম, টাকা ও পণ্যের নাম বলুন');
     setIsListening(true);
@@ -83,32 +84,19 @@ export default function VoiceKhataModal({
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        let interim = '';
-        let finalChunk = '';
+        const { fullTranscript } = extractTranscriptFromEvent(event);
+        if (!fullTranscript) return;
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
+        latestTranscriptRef.current = fullTranscript;
+        setLiveTranscript(fullTranscript);
 
-        if (finalChunk) {
-          accumulatedTextRef.current += finalChunk;
-        }
-
-        const currentFull = (accumulatedTextRef.current + ' ' + interim).trim();
-        setLiveTranscript(currentFull);
-
-        // Smart silence timer (1.5 seconds silence triggers processing)
+        // Smart silence timer (1.3 seconds of pause triggers auto-processing)
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          if (isMountedRef.current && (accumulatedTextRef.current.trim() || interim.trim())) {
-            const finalText = (accumulatedTextRef.current + ' ' + interim).trim();
-            handleProcessCommand(finalText);
+          if (isMountedRef.current && latestTranscriptRef.current.trim()) {
+            handleProcessCommand(latestTranscriptRef.current.trim());
           }
-        }, 1500);
+        }, 1300);
       };
 
       recognition.onerror = (err: any) => {
@@ -166,7 +154,7 @@ export default function VoiceKhataModal({
           if (speakAnnouncement) speakAnnouncement(result.speech);
           onActionCompleted();
           setLiveTranscript('');
-          accumulatedTextRef.current = '';
+          latestTranscriptRef.current = '';
           
           // Auto restart listening after 2 seconds for continuous multi-customer entry
           setTimeout(() => {

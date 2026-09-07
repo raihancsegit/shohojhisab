@@ -3853,6 +3853,31 @@ fastify.post('/api/voice-action', async (request, reply) => {
     return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
   }
 
+  // Deduplicate consecutive spoken words and repeated phrases (common on mobile speech recognizers)
+  const cleanSpokenBengali = (str: string) => {
+    if (!str) return '';
+    let s = String(str).trim();
+
+    // 1. Remove obvious continuous repetitions of single words: "রহিম রহিম রহিম" -> "রহিম"
+    const words = s.split(/\s+/);
+    const dedupedWords: string[] = [];
+    for (let i = 0; i < words.length; i++) {
+      const current = words[i];
+      const prev = dedupedWords[dedupedWords.length - 1];
+      if (current && current !== prev) {
+        dedupedWords.push(current);
+      }
+    }
+    s = dedupedWords.join(' ');
+
+    // 2. Remove multi-word repeated phrases (e.g. "রহিম ভাই রহিম ভাই রহিম ভাই" -> "রহিম ভাই")
+    for (let len = 4; len >= 1; len--) {
+      const pattern = new RegExp(`((?:\\S+\\s+){${len - 1}}\\S+)(?:\\s+\\1)+`, 'gi');
+      s = s.replace(pattern, '$1');
+    }
+    return s.trim();
+  };
+
   // Spoken numbers and words dictionary
   const parseSpokenBengaliNumbers = (str: string) => {
     let s = String(str || '');
@@ -3887,7 +3912,7 @@ fastify.post('/api/voice-action', async (request, reply) => {
     return String(str || '').replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
   };
 
-  const rawText = String(text).trim();
+  const rawText = cleanSpokenBengali(String(text).trim());
   const normalized = toEnDigits(parseSpokenBengaliNumbers(rawText.toLowerCase()));
   const now = new Date().toISOString();
   const todayDate = now.split('T')[0];
@@ -3952,12 +3977,11 @@ fastify.post('/api/voice-action', async (request, reply) => {
   // INTENT 1.45: SMART NATURAL SENTENCE FULL ORDER POS & KHATA
   // e.g. "করিম ভাইরে নাপা এক্সট্রা ২ পাতা আর সেক্লো ১ পাতা দিলাম, ২০০ টাকা পাইছি"
   // e.g. "রহিম ভাইরে চিনি ২ কেজি তেল ১ লিটার বাকিতে দিলাম, নগদ ১০০ টাকা পাইছি"
-  // e.g. "সুতি পাঞ্জাবি ১টা আর জিন্স প্যান্ট ১টা দিলাম, ১০০০ টাকা পাইছি"
   // ----------------------------------------------------
   const hasItemOrQuantity = /(?:পাতা|ট্যাবলেট|কেজি|লিটার|গ্রাম|পিস|প্যাকেট|বস্তা|বক্স|ডজন|হালি|জোড়া|জোড়া|প্লেট|কাপ|মিটার|ফুট|বোতল|রোল|টি|টা|\b\d+\b)/.test(normalized);
   const hasOrderIntent = /(?:দিলাম|দিয়েছি|বেচলাম|বিক্রি\s*করলাম|পাইছি|পেয়েছি|নগদ|বাকিতে|বাকি\s*দিলাম)/.test(rawText);
 
-  if (hasItemOrQuantity && hasOrderIntent && !/বাকি\s*কত|হিসাব\s*কত|কার\s*কার|স্টক\s*কত|দাম\s*কত|ডিলার|খরচ\s*হলো/.test(rawText)) {
+  if (hasItemOrQuantity && hasOrderIntent && !/বাকি\s*কত|হিসাব\s*কত|কার\s*কার|স্টক\s*কত|দাম\s*কত|ডিলার|খরচ\s*হলো|নাস্তা|ভাড়া|বিল/.test(rawText)) {
     // 1. Extract Spoken Customer Name
     let customerName = '';
     const custMatch = rawText.match(/^([^,\s]+(?:\s+[^,\s]+)?)(?:\s*ভাইরে|\s*ভাইকে|\s*ভাইয়ের|\s*ভাই|\s*চাচারে|\s*চাচাকে|\s*চাচার|\s*কাকুকে|\s*এর|\s*রে|\s*কে)\b/);
@@ -4018,7 +4042,6 @@ fastify.post('/api/voice-action', async (request, reply) => {
         if (product) {
           unitPrice = Number(product.selling_price) || 0;
         } else {
-          // Fallback unit prices based on common staples
           unitPrice = 50;
         }
 
@@ -4098,7 +4121,6 @@ fastify.post('/api/voice-action', async (request, reply) => {
         }
       }
 
-      // Compose Bangla speech response
       const itemsSpeech = parsedOrderItems.map(it => `${it.name} (${it.quantity} ${it.unit})`).join(' ও ');
       let speech = `✓ ${customer ? customer.name : 'মেমো'} সম্পন্ন: ${itemsSpeech}। মোট ৳${totalAmount} টাকা।`;
       if (hasExplicitPaid) {
@@ -4128,59 +4150,6 @@ fastify.post('/api/voice-action', async (request, reply) => {
           dueAmount,
           changeAmount
         }
-      };
-    }
-  }
-
-  // ----------------------------------------------------
-  // INTENT 1.5: MULTI-ITEM OR SINGLE ITEM VOICE ADD-TO-CART & CHECKOUT FOR POS
-  // ----------------------------------------------------
-  if (/কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|বিল|বিক্রি|সম্পন্ন|চেকআউট|কেজি|লিটার|পিস|পাতা|প্যাকেট|ডজন/.test(rawText) && !/বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|খরচ|আজকে\s*কত|কত\s*লাভ|দাম\s*কত|স্টক\s*কত/.test(rawText)) {
-    // Check if voice command is checkout
-    if (/বিল\s*করো|বিক্রি\s*সম্পন্ন|নগদ\s*বিক্রি|ক্যাশে\s*বিল|চেকআউট|সম্পন্ন\s*করো/.test(rawText) && !/\d+/.test(rawText)) {
-      return {
-        success: true,
-        action: 'checkout_cash',
-        speech: 'নগদ বিক্রি সম্পন্ন করা হচ্ছে।'
-      };
-    }
-
-    // Split multiple items if comma, 'এবং', or 'আর' is present
-    const itemPhrases = rawText.split(/,|\s+এবং\s+|\s+আর\s+/).map(s => s.trim()).filter(Boolean);
-    const addedItems: any[] = [];
-
-    for (const phrase of itemPhrases) {
-      const phraseNorm = toEnDigits(parseSpokenBengaliNumbers(phrase.toLowerCase()));
-      const numbersMatch = phraseNorm.match(/(\d+(\.\d+)?)/);
-      const qty = numbersMatch ? parseFloat(numbersMatch[1]) : 1;
-
-      let cleanProd = phrase
-        .replace(/(\d+|[০-৯]+)/g, '')
-        .replace(/(কার্টে\s*নাও|কার্টে\s*রাখো|কার্টে\s*যোগ|কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|পিস|পাতা|কেজি|লিটার|প্যাকেট|বোতল|টাকা|টাকার|বিল\s*করো|\?)/gi, '')
-        .trim();
-
-      if (cleanProd && cleanProd.length >= 2) {
-        const product = db.prepare(`
-          SELECT * FROM products WHERE tenant_id = ? AND (
-            bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
-          ) LIMIT 1
-        `).get(tenantId, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, cleanProd) as any;
-
-        if (product) {
-          addedItems.push({ product, quantity: qty });
-        }
-      }
-    }
-
-    if (addedItems.length > 0) {
-      const names = addedItems.map(it => `${it.product.bangla_name || it.product.name} (${it.quantity} ${it.product.unit || 'পিস'})`).join(', ');
-      const speech = `${names} কার্টে যোগ করা হয়েছে।`;
-      return {
-        success: true,
-        action: 'multi_items_add',
-        speech,
-        data: { items: addedItems },
-        navigateTo: '/pos'
       };
     }
   }
@@ -4284,101 +4253,61 @@ fastify.post('/api/voice-action', async (request, reply) => {
   }
 
   // ----------------------------------------------------
-  // INTENT 5: DUE GIVEN (বাকি দেওয়া / বাকি নিল / বাকি দিলাম / বাকি লেখো / অমুকের বাকি ৫০০ টাকা)
+  // INTENT 9: EXPENSE LOGGING (চা নাস্তা / দোকান খরচ / বিদ্যুৎ বিল / নাস্তা ৬০)
   // ----------------------------------------------------
-  if ((/বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*হলো|বাকিতে/.test(rawText) || (/বাকি/.test(rawText) && /\d+|[০-৯]+/.test(rawText))) && !/পরিশোধ|শোধ|জমা|কত\s*পাবে|কত|আজকে/.test(rawText)) {
+  if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
-      // Extract Customer Name
-      let cleanName = rawText
-        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
-        .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি)/gi, '')
-        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|ভাই|চাচার|চাচাকে|চাচারে|চাচা|মামার|মামা)/gi, '')
-        .replace(/(সিগারেট|চাল|ডাল|তেল|সাবান|বিস্কুট|চিনি|আটা|ময়দা|মাল|ঔষধ|নাপা|ট্যাবলেট|শার্ট|প্যান্ট|লুঙ্গি)/gi, '')
+      let cleanTitle = rawText
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka|খরচ)/gi, '')
+        .replace(/(খরচ\s*হলো|খরচ\s*লিখুন|খরচ\s*লেখো|খরচ\s*হয়েছে|খরচ\s*করলাম|খরচে\s*লেখো|বাবদ|লেখো|লিখুন)/gi, '')
         .trim();
+      if (!cleanTitle || cleanTitle.length < 2) cleanTitle = 'দোকানের বিবিধ খরচ';
 
-      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
-
-      if (!cleanName || cleanName.length < 2) {
-        const words = rawText.split(/\s+/).filter(w => !w.match(/বাকি|টাকা|নিল|দিলাম|লেখো|\d+|দেড়|আড়াই|পাঁচশ|একশ/));
-        cleanName = words[0] || 'সম্মানিত কাস্টমার';
-      }
-      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').trim();
-
-      // Check if customer exists in tenant
-      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ?').get(tenantId, `%${cleanName}%`) as any;
-
-      if (!customer) {
-        // Auto-create customer
-        const custId = 'cust-' + uuidv4().slice(0, 8);
-        db.prepare(`
-          INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(custId, tenantId, cleanName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
-        customer = { id: custId, name: cleanName, total_due: amount };
-      } else {
-        // Update customer total due
-        const newDue = (Number(customer.total_due) || 0) + amount;
-        db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
-        customer.total_due = newDue;
+      let category = 'সাধারণ খরচ';
+      let icon = '💸';
+      if (/চা|নাস্তা|বিস্কুট|পানি|খাওয়া|খাবার/.test(rawText)) {
+        category = 'আপ্যায়ন / চা-নাস্তা';
+        icon = '☕';
+      } else if (/ভাড়া|ভাড়া/.test(rawText)) {
+        category = 'দোকান ভাড়া';
+        icon = '🏠';
+      } else if (/বিল|বিদ্যুৎ|কারেন্ট|গ্যাস|পানি/.test(rawText)) {
+        category = 'বিদ্যুৎ বিল';
+        icon = '💡';
+      } else if (/বেতন|স্টাফ|কর্মচারী/.test(rawText)) {
+        category = 'স্টাফ বেতন';
+        icon = '💼';
+      } else if (/যাতায়াত|যাতায়াত|পরিবহন|কুলি|গাড়ি\s*ভাড়া|ভাড়া/.test(rawText)) {
+        category = 'পরিবহন / কুলি খরচ';
+        icon = '🚚';
       }
 
-      // Check if specific items were mentioned in voice command
-      let spokenItemsSummary = rawText
-        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
-        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি)/gi, '')
-        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|ভাই|চাচার|চাচাকে|চাচারে|চাচা|মামার|মামা)/gi, '')
-        .replace(new RegExp(cleanName, 'gi'), '')
-        .trim();
-
-      // Insert Due Sale Record
-      const saleId = 'sale-' + uuidv4().slice(0, 8);
-      const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
-      const note = spokenItemsSummary || 'ভয়েস বাকি এন্ট্রি';
-      
+      const expId = 'exp-' + uuidv4().slice(0, 8);
       db.prepare(`
-        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
+        INSERT INTO expenses (id, tenant_id, title, amount, category, icon, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(expId, tenantId, cleanTitle, amount, category, icon, now);
 
-      // Try matching products in inventory to deduct stock and record itemized sale_item
-      const matchedProd = db.prepare(`
-        SELECT * FROM products WHERE tenant_id = ? AND (
-          bangla_name LIKE ? OR name LIKE ? OR ? LIKE '%' || bangla_name || '%'
-        ) LIMIT 1
-      `).get(tenantId, `%${spokenItemsSummary}%`, `%${spokenItemsSummary}%`, rawText) as any;
-
-      const itemId = 'sitem-' + uuidv4().slice(0, 8);
-      if (matchedProd) {
-        db.prepare('UPDATE products SET stock = MAX(0, stock - 1) WHERE id = ?').run(matchedProd.id);
-        db.prepare(`
-          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(itemId, saleId, matchedProd.bangla_name || matchedProd.name, 1, amount, amount);
-      } else {
-        db.prepare(`
-          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(itemId, saleId, note || 'বাকি পণ্য সামগ্রী', 1, amount, amount);
-      }
-
-      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা (${note}) লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
+      const speech = `✓ ${cleanTitle} ৳${amount} টাকা খরচ খাতায় যুক্ত হয়েছে।`;
       return {
         success: true,
-        action: 'due_given',
+        action: 'expense_logged',
         speech,
-        data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo, note }
+        data: { title: cleanTitle, amount, category }
       };
     }
   }
 
   // ----------------------------------------------------
-  // INTENT 6: DUE PAYMENT RECEIVED (বাকি শোধ / বাকি জমা / বাকি দিল / টাকা জমা দিল)
+  // INTENT 6: DUE PAYMENT RECEIVED (বাকি শোধ / বাকি জমা / বাকি দিল / টাকা জমা দিল / রহিম ১০০ টাকা দিল)
   // ----------------------------------------------------
-  if (/বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|জমা\s*দিল|শোধ\s*দিল/.test(rawText)) {
+  const isPaymentIntent = /বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|শোধ\s*দিল|জমা|পরিশোধ|শোধ/.test(rawText) ||
+                          (/(দিল|দিলো|দিছে|পাইছি|পেয়েছি)/.test(rawText) && /\d+/.test(normalized));
+
+  if (isPaymentIntent && !/বাকি\s*কত|খরচ|ভাড়া|বিল/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
@@ -4386,10 +4315,10 @@ fastify.post('/api/voice-action', async (request, reply) => {
       let cleanName = rawText
         .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
         .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|এর|থেকে|ভাই|চাচা|মামা)/gi, '')
+        .replace(/(বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|জমা|পরিশোধ|শোধ|দিল|দিলো|দিছে|পাইছি|পেয়েছি|এর|থেকে|ভাই|চাচা|মামা)/gi, '')
         .trim();
 
-      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ?').get(tenantId, `%${cleanName}%`) as any;
+      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE "%" || name || "%")').get(tenantId, `%${cleanName}%`, cleanName) as any;
 
       if (!customer) {
         customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND total_due > 0 ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
@@ -4424,6 +4353,88 @@ fastify.post('/api/voice-action', async (request, reply) => {
         const speech = `ক্যাশ বাক্সে ৳${amount} টাকা জমা রেকর্ড করা হয়েছে।`;
         return { success: true, action: 'due_paid', speech, data: { paidAmount: amount } };
       }
+    }
+  }
+
+  // ----------------------------------------------------
+  // INTENT 5: DUE GIVEN (বাকি দেওয়া / বাকি নিল / বাকি দিলাম / বাকি লেখো / "রহিম ভাই ১০০ টাকা" / "স্বপন ৫০ টাকা")
+  // Handles explicit "বাকি" keywords as well as natural spoken "Name + Amount" shopkeeper patterns
+  // ----------------------------------------------------
+  const hasAmount = /\d+/.test(normalized);
+  const isDueIntent = /বাকি|বাকিতে/.test(rawText) || (hasAmount && !/কত|দাম|দর|স্টক|রিপোর্ট|লাভ|খোলো|বিক্রি/.test(rawText));
+
+  if (isDueIntent && hasAmount) {
+    const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
+    const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+
+    if (amount > 0) {
+      // Extract Customer Name & Title cleanly
+      let cleanName = rawText
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+        .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
+        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
+        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|চাচার|চাচাকে|চাচারে|মামার)/gi, '')
+        .trim();
+
+      // Clean trailing grammar particles
+      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
+
+      if (!cleanName || cleanName.length < 2) {
+        const words = rawText.split(/\s+/).filter(w => !w.match(/বাকি|টাকা|নিল|দিলাম|লেখো|\d+|দেড়|আড়াই|পাঁচশ|একশ/));
+        cleanName = words[0] || 'সম্মানিত কাস্টমার';
+      }
+      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').trim();
+
+      // Look up customer or fuzzy match
+      let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE "%" || name || "%")').get(tenantId, `%${cleanName}%`, cleanName) as any;
+
+      if (!customer) {
+        // Auto-create new customer with full spoken name
+        const custDisplayName = cleanName.includes('ভাই') || cleanName.includes('চাচা') ? cleanName : `${cleanName} ভাই`;
+        const custId = 'cust-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
+        customer = { id: custId, name: custDisplayName, total_due: amount };
+      } else {
+        // Update customer total due
+        const newDue = (Number(customer.total_due) || 0) + amount;
+        db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+        customer.total_due = newDue;
+      }
+
+      // Check if specific items were mentioned in voice command
+      let spokenItemsSummary = rawText
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি)/gi, '')
+        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|ভাই|চাচার|চাচাকে|চাচারে|চাচা|মামার|মামা)/gi, '')
+        .replace(new RegExp(cleanName, 'gi'), '')
+        .trim();
+
+      // Insert Due Sale Record
+      const saleId = 'sale-' + uuidv4().slice(0, 8);
+      const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
+      const note = spokenItemsSummary || 'ভয়েস বাকি এন্ট্রি';
+      
+      db.prepare(`
+        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
+
+      const itemId = 'sitem-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, note || 'বাকি পণ্য সামগ্রী', 1, amount, amount);
+
+      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
+      return {
+        success: true,
+        action: 'due_given',
+        speech,
+        data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo, note }
+      };
     }
   }
 
@@ -4495,55 +4506,6 @@ fastify.post('/api/voice-action', async (request, reply) => {
       speech,
       data: { id: prodId, name: cleanProdName, barcode, sellPrice, purchasePrice, stock, unit }
     };
-  }
-
-  // ----------------------------------------------------
-  // INTENT 9: EXPENSE LOGGING (চা নাস্তা / দোকান খরচ / বিদ্যুৎ বিল)
-  // ----------------------------------------------------
-  if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText)) {
-    const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
-    const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
-
-    if (amount > 0) {
-      let cleanTitle = rawText
-        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka|খরচ)/gi, '')
-        .replace(/(খরচ\s*হলো|খরচ\s*লিখুন|খরচ\s*লেখো|খরচ\s*হয়েছে|খরচ\s*করলাম|খরচে\s*লেখো|বাবদ|লেখো|লিখুন)/gi, '')
-        .trim();
-      if (!cleanTitle || cleanTitle.length < 2) cleanTitle = 'দোকানের বিবিধ খরচ';
-
-      let category = 'সাধারণ খরচ';
-      let icon = '💸';
-      if (/চা|নাস্তা|বিস্কুট|পানি|খাওয়া|খাবার/.test(rawText)) {
-        category = 'আপ্যায়ন / চা-নাস্তা';
-        icon = '☕';
-      } else if (/ভাড়া|ভাড়া/.test(rawText)) {
-        category = 'দোকান ভাড়া';
-        icon = '🏠';
-      } else if (/বিল|বিদ্যুৎ|কারেন্ট|গ্যাস|পানি/.test(rawText)) {
-        category = 'বিদ্যুৎ বিল';
-        icon = '💡';
-      } else if (/বেতন|স্টাফ|কর্মচারী/.test(rawText)) {
-        category = 'স্টাফ বেতন';
-        icon = '💼';
-      } else if (/যাতায়াত|যাতায়াত|পরিবহন|কুলি|গাড়ি\s*ভাড়া|ভাড়া/.test(rawText)) {
-        category = 'পরিবহন / কুলি খরচ';
-        icon = '🚚';
-      }
-
-      const expId = 'exp-' + uuidv4().slice(0, 8);
-      db.prepare(`
-        INSERT INTO expenses (id, tenant_id, title, amount, category, icon, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(expId, tenantId, cleanTitle, amount, category, icon, now);
-
-      const speech = `✓ ${cleanTitle} ৳${amount} টাকা খরচ খাতায় যুক্ত হয়েছে।`;
-      return {
-        success: true,
-        action: 'expense_logged',
-        speech,
-        data: { title: cleanTitle, amount, category }
-      };
-    }
   }
 
   // ----------------------------------------------------

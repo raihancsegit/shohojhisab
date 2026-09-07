@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
 
 interface VoiceExpenseModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export default function VoiceExpenseModal({
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
-  const accumulatedTextRef = useRef<string>('');
+  const latestTranscriptRef = useRef<string>('');
   const isMountedRef = useRef<boolean>(false);
 
   const startListening = () => {
@@ -34,7 +35,7 @@ export default function VoiceExpenseModal({
     }
 
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    accumulatedTextRef.current = '';
+    latestTranscriptRef.current = '';
     setLiveTranscript('');
     setFeedback('🎙️ শুনছি... খরচ ও টাকার পরিমাণ বলুন');
     setIsListening(true);
@@ -52,32 +53,19 @@ export default function VoiceExpenseModal({
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        let interim = '';
-        let finalChunk = '';
+        const { fullTranscript } = extractTranscriptFromEvent(event);
+        if (!fullTranscript) return;
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
+        latestTranscriptRef.current = fullTranscript;
+        setLiveTranscript(fullTranscript);
 
-        if (finalChunk) {
-          accumulatedTextRef.current += finalChunk;
-        }
-
-        const currentFull = (accumulatedTextRef.current + ' ' + interim).trim();
-        setLiveTranscript(currentFull);
-
-        // 1.5-second smart silence timer
+        // 1.3-second smart silence timer
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          if (isMountedRef.current && (accumulatedTextRef.current.trim() || interim.trim())) {
-            const finalText = (accumulatedTextRef.current + ' ' + interim).trim();
-            handleProcessExpense(finalText);
+          if (isMountedRef.current && latestTranscriptRef.current.trim()) {
+            handleProcessExpense(latestTranscriptRef.current.trim());
           }
-        }, 1500);
+        }, 1300);
       };
 
       recognition.onerror = (err: any) => {
@@ -132,7 +120,7 @@ export default function VoiceExpenseModal({
           speakAnnouncement(result.speech);
           onExpenseCreated();
           setLiveTranscript('');
-          accumulatedTextRef.current = '';
+          latestTranscriptRef.current = '';
 
           // Auto restart listening after 2 seconds for another entry
           setTimeout(() => {

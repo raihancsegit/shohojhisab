@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceProductEntry, VoiceProductEntryResult } from '../lib/voicePOSParser';
 import { getIndustryTheme, getIndustryVoiceConfig, getIndustryProductSuggestions } from '../lib/industryConfig';
+import { extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
 import IndustryUnitSelect from './IndustryUnitSelect';
 
 interface VoiceProductEntryModalProps {
@@ -72,24 +73,13 @@ export default function VoiceProductEntryModal({
       };
 
       recognition.onresult = (event: any) => {
-        let interimText = '';
-        let finalChunk = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interimText += event.results[i][0].transcript;
-          }
+        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        if (fullTranscript) {
+          setLiveTranscript(fullTranscript);
         }
 
-        const currentSaid = (finalChunk || interimText).trim();
-        if (currentSaid) {
-          setLiveTranscript(currentSaid);
-        }
-
-        if (finalChunk.trim()) {
-          handleProcessVoiceInput(finalChunk.trim());
+        if (isFinal && fullTranscript) {
+          handleProcessVoiceInput(fullTranscript);
         }
       };
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceStockIn, VoiceStockInResult } from '../lib/voicePOSParser';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
 
 interface VoiceStockInModalProps {
   isOpen: boolean;
@@ -32,17 +33,18 @@ export default function VoiceStockInModal({
   const isComponentMounted = useRef<boolean>(true);
 
   // Sound generator
-  const playBeep = (freq = 880) => {
+  const playBeep = (freq = 880, type: OscillatorType = 'sine') => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+      osc.type = type;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       gain.gain.setValueAtTime(0.12, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.08);
     } catch (e) {}
@@ -73,24 +75,13 @@ export default function VoiceStockInModal({
       };
 
       recognition.onresult = (event: any) => {
-        let interimText = '';
-        let finalChunk = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interimText += event.results[i][0].transcript;
-          }
+        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        if (fullTranscript) {
+          setLiveTranscript(fullTranscript);
         }
 
-        const currentSaid = (finalChunk || interimText).trim();
-        if (currentSaid) {
-          setLiveTranscript(currentSaid);
-        }
-
-        if (finalChunk.trim()) {
-          handleProcessVoiceInput(finalChunk.trim());
+        if (isFinal && fullTranscript) {
+          handleProcessVoiceInput(fullTranscript);
         }
       };
 
