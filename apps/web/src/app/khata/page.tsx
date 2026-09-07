@@ -8,6 +8,7 @@ import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceKhataModal from '../../components/VoiceKhataModal';
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
+import { playMicStartSound, playSuccessChime, playWarningSound, playDeleteSound } from '../../lib/audioFeedbackUtils';
 
 export default function KhataPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -408,6 +409,7 @@ export default function KhataPage() {
         method: 'DELETE'
       });
       if (res.ok) {
+        playDeleteSound();
         triggerHaptic('success');
         speakAnnouncement(`${customerToDelete.name} এর খাতা মুছে ফেলা হয়েছে।`);
         setNotice(`✓ "${customerToDelete.name}" বাকি খাতা থেকে সফলভাবে মুছে ফেলা হয়েছে!`);
@@ -418,10 +420,12 @@ export default function KhataPage() {
         await loadCustomers();
         setTimeout(() => setNotice(''), 4000);
       } else {
+        playWarningSound();
         const err = await res.json();
         alert(err.error || 'মুছে ফেলতে ব্যর্থ হয়েছে');
       }
     } catch (e) {
+      playWarningSound();
       console.error('Delete customer error', e);
     } finally {
       setDeleteSubmitting(false);
@@ -441,6 +445,7 @@ export default function KhataPage() {
       });
       const result = await res.json();
       if (res.ok && result.success) {
+        playSuccessChime();
         triggerHaptic('success');
         const msg = result.message || 'বাকি আপডেট হয়েছে';
         speakAnnouncement(msg);
@@ -457,18 +462,23 @@ export default function KhataPage() {
         }, 1800);
         setTimeout(() => setNotice(''), 4000);
       } else {
+        playWarningSound();
         triggerHaptic('warning');
         setVoiceCustomerStatus(result.error || 'ভয়েস বোঝা যায়নি, আবার বলুন');
       }
     } catch (e) {
+      playWarningSound();
       setVoiceCustomerStatus('সার্ভারে যোগাযোগ করা যায়নি');
     } finally {
       setVoiceCustomerSubmitting(false);
     }
   };
 
+  const directVoiceSilenceTimerRef = React.useRef<any>(null);
+
   const startCustomerVoice = (cust: any) => {
     triggerHaptic('medium');
+    playMicStartSound();
     setVoiceCustomerModal(cust);
     setVoiceCustomerTranscript('');
     setVoiceCustomerStatus('শুনছি... বলুন: "৫০ টাকা বাকি" বা "১০০ টাকা জমা" বা "১ প্যাকেট চিনি বাকি"');
@@ -483,6 +493,7 @@ export default function KhataPage() {
       if (voiceRecognitionInstance) {
         try { voiceRecognitionInstance.abort(); } catch (e) {}
       }
+      if (directVoiceSilenceTimerRef.current) clearTimeout(directVoiceSilenceTimerRef.current);
 
       const rec = new SpeechRecognition();
       rec.lang = 'bn-BD';
@@ -499,6 +510,15 @@ export default function KhataPage() {
           finalStr += event.results[i][0].transcript;
         }
         setVoiceCustomerTranscript(finalStr);
+
+        // Auto-silence timer: 1.3 seconds after speech pauses, auto-submit!
+        if (directVoiceSilenceTimerRef.current) clearTimeout(directVoiceSilenceTimerRef.current);
+        directVoiceSilenceTimerRef.current = setTimeout(() => {
+          if (finalStr.trim()) {
+            try { rec.stop(); } catch (e) {}
+            handleDirectCustomerVoiceSubmit(cust, finalStr.trim());
+          }
+        }, 1300);
       };
 
       rec.onerror = (e: any) => {

@@ -81,10 +81,96 @@ export function normalizeBengaliNumbers(str: string): string {
   s = s.replace(/আড়াই কেজি|আড়াই কেজি/g, '2.5 কেজি');
   s = s.replace(/আধা কেজি|আধ কেজি|হাফ কেজি/g, '0.5 কেজি');
 
+  // Colloquial Bangladeshi Quantities & Units
+  s = s.replace(/এক পোয়া|১ পোয়া|এক পোয়া|১ পোয়া|পোয়া|পোয়া/g, '0.25 কেজি');
+  s = s.replace(/আধ পোয়া|আধ পোয়া|হাফ পোয়া|হাফ পোয়া/g, '0.125 কেজি');
+  s = s.replace(/তিন পোয়া|তিন পোয়া|৩ পোয়া|৩ পোয়া/g, '0.75 কেজি');
+  s = s.replace(/এক কুড়ি|১ কুড়ি|এক কুড়ি|১ কুড়ি/g, '20টি');
+  s = s.replace(/দুই কুড়ি|২ কুড়ি|দুই কুড়ি|২ কুড়ি/g, '40টি');
+  s = s.replace(/এক ডজন|১ ডজন/g, '12টি');
+  s = s.replace(/হাফ ডজন|আধা ডজন|আধ ডজন/g, '6টি');
+  s = s.replace(/দেড় ডজন|দেড় ডজন/g, '18টি');
+  s = s.replace(/দুই ডজন|২ ডজন/g, '24টি');
+
   // Convert digits ০-৯ to 0-9
   s = s.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
 
   return s;
+}
+
+/**
+ * Levenshtein distance string similarity score (0 to 1)
+ */
+export function getBengaliStringSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  const s1 = a.trim().toLowerCase();
+  const s2 = b.trim().toLowerCase();
+  if (s1 === s2) return 1.0;
+  if (s1.includes(s2) || s2.includes(s1)) return 0.85;
+
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  const maxLen = Math.max(m, n);
+  return maxLen === 0 ? 1 : 1 - (dp[m][n] / maxLen);
+}
+
+/**
+ * Finds the best matching candidate from the database for a spoken name
+ */
+export function findBestFuzzyMatch<T extends { name?: string; banglaName?: string; bangla_name?: string }>(
+  spoken: string,
+  candidates: T[],
+  threshold = 0.45
+): { match: T | null; confidence: number } {
+  if (!spoken || !candidates || candidates.length === 0) return { match: null, confidence: 0 };
+  const cleanSpoken = spoken.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/g, '').trim();
+
+  let bestMatch: T | null = null;
+  let highestScore = 0;
+
+  for (const c of candidates) {
+    const candidateName = c.banglaName || c.bangla_name || c.name || '';
+    if (!candidateName) continue;
+
+    const cleanCand = candidateName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/g, '').trim();
+
+    // Exact or direct substring match
+    if (candidateName.includes(spoken) || spoken.includes(candidateName) || cleanCand.includes(cleanSpoken) || cleanSpoken.includes(cleanCand)) {
+      return { match: c, confidence: 0.95 };
+    }
+
+    const sim = Math.max(
+      getBengaliStringSimilarity(spoken, candidateName),
+      getBengaliStringSimilarity(cleanSpoken, cleanCand)
+    );
+
+    if (sim > highestScore) {
+      highestScore = sim;
+      bestMatch = c;
+    }
+  }
+
+  if (highestScore >= threshold && bestMatch) {
+    return { match: bestMatch, confidence: highestScore };
+  }
+
+  return { match: null, confidence: highestScore };
 }
 
 /**

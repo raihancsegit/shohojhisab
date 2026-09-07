@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
+import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 
 interface VoiceKhataModalProps {
   isOpen: boolean;
@@ -75,6 +76,7 @@ export default function VoiceKhataModal({
     setLiveTranscript('');
     setLastActionMessage('🎙️ শুনছি... কাস্টমারের নাম, টাকা ও পণ্যের নাম বলুন');
     setIsListening(true);
+    playMicStartSound();
     if (triggerHaptic) triggerHaptic('medium');
 
     try {
@@ -128,6 +130,7 @@ export default function VoiceKhataModal({
   const stopListening = () => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     setIsListening(false);
+    playMicStopSound();
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
@@ -139,7 +142,6 @@ export default function VoiceKhataModal({
     if (!spokenText || !currentTenantId || isEchoedTTSResponse(spokenText)) return;
     setIsProcessing(true);
     stopListening();
-    playBeep(1100);
 
     setLastActionMessage(`প্রসেস হচ্ছে: "${spokenText}"...`);
 
@@ -153,7 +155,7 @@ export default function VoiceKhataModal({
       if (res.ok) {
         const result = await res.json();
         if (result.success) {
-          playBeep(1300);
+          playSuccessChime();
           if (triggerHaptic) triggerHaptic('success');
           setLastActionMessage(`✓ ${result.speech}`);
           onActionCompleted();
@@ -172,13 +174,16 @@ export default function VoiceKhataModal({
           }
           return;
         } else {
+          playWarningSound();
           setLastActionMessage(result.speech || 'কথাটি বুঝতে পারিনি। পরিষ্কারভাবে আবার বলুন।');
           if (triggerHaptic) triggerHaptic('warning');
         }
       } else {
+        playWarningSound();
         setLastActionMessage('সার্ভার থেকে রেসপন্স পাওয়া যায়নি।');
       }
     } catch (e) {
+      playWarningSound();
       setLastActionMessage('কানেকশন সমস্যা! ইন্টারনেট চেক করুন।');
     } finally {
       setIsProcessing(false);

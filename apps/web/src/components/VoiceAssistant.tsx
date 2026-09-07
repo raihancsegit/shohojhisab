@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
+import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -39,6 +40,7 @@ export default function VoiceAssistant() {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     isListeningRef.current = false;
     setIsListening(false);
+    playMicStopSound();
 
     if (recognitionRef.current) {
       try {
@@ -50,6 +52,7 @@ export default function VoiceAssistant() {
     if (finalSpoken) {
       processUniversalVoiceCommand(finalSpoken);
     } else {
+      playWarningSound();
       setFeedback('কোনো কথা শোনা যায়নি। আবার বলুন।');
       setTimeout(() => setFeedback(''), 3500);
     }
@@ -68,6 +71,7 @@ export default function VoiceAssistant() {
     }
 
     triggerHaptic('medium');
+    playMicStartSound();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     latestTranscriptRef.current = '';
     setLiveTranscript('');
@@ -158,6 +162,7 @@ export default function VoiceAssistant() {
       if (res.ok) {
         const result = await res.json();
         if (result.success) {
+          playSuccessChime();
           setFeedback(`✓ ${result.speech}`);
           triggerHaptic('success');
 
@@ -196,6 +201,7 @@ export default function VoiceAssistant() {
           }, 4000);
           return;
         } else {
+          playWarningSound();
           setFeedback(result.speech || 'কথাটি বুঝতে পারিনি। আবার চেষ্টা করুন।');
           setTimeout(() => setFeedback(''), 4000);
           return;
