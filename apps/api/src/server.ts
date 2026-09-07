@@ -2503,16 +2503,82 @@ function executeAiShopCommand(tenantId: string, text: string): {
     return String(str || '').replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
   };
 
-  const rawText = cleanSpokenBengali(String(text).trim());
+  const rawCleaned = cleanSpokenBengali(String(text).trim());
+  // Strip wake words if user calls assistant by name (e.g., "সহজহিসাব, আজকের বিক্রি কত", "ম্যানেজার, আজকের স্টক কত", "রোবট, রিয়ানের ২০ টাকা বাকি")
+  const rawText = rawCleaned.replace(/^(সহজহিসাব|সহজ\s*হিসাব|রোবট|ম্যানেজার|সহকারী|জার্ভিস|এআই|অ্যাসিস্ট্যান্ট|কম্পিউটার|ভাই|স্যার|ওহে|এই\s*যে)[,\s]+/i, '').trim() || rawCleaned;
   const normalized = toEnDigits(parseSpokenBengaliNumbers(rawText.toLowerCase()));
   const now = new Date().toISOString();
   const todayDate = now.split('T')[0];
 
-  // 1. Proactive Navigation & Voice Narration
-  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText)) {
-    const totalProdRow = db.prepare('SELECT COUNT(*) as total FROM products WHERE tenant_id = ?').get(tenantId) as any;
+  // Self-Sanitization: Clean up any corrupted legacy customer names containing noise words
+  try {
+    const corruptedRows = db.prepare(`
+      SELECT * FROM customers WHERE tenant_id = ? AND (
+        name LIKE '%নতুনভাবে%' OR name LIKE '%খাতায়%' OR name LIKE '%আবার%' OR name LIKE '%বাকি%' OR name LIKE '%যোগ%' OR name LIKE '%টাকা%' OR name LIKE '%হবে%'
+      )
+    `).all(tenantId) as any[];
+
+    for (const bad of corruptedRows) {
+      // Look for real existing customer (e.g., "রিয়ান")
+      const allClean = db.prepare(`
+        SELECT * FROM customers WHERE tenant_id = ? AND id != ? AND name NOT LIKE '%নতুনভাবে%' AND name NOT LIKE '%খাতায়%'
+      `).all(tenantId, bad.id) as any[];
+
+      const matchedReal = allClean.find((c: any) => bad.name.includes(c.name.replace(/(ভাই|চাচা|মামা)/g, '').trim()));
+      if (matchedReal) {
+        // Merge due and remove corrupted duplicate
+        db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(bad.total_due || 0, matchedReal.id);
+        db.prepare('DELETE FROM customers WHERE id = ?').run(bad.id);
+      } else {
+        const cleanedName = bad.name.replace(/(নতুনভাবে|খাতায়|আবার|বো|হবে|বাকি|যোগ|টাকা|এর|খাতা)/gi, '').trim() || 'সম্মানিত কাস্টমার';
+        db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(cleanedName, bad.id);
+      }
+    }
+  } catch (e) {}
+
+  // Fetch all customers for intelligent utterance matching
+  const allCustomers = db.prepare('SELECT id, name, phone, total_due FROM customers WHERE tenant_id = ?').all(tenantId) as any[];
+
+  // Intelligent Utterance Scanner for Existing Customers
+  const findCustomerInUtterance = (utterance: string) => {
+    if (!utterance || allCustomers.length === 0) return null;
+    const lowerUtt = utterance.toLowerCase();
+
+    // Sort by name length descending to prioritize exact full names ("রিয়ান আহমেদ" over "রিয়ান")
+    const sorted = [...allCustomers].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
+
+    for (const c of sorted) {
+      if (!c.name) continue;
+      const rawCName = String(c.name).trim().toLowerCase();
+      const cleanBase = rawCName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী|মামা|ডাক্তার|শেখ)/gi, '').trim();
+
+      // Variations: "রিয়ান", "রিয়ানের", "রিয়ানকে", "রিয়ানরে", "রিয়ানে"
+      const variations = [
+        rawCName,
+        cleanBase,
+        cleanBase + 'ের',
+        cleanBase + 'র',
+        cleanBase + 'কে',
+        cleanBase + 'রে',
+        cleanBase + 'েরে',
+        cleanBase + 'ে',
+      ].filter(v => v.length >= 2);
+
+      for (const v of variations) {
+        if (lowerUtt.includes(v)) {
+          return c;
+        }
+      }
+    }
+    return null;
+  };
+
+  // 1. Proactive Navigation & Voice Narration for Stock & Reports
+  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে/.test(rawText)) {
+    const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
     const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
     const totalCount = Number(totalProdRow?.total) || 0;
+    const totalVal = Number(totalProdRow?.totalValuation) || 0;
     const lowCount = lowStockRows.length;
 
     let stockSummarySpeech = '';
@@ -2520,7 +2586,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
       const topLow = lowStockRows.slice(0, 3).map(p => `${p.bangla_name || p.name} (${p.stock} ${p.unit || 'টি'})`).join(', ');
       stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম—যেমন: ${topLow}।`;
     } else {
-      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে।`;
+      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
     }
 
     return {
@@ -2528,33 +2594,108 @@ function executeAiShopCommand(tenantId: string, text: string): {
       action: 'navigate',
       navigateTo: '/stock',
       speech: stockSummarySpeech,
-      reply: `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`,
+      reply: `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n• মোট ইনভেন্টরি মূল্য: **৳${totalVal.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`,
       actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
     };
   }
 
-  if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|লাভ\s*ক্ষতি\s*দেখাও/.test(rawText) && !/কত\s*টাকা|টাকা/.test(rawText)) {
+  // Assistant Stock Helper ("আমার হয়ে স্টক যোগ করো")
+  if (/আমার\s*হয়ে\s*স্টক|স্টক\s*যোগ\s*করতে\s*চাই|স্টক\s*ম্যানেজার|সহকারী\s*স্টক/.test(rawText) && !/\d+/.test(normalized)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/stock',
+      speech: 'স্টক পেজে এসেছি। আপনি সরাসরি মুখে পণ্যের নাম ও পরিমাণ বলুন (যেমন: নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো) অথবা বাল্ক যুক্ত করুন।',
+      reply: '📦 **স্টক যোগ করতে প্রস্তুত!**\nসরাসরি মুখে বলুন: *"নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো"*',
+      actionLink: { text: 'স্টক পেজে যান →', href: '/stock' }
+    };
+  }
+
+  // 2. Stock Restock & Multi-Item Addition ("নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো", "প্যারাসিটামল ১০০ পিস স্টক বাড়াও")
+  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ|স্টকে\s*এড/.test(rawText)) {
+    const numbersMatch = normalized.match(/(\d+(\.\d+)?)/g);
+    
+    // Split compound inputs if user gave multiple items (e.g., "নাপা ৫০ পাতা এবং চিনি ২০ কেজি")
+    const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
+    const updatedProducts: any[] = [];
+
+    for (const seg of segments) {
+      const segNorm = toEnDigits(parseSpokenBengaliNumbers(seg.toLowerCase()));
+      const numM = segNorm.match(/(\d+(\.\d+)?)/);
+      const addQty = numM ? parseFloat(numM[1]) : (numbersMatch ? parseFloat(numbersMatch[0]) : 10);
+
+      let cleanProd = seg
+        .replace(/(\d+|[০-৯]+)/g, '')
+        .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ)/gi, '')
+        .trim();
+
+      if (cleanProd && cleanProd.length >= 2) {
+        let product = db.prepare(`
+          SELECT * FROM products WHERE tenant_id = ? AND (
+            bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
+          ) LIMIT 1
+        `).get(tenantId, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, cleanProd) as any;
+
+        if (product) {
+          const newStock = (Number(product.stock) || 0) + addQty;
+          db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+          updatedProducts.push({ name: product.bangla_name || product.name, added: addQty, unit: product.unit || 'পিস', total: newStock });
+        } else {
+          // Auto-create missing product
+          const newProdId = 'prod-' + uuidv4().slice(0, 8);
+          const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/)?.[0] || 'পিস') : 'পিস';
+          db.prepare(`
+            INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, icon, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, 'cat-grocery', 10, 15, addQty, autoUnit, 5, '📦', now);
+          updatedProducts.push({ name: cleanProd, added: addQty, unit: autoUnit, total: addQty });
+        }
+      }
+    }
+
+    if (updatedProducts.length > 0) {
+      const summaryItems = updatedProducts.map(p => `${p.name} (+${p.added} ${p.unit})`).join(', ');
+      const speech = `✓ ${summaryItems} সফলভাবে স্টক যোগ করা হয়েছে।`;
+      const replyList = updatedProducts.map(p => `• **${p.name}**: +${p.added} ${p.unit} (মোট মজুদ: **${p.total} ${p.unit}**)`).join('\n');
+
+      return {
+        success: true,
+        action: 'stock_incremented',
+        navigateTo: '/stock',
+        speech,
+        reply: `✅ **স্টক আপডেট সফল!**\n${replyList}`,
+        actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' },
+        data: { items: updatedProducts }
+      };
+    }
+  }
+
+  // 3. Daily Live Report & Sales / Profit Narration
+  if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট/.test(rawText)) {
     const todaySales = db.prepare(`
-      SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash
+      SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash, COALESCE(SUM(due_amount), 0) as due
       FROM sales WHERE tenant_id = ? AND created_at LIKE ?
     `).get(tenantId, `${todayDate}%`) as any;
 
     const s = Number(todaySales?.s) || 0;
     const p = Number(todaySales?.p) || 0;
+    const cash = Number(todaySales?.cash) || 0;
     const count = Number(todaySales?.count) || 0;
-    const speech = `আজকের রিপোর্ট পেজে এসেছি। আজকে মোট বিক্রি ৳${s} টাকা (${count}টি ইনভয়েস) এবং খাঁটি নিট লাভ ৳${p} টাকা।`;
+    const speech = `আজকে মোট বিক্রি ৳${s} টাকা (${count}টি মেমো), নগদ ক্যাশ ৳${cash} টাকা এবং খাঁটি নিট লাভ ৳${p} টাকা।`;
 
     return {
       success: true,
       action: 'navigate',
       navigateTo: '/day-end',
       speech,
-      reply: `📊 **আজকের লাইভ ক্লোজিং রিপোর্ট:**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${(Number(todaySales?.cash) || 0).toLocaleString('en-US')}**\n• আসল নিট লাভ: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
-      actionLink: { text: 'রিপোর্ট দেখুন →', href: '/day-end' }
+      reply: `📊 **আজকের লাইভ ক্লোজিং report (${todayDate}):**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${cash.toLocaleString('en-US')}**\n• খাঁটি নিট প্রফিট: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
+      actionLink: { text: 'দিনের ক্লোজিং রিপোর্ট দেখুন →', href: '/day-end' },
+      data: { totalSales: s, netProfit: p, cashSales: cash, count }
     };
   }
 
-  if (/বাকি\s*খাতায়\s*যান|বাকি\s*খাতায়\s*যাও|বাকি\s*খাতা\s*খোলো|বাকি\s*খাতা|খাতায়\s*যাও|কাস্টমার\s*খাতা|কাস্টমারদের\s*তালিকা/.test(rawText) && !/\d+/.test(normalized)) {
+  // Navigation to Khata / POS / Expenses
+  if (/বাকি\s*খাতায়\s*যান|বাকি\s*খাতায়\s*যাও|বাকি\s*খাতা\s*খোলো|বাকি\s*খাতা|খাতায়\s*যাও|কাস্টমার\s*খাতা/.test(rawText) && !/\d+/.test(normalized)) {
     const dueStats = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
     const debtorCount = Number(dueStats?.count) || 0;
     const marketDue = Number(dueStats?.totalDue) || 0;
@@ -2575,7 +2716,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
       success: true,
       action: 'navigate',
       navigateTo: '/pos',
-      speech: 'পিওএস ক্যাশ কাউন্টারে এসেছি। নতুন মেমো বা বিক্রয় এন্ট্রি করার জন্য প্রস্তুত।',
+      speech: 'পিওএস ক্যাশ কাউন্টারে এসেছি। নতুন মেমো কাটার জন্য প্রস্তুত।',
       reply: '⚡ **পিওএস ক্যাশ কাউন্টার প্রস্তুত!**\nনতুন মেমো কাটতে আইটেম যোগ করুন...',
       actionLink: { text: 'ক্যাশ কাউন্টার ওপেন →', href: '/pos' }
     };
@@ -2597,39 +2738,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     };
   }
 
-  // 2. Stock Restock ("চিনিতে ৫০ কেজি স্টক যোগ করো")
-  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ/.test(rawText)) {
-    const numbersMatch = normalized.match(/(\d+(\.\d+)?)/);
-    const addQty = numbersMatch ? parseFloat(numbersMatch[1]) : 10;
-    let cleanProd = rawText
-      .replace(/(\d+|[০-৯]+)/g, '')
-      .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|তে|এ)/gi, '')
-      .trim();
-
-    if (cleanProd) {
-      const product = db.prepare(`
-        SELECT * FROM products WHERE tenant_id = ? AND (
-          bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
-        ) LIMIT 1
-      `).get(tenantId, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, `%${cleanProd}%`, cleanProd) as any;
-
-      if (product) {
-        const newStock = (Number(product.stock) || 0) + addQty;
-        db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
-        const speech = `✓ ${product.bangla_name || product.name}-এ +${addQty} ${product.unit || 'পিস'} স্টক যোগ করা হয়েছে। বর্তমান মোট স্টক: ${newStock} ${product.unit || 'পিস'}।`;
-        return {
-          success: true,
-          action: 'stock_incremented',
-          speech,
-          reply: `✅ **স্টক আপডেট সফল!**\n• পণ্য: ${product.bangla_name || product.name}\n• নতুন যোগ: +${addQty} ${product.unit || 'পিস'}\n• বর্তমান মোট মজুদ: **${newStock} ${product.unit || 'পিস'}**`,
-          actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' },
-          data: { productId: product.id, name: product.bangla_name || product.name, addedQty: addQty, totalStock: newStock }
-        };
-      }
-    }
-  }
-
-  // 3. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
+  // 4. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
   if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText) && !/কত|রিপোর্ট|লাভ|খোলো|যান|যাও/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
@@ -2678,56 +2787,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // Robust Customer Matching Helper across SQLite customers
-  const findCustomerInDB = (spokenNameQuery: string) => {
-    if (!spokenNameQuery) return null;
-    const allCustomers = db.prepare('SELECT id, name, phone, total_due FROM customers WHERE tenant_id = ?').all(tenantId) as any[];
-    if (allCustomers.length === 0) return null;
-
-    const cleanSpoken = spokenNameQuery
-      .replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী|এর|কে|রে)/gi, '')
-      .trim()
-      .toLowerCase();
-
-    // 1. Direct or substring match
-    for (const c of allCustomers) {
-      const cName = String(c.name || '').toLowerCase();
-      const cleanC = cName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/gi, '').trim();
-      if (cName === cleanSpoken || cleanC === cleanSpoken || cName.includes(cleanSpoken) || cleanSpoken.includes(cleanC)) {
-        return c;
-      }
-    }
-
-    // 2. Fuzzy Levenshtein match
-    let bestMatch: any = null;
-    let highestScore = 0;
-    for (const c of allCustomers) {
-      const cName = String(c.name || '').toLowerCase();
-      const cleanC = cName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/gi, '').trim();
-      
-      const dist = (a: string, b: string) => {
-        if (!a || !b) return 0;
-        if (a === b) return 1.0;
-        let longer = a.length > b.length ? a : b;
-        let shorter = a.length > b.length ? b : a;
-        if (longer.includes(shorter)) return 0.88;
-        return 0;
-      };
-
-      const score = Math.max(dist(cleanSpoken, cleanC), dist(spokenNameQuery.toLowerCase(), cName));
-      if (score > highestScore) {
-        highestScore = score;
-        bestMatch = c;
-      }
-    }
-
-    if (highestScore >= 0.8 && bestMatch) {
-      return bestMatch;
-    }
-    return null;
-  };
-
-  // 4. Due Payment Received ("কালাম ২০০ টাকা জমা দিল", "রহিম ৩০০ টাকা শোধ করল")
+  // 5. Due Payment Received ("কালাম ২০০ টাকা জমা দিল", "রিয়ান ২০ টাকা শোধ করল")
   const isPaymentIntent = /বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|শোধ\s*দিল|জমা|পরিশোধ|শোধ/.test(rawText) ||
                           (/(দিল|দিলো|দিছে|পাইছি|পেয়েছি)/.test(rawText) && /\d+/.test(normalized));
 
@@ -2736,13 +2796,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
-      let cleanName = rawText
-        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
-        .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|জমা|পরিশোধ|শোধ|দিল|দিলো|দিছে|পাইছি|পেয়েছি|এর|থেকে|ভাই|চাচা|মামা|আরও|আগে|যোগ\s*হবে|যোগ|এড\s*হবে|এড|add)/gi, '')
-        .trim();
-
-      let customer = findCustomerInDB(cleanName);
+      let customer = findCustomerInUtterance(rawText);
       if (!customer) {
         customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND total_due > 0 ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
       }
@@ -2769,6 +2823,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
         return {
           success: true,
           action: 'due_paid',
+          navigateTo: '/khata',
           speech,
           reply: `✅ **বাকি আদায় সম্পন্ন!**\n• কাস্টমার: **${customer.name}**\n• জমা নেওয়া হয়েছে: **৳${amount.toLocaleString('en-US')}**\n• অবশিষ্ট বর্তমান বকেয়া: **৳${newDue.toLocaleString('en-US')}**`,
           actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
@@ -2778,7 +2833,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 5. Due Given ("রহিম ভাই ৫০০ টাকা বাকি নিল", "রিয়ানের আরও ৩০ টাকা বাকি যোগ হবে", "স্বপন ১০০ টাকা")
+  // 6. Due Given ("রিয়ানের আরও ২০ টাকা বাকি যোগ হবে", "কালাম ৫০০ টাকা বাকি নিল", "স্বপন ১০০ টাকা")
   const hasAmount = /\d+/.test(normalized);
   const isDueIntent = /বাকি|বাকিতে|বাকি\s*যোগ|বাকি\s*হবে|বাকি\s*এড|add/.test(rawText) || (hasAmount && !/কত|দাম|দর|স্টক|রিপোর্ট|লাভ|খোলো|বিক্রি|ক্যাশ|লাভ|খরচ|ভাড়া|বিল|যান|যাও/.test(rawText));
 
@@ -2787,135 +2842,99 @@ function executeAiShopCommand(tenantId: string, text: string): {
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
-      // Clean candidate customer name by removing all instruction and verb words
-      let cleanName = rawText
-        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
-        .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি\s*যোগ\s*হবে|বাকি\s*যোগ|বাকি\s*এড\s*হবে|বাকি\s*এড|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
-        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|চাচার|চাচাকে|চাচারে|মামার|আরও|আগে|পরে|নতুন|যোগ\s*হবে|যোগ\s*করো|যোগ|যুক্ত|এড\s*হবে|এড|add|হবে|আছে|হলো|নিল|দিলাম|দিব|দাও|লেখো|লিখুন)/gi, '')
-        .trim();
-
-      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
-      if (!cleanName || cleanName.length < 2) {
-        const words = rawText.split(/\s+/).filter(w => !w.match(/বাকি|টাকা|নিল|দিলাম|লেখো|\d+|দেড়|আড়াই|পাঁচশ|একশ|যোগ|হবে|আরও|এড/));
-        cleanName = words[0] || 'সম্মানিত কাস্টমার';
-      }
-      cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').trim();
-
-      // Look up existing customer using intelligent fuzzy matching
-      let customer = findCustomerInDB(cleanName);
+      // 1. Direct utterance match against all existing customers
+      let customer = findCustomerInUtterance(rawText);
 
       if (!customer) {
-        // Create new customer only if no existing customer matched
-        const custDisplayName = cleanName.includes('ভাই') || cleanName.includes('চাচা') ? cleanName : `${cleanName} ভাই`;
-        const custId = 'cust-' + uuidv4().slice(0, 8);
-        db.prepare(`
-          INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
-        customer = { id: custId, name: custDisplayName, total_due: amount };
+        // Extract clean name Candidate
+        let cleanName = rawText
+          .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+          .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
+          .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি\s*যোগ\s*হবে|বাকি\s*যোগ|বাকি\s*এড\s*হবে|বাকি\s*এড|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
+          .replace(/(নতুনভাবে|নতুন|আবার|হবে|আছে|হলো|নিল|দিলাম|দিব|দাও|লেখো|লিখুন|যোগ|যুক্ত|এড|ভাইয়ের|ভাইকে|চাচার|চাচাকে|মামার|মামা)/gi, '')
+          .trim();
+
+        cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
+
+        // Check if extracted cleanName is a valid 1-2 word name and not noise
+        const words = cleanName.split(/\s+/).filter(w => w.length >= 2 && !/নতুনভাবে|খাতায়|আবার|বো|বাকি|টাকা|যোগ|হবে/.test(w));
+        const finalName = words.slice(0, 2).join(' ');
+
+        if (finalName && finalName.length >= 2) {
+          const custDisplayName = finalName.includes('ভাই') || finalName.includes('চাচা') ? finalName : `${finalName} ভাই`;
+          const custId = 'cust-' + uuidv4().slice(0, 8);
+          db.prepare(`
+            INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
+          customer = { id: custId, name: custDisplayName, total_due: amount };
+        } else {
+          // Fallback to most recent customer with dues
+          customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
+          if (customer) {
+            const newDue = (Number(customer.total_due) || 0) + amount;
+            db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+            customer.total_due = newDue;
+          }
+        }
       } else {
-        // Update existing customer due
+        // Update matched existing customer due
         const newDue = (Number(customer.total_due) || 0) + amount;
         db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
         customer.total_due = newDue;
       }
 
-      const saleId = 'sale-' + uuidv4().slice(0, 8);
-      const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
-      const note = 'ভয়েস বাকি এন্ট্রি';
-      
-      db.prepare(`
-        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
-
-      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
-      return {
-        success: true,
-        action: 'due_given',
-        speech,
-        reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• যোগকৃত নতুন বাকি: **+৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**`,
-        actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
-        data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo }
-      };
-    }
-  }
-
-  // 6. Customer Due Inquiry ("রহিম ভাই কত পাবে", "কালামের বাকি কত")
-  if (/বাকি\s*কত|হিসাব\s*কত|কত\s*পাবে|পাওনা\s*কত/.test(rawText) && !/মার্কেট|মোট\s*বাকি|আজকে\s*কত\s*বাকি/.test(rawText)) {
-    let cleanName = rawText
-      .replace(/(এর|কে|ভাই|চাচা|মামা|এর\s*বাকি|বাকি\s*কত|হিসাব\s*কত|কত\s*পাবে|পাওনা\s*কত|টাকা|টাকার|\?)/gi, '')
-      .trim();
-    if (cleanName) {
-      const customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ?').get(tenantId, `%${cleanName}%`) as any;
       if (customer) {
-        const due = Number(customer.total_due) || 0;
-        const speech = `${customer.name} এর দোকানে বর্তমান বকেয়া বাকি ৳${due} টাকা।`;
+        const saleId = 'sale-' + uuidv4().slice(0, 8);
+        const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
+        const note = 'ভয়েস বাকি এন্ট্রি';
+
+        db.prepare(`
+          INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
+
+        const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
         return {
           success: true,
-          action: 'inquiry_customer_due',
+          action: 'due_given',
+          navigateTo: '/khata',
           speech,
-          reply: `👤 **কাস্টমার বাকি হিসাব:**\n• নাম: **${customer.name}**\n• মোবাইল: ${customer.phone || 'দেওয়া নেই'}\n• বর্তমান বকেয়া: **৳${due.toLocaleString('en-US')}**`,
-          actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' },
-          data: { customerName: customer.name, totalDue: due }
+          reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• যোগকৃত নতুন বাকি: **+৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**`,
+          actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
+          data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo }
         };
       }
     }
   }
 
-  // 7. Business Intelligence Reports: Profit & Live Sales
-  const todaySalesRow = db.prepare(`
-    SELECT COUNT(*) as count,
-           COALESCE(SUM(total_amount), 0) as totalSales,
-           COALESCE(SUM(paid_amount), 0) as cashSales,
-           COALESCE(SUM(profit_amount), 0) as netProfit,
-           COALESCE(SUM(due_amount), 0) as todayDue
-    FROM sales
-    WHERE tenant_id = ? AND created_at LIKE ?
-  `).get(tenantId, `${todayDate}%`) as any;
-
-  const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
-  const lowStockProducts = db.prepare('SELECT name, bangla_name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold ORDER BY stock ASC LIMIT 4').all(tenantId) as any[];
-
-  if (/আজকের\s*লাভ|কত\s*লাভ|আজকে\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট|বিক্রি\s*কত|আজকের\s*বিক্রি/.test(rawText)) {
-    const s = Number(todaySalesRow?.totalSales) || 0;
-    const p = Number(todaySalesRow?.netProfit) || 0;
-    const count = Number(todaySalesRow?.count) || 0;
-    const margin = s > 0 ? ((p / s) * 100).toFixed(1) : '0';
-    const speech = `আজকে মোট বিক্রি ৳${s} টাকা এবং সব খরচ বাদে আসল লাভ হয়েছে ৳${p} টাকা।`;
-    return {
-      success: true,
-      action: 'inquiry_profit',
-      speech,
-      reply: `📊 **আজকের লাইভ হিসাব (${todayDate}):**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ জমা: **৳${(Number(todaySalesRow?.cashSales) || 0).toLocaleString('en-US')}**\n• খাঁটি নিট প্রফিট: **৳${p.toLocaleString('en-US')}** (${margin}% মার্জিন)`,
-      actionLink: { text: 'দিনের ক্লোজিং রিপোর্ট দেখুন →', href: '/day-end' },
-      data: { totalSales: s, netProfit: p, count }
-    };
-  }
-
-  if (/স্টক\s*শেষ|স্টক\s*কম|ঘাটতি|কম\s*মাল/.test(rawText)) {
-    if (lowStockProducts.length === 0) {
-      const speech = 'আলহামদুলিল্লাহ! আপনার দোকানে সব মালের পর্যাপ্ত স্টক রয়েছে।';
-      return { success: true, speech, reply: '✅ আলহামদুলিল্লাহ! আপনার দোকানের সকল পণ্যের পর্যাপ্ত স্টক রয়েছে, কোনো পণ্যের ঘাটতি নেই।', actionLink: { text: 'স্টক ক্যাটালগ দেখুন →', href: '/stock' } };
-    } else {
-      const listStr = lowStockProducts.map((p, i) => `${i + 1}. **${p.bangla_name || p.name}** (মজুদ: ${p.stock} ${p.unit || 'টি'})`).join('\n');
-      const speech = `দোকানে ${lowStockProducts.length}টি পণ্যের স্টক অ্যালার্ট লেভেলে রয়েছে। দ্রুত অর্ডার দেওয়ার পরামর্শ দেওয়া হচ্ছে।`;
+  // 7. Customer Due Inquiry ("রিয়ান ভাই কত পাবে", "কালামের বাকি কত")
+  if (/বাকি\s*কত|হিসাব\s*কত|কত\s*পাবে|পাওনা\s*কত/.test(rawText) && !/মার্কেট|মোট\s*বাকি|আজকে\s*কত\s*বাকি/.test(rawText)) {
+    const customer = findCustomerInUtterance(rawText);
+    if (customer) {
+      const due = Number(customer.total_due) || 0;
+      const speech = `${customer.name} এর দোকানে বর্তমান বকেয়া বাকি ৳${due} টাকা।`;
       return {
         success: true,
+        action: 'inquiry_customer_due',
+        navigateTo: '/khata',
         speech,
-        reply: `⚠️ **স্টক অ্যালার্ট (${lowStockProducts.length}টি পণ্য):**\n${listStr}\n\nমহাজন বা ডিলারকে দ্রুত অর্ডার দিন।`,
-        actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
+        reply: `👤 **কাস্টমার বাকি হিসাব:**\n• নাম: **${customer.name}**\n• মোবাইল: ${customer.phone || 'দেওয়া নেই'}\n• বর্তমান বকেয়া: **৳${due.toLocaleString('en-US')}**`,
+        actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' },
+        data: { customerName: customer.name, totalDue: due }
       };
     }
   }
 
+  // 8. Market Total Due
   if (/মোট\s*বাকি|মার্কেট\s*বাকি|পাওনা/.test(rawText)) {
+    const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
     const marketDue = Number(totalMarketDueRow?.totalDue) || 0;
     const speech = `মার্কেটে আপনার মোট বকেয়া পাওনা ৳${marketDue} টাকা।`;
     return {
       success: true,
       action: 'inquiry_market_due',
+      navigateTo: '/khata',
       speech,
       reply: `📖 **বাজারের মোট বকেয়া পাওনা:** **৳${marketDue.toLocaleString('en-US')}**\n\nবাকি খাতা থেকে তাগাদা মেসেজ পাঠাতে পারেন।`,
       actionLink: { text: 'বাকি খাতা দেখুন →', href: '/khata' }
@@ -2923,6 +2942,12 @@ function executeAiShopCommand(tenantId: string, text: string): {
   }
 
   // Fallback Overview Summary
+  const todaySalesRow = db.prepare(`
+    SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as netProfit
+    FROM sales WHERE tenant_id = ? AND created_at LIKE ?
+  `).get(tenantId, `${todayDate}%`) as any;
+  const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
+
   const s = Number(todaySalesRow?.totalSales) || 0;
   const p = Number(todaySalesRow?.netProfit) || 0;
   const marketDue = Number(totalMarketDueRow?.totalDue) || 0;
@@ -2931,7 +2956,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     success: true,
     action: 'summary',
     speech,
-    reply: `🏪 **দোকানের সার্বিক লাইভ সারসংক্ষেপ:**\n• আজকের মোট বিক্রি: **৳${s.toLocaleString('en-US')}**\n• আজকের নিট লাভ: **৳${p.toLocaleString('en-US')}**\n• মোট মার্কেট বাকি: **৳${marketDue.toLocaleString('en-US')}**\n\nযেকোনো নির্দিষ্ট প্রশ্ন করুন বা বাকি/খরচ লিখতে মুখে বলুন।`,
+    reply: `🏪 **দোকানের সার্বিক লাইভ সারসংক্ষেপ:**\n• আজকের মোট বিক্রি: **৳${s.toLocaleString('en-US')}**\n• আজকের নিট লাভ: **৳${p.toLocaleString('en-US')}**\n• মোট মার্কেট বাকি: **৳${marketDue.toLocaleString('en-US')}**\n\nযেকোনো নির্দিষ্ট প্রশ্ন করুন বা বাকি/খরচ/স্টক লিখতে মুখে বলুন।`,
     actionLink: { text: 'ড্যাশবোর্ড দেখুন →', href: '/' }
   };
 }

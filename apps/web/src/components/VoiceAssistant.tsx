@@ -330,6 +330,44 @@ export default function VoiceAssistant() {
               {isListening ? '🎙️' : isProcessing ? '⏳' : actionResult?.success ? '✓' : '🤖'}
             </div>
 
+            {/* Assistant Name Badge & Customizer */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#e0e7ff',
+              color: '#4338ca',
+              padding: '4px 12px',
+              borderRadius: '99px',
+              fontSize: '12px',
+              fontWeight: '800',
+              marginBottom: '12px'
+            }}>
+              <span>🤖 সহকারীর নাম:</span>
+              <input
+                type="text"
+                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব'}
+                onChange={(e) => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('lbos_assistant_name', e.target.value.trim() || 'সহজহিসাব');
+                  }
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #c7d2fe',
+                  borderRadius: '6px',
+                  padding: '1px 6px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  color: '#3730a3',
+                  width: '80px',
+                  textAlign: 'center'
+                }}
+                title="এআই সহকারীর নাম পরিবর্তন করুন"
+              />
+              <span style={{ fontSize: '10px', color: '#6366f1' }}>✎ ডাকনাম</span>
+            </div>
+
             <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
               {isListening
                 ? 'পরিষ্কার বাংলায় বলুন, কাজ হয়ে যাবে...'
@@ -341,7 +379,7 @@ export default function VoiceAssistant() {
             </h2>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
               {isListening
-                ? 'বাকি লেখা, টাকা জমা, খরচ বা লাভ জানতে কথা বলুন'
+                ? 'বাকি লেখা, টাকা জমা, স্টক বাড়ানো বা বিক্রি জানতে কথা বলুন'
                 : 'মুখে বলুন অথবা নিচে ক্লিক করে নির্দেশ দিন'}
             </p>
 
@@ -364,7 +402,7 @@ export default function VoiceAssistant() {
                 </span>
               ) : isListening ? (
                 <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-                  🔊 আপনার কথা শুনছি... (যেমন: "রহিম ভাই ৫০০ টাকা নিল")
+                  🔊 আপনার কথা শুনছি... (যেমন: "আজকের স্টক কত" বা "রিয়ানের ২০ টাকা বাকি")
                 </span>
               ) : lastSpoken ? (
                 <span style={{ fontSize: '14px', color: '#475569', fontWeight: '700' }}>
@@ -503,19 +541,21 @@ export default function VoiceAssistant() {
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                 {[
-                  'আজকের আসল লাভ কত?',
-                  'চা নাস্তা ৬০ টাকা খরচ লেখো',
-                  'রহিম ভাই ৫০০ টাকা বাকি নিল',
-                  'কালাম ২০০ টাকা জমা দিল',
-                  'কোন কোন মালের স্টক কম?',
-                  'বাজারে মোট বাকি কত?'
+                  '📦 আজকের স্টক কত?',
+                  '📊 আজকের বিক্রি কত?',
+                  '➕ নাপা ৫০ পাতা স্টক যোগ করো',
+                  '📖 রিয়ানের ২০ টাকা বাকি',
+                  '💵 রিয়ান ২০ টাকা জমা দিল',
+                  '☕ চা নাস্তা ৬০ টাকা খরচ লেখো',
+                  '⚠️ কোন কোন মালের স্টক কম?',
+                  '📖 বাজারে মোট বাকি কত?'
                 ].map((chip, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => {
                       stopListeningOnly();
-                      stopAndExecute(chip);
+                      stopAndExecute(chip.replace(/^[^\s]+\s+/, ''));
                     }}
                     style={{
                       background: '#f8fafc',
@@ -529,7 +569,7 @@ export default function VoiceAssistant() {
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    💬 {chip}
+                    {chip}
                   </button>
                 ))}
               </div>
