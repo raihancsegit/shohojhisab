@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
+import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
@@ -50,42 +51,8 @@ export default function ShopkeeperDashboard() {
   };
 
   // 🎙️ Universal Voice-to-Fill for any input field
-  const startVoiceInputForField = (setter: (val: string) => void, isNumericOnly = false) => {
-    triggerHaptic('medium');
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট পাওয়া যায়নি');
-      return;
-    }
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'bn-BD';
-      recognition.start();
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          let parsed = transcript.trim();
-          if (isNumericOnly) {
-            parsed = parsed.replace(/দেড়শো|দেড়শ|দেড়শো|দেড়শ/g, '150');
-            parsed = parsed.replace(/আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ/g, '250');
-            parsed = parsed.replace(/সাড়ে তিনশো|সাড়ে তিনশ/g, '350');
-            parsed = parsed.replace(/সাড়ে চারশো|সাড়ে চারশ/g, '450');
-            parsed = parsed.replace(/একশত|একশো|একশ/g, '100');
-            parsed = parsed.replace(/দুইশত|দুইশো|দুশো/g, '200');
-            parsed = parsed.replace(/তিনশত|তিনশো/g, '300');
-            parsed = parsed.replace(/পাঁচশত|পাঁচশো/g, '500');
-            parsed = parsed.replace(/হাজার/g, '000');
-            const digits = parsed.replace(/[^0-9.]/g, '');
-            setter(digits || parsed);
-          } else {
-            setter(parsed);
-          }
-          triggerHaptic('success');
-        }
-      };
-    } catch (e) {
-      console.error('Speech input error', e);
-    }
+  const startVoiceInputForField = (setter: (val: string) => void, isNumericOnly = false, label?: string) => {
+    triggerFieldVoiceInput({ label, isNumeric: isNumericOnly, onResult: setter });
   };
 
   // Time & Greeting

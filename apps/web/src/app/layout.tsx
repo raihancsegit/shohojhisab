@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import PWAInstaller from '../components/PWAInstaller';
 import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
+import VoiceFieldHUD from '../components/VoiceFieldHUD';
 import { getIndustryTheme } from '../lib/industryConfig';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
@@ -1500,6 +1501,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BottomMobileNav onOpenActionSheet={() => setIsActionSheetOpen(true)} />
           <SideMenuDrawer isOpen={isMenuDrawerOpen} onClose={() => setIsMenuDrawerOpen(false)} />
           <ActionSheetModal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} />
+          <VoiceFieldHUD />
         </AuthProvider>
       </body>
     </html>

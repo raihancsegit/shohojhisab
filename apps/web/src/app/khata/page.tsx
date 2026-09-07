@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceKhataModal from '../../components/VoiceKhataModal';
 import DataLoader from '../../components/DataLoader';
+import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 
 export default function KhataPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -344,34 +345,8 @@ export default function KhataPage() {
     setSubmitting(false);
   };
 
-  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false) => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। গুগল ক্রোম ব্যবহার করুন।');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'bn-BD';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      let spoken = e.results[0][0].transcript;
-      if (spoken) {
-        if (isNumeric) {
-          const toEn = (s: string) => s.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
-          const match = toEn(spoken).match(/\d+(\.\d+)?/);
-          if (match) {
-            setter(match[0]);
-          } else {
-            setter(spoken);
-          }
-        } else {
-          setter(spoken.trim());
-        }
-        triggerHaptic('success');
-      }
-    };
-    recognition.start();
+  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false, label?: string) => {
+    triggerFieldVoiceInput({ label, isNumeric, onResult: setter });
   };
 
   const handleCollectDue = async (e: React.FormEvent) => {
@@ -1080,7 +1055,7 @@ export default function KhataPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => startVoiceInputForField(setProductSearch, false)}
+                        onClick={() => startVoiceInputForField(setProductSearch, false, 'পণ্য সার্চ করুন')}
                         style={{
                           background: '#eff6ff',
                           border: '1px solid #bfdbfe',
@@ -1304,7 +1279,7 @@ export default function KhataPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => startVoiceInputForField(setAddDueAmount, true)}
+                        onClick={() => startVoiceInputForField(setAddDueAmount, true, 'বাকি টাকার পরিমাণ')}
                         style={{
                           background: '#fee2e2',
                           border: '1px solid #fca5a5',
@@ -1351,7 +1326,7 @@ export default function KhataPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() => startVoiceInputForField(setAddDueItems, false)}
+                        onClick={() => startVoiceInputForField(setAddDueItems, false, 'পণ্যের ফর্দ বা বিবরণ')}
                         style={{
                           background: '#eff6ff',
                           border: '1px solid #bfdbfe',
@@ -1449,7 +1424,7 @@ export default function KhataPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField(setPayAmount, true)}
+                    onClick={() => startVoiceInputForField(setPayAmount, true, 'জমা টাকার পরিমাণ')}
                     style={{
                       background: '#ecfdf5',
                       border: '1px solid #a7f3d0',
@@ -1532,7 +1507,7 @@ export default function KhataPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField(setName, false)}
+                    onClick={() => startVoiceInputForField(setName, false, 'কাস্টমারের নাম')}
                     style={{
                       background: '#fee2e2',
                       border: '1px solid #fca5a5',
@@ -1569,7 +1544,7 @@ export default function KhataPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField(setPhone, true)}
+                    onClick={() => startVoiceInputForField(setPhone, true, 'মোবাইল নাম্বার')}
                     style={{
                       background: '#eff6ff',
                       border: '1px solid #bfdbfe',
@@ -1607,7 +1582,7 @@ export default function KhataPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => startVoiceInputForField(setInitialDue, true)}
+                      onClick={() => startVoiceInputForField(setInitialDue, true, 'পূর্বের বকেয়া টাকা')}
                       style={{
                         background: '#fffbeb',
                         border: '1px solid #fde68a',

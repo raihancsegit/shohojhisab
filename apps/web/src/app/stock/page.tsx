@@ -9,6 +9,7 @@ import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceStockInModal from '../../components/VoiceStockInModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
+import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -182,34 +183,8 @@ export default function StockPage() {
     }
   };
 
-  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false) => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। ক্রোম ব্যবহার করুন।');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'bn-BD';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      let spoken = e.results[0][0].transcript;
-      if (spoken) {
-        if (isNumeric) {
-          const toEn = (s: string) => s.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
-          const match = toEn(spoken).match(/\d+(\.\d+)?/);
-          if (match) {
-            setter(match[0]);
-          } else {
-            setter(spoken);
-          }
-        } else {
-          setter(spoken.trim());
-        }
-        triggerHaptic('success');
-      }
-    };
-    recognition.start();
+  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false, label?: string) => {
+    triggerFieldVoiceInput({ label, isNumeric, onResult: setter });
   };
 
   const loadStock = async () => {
@@ -634,7 +609,7 @@ export default function StockPage() {
             </button>
             <button
               type="button"
-              onClick={() => startVoiceInputForField(setSearch, false)}
+              onClick={() => startVoiceInputForField(setSearch, false, 'পণ্য খুঁজুন')}
               style={{
                 background: '#ecfdf5',
                 border: '1px solid #a7f3d0',
@@ -1446,7 +1421,7 @@ export default function StockPage() {
                   <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>পণ্যের নাম: *</label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, banglaName: v })), false)}
+                    onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, banglaName: v })), false, 'পণ্যের নাম')}
                     style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#dc2626', cursor: 'pointer', fontWeight: '800' }}
                   >
                     🎙️ মুখে বলুন
@@ -1468,7 +1443,7 @@ export default function StockPage() {
                     <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>বিক্রয় মূল্য: *</label>
                     <button
                       type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, sellingPrice: v })), true)}
+                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, sellingPrice: v })), true, 'বিক্রয় মূল্য (টাকা)')}
                       style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#059669', cursor: 'pointer', fontWeight: '800' }}
                     >
                       🎙️
@@ -1490,7 +1465,7 @@ export default function StockPage() {
                     <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>কেনার দাম:</label>
                     <button
                       type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, purchasePrice: v })), true)}
+                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, purchasePrice: v })), true, 'কেনার দাম (টাকা)')}
                       style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
                     >
                       🎙️
@@ -1513,7 +1488,7 @@ export default function StockPage() {
                     <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>প্রাথমিক স্টক:</label>
                     <button
                       type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, stock: v })), true)}
+                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, stock: v })), true, 'প্রাথমিক স্টক (সংখ্যা)')}
                       style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#ca8a04', cursor: 'pointer', fontWeight: '800' }}
                     >
                       🎙️

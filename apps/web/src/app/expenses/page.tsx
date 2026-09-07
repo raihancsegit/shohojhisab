@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
+import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 
 export default function ExpensesPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -74,34 +75,8 @@ export default function ExpensesPage() {
     setSubmitting(false);
   };
 
-  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false) => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। ক্রোম ব্যবহার করুন।');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'bn-BD';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      let spoken = e.results[0][0].transcript;
-      if (spoken) {
-        if (isNumeric) {
-          const toEn = (s: string) => s.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
-          const match = toEn(spoken).match(/\d+(\.\d+)?/);
-          if (match) {
-            setter(match[0]);
-          } else {
-            setter(spoken);
-          }
-        } else {
-          setter(spoken.trim());
-        }
-        triggerHaptic('success');
-      }
-    };
-    recognition.start();
+  const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false, label?: string) => {
+    triggerFieldVoiceInput({ label, isNumeric, onResult: setter });
   };
 
   const totalExpense = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
@@ -235,7 +210,7 @@ export default function ExpensesPage() {
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>খরচের নাম / বিবরণ *</label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField(setTitle, false)}
+                    onClick={() => startVoiceInputForField(setTitle, false, 'খরচের নাম / বিবরণ')}
                     style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#dc2626', cursor: 'pointer', fontWeight: '800' }}
                   >
                     🎙️ মুখে বলুন
@@ -249,7 +224,7 @@ export default function ExpensesPage() {
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>টাকার পরিমাণ (৳) *</label>
                   <button
                     type="button"
-                    onClick={() => startVoiceInputForField(setAmount, true)}
+                    onClick={() => startVoiceInputForField(setAmount, true, 'খরচের টাকার পরিমাণ')}
                     style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
                   >
                     🎙️ মুখে বলুন
