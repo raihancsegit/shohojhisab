@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceProductEntry, VoiceProductEntryResult } from '../lib/voicePOSParser';
-import { getIndustryTheme, getIndustryVoiceConfig } from '../lib/industryConfig';
+import { getIndustryTheme, getIndustryVoiceConfig, getIndustryProductSuggestions } from '../lib/industryConfig';
 import IndustryUnitSelect from './IndustryUnitSelect';
 
 interface VoiceProductEntryModalProps {
@@ -382,18 +382,13 @@ export default function VoiceProductEntryModal({
           {/* Quick Simulation Samples */}
           <div style={{ marginBottom: '18px' }}>
             <span style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
-              কুইক টেস্ট সিমুলেশন (১-ক্লিক করুন):
+              কুইক ভয়েস টেস্ট সিমুলেশন ({getIndustryTheme(tenant?.industryId).name}):
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {[
-                { label: '💊 নাপা এক্সট্রা (ফার্মেসি)', text: 'নাপা এক্সট্রা ৫০ পাতা কেনা দর ২০ টাকা বিক্রয় দর ২৫ টাকা' },
-                { label: '👕 জিন্স প্যান্ট (গার্মেন্টস)', text: 'নতুন জিন্স প্যান্ট সাইজ ৩২ স্টক ৫০ পিস কেনা ৫০০ বিক্রয় ৮০০' },
-                { label: '💡 এলইডি লাইট (ইলেকট্রনিক্স)', text: 'এলইডি লাইট ১২ ওয়াট কেনা ১২০ বিক্রয় ১৮০ স্টক ৩০ টা' },
-                { label: '🍚 মিনিকেট চাল (মুদি)', text: 'মিনিকেট চাল ৫০ বস্তা কেনা ৩০০০ বিক্রয় ৩৪০০' }
-              ].map((s, idx) => (
+              {getIndustryProductSuggestions(tenant?.industryId).slice(0, 4).map((s, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleProcessVoiceInput(s.text)}
+                  onClick={() => handleProcessVoiceInput(`${s.name} ৫০ ${s.unit} কেনা দর ${s.costPrice || Math.round(s.price * 0.75)} টাকা বিক্রয় দর ${s.price} টাকা`)}
                   style={{
                     background: '#eff6ff',
                     border: '1px solid #bfdbfe',
@@ -405,7 +400,7 @@ export default function VoiceProductEntryModal({
                     cursor: 'pointer'
                   }}
                 >
-                  {s.label}
+                  {s.icon} {s.name} ({s.unit})
                 </button>
               ))}
             </div>

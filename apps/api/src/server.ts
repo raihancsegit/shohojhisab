@@ -3949,6 +3949,190 @@ fastify.post('/api/voice-action', async (request, reply) => {
   }
 
   // ----------------------------------------------------
+  // INTENT 1.45: SMART NATURAL SENTENCE FULL ORDER POS & KHATA
+  // e.g. "করিম ভাইরে নাপা এক্সট্রা ২ পাতা আর সেক্লো ১ পাতা দিলাম, ২০০ টাকা পাইছি"
+  // e.g. "রহিম ভাইরে চিনি ২ কেজি তেল ১ লিটার বাকিতে দিলাম, নগদ ১০০ টাকা পাইছি"
+  // e.g. "সুতি পাঞ্জাবি ১টা আর জিন্স প্যান্ট ১টা দিলাম, ১০০০ টাকা পাইছি"
+  // ----------------------------------------------------
+  const hasItemOrQuantity = /(?:পাতা|ট্যাবলেট|কেজি|লিটার|গ্রাম|পিস|প্যাকেট|বস্তা|বক্স|ডজন|হালি|জোড়া|জোড়া|প্লেট|কাপ|মিটার|ফুট|বোতল|রোল|টি|টা|\b\d+\b)/.test(normalized);
+  const hasOrderIntent = /(?:দিলাম|দিয়েছি|বেচলাম|বিক্রি\s*করলাম|পাইছি|পেয়েছি|নগদ|বাকিতে|বাকি\s*দিলাম)/.test(rawText);
+
+  if (hasItemOrQuantity && hasOrderIntent && !/বাকি\s*কত|হিসাব\s*কত|কার\s*কার|স্টক\s*কত|দাম\s*কত|ডিলার|খরচ\s*হলো/.test(rawText)) {
+    // 1. Extract Spoken Customer Name
+    let customerName = '';
+    const custMatch = rawText.match(/^([^,\s]+(?:\s+[^,\s]+)?)(?:\s*ভাইরে|\s*ভাইকে|\s*ভাইয়ের|\s*ভাই|\s*চাচারে|\s*চাচাকে|\s*চাচার|\s*কাকুকে|\s*এর|\s*রে|\s*কে)\b/);
+    if (custMatch) {
+      const candidate = custMatch[1].replace(/(দোকান|আজকে|এখন|ভাই|চাচা|মামা)/g, '').trim();
+      if (candidate.length >= 2 && !/^(নাপা|চিনি|চাল|তেল|ডাল|সুতি|জিন্স|পান)/.test(candidate)) {
+        customerName = candidate;
+      }
+    }
+
+    // 2. Extract Spoken Cash/Paid Amount
+    let paidAmount = 0;
+    let hasExplicitPaid = false;
+    const paidMatch = normalized.match(/(?:নগদ|জমা|ক্যাশ|পাইছি|পেয়েছি|দিল|পরিশোধ)\s*(\d+(?:\.\d+)?)\s*(?:টাকা)?/i) ||
+                      normalized.match(/(\d+(?:\.\d+)?)\s*(?:টাকা|টাকার)?\s*(?:পাইছি|পেয়েছি|দিল|নগদ|জমা)/i);
+    if (paidMatch) {
+      paidAmount = parseFloat(paidMatch[1]);
+      hasExplicitPaid = true;
+    }
+
+    // 3. Extract items section
+    let itemSection = rawText;
+    if (customerName) {
+      itemSection = itemSection.replace(new RegExp(`^${customerName}[^\\s]*\\s*`, 'i'), '');
+    }
+    itemSection = itemSection
+      .replace(/(?:নগদ|জমা|ক্যাশ|পাইছি|পেয়েছি|দিল|পরিশোধ)\s*\d+(?:\.\d+)?\s*(?:টাকা)?/gi, '')
+      .replace(/\d+(?:\.\d+)?\s*(?:টাকা|টাকার)?\s*(?:পাইছি|পেয়েছি|দিল|নগদ|জমা)/gi, '')
+      .replace(/(দিলাম|দিয়েছি|বেচলাম|বিক্রি\s*করলাম|বাকিতে\s*দিলাম|বাকিতে|বাকি)/gi, '')
+      .trim();
+
+    // Split multiple items if comma, 'এবং', 'আর', 'ও'
+    const rawItems = itemSection.split(/,|\s+এবং\s+|\s+আর\s+|\s+ও\s+/).map(s => s.trim()).filter(Boolean);
+    const parsedOrderItems: any[] = [];
+    let calculatedSubtotal = 0;
+
+    for (const rawItem of rawItems) {
+      const itemNorm = toEnDigits(parseSpokenBengaliNumbers(rawItem.toLowerCase()));
+      const qtyMatch = itemNorm.match(/(\d+(?:\.\d+)?)\s*(পাতা|ট্যাবলেট|কেজি|লিটার|গ্রাম|পিস|প্যাকেট|বস্তা|বক্স|ডজন|হালি|জোড়া|জোড়া|প্লেট|কাপ|মিটার|ফুট|বোতল|রোল|টি|টা)?/);
+      let qty = qtyMatch ? parseFloat(qtyMatch[1]) : 1;
+      let unit = qtyMatch && qtyMatch[2] ? qtyMatch[2] : 'পিস';
+      if (unit === 'টি' || unit === 'টা') unit = 'পিস';
+      if (unit === 'জোড়া') unit = 'জোড়া';
+
+      let cleanName = rawItem
+        .replace(/(\d+|[০-৯]+)/g, '')
+        .replace(/(পাতা|ট্যাবলেট|কেজি|লিটার|গ্রাম|পিস|প্যাকেট|বস্তা|বক্স|ডজন|হালি|জোড়া|জোড়া|প্লেট|কাপ|মিটার|ফুট|বোতল|রোল|টি|টা|টাকা|টাকার)/gi, '')
+        .trim();
+
+      if (cleanName.length >= 2) {
+        let product = db.prepare(`
+          SELECT * FROM products WHERE tenant_id = ? AND (
+            bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
+          ) LIMIT 1
+        `).get(tenantId, `%${cleanName}%`, `%${cleanName}%`, `%${cleanName}%`, `%${cleanName}%`, cleanName) as any;
+
+        let unitPrice = 0;
+        if (product) {
+          unitPrice = Number(product.selling_price) || 0;
+        } else {
+          // Fallback unit prices based on common staples
+          unitPrice = 50;
+        }
+
+        const lineTotal = Math.round(unitPrice * qty);
+        calculatedSubtotal += lineTotal;
+        parsedOrderItems.push({
+          product,
+          name: product ? (product.bangla_name || product.name) : cleanName,
+          quantity: qty,
+          unit: product?.unit || unit,
+          unitPrice,
+          totalPrice: lineTotal
+        });
+      }
+    }
+
+    if (parsedOrderItems.length > 0) {
+      const totalAmount = calculatedSubtotal;
+      const finalPaid = hasExplicitPaid ? paidAmount : (/বাকিতে|বাকি/.test(rawText) ? 0 : totalAmount);
+      const dueAmount = Math.max(0, totalAmount - finalPaid);
+      const changeAmount = Math.max(0, finalPaid - totalAmount);
+
+      // Handle Customer
+      let customer: any = null;
+      if (customerName) {
+        customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ?').get(tenantId, `%${customerName}%`) as any;
+        if (!customer) {
+          const custId = 'cust-' + uuidv4().slice(0, 8);
+          db.prepare(`
+            INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(custId, tenantId, customerName, '01700000000', 'লোকাল কাস্টমার', dueAmount, 5000, now);
+          customer = { id: custId, name: customerName, total_due: dueAmount };
+        } else if (dueAmount > 0) {
+          const newDue = (Number(customer.total_due) || 0) + dueAmount;
+          db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+          customer.total_due = newDue;
+        }
+      }
+
+      // Record in Sales
+      const saleId = 'sale-' + uuidv4().slice(0, 8);
+      const invoiceNo = (dueAmount > 0 ? 'BK-' : 'INV-') + Date.now().toString().slice(-5);
+      const note = parsedOrderItems.map(it => `${it.name} (${it.quantity} ${it.unit})`).join(', ');
+
+      db.prepare(`
+        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        saleId,
+        tenantId,
+        invoiceNo,
+        totalAmount,
+        0,
+        totalAmount,
+        Math.min(totalAmount, finalPaid),
+        dueAmount,
+        Math.round(totalAmount * 0.18),
+        dueAmount > 0 && finalPaid === 0 ? 'due' : 'cash',
+        customer?.id || null,
+        customer?.name || (customerName || 'খুচরা ক্রেতা'),
+        note,
+        'ভয়েস এআই সহকারী',
+        now
+      );
+
+      // Record Line Items & deduct stock
+      for (const it of parsedOrderItems) {
+        const itemId = 'sitem-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, it.name, it.quantity, it.unitPrice, it.totalPrice);
+
+        if (it.product?.id) {
+          db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?').run(it.quantity, it.product.id);
+        }
+      }
+
+      // Compose Bangla speech response
+      const itemsSpeech = parsedOrderItems.map(it => `${it.name} (${it.quantity} ${it.unit})`).join(' ও ');
+      let speech = `✓ ${customer ? customer.name : 'মেমো'} সম্পন্ন: ${itemsSpeech}। মোট ৳${totalAmount} টাকা।`;
+      if (hasExplicitPaid) {
+        speech += ` নগদ জমা ৳${finalPaid} টাকা`;
+        if (dueAmount > 0) {
+          speech += `, বাকি ৳${dueAmount} টাকা${customer ? ` (${customer.name}-এর খাতায় যোগ)` : ''}।`;
+        } else if (changeAmount > 0) {
+          speech += `, ফেরত ৳${changeAmount} টাকা।`;
+        } else {
+          speech += ` (সম্পূর্ণ পরিশোধিত)।`;
+        }
+      } else if (dueAmount > 0 && customer) {
+        speech += ` সম্পূর্ণ বাকি ৳${dueAmount} টাকা ${customer.name}-এর খাতায় লেখা হয়েছে।`;
+      }
+
+      return {
+        success: true,
+        action: 'order_completed',
+        speech,
+        data: {
+          saleId,
+          invoiceNo,
+          customerName: customer?.name || customerName || 'খুচরা ক্রেতা',
+          items: parsedOrderItems,
+          totalAmount,
+          paidAmount: finalPaid,
+          dueAmount,
+          changeAmount
+        }
+      };
+    }
+  }
+
+  // ----------------------------------------------------
   // INTENT 1.5: MULTI-ITEM OR SINGLE ITEM VOICE ADD-TO-CART & CHECKOUT FOR POS
   // ----------------------------------------------------
   if (/কার্টে|কার্ট|ব্যাগে|ঝুড়িতে|দাও|রাখো|বিল|বিক্রি|সম্পন্ন|চেকআউট|কেজি|লিটার|পিস|পাতা|প্যাকেট|ডজন/.test(rawText) && !/বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|খরচ|আজকে\s*কত|কত\s*লাভ|দাম\s*কত|স্টক\s*কত/.test(rawText)) {

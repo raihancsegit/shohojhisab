@@ -763,5 +763,204 @@ export function getIndustryVoiceConfig(industryId?: string): IndustryVoiceConfig
   return INDUSTRY_VOICE_CONFIGS[key] || INDUSTRY_VOICE_CONFIGS['cat-grocery'];
 }
 
+export interface IndustryProductSuggestion {
+  name: string;
+  unit: string;
+  price: number;
+  costPrice?: number;
+  icon: string;
+  generic?: string;
+  size?: string;
+  brand?: string;
+}
+
+export const INDUSTRY_PRODUCT_SUGGESTIONS: Record<string, IndustryProductSuggestion[]> = {
+  'cat-pharmacy': [
+    { name: 'নাপা এক্সট্রা ৫০০ মি.গ্রা.', unit: 'পাতা', price: 30, costPrice: 22, icon: '💊', generic: 'Paracetamol 500mg + Caffeine 65mg', brand: 'Beximco' },
+    { name: 'সেকলো ২০ মি.গ্রা.', unit: 'পাতা', price: 70, costPrice: 58, icon: '🧪', generic: 'Omeprazole 20mg', brand: 'Square' },
+    { name: 'তুসকা কফ সিরাপ ১০০ml', unit: 'বোতল', price: 95, costPrice: 78, icon: '🧴', generic: 'Dextromethorphan + Guaiphenesin', brand: 'Square' },
+    { name: 'এসএমসি ওরস্যালাইন-এন', unit: 'প্যাকেট', price: 6, costPrice: 4.8, icon: '💧', generic: 'Oral Rehydration Salts', brand: 'SMC' },
+    { name: 'অ্যালাট্রোল ১০ মি.গ্রা.', unit: 'পাতা', price: 40, costPrice: 32, icon: '💊', generic: 'Cetirizine Dihydrochloride', brand: 'Square' },
+    { name: 'ফ্ল্যাজিল ৪০০ মি.গ্রা.', unit: 'পাতা', price: 35, costPrice: 28, icon: '💊', generic: 'Metronidazole 400mg', brand: 'Sanofi' },
+    { name: 'স্যাভলন এন্টিসেপটিক লিকুইড', unit: 'বোতল', price: 120, costPrice: 98, icon: '🧴', generic: 'Chlorhexidine + Cetrimide', brand: 'ACI' },
+    { name: 'হিস্টাসিন ৪ মি.গ্রা.', unit: 'পাতা', price: 10, costPrice: 7, icon: '💊', generic: 'Chlorpheniramine Maleate', brand: 'Beximco' }
+  ],
+  'cat-grocery': [
+    { name: 'মিনিকেট চাল ৫০ কেজি বস্তা', unit: 'বস্তা', price: 3500, costPrice: 3200, icon: '🍚', brand: 'রশিদ অটো রাইস' },
+    { name: 'তীর পরিশোধিত সয়াবিন তেল ১ লিটার', unit: 'লিটার', price: 185, costPrice: 168, icon: '🫒', brand: 'তীর / City Group' },
+    { name: 'ফ্রেশ পরিশোধিত চিনি ১ কেজি', unit: 'কেজি', price: 135, costPrice: 122, icon: '🧂', brand: 'ফ্রেশ / Meghna' },
+    { name: 'মসুর ডাল প্রিমিয়াম ১ কেজি', unit: 'কেজি', price: 140, costPrice: 125, icon: '🥣', brand: 'দেশি' },
+    { name: 'ফার্মের লাল ডিম ১ হালি', unit: 'হালি', price: 48, costPrice: 40, icon: '🥚', brand: 'লোকাল পোল্ট্রি' },
+    { name: 'লাক্স বিউটি সাবান ১০০ গ্রাম', unit: 'পিস', price: 60, costPrice: 50, icon: '🧼', brand: 'ইউনিলিভার' },
+    { name: 'তীর আটা ২ কেজি প্যাকেট', unit: 'প্যাকেট', price: 110, costPrice: 95, icon: '🌾', brand: 'তীর' },
+    { name: 'আইওডিনযুক্ত লবণ ১ কেজি', unit: 'কেজি', price: 40, costPrice: 32, icon: '🧂', brand: 'এসিআই' }
+  ],
+  'cat-clothing': [
+    { name: 'প্রিমিয়াম সুতি পাঞ্জাবি', unit: 'পিস', price: 950, costPrice: 680, icon: '👕', brand: 'হ্যান্ডলুম কটন', size: '40, 42, 44' },
+    { name: 'স্লিম ফিট ডেনিম জিন্স প্যান্ট', unit: 'পিস', price: 1200, costPrice: 850, icon: '👖', brand: 'ডেনিম ওয়ার্ল্ড', size: '30, 32, 34' },
+    { name: 'ঢাকাই জামদানি শাড়ি', unit: 'পিস', price: 2800, costPrice: 2100, icon: '👗', brand: 'রূপগঞ্জ তাঁতি' },
+    { name: '১০০% কটন গোলগলা টি-শার্ট', unit: 'পিস', price: 350, costPrice: 220, icon: '👕', brand: 'এক্সপোর্ট কোয়ালিটি', size: 'M, L, XL' },
+    { name: 'আরামদায়ক সুতি প্রিন্ট লুঙ্গি', unit: 'পিস', price: 450, costPrice: 340, icon: '🧣', brand: 'আমানত শাহ্' },
+    { name: 'কটন থ্রি-পিস আনস্টিচড', unit: 'সেট', price: 1450, costPrice: 1050, icon: '👗', brand: 'জয়পুরি কটন' }
+  ],
+  'cat-shoes': [
+    { name: 'জেন্টস লেদার ফরমাল সু', unit: 'জোড়া', price: 1350, costPrice: 980, icon: '👞', brand: 'এপেক্স স্টাইল', size: '40, 41, 42' },
+    { name: 'ক্যাজুয়াল স্পোর্টস স্নিকার্স', unit: 'জোড়া', price: 980, costPrice: 700, icon: '👟', brand: 'লোটো স্টাইল', size: '39, 40, 41' },
+    { name: 'লেডিস ফ্যাশন হিল স্যান্ডেল', unit: 'জোড়া', price: 750, costPrice: 520, icon: '👡', brand: 'বাটা কালেকশন' },
+    { name: 'বাটার ওয়াটারপ্রুফ স্পঞ্জ স্যান্ডেল', unit: 'জোড়া', price: 250, costPrice: 180, icon: '🩴', brand: 'বাটা' },
+    { name: 'সুতি মোজা প্রিমিয়াম কম্বো', unit: 'জোড়া', price: 120, costPrice: 75, icon: '🧦', brand: 'ইমপোর্ট' }
+  ],
+  'cat-hardware': [
+    { name: 'সুপার স্টার এলইডি বাল্ব ২০W', unit: 'পিস', price: 180, costPrice: 135, icon: '💡', brand: 'Super Star' },
+    { name: 'আরএফএল পিপিআর পাইপ ১ ইঞ্চি ২০ ফুট', unit: 'ফুট', price: 45, costPrice: 32, icon: '🔩', brand: 'RFL Pipes' },
+    { name: 'পিতলের হেভি পানির ট্যাপ কল', unit: 'পিস', price: 320, costPrice: 240, icon: '🚰', brand: 'National Brass' },
+    { name: 'বিআরবি কপার তার ১.৫ আরএম', unit: 'মিটার', price: 65, costPrice: 52, icon: '🔌', brand: 'BRB Cable' },
+    { name: 'প্রিমিয়ার পোর্টল্যান্ড সিমেন্ট ৫০ কেজি', unit: 'ব্যাগ', price: 520, costPrice: 475, icon: '🧱', brand: 'Premier Cement' },
+    { name: 'হেভি পিভিসি ইলেকট্রিক টেপ', unit: 'রোল', price: 25, costPrice: 16, icon: '⬛', brand: 'Wonder Tape' }
+  ],
+  'cat-mobile': [
+    { name: '২০W পিডি টাইপ-সি ফাস্ট চার্জার', unit: 'পিস', price: 550, costPrice: 380, icon: '🔌', brand: 'Baseus' },
+    { name: 'ব্রেইডেড ফাস্ট চার্জিং ক্যাবল ১.২মি.', unit: 'পিস', price: 160, costPrice: 95, icon: '⚡', brand: 'Joyroom' },
+    { name: '৯ডি কার্ভড টেম্পারড গ্লাস', unit: 'পিস', price: 120, costPrice: 45, icon: '📱', brand: 'Universal' },
+    { name: 'ব্লুটুথ ওয়্যারলেস নেকব্যান্ড হেডফোন', unit: 'পিস', price: 650, costPrice: 460, icon: '🎧', brand: 'UiiSii' },
+    { name: 'সিলিকন শকপ্রুফ ব্যাক কভার', unit: 'পিস', price: 150, costPrice: 65, icon: '🛡️', brand: 'Generic' }
+  ],
+  'cat-restaurant': [
+    { name: 'স্পেশাল চিকেন দম বিরিয়ানি', unit: 'প্লেট', price: 180, costPrice: 120, icon: '🍗' },
+    { name: 'বিফ ভুনা খিচুড়ি স্পেশাল', unit: 'প্লেট', price: 220, costPrice: 150, icon: '🍛' },
+    { name: 'চিকেন গ্রিল ফুল ও ৪টি নান', unit: 'সেট', price: 450, costPrice: 310, icon: '🍗' },
+    { name: 'মোগলাই পরোটা উইথ স্পেশাল সালাদ', unit: 'পিস', price: 70, costPrice: 42, icon: '🫓' },
+    { name: 'স্পেশাল কাঁচা মরিচ বোরহানি ৫০০ml', unit: 'বোতল', price: 80, costPrice: 48, icon: '🥛' }
+  ],
+  'cat-tea': [
+    { name: 'স্পেশাল মালাই দুধ চা', unit: 'কাপ', price: 15, costPrice: 8, icon: '☕' },
+    { name: 'লেমন জিঞ্জার রং চা', unit: 'কাপ', price: 10, costPrice: 4, icon: '🍵' },
+    { name: 'মুচমুচে গরম সিঙ্গাড়া', unit: 'পিস', price: 10, costPrice: 5.5, icon: '🥟' },
+    { name: 'বেনসন অ্যান্ড হেজেস সিগারেট', unit: 'শলা', price: 15, costPrice: 13.5, icon: '🚬', brand: 'BAT' },
+    { name: 'স্পেশাল মিষ্টি পান', unit: 'খিলি', price: 12, costPrice: 6, icon: '🍃' }
+  ],
+  'cat-meat-fish': [
+    { name: 'দেশি টাটকা গরুর মাংস ১ কেজি', unit: 'কেজি', price: 750, costPrice: 660, icon: '🥩' },
+    { name: 'ফার্মের ব্রয়লার মুরগি লাইভ', unit: 'কেজি', price: 195, costPrice: 165, icon: '🐔' },
+    { name: 'নদীর তাজা রুই মাছ ২ কেজি সাইজ', unit: 'কেজি', price: 340, costPrice: 280, icon: '🐟' },
+    { name: 'খাসির মাংস ফ্রেশ ১ কেজি', unit: 'কেজি', price: 1100, costPrice: 960, icon: '🍖' },
+    { name: 'গলদা চিংড়ি গ্রেড-এ ৫০০ গ্রাম', unit: 'কেজি', price: 850, costPrice: 720, icon: '🦐' }
+  ],
+  'cat-sweet': [
+    { name: 'খাঁটি ছানার স্পেশাল রসগোল্লা', unit: 'কেজি', price: 340, costPrice: 240, icon: '⚪' },
+    { name: 'ভ্যানিলা বাটার কেক ১ পাউন্ড', unit: 'পাউন্ড', price: 450, costPrice: 290, icon: '🎂' },
+    { name: 'ঘিয়ে ভাজা স্পেশাল চমচম', unit: 'কেজি', price: 380, costPrice: 260, icon: '🍬' },
+    { name: 'স্পেশাল দুধ ছানার সন্দেশ', unit: 'কেজি', price: 550, costPrice: 390, icon: '🥮' },
+    { name: 'খাস্তা নিমকি ৫০০ গ্রাম প্যাকেট', unit: 'প্যাকেট', price: 120, costPrice: 75, icon: '🥨' }
+  ],
+  'cat-furniture': [
+    { name: 'চিটাগাং সেগুন কাঠের খাট (৬×৭ ফিট)', unit: 'পিস', price: 35000, costPrice: 27000, icon: '🛏️' },
+    { name: '৬ চেয়ারের ডাইনিং টেবিল সেট', unit: 'সেট', price: 24000, costPrice: 18500, icon: '🪑' },
+    { name: '৪ পাল্লার আধুনিক উডেন আলমিরা', unit: 'পিস', price: 28000, costPrice: 21000, icon: '🚪' },
+    { name: 'এক্সিকিউটিভ অফিস রিভলভিং চেয়ার', unit: 'পিস', price: 4800, costPrice: 3400, icon: '💺' }
+  ],
+  'cat-stationery': [
+    { name: 'এ-ফোর ৮০ জিএসএম পেপার ১ রিম', unit: 'রিম', price: 420, costPrice: 345, icon: '📄', brand: 'Double A' },
+    { name: 'ম্যাটাডোর হাই-স্কুল বলপেন ১ ডজন', unit: 'ডজন', price: 60, costPrice: 44, icon: '🖊️', brand: 'Matador' },
+    { name: 'হার্ডকভার প্রিমিয়াম খাতা ২০০ পৃষ্ঠা', unit: 'পিস', price: 85, costPrice: 58, icon: '📓', brand: 'Good Luck' },
+    { name: 'স্টুডেন্ট জ্যামিতি বক্স ফুল সেট', unit: 'পিস', price: 140, costPrice: 95, icon: '📐', brand: 'Camlin' }
+  ],
+  'cat-cosmetics': [
+    { name: 'নিভিয়া সফট লাইট ময়েশ্চারাইজার', unit: 'বোতল', price: 360, costPrice: 275, icon: '🧴', brand: 'Nivea' },
+    { name: 'হিমালয়া পিউরিফাইং নিম ফেসওয়াশ', unit: 'টিউব', price: 195, costPrice: 148, icon: '🧼', brand: 'Himalaya' },
+    { name: 'ম্যাট ভেলভেট লং-লাস্টিং লিপস্টিক', unit: 'পিস', price: 280, costPrice: 185, icon: '💄', brand: 'Maybelline' },
+    { name: 'সানসিল্ক ব্ল্যাক শাইন শ্যাম্পু ৩৫০ml', unit: 'বোতল', price: 320, costPrice: 255, icon: '🧴', brand: 'Sunsilk' }
+  ]
+};
+
+export function getIndustryProductSuggestions(industryId?: string): IndustryProductSuggestion[] {
+  const key = industryId || 'cat-grocery';
+  return INDUSTRY_PRODUCT_SUGGESTIONS[key] || INDUSTRY_PRODUCT_SUGGESTIONS['cat-grocery'];
+}
+
+export function getIndustryProductPlaceholder(industryId?: string): string {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return 'যেমন: নাপা এক্সট্রা ৫০০ মি.গ্রা., সেক্লো ২০ মি.গ্রা., হিস্টাসিন';
+    case 'cat-clothing':
+      return 'যেমন: সুতি পাঞ্জাবি, স্লিম ফিট জিন্স প্যান্ট, জামদানি শাড়ি';
+    case 'cat-shoes':
+      return 'যেমন: জেন্টস লেদার ফরমাল সু, ক্যাজুয়াল স্নিকার্স, স্পঞ্জ স্যান্ডেল';
+    case 'cat-hardware':
+      return 'যেমন: সুপার স্টার এলইডি বাল্ব ২০W, আরএফএল পিপিআর পাইপ ১ ইঞ্চি';
+    case 'cat-mobile':
+      return 'যেমন: ২০W টাইপ-সি ফাস্ট চার্জার, ৯ডি গ্লাস, ব্লুটুথ হেডফোন';
+    case 'cat-restaurant':
+      return 'যেমন: চিকেন দম বিরিয়ানি, বিফ ভুনা খিচুড়ি, মোগলাই পরোটা';
+    case 'cat-tea':
+      return 'যেমন: স্পেশাল মালাই দুধ চা, গরম সিঙ্গাড়া, বেনসন সিগারেট';
+    case 'cat-meat-fish':
+      return 'যেমন: দেশি গরুর মাংস ১ কেজি, ব্রয়লার মুরগি, রুই মাছ';
+    case 'cat-sweet':
+      return 'যেমন: স্পেশাল রসগোল্লা ১ কেজি, ভ্যানিলা কেক ১ পাউন্ড, চমচম';
+    case 'cat-furniture':
+      return 'যেমন: সেগুন কাঠের খাট, ডাইনিং টেবিল সেট, রিভলভিং চেয়ার';
+    case 'cat-stationery':
+      return 'যেমন: এ-ফোর ফটোকপি কাগজ ১ রিম, ম্যাটাডোর জেল পেন ১ ডজন';
+    case 'cat-cosmetics':
+      return 'যেমন: নিভিয়া বডি লোশন, নিম ফেসওয়াশ, ম্যাট লিপস্টিক';
+    case 'cat-grocery':
+    default:
+      return 'যেমন: মিনিকেট চাল ৫০ কেজি বস্তা, তীর সয়াবিন তেল, চিনি';
+  }
+}
+
+export function getIndustryBrandPlaceholder(industryId?: string): string {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return 'যেমন: Square / Beximco / Incepta / Renata';
+    case 'cat-clothing':
+      return 'যেমন: আড়ং / রিচম্যান / জারা / লোকাল তাঁত';
+    case 'cat-shoes':
+      return 'যেমন: বাটা / এপেক্স / লোটো / পেগাসাস';
+    case 'cat-hardware':
+      return 'যেমন: সুপার স্টার / আরএফএল / গাজী / বিআরবি';
+    case 'cat-mobile':
+      return 'যেমন: স্যামসাং / শাওমি / বেসাস / অ্যানকার';
+    case 'cat-stationery':
+      return 'যেমন: ম্যাটাডোর / ডাবল-এ / বাশার / অলিম্পিক';
+    case 'cat-cosmetics':
+      return 'যেমন: নিভিয়া / হিমালয়া / লাক্স / মেবিলিন';
+    case 'cat-grocery':
+    default:
+      return 'যেমন: তীর / রূপচাঁদা / ফ্রেশ / এসিআই / প্রাণ';
+  }
+}
+
+export function getIndustrySearchPlaceholder(industryId?: string): string {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return '🔍 ঔষধের নাম, জেনেরিক বা বারকোড খুঁজুন...';
+    case 'cat-clothing':
+      return '🔍 পোশাকের নাম, সাইজ বা বারকোড খুঁজুন...';
+    case 'cat-shoes':
+      return '🔍 জুতো, স্যান্ডেল বা সাইজ খুঁজুন...';
+    case 'cat-hardware':
+      return '🔍 হার্ডওয়্যার মালামাল বা কোড খুঁজুন...';
+    case 'cat-mobile':
+      return '🔍 মোবাইল এক্সেসরিজ বা মডেল খুঁজুন...';
+    case 'cat-restaurant':
+      return '🔍 মেনু আইটেম বা খাবার খুঁজুন...';
+    case 'cat-tea':
+      return '🔍 চা বা স্ন্যাক্স আইটেম খুঁজুন...';
+    case 'cat-meat-fish':
+      return '🔍 মাংস বা মাছের নাম খুঁজুন...';
+    case 'cat-sweet':
+      return '🔍 মিষ্টি বা বেকারি আইটেম খুঁজুন...';
+    case 'cat-stationery':
+      return '🔍 বই-খাতা বা স্টেশনারি খুঁজুন...';
+    case 'cat-cosmetics':
+      return '🔍 কসমেটিকস পণ্যের নাম খুঁজুন...';
+    case 'cat-grocery':
+    default:
+      return '🔍 মুদি পণ্যের নাম বা বারকোড খুঁজুন...';
+  }
+}
+
 
 

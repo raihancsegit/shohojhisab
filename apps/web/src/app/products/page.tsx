@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import { getIndustryProductPlaceholder, getIndustryBrandPlaceholder, getIndustryProductSuggestions, getIndustrySearchPlaceholder } from '../../lib/industryConfig';
 import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
@@ -250,7 +251,7 @@ export default function ProductsPage() {
       <div style={{ marginBottom: '14px' }}>
         <input
           type="text"
-          placeholder="🔍 পণ্য, জেনেরিক বা বারকোড খুঁজুন..."
+          placeholder={getIndustrySearchPlaceholder(tenant?.industryId)}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '1.5px solid #cbd5e1', outline: 'none', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}
@@ -358,12 +359,45 @@ export default function ProductsPage() {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম (বাংলা): *</label>
                 <input
                   type="text"
-                  placeholder="যেমন: নাপা এক্সট্রা, চিনি ১ কেজি, সুতি শার্ট"
+                  placeholder={getIndustryProductPlaceholder(tenant?.industryId)}
                   value={banglaName}
                   onChange={(e) => setBanglaName(e.target.value)}
                   required
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                 />
+
+                {/* 💡 Quick Category Sample Suggestions Chips */}
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
+                  {getIndustryProductSuggestions(tenant?.industryId).slice(0, 4).map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setBanglaName(sug.name);
+                        setSellingPrice(String(sug.price));
+                        if (sug.costPrice) setPurchasePrice(String(sug.costPrice));
+                        if (sug.unit) setUnit(sug.unit);
+                        if (sug.generic) setGenericName(sug.generic);
+                        if (sug.brand) setBrand(sug.brand);
+                        if (sug.size) setSize(sug.size);
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { getIndustryTheme } from '../../lib/industryConfig';
+import { getIndustryTheme, getIndustryProductPlaceholder, getIndustryBrandPlaceholder, getIndustryProductSuggestions, getIndustrySearchPlaceholder } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
@@ -574,7 +574,7 @@ export default function StockPage() {
         <div style={{ flex: 1, minWidth: '180px', position: 'relative' }}>
           <input
             type="text"
-            placeholder="🔍 পণ্যের নাম বা বারকোড খুঁজুন..."
+            placeholder={getIndustrySearchPlaceholder(indId)}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -1292,7 +1292,7 @@ export default function StockPage() {
                       <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: Square / Beximco"
+                        placeholder={getIndustryBrandPlaceholder(indId)}
                         value={editForm.brand}
                         onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
                         style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
@@ -1429,12 +1429,50 @@ export default function StockPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="যেমন: নাপা এক্সট্রা, চিনি, মিনিকেট চাল"
+                  placeholder={getIndustryProductPlaceholder(indId)}
                   value={addForm.banglaName}
                   onChange={(e) => setAddForm({ ...addForm, banglaName: e.target.value })}
                   required
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                 />
+
+                {/* 💡 Quick Category Sample Suggestions Chips */}
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
+                  {getIndustryProductSuggestions(indId).slice(0, 5).map((sug, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setAddForm(prev => ({
+                          ...prev,
+                          banglaName: sug.name,
+                          sellingPrice: String(sug.price),
+                          purchasePrice: sug.costPrice ? String(sug.costPrice) : prev.purchasePrice,
+                          unit: sug.unit || prev.unit,
+                          genericName: sug.generic || prev.genericName,
+                          brand: sug.brand || prev.brand,
+                          size: sug.size || prev.size
+                        }));
+                        triggerHaptic('light');
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title={`${sug.name} - দর: ৳${sug.price}`}
+                    >
+                      {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -1549,7 +1587,7 @@ export default function StockPage() {
                       <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: Square / Beximco"
+                        placeholder={getIndustryBrandPlaceholder(indId)}
                         value={addForm.brand}
                         onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
                         style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
