@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceProductEntry, VoiceProductEntryResult } from '../lib/voicePOSParser';
+import { getIndustryTheme, getIndustryVoiceConfig } from '../lib/industryConfig';
 import IndustryUnitSelect from './IndustryUnitSelect';
 
 interface VoiceProductEntryModalProps {
@@ -17,13 +18,14 @@ export default function VoiceProductEntryModal({
 }: VoiceProductEntryModalProps) {
   const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled } = useAuth();
   const currentTenantId = tenant?.id || 'tenant-1';
+  const voiceConfig = getIndustryVoiceConfig(tenant?.industryId);
 
   const [isListening, setIsListening] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [parsedProduct, setParsedProduct] = useState<VoiceProductEntryResult | null>(null);
-  const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন: যেমন "প্যারাসিটামল ৫০ পাতা কেনা ২০ বিক্রয় ৩০"');
+  const [lastActionMessage, setLastActionMessage] = useState<string>(`মাইক চালু আছে। সরাসরি মুখে বলুন: যেমন "${voiceConfig.productEntryHint}"`);
 
   const recognitionRef = useRef<any>(null);
   const isComponentMounted = useRef<boolean>(true);
@@ -430,7 +432,7 @@ export default function VoiceProductEntryModal({
                   padding: '3px 8px',
                   borderRadius: '6px'
                 }}>
-                  {parsedProduct.categoryId === 'cat-pharmacy' ? '💊 ফার্মেসি' : parsedProduct.categoryId === 'cat-clothing' ? '👕 পোশাক' : parsedProduct.categoryId === 'cat-hardware' ? '💡 ইলেকট্রনিক্স' : '🍚 মুদি'}
+                  {getIndustryTheme(parsedProduct.categoryId || tenant?.industryId).icon} {getIndustryTheme(parsedProduct.categoryId || tenant?.industryId).name}
                 </span>
               </div>
 
@@ -511,9 +513,30 @@ export default function VoiceProductEntryModal({
               <p style={{ fontWeight: '800', fontSize: '14px', margin: '0 0 6px 0', color: '#334155' }}>
                 কোনো পণ্য মুখে বলুন অথবা উপরের বাটনে ক্লিক করুন
               </p>
-              <p style={{ fontSize: '12px', margin: 0, color: '#94a3b8' }}>
+              <p style={{ fontSize: '12px', margin: '0 0 12px', color: '#94a3b8' }}>
                 AI আপনার কথার মধ্য থেকে নাম, স্টক, কেনা দর ও বিক্রয় দর স্বয়ংক্রিয়ভাবে আলাদা করবে
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                {voiceConfig.quickSaleSuggestions.slice(0, 4).map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleProcessVoiceInput(sample)}
+                    style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🎙️ &quot;{sample}&quot;
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

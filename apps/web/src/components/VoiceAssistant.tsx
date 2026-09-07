@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { getIndustryVoiceConfig } from '../lib/industryConfig';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -420,16 +421,7 @@ export default function VoiceAssistant() {
                 💡 মুখে বলুন অথবা ট্যাপ করুন:
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '2px' }}>
-                {[
-                  'কালাম ভাই ৫০০ টাকা বাকি নিল',
-                  'রহিম ভাই ২০০ টাকা বাকি দিল',
-                  'চা নাস্তা ৬০ টাকা খরচ',
-                  'চিনি ২ কেজি, ডাল ১ কেজি',
-                  'আজকে কত বিক্রি হলো?',
-                  'আজকে কত লাভ হলো?',
-                  'তীর তেলের স্টক কত আছে?',
-                  'চিনিতে আরও ৫০ কেজি স্টক যোগ করো'
-                ].map((eg, i) => (
+                {getIndustryVoiceConfig(tenant?.industryId).assistantSuggestions.map((eg, i) => (
                   <button
                     key={i}
                     type="button"

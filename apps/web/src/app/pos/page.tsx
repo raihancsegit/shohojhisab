@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { getIndustryTheme } from '../../lib/industryConfig';
+import { getIndustryTheme, getIndustryVoiceConfig } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
@@ -101,19 +101,82 @@ const INDUSTRY_SUBCATS: Record<string, Array<{ id: string; label: string; icon: 
     { id: 'toiletries', label: 'সাবান ও ক্লিন', icon: '🧼', keywords: ['সাবান', 'লাক্স', 'শ্যাম্পু', 'হুইল'] }
   ],
   'cat-pharmacy': [
-    { id: 'tablet', label: 'ট্যাবলেট ও পাতা', icon: '💊', keywords: ['ট্যাবলেট', 'পাতা', 'নাপা', 'এইস', 'সেকলো'] },
-    { id: 'syrup', label: 'সিরাপ ও ড্রপ', icon: '🧴', keywords: ['সিরাপ', 'ড্রপ', 'তুসকা'] },
-    { id: 'saline', label: 'স্যালাইন ও ব্যান্ডেজ', icon: '💧', keywords: ['স্যালাইন', 'ব্যান্ডেজ', 'স্যাভলন'] }
+    { id: 'tablet', label: 'ট্যাবলেট ও পাতা', icon: '💊', keywords: ['ট্যাবলেট', 'পাতা', 'নাপা', 'এইস', 'সেকলো', 'প্যারাসিটামল', 'ক্যাপসুল'] },
+    { id: 'syrup', label: 'সিরাপ ও ড্রপ', icon: '🧴', keywords: ['সিরাপ', 'ড্রপ', 'তুসকা', 'লিকুইড'] },
+    { id: 'saline', label: 'স্যালাইন ও ব্যান্ডেজ', icon: '💧', keywords: ['স্যালাইন', 'ব্যান্ডেজ', 'স্যাভলন', 'তুলা'] },
+    { id: 'injection', label: 'ইনজেকশন ও ভায়াল', icon: '💉', keywords: ['ইনজেকশন', 'ভায়াল', 'অ্যাম্পুল', 'ইনসুলিন'] },
+    { id: 'ointment', label: 'মলম ও জেল', icon: '🩹', keywords: ['মলম', 'জেল', 'ক্রিম', 'অয়েন্টমেন্ট'] },
+    { id: 'devices', label: 'মেডিকেল ডিভাইস', icon: '🩺', keywords: ['থার্মোমিটার', 'প্রেসার', 'নেবুলাইজার', 'মাস্ক'] }
   ],
   'cat-clothing': [
-    { id: 'panjabi', label: 'পাঞ্জাবি ও থ্রি-পিস', icon: '🥻', keywords: ['পাঞ্জাবি', 'থ্রি-পিস'] },
-    { id: 'shirt-pant', label: 'শার্ট ও প্যান্ট', icon: '👔', keywords: ['শার্ট', 'প্যান্ট', 'টি-শার্ট'] },
-    { id: 'lungi', label: 'লুঙ্গি', icon: '🩳', keywords: ['লুঙ্গি'] }
+    { id: 'panjabi', label: 'পাঞ্জাবি ও পায়জামা', icon: '🥻', keywords: ['পাঞ্জাবি', 'পায়জামা', 'কুর্তা'] },
+    { id: 'shirt-pant', label: 'শার্ট ও প্যান্ট', icon: '👔', keywords: ['শার্ট', 'প্যান্ট', 'জিন্স', 'গ্যাবার্ডিন'] },
+    { id: 'tshirt', label: 'টি-শার্ট ও পোলো', icon: '👕', keywords: ['টি-শার্ট', 'পোলো', 'গেঞ্জি'] },
+    { id: 'saree', label: 'শাড়ি ও থ্রি-পিস', icon: '👗', keywords: ['শাড়ি', 'থ্রি-পিস', 'কামিজ', 'বোরকা', 'হিজাব'] },
+    { id: 'lungi', label: 'লুঙ্গি ও গামছা', icon: '🩳', keywords: ['লুঙ্গি', 'গামছা'] },
+    { id: 'kids', label: 'বাচ্চাদের পোশাক', icon: '👶', keywords: ['বেবি', 'বাচ্চা', 'ফ্রক'] }
   ],
   'cat-shoes': [
-    { id: 'gents', label: 'জেন্টস সু', icon: '👞', keywords: ['সু', 'লেদার'] },
-    { id: 'sneakers', label: 'স্নিকার্স', icon: '👟', keywords: ['স্নিকার্স', 'কেডস'] },
-    { id: 'sandals', label: 'স্যান্ডেল', icon: '🩴', keywords: ['স্যান্ডেল', 'বাটা', 'এপেক্স'] }
+    { id: 'gents', label: 'জেন্টস লেদার সু', icon: '👞', keywords: ['সু', 'লেদার', 'ফরমাল', 'জুতা'] },
+    { id: 'ladies', label: 'লেডিস স্যান্ডেল ও হিল', icon: '👡', keywords: ['লেডিস', 'হিল', 'স্যান্ডেল'] },
+    { id: 'sneakers', label: 'স্নিকার্স ও কেডস', icon: '👟', keywords: ['স্নিকার্স', 'কেডস', 'স্পোর্টস'] },
+    { id: 'sandals', label: 'স্লিপার ও চটি', icon: '🩴', keywords: ['স্যান্ডেল', 'বাটা', 'এপেক্স', 'স্পঞ্জ', 'স্লিপার'] },
+    { id: 'accessories', label: 'মোজা ও পলিশ', icon: '🧦', keywords: ['মোজা', 'পলিশ', 'ব্রাশ', 'ইনসোল'] }
+  ],
+  'cat-hardware': [
+    { id: 'sanitary', label: 'পাইপ ও স্যানিটারি', icon: '🚰', keywords: ['পাইপ', 'কল', 'বেসিন', 'ফিটিংস', 'স্যানিটারি'] },
+    { id: 'electric', label: 'ইলেকট্রিক ও লাইট', icon: '💡', keywords: ['লাইট', 'বাল্ব', 'তার', 'ক্যাবল', 'সুইচ', 'সকেট'] },
+    { id: 'tools', label: 'টুলস ও যন্ত্রপাতি', icon: '🔧', keywords: ['রেঞ্চ', 'প্লাস', 'ড্রিল', 'হাতুড়ি', 'স্ক্রু'] },
+    { id: 'paints', label: 'রং ও কেমিক্যাল', icon: '🎨', keywords: ['রং', 'পেইন্ট', 'আঠা', 'বার্নিশ', 'থিনার'] },
+    { id: 'hardware-misc', label: 'নাট-বোল্ট ও তালা', icon: '🔩', keywords: ['নাট', 'বোল্ট', 'পেরেক', 'তালা', 'কব্জা'] }
+  ],
+  'cat-mobile': [
+    { id: 'phones', label: 'মোবাইল ফোন', icon: '📱', keywords: ['স্মার্টফোন', 'ফোন', 'স্যামসাং', 'শাওমি', 'রিয়েলমি'] },
+    { id: 'chargers', label: 'চার্জার ও ক্যাবল', icon: '🔌', keywords: ['চার্জার', 'ক্যাবল', 'টাইপ-সি', 'এডাপ্টার'] },
+    { id: 'audio', label: 'হেডফোন ও ইয়ারবাডস', icon: '🎧', keywords: ['হেডফোন', 'ইয়ারবাডস', 'স্পিকার', 'ব্লুটুথ'] },
+    { id: 'covers', label: 'কভার ও গ্লাস', icon: '🛡️', keywords: ['কভার', 'গ্লাস', 'প্রোটেক্টর', 'কেস'] },
+    { id: 'power', label: 'ব্যাটারি ও পাওয়ার ব্যাংক', icon: '🔋', keywords: ['ব্যাটারি', 'পাওয়ার ব্যাংক', 'মেমোরি'] }
+  ],
+  'cat-restaurant': [
+    { id: 'biryani', label: 'বিরিয়ানি ও ভাত', icon: '🍗', keywords: ['বিরিয়ানি', 'পোলাও', 'ভাত', 'খিচুড়ি'] },
+    { id: 'curry', label: 'কারি ও মাংস/মাছ', icon: '🍛', keywords: ['চিকেন', 'বিফ', 'মাটন', 'মাছ', 'ভুনা'] },
+    { id: 'breads', label: 'নান ও পরোটা', icon: '🫓', keywords: ['নান', 'পরোটা', 'রুটি', 'গ্রিল', 'কাবাব'] },
+    { id: 'fastfood', label: 'বার্গার ও স্ন্যাক্স', icon: '🍔', keywords: ['বার্গার', 'ফ্রাই', 'রোল', 'স্যান্ডউইচ'] },
+    { id: 'beverages', label: 'ড্রিঙ্কস ও জুস', icon: '🥤', keywords: ['জুস', 'লাচ্ছি', 'ফালুদা', 'বোরহানি', 'ড্রিঙ্কস', 'চা'] }
+  ],
+  'cat-tea': [
+    { id: 'tea', label: 'চা ও কফি', icon: '☕', keywords: ['দুধ চা', 'রং চা', 'লেবু চা', 'কফি', 'মাল্টা চা'] },
+    { id: 'snacks', label: 'সিঙ্গাড়া ও সমুচা', icon: '🥟', keywords: ['সিঙ্গাড়া', 'সমুচা', 'পুরি', 'বিস্কুট', 'কেক'] },
+    { id: 'cigarettes', label: 'সিগারেট ও বিড়ি', icon: '🚬', keywords: ['বেনসন', 'ডার্বি', 'গোল্ডলিফ', 'সিগারেট'] },
+    { id: 'pan', label: 'পান ও সুপারি', icon: '🍃', keywords: ['পান', 'সুপারি', 'জর্দা', 'খিলি'] },
+    { id: 'cold-drinks', label: 'ড্রিঙ্কস ও পানি', icon: '🥤', keywords: ['পানি', 'কোক', 'স্প্রাইট', 'জুস'] }
+  ],
+  'cat-meat-fish': [
+    { id: 'meat', label: 'গরু ও খাসির মাংস', icon: '🥩', keywords: ['গরু', 'খাসি', 'মহিষ', 'কলিজা', 'মাংস'] },
+    { id: 'poultry', label: 'মুরগি ও হাঁস', icon: '🍗', keywords: ['ব্রয়লার', 'সোনালি', 'লেয়ার', 'দেশি', 'মুরগি', 'হাঁস'] },
+    { id: 'fish', label: 'মাছ ও চিংড়ি', icon: '🐟', keywords: ['রুই', 'কাতলা', 'তেলাপিয়া', 'চিংড়ি', 'ইলিশ', 'মাছ'] }
+  ],
+  'cat-bakery': [
+    { id: 'cakes', label: 'কেক ও পেস্ট্রি', icon: '🎂', keywords: ['কেক', 'পেস্ট্রি', 'পাউন্ড', 'বার্থডে'] },
+    { id: 'sweets', label: 'মিষ্টি ও রসগোল্লা', icon: '🧁', keywords: ['মিষ্টি', 'রসগোল্লা', 'সন্দেশ', 'চমচম', 'দই'] },
+    { id: 'breads', label: 'পাউরুটি ও বন', icon: '🍞', keywords: ['পাউরুটি', 'বন', 'টোস্ট', 'রুটি'] },
+    { id: 'biscuits', label: 'বিস্কুট ও চানাচুর', icon: '🍪', keywords: ['বিস্কুট', 'চানাচুর', 'নিমকি', 'প্যাটিস'] }
+  ],
+  'cat-furniture': [
+    { id: 'bedroom', label: 'খাট ও আলমিরা', icon: '🛏️', keywords: ['খাট', 'আলমিরা', 'ওয়ারড্রব', 'ড্রেসিং'] },
+    { id: 'living', label: 'সোফা ও সেন্টার টেবিল', icon: '🛋️', keywords: ['সোফা', 'টেবিল', 'ডিভান'] },
+    { id: 'dining', label: 'ডাইনিং ও চেয়ার', icon: '🪑', keywords: ['ডাইনিং', 'চেয়ার', 'টুল'] }
+  ],
+  'cat-stationery': [
+    { id: 'books', label: 'বই ও খাতা', icon: '📚', keywords: ['বই', 'খাতা', 'ডায়েরি', 'কাগজ'] },
+    { id: 'pens', label: 'কলম ও পেন্সিল', icon: '🖊️', keywords: ['কলম', 'পেন্সিল', 'মার্কার', 'ইরেজার'] },
+    { id: 'office', label: 'ফাইল ও স্ট্যাপলার', icon: '📁', keywords: ['ফাইল', 'স্ট্যাপলার', 'পিন', 'স্কেল', 'বক্স'] }
+  ],
+  'cat-cosmetics': [
+    { id: 'skincare', label: 'স্কিনকেয়ার ও ক্রিম', icon: '🧴', keywords: ['লোশন', 'ক্রিম', 'ফেসওয়াশ', 'জেল'] },
+    { id: 'makeup', label: 'মেকআপ ও লিপস্টিক', icon: '💄', keywords: ['লিপস্টিক', 'পাউডার', 'কাজল', 'নেইলপলিশ'] },
+    { id: 'haircare', label: 'শ্যাম্পু ও তেল', icon: '💆', keywords: ['শ্যাম্পু', 'তেল', 'কন্ডিশনার', 'হেয়ার'] },
+    { id: 'fragrance', label: 'পারফিউম ও স্প্রে', icon: '✨', keywords: ['পারফিউম', 'বডি স্প্রে', 'আতর'] }
   ]
 };
 
@@ -163,6 +226,8 @@ export default function PosPage() {
   const [quickAddExpiry, setQuickAddExpiry] = useState('');
   const [quickAddSize, setQuickAddSize] = useState('L');
   const [quickAddColor, setQuickAddColor] = useState('');
+  const [quickAddBrand, setQuickAddBrand] = useState('');
+  const [quickAddWarranty, setQuickAddWarranty] = useState('');
   const [quickAddUnit, setQuickAddUnit] = useState('পিস');
 
   // Running Tabs / চলতি আড্ডা খাতা state
@@ -477,8 +542,10 @@ export default function PosPage() {
       categoryId: industryId,
       genericName: industryId === 'cat-pharmacy' ? quickAddGeneric || null : null,
       expiryDate: industryId === 'cat-pharmacy' ? quickAddExpiry || null : null,
-      size: industryId === 'cat-clothing' ? quickAddSize || null : null,
-      color: industryId === 'cat-clothing' ? quickAddColor || null : null,
+      size: (industryId === 'cat-clothing' || industryId === 'cat-shoes') ? quickAddSize || null : null,
+      color: (industryId === 'cat-clothing' || industryId === 'cat-shoes') ? quickAddColor || null : null,
+      brand: (industryId === 'cat-mobile' || industryId === 'cat-pharmacy') ? quickAddBrand || null : null,
+      warranty: industryId === 'cat-mobile' ? quickAddWarranty || null : null,
       lowStockThreshold: 5,
       barcode: autoBarcode,
       imageEmoji: defaultEmoji
@@ -504,6 +571,8 @@ export default function PosPage() {
     setQuickAddExpiry('');
     setQuickAddSize('L');
     setQuickAddColor('');
+    setQuickAddBrand('');
+    setQuickAddWarranty('');
     setQuickAddUnit('পিস');
   };
 
@@ -964,8 +1033,10 @@ export default function PosPage() {
     msg += `রসিদ নং: ${rcpt.invoiceNo}\n`;
     msg += `তারিখ: ${rcpt.date}\n`;
     msg += `--------------------------\n`;
-    rcpt.items.forEach((it: any, idx: number) => {
-      msg += `${idx + 1}. ${it.product.banglaName || it.product.name} × ${it.quantity} = ৳${it.totalPrice}\n`;
+    (rcpt.items || []).forEach((it: any, idx: number) => {
+      const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'পণ্য';
+      const pPrice = it.totalPrice || ((it.unitPrice || it.sellingPrice || it.product?.sellingPrice || 0) * it.quantity);
+      msg += `${idx + 1}. ${pName} × ${it.quantity} = ৳${pPrice}\n`;
     });
     msg += `--------------------------\n`;
     msg += `মোট বিল: ৳${rcpt.totalAmount}\n`;
@@ -1104,7 +1175,7 @@ export default function PosPage() {
       return fastItems.some(fn => (p.banglaName || '').toLowerCase().includes(fn) || (p.name || '').toLowerCase().includes(fn));
     }
 
-    const subcats = INDUSTRY_SUBCATS[industryId] || INDUSTRY_SUBCATS['cat-grocery'] || [];
+    const subcats = INDUSTRY_SUBCATS[industryId] || [];
     const matchedSub = subcats.find(s => s.id === selectedCategory);
     if (matchedSub) {
       const combined = `${p.banglaName || ''} ${p.name || ''} ${p.genericName || ''}`.toLowerCase();
@@ -1185,7 +1256,7 @@ export default function PosPage() {
         </div>
 
         <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
-          মুখে বলুন: <em>&quot;চাল ১ কেজি ৬০, ডাল ১ কেজি ২০০, তেল ১৯০&quot;</em>
+          মুখে বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
         </div>
       </div>
 
@@ -1392,7 +1463,7 @@ export default function PosPage() {
         )}
 
         {/* Dynamic Industry Category Chips */}
-        {(INDUSTRY_SUBCATS[industryId] || INDUSTRY_SUBCATS['cat-grocery'] || []).map(cat => (
+        {(INDUSTRY_SUBCATS[industryId] || []).map(cat => (
           <button
             key={cat.id}
             type="button"
@@ -2358,7 +2429,12 @@ export default function PosPage() {
       )}
 
       {/* Checkout Modal with Cash Tendered & Change Return Calculator */}
-      {showCheckoutModal && (
+      {showCheckoutModal && (() => {
+        const subtotalCart = cart.reduce((acc, it) => acc + (it.totalPrice || 0), 0);
+        const finalPayable = Math.max(0, subtotalCart - (Number(discount) || 0));
+        const finalTotalCart = finalPayable;
+
+        return (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
@@ -2981,7 +3057,8 @@ export default function PosPage() {
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* 58mm / 80mm Thermal Receipt & A4 Invoice Modal */}
       {receipt && (
@@ -3030,12 +3107,15 @@ export default function PosPage() {
                     <span>মেনু আইটেম</span>
                     <span>পরিমাণ</span>
                   </div>
-                  {receipt.items.map((it: any, idx: number) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800', marginBottom: '4px' }}>
-                      <span>{it.product.banglaName}</span>
-                      <span className="num-font">× {it.quantity}</span>
-                    </div>
-                  ))}
+                  {(receipt.items || []).map((it: any, idx: number) => {
+                    const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'মেনু আইটেম';
+                    return (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '800', marginBottom: '4px' }}>
+                        <span>{pName}</span>
+                        <span className="num-font">× {it.quantity}</span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700' }}>
@@ -3101,15 +3181,21 @@ export default function PosPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {receipt.items.map((it: any, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: '700' }}>{it.product.banglaName || it.product.name}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{it.quantity} {it.product.unit || 'পিস'}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right' }} className="num-font">৳{it.unitPrice || it.product.sellingPrice}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800' }} className="num-font">৳{it.totalPrice}</td>
-                      </tr>
-                    ))}
+                    {(receipt.items || []).map((it: any, idx: number) => {
+                      const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'পণ্য';
+                      const pUnit = it.product?.unit || it.unit || 'পিস';
+                      const pUnitPrice = it.unitPrice || it.sellingPrice || it.product?.sellingPrice || 0;
+                      const pTotalPrice = it.totalPrice || (pUnitPrice * it.quantity);
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
+                          <td style={{ padding: '8px 10px', fontWeight: '700' }}>{pName}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>{it.quantity} {pUnit}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right' }} className="num-font">৳{pUnitPrice}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: '800' }} className="num-font">৳{pTotalPrice}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
 
@@ -3141,7 +3227,7 @@ export default function PosPage() {
                       <span className="num-font" style={{ color: '#059669' }}>৳{receipt.totalAmount}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontSize: '12px' }}>
-                      <span>পরিশোধিত ({receipt.paymentMethod.toUpperCase()}):</span>
+                      <span>পরিশোধিত ({(receipt.paymentMethod || 'cash').toUpperCase()}):</span>
                       <strong className="num-font">৳{receipt.paidAmount}</strong>
                     </div>
                     {receipt.dueAmount > 0 && (
@@ -3221,14 +3307,21 @@ export default function PosPage() {
                     <span>বিবরণ</span>
                     <span>পরিমাণ × দর = মোট</span>
                   </div>
-                  {receipt.items.map((it: any, idx: number) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <span>{it.product.banglaName}</span>
-                      <span className="num-font">
-                        {it.product.unit === 'হালি' ? `${Math.round(it.quantity * 4)}টা (${it.quantity} হালি)` : `${it.quantity} ${it.product.unit}`} × ৳{it.unitPrice || it.product.sellingPrice} = ৳{it.totalPrice}
-                      </span>
-                    </div>
-                  ))}
+                  {(receipt.items || []).map((it: any, idx: number) => {
+                    const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'পণ্য';
+                    const pUnit = it.product?.unit || it.unit || 'পিস';
+                    const pUnitPrice = it.unitPrice || it.sellingPrice || it.product?.sellingPrice || 0;
+                    const pTotalPrice = it.totalPrice || (pUnitPrice * it.quantity);
+                    const qtyDisplay = pUnit === 'হালি' ? `${Math.round(it.quantity * 4)}টা (${it.quantity} হালি)` : `${it.quantity} ${pUnit}`;
+                    return (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                        <span>{pName}</span>
+                        <span className="num-font">
+                          {qtyDisplay} × ৳{pUnitPrice} = ৳{pTotalPrice}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Totals */}
@@ -3239,7 +3332,7 @@ export default function PosPage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontWeight: '700' }}>
                     <span>নগদ গ্রহণ:</span>
-                    <span className="num-font">৳{receipt.paidAmount} ({receipt.paymentMethod.toUpperCase()})</span>
+                    <span className="num-font">৳{receipt.paidAmount} ({(receipt.paymentMethod || 'cash').toUpperCase()})</span>
                   </div>
                   {receipt.dueAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626', fontWeight: '700' }}>
@@ -3259,12 +3352,12 @@ export default function PosPage() {
                   <div style={{ textAlign: 'center', margin: '8px 0', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
-                        `${receipt.paymentMethod.toUpperCase()}:PAID?memo=${receipt.invoiceNo}&amount=${receipt.totalAmount}`
+                        `${(receipt.paymentMethod || 'cash').toUpperCase()}:PAID?memo=${receipt.invoiceNo}&amount=${receipt.totalAmount}`
                       )}`}
                       alt="Receipt QR"
                       style={{ width: '80px', height: '80px', display: 'block', margin: '0 auto 4px' }}
                     />
-                    <span style={{ fontSize: '10px', color: '#475569' }}>ডিজিটাল পেমেন্ট ভেরিফাইড ({receipt.paymentMethod.toUpperCase()})</span>
+                    <span style={{ fontSize: '10px', color: '#475569' }}>ডিজিটাল পেমেন্ট ভেরিফাইড ({(receipt.paymentMethod || 'cash').toUpperCase()})</span>
                   </div>
                 )}
 
@@ -3481,27 +3574,20 @@ export default function PosPage() {
                 </>
               )}
 
-              {/* Clothing Specific: Size & Color */}
-              {industryId === 'cat-clothing' && (
+              {/* Clothing & Shoes Specific: Size & Color */}
+              {(industryId === 'cat-clothing' || industryId === 'cat-shoes') && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
                       🏷️ সাইজ
                     </label>
-                    <select
+                    <input
+                      type="text"
+                      placeholder={industryId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
                       value={quickAddSize}
                       onChange={(e) => setQuickAddSize(e.target.value)}
                       style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    >
-                      <option value="S">S (স্মল)</option>
-                      <option value="M">M (মিডিয়াম)</option>
-                      <option value="L">L (লার্জ)</option>
-                      <option value="XL">XL (এক্সট্রা লার্জ)</option>
-                      <option value="XXL">XXL</option>
-                      <option value="30">30 ইঞ্চি</option>
-                      <option value="32">32 ইঞ্চি</option>
-                      <option value="34">34 ইঞ্চি</option>
-                    </select>
+                    />
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
@@ -3512,6 +3598,36 @@ export default function PosPage() {
                       placeholder="যেমন: সাদা, কালো"
                       value={quickAddColor}
                       onChange={(e) => setQuickAddColor(e.target.value)}
+                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile Specific: Brand & Warranty */}
+              {industryId === 'cat-mobile' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      🏷️ ব্র্যান্ড
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="যেমন: Samsung, Xiaomi"
+                      value={quickAddBrand}
+                      onChange={(e) => setQuickAddBrand(e.target.value)}
+                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                      🛡️ ওয়ারেন্টি
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="যেমন: ১ বছর"
+                      value={quickAddWarranty}
+                      onChange={(e) => setQuickAddWarranty(e.target.value)}
                       style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
                     />
                   </div>
@@ -3939,15 +4055,6 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* 🧾 58mm / 80mm ESC/POS Thermal Receipt Print Modal */}
-      {receipt && (
-        <ThermalReceipt
-          invoice={receipt}
-          tenant={tenant}
-          onClose={() => setReceipt(null)}
-        />
-      )}
-
       {/* 🎙️ Ultra Hands-Free Continuous Voice POS Calculator Modal */}
       {showVoiceCalculatorModal && (
         <VoicePOSCalculatorModal
@@ -3960,7 +4067,29 @@ export default function PosPage() {
           }}
           onCompleteSale={(saleData) => {
             setShowVoiceCalculatorModal(false);
-            setReceipt(saleData.order || saleData);
+            const indTheme = getIndustryTheme(tenant?.industryId);
+            const rawOrder = saleData.order || saleData;
+            const normalizedReceipt = {
+              shopName: tenant?.shopName || 'আমার দোকান',
+              phone: tenant?.phone || '',
+              location: tenant?.location || 'বাজার',
+              industryId: tenant?.industryId || 'cat-grocery',
+              industrySubtitle: indTheme.receiptSubtitle,
+              terms: indTheme.terms,
+              invoiceNo: saleData.invoiceNo || rawOrder.invoiceNo || ('INV-' + Date.now().toString().slice(-6)),
+              date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+              cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
+              items: (saleData.items && saleData.items.length > 0) ? saleData.items : (rawOrder.items || []),
+              subtotal: saleData.subtotal ?? rawOrder.subtotal ?? rawOrder.totalAmount ?? 0,
+              discount: saleData.discount ?? rawOrder.discount ?? 0,
+              totalAmount: saleData.totalAmount ?? rawOrder.totalAmount ?? 0,
+              paidAmount: saleData.paidAmount ?? rawOrder.paidAmount ?? 0,
+              dueAmount: saleData.dueAmount ?? rawOrder.dueAmount ?? 0,
+              paymentMethod: saleData.paymentMethod || rawOrder.paymentMethod || 'cash',
+              customerName: saleData.customerName || rawOrder.customerName || 'নগদ কাস্টমার',
+              customerPhone: saleData.customerPhone || rawOrder.customerPhone || '',
+            };
+            setReceipt(normalizedReceipt);
             loadData();
           }}
         />

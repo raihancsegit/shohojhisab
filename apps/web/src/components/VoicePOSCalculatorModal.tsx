@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
+import { getIndustryVoiceConfig } from '../lib/industryConfig';
 
 interface VoicePOSCalculatorModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function VoicePOSCalculatorModal({
 }: VoicePOSCalculatorModalProps) {
   const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled } = useAuth();
   const currentTenantId = tenant?.id;
+  const voiceConfig = getIndustryVoiceConfig(tenant?.industryId);
 
   const [items, setItems] = useState<ParsedVoiceItem[]>([]);
   const [discount, setDiscount] = useState<number>(0);
@@ -548,7 +550,7 @@ export default function VoicePOSCalculatorModal({
                 </span>
               </div>
               <p className="voice-header-subtitle" style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
-                মুখে বলুন: <em>&quot;চাল ২ কেজি ৬০, ডাল ১ কেজি ২০০, তেল ১৯০&quot;</em>
+                মুখে বলুন: <em>&quot;{voiceConfig.quickSaleBannerHint}&quot;</em>
               </p>
             </div>
           </div>
@@ -647,14 +649,7 @@ export default function VoicePOSCalculatorModal({
                 কাস্টমার যেসব জিনিস নিচ্ছে মুখে বলুন। মেমোতে অটোমেটিক সব হিসাব হয়ে যাবে।
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-                {[
-                  'চাল ২ কেজি ৬০, ডাল ১ কেজি ২০০, তেল ১৯০',
-                  'ডাল ২ কেজি ৫০ টাকা কেজি',
-                  'নাপা এক্সট্রা ২ পাতা ৩০ টাকা করে',
-                  'জিন্স প্যান্ট ১টা ৮০০ টাকা',
-                  '১ হালি ডিম ৪৮ টাকা',
-                  '২টা লাক্স সাবান ৬০ টাকা'
-                ].map((sample, idx) => (
+                {voiceConfig.quickSaleSuggestions.map((sample, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleProcessVoiceInput(sample)}

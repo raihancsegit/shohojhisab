@@ -393,35 +393,375 @@ export const INDUSTRY_UNITS: Record<string, Array<{ value: string; label: string
   ]
 };
 
+export const COMMON_UNITS = [
+  { value: 'পিস', label: 'পিস (Pcs)' },
+  { value: 'প্যাকেট', label: 'প্যাকেট (Packet)' },
+  { value: 'বক্স', label: 'বক্স (Box)' },
+  { value: 'কার্টন', label: 'কার্টন (Carton)' },
+  { value: 'ডজন', label: 'ডজন (Dozen)' },
+  { value: 'কেজি', label: 'কেজি (Kg)' },
+  { value: 'গ্রাম', label: 'গ্রাম (Gram)' },
+  { value: 'লিটার', label: 'লিটার (Liter)' },
+  { value: 'সেট', label: 'সেট (Set)' },
+];
+
 export function getIndustryUnits(industryId?: string): {
   primaryUnits: Array<{ value: string; label: string }>;
   categories: Array<{ id: string; name: string; icon: string; units: Array<{ value: string; label: string }> }>;
 } {
   const currentKey = industryId || 'cat-grocery';
-  const primaryUnits = INDUSTRY_UNITS[currentKey] || INDUSTRY_UNITS['cat-grocery'];
+  const primaryUnits = INDUSTRY_UNITS[currentKey] || INDUSTRY_UNITS['cat-grocery'] || [];
 
   const categories: Array<{ id: string; name: string; icon: string; units: Array<{ value: string; label: string }> }> = [];
 
-  // Add all categories, putting current category at top
+  // 1. Add current industry units as primary group
   const currentTheme = INDUSTRY_THEMES[currentKey] || { name: 'আপনার ব্যবসা', icon: '⭐' };
   categories.push({
     id: currentKey,
-    name: `⭐ ${currentTheme.name} (প্রস্তাবিত একক)`,
+    name: `${currentTheme.icon} ${currentTheme.name} (প্রস্তাবিত একক)`,
     icon: currentTheme.icon,
     units: primaryUnits
   });
 
-  Object.entries(INDUSTRY_UNITS).forEach(([catKey, units]) => {
-    if (catKey !== currentKey && INDUSTRY_THEMES[catKey]) {
-      categories.push({
-        id: catKey,
-        name: `${INDUSTRY_THEMES[catKey].icon} ${INDUSTRY_THEMES[catKey].name}`,
-        icon: INDUSTRY_THEMES[catKey].icon,
-        units
-      });
-    }
-  });
+  // 2. Add common/general units (excluding any already present in primaryUnits)
+  const existingValues = new Set(primaryUnits.map(u => u.value));
+  const generalUnits = COMMON_UNITS.filter(u => !existingValues.has(u.value));
+
+  if (generalUnits.length > 0) {
+    categories.push({
+      id: 'common-units',
+      name: '📦 সাধারণ / সার্বজনীন একক',
+      icon: '📦',
+      units: generalUnits
+    });
+  }
 
   return { primaryUnits, categories };
 }
+
+export interface IndustryVoiceConfig {
+  quickSaleBannerHint: string;
+  quickSaleSuggestions: string[];
+  stockInHint: string;
+  stockInSuggestions: string[];
+  productEntryHint: string;
+  assistantSuggestions: string[];
+  dueVoiceExample?: string;
+}
+
+export const INDUSTRY_VOICE_CONFIGS: Record<string, IndustryVoiceConfig> = {
+  'cat-pharmacy': {
+    quickSaleBannerHint: 'নাপা এক্সট্রা ২ পাতা ৬০, তুসকা সিরাপ ১ বোতল ৯৫',
+    quickSaleSuggestions: [
+      'নাপা এক্সট্রা ২ পাতা ৬০ টাকা',
+      'সেকলো ২০ মিগ্রা ১ পাতা ৭০ টাকা',
+      'তুসকা কফ সিরাপ ১ বোতল ৯৫ টাকা',
+      '১ প্যাকেট ওরস্যালাইন ৬ টাকা',
+      '২ পিস স্যাভলন ব্যান্ডেজ ৩০ টাকা',
+      'অ্যালাট্রোল ১০ মিগ্রা ১ পাতা ৪০ টাকা',
+      'সিভিত ২৫০mg ১ পাতা ২৫ টাকা',
+      'ফ্ল্যাজিল ৪০০ মিগ্রা ১ পাতা ৩৫ টাকা'
+    ],
+    stockInHint: 'নাপা এক্সট্রা ৫০ পাতা স্টক যোগ করো কেনা ২২',
+    stockInSuggestions: [
+      'নাপা এক্সট্রা ৫০ পাতা কেনা ২২',
+      'সেকলো ২০ মিগ্রা ৩০ পাতা কেনা ৬০',
+      'তুসকা সিরাপ ২০ বোতল কেনা ৮০',
+      'ওরস্যালাইন ১০০ প্যাকেট কেনা ৫'
+    ],
+    productEntryHint: 'প্যারাসিটামল ৫০ পাতা কেনা ২০ বিক্রয় ৩০',
+    assistantSuggestions: [
+      'কালাম ভাই ৫০০ টাকা বাকি নিল',
+      'রহিম ভাই ২০০ টাকা বাকি দিল',
+      'নাপা এক্সট্রার স্টক কত আছে?',
+      'আজকে কত ঔষধ বিক্রি হলো?',
+      'আজকে কত লাভ হলো?',
+      'সেকলোতে আরও ৫০ পাতা স্টক যোগ করো'
+    ]
+  },
+  'cat-clothing': {
+    quickSaleBannerHint: 'সুতি পাঞ্জাবি ১টা ৯৫০, ফরমাল শার্ট ১টা ৭৫০',
+    quickSaleSuggestions: [
+      'সুতি পাঞ্জাবি ১টা ৯৫০ টাকা',
+      'ফরমাল শার্ট ১টা ৭৫০ টাকা',
+      'জিন্স প্যান্ট ১টা ১১০০ টাকা',
+      'গোলগলা টি-শার্ট ২টা ৭০০ টাকা',
+      'সুতি লুঙ্গি ১টা ৪৫০ টাকা',
+      'কটন থ্রি-পিস ১টা ১৪৫০ টাকা'
+    ],
+    stockInHint: 'সুতি পাঞ্জাবি ২০টা স্টক যোগ করো কেনা ৭০০',
+    stockInSuggestions: [
+      'সুতি পাঞ্জাবি ২০টা কেনা ৭০০',
+      'জিন্স প্যান্ট ৩০টা কেনা ৮৫০',
+      'টি-শার্ট ৫০টা কেনা ২৫০'
+    ],
+    productEntryHint: 'সুতি পাঞ্জাবি ২০ পিস কেনা ৭০০ বিক্রয় ৯৫০',
+    assistantSuggestions: [
+      'কালাম ভাই ১০০০ টাকা বাকি নিল',
+      'রহিম ভাই ৫০০ টাকা বাকি দিল',
+      'পাঞ্জাবির স্টক কত আছে?',
+      'আজকে কত পোশাক বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-shoes': {
+    quickSaleBannerHint: 'লেদার সু ১ জোড়া ১২৫০, বাটা স্যান্ডেল ১ জোড়া ২৫০',
+    quickSaleSuggestions: [
+      'জেন্টস লেদার সু ১ জোড়া ১২৫০ টাকা',
+      'ক্যাজুয়াল স্নিকার্স ১ জোড়া ৯৫০ টাকা',
+      'লেডিস হিল স্যান্ডেল ১ জোড়া ৭৫০ টাকা',
+      'বাটার স্পঞ্জের স্যান্ডেল ১ জোড়া ২৫০ টাকা',
+      'সুতি মোজা ২ জোড়া ১২০ টাকা',
+      'জুতার পোলিশ ১ সেট ৯০ টাকা'
+    ],
+    stockInHint: 'লেদার সু ১০ জোড়া স্টক যোগ করো কেনা ৯০০',
+    stockInSuggestions: [
+      'লেদার সু ১০ জোড়া কেনা ৯০০',
+      'স্নিকার্স ১৫ জোড়া কেনা ৭০০',
+      'স্যান্ডেল ২০ জোড়া কেনা ১৮০'
+    ],
+    productEntryHint: 'জেন্টস লেদার সু ১০ জোড়া কেনা ৯০০ বিক্রয় ১২৫০',
+    assistantSuggestions: [
+      'কালাম ভাই ৫০০ টাকা বাকি নিল',
+      'আজকে কত জোড়া জুতা বিক্রি হলো?',
+      'লেদার সুর স্টক কত আছে?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-hardware': {
+    quickSaleBannerHint: 'পাইপ ২০ ফুট ৯০০, পানির কল ১টা ৩২০, এলইডি বাল্ব ১টা ১৫০',
+    quickSaleSuggestions: [
+      'পিপিআর পাইপ ২০ ফুট ৯০০ টাকা',
+      'পিতলের পানির কল ১টা ৩২০ টাকা',
+      'এলইডি বাল্ব ১২W ২টা ৩০০ টাকা',
+      'মাল্টিপ্লাগ ১টা ২৮০ টাকা',
+      'কালো কসটেপ ২ রোল ৫০ টাকা',
+      'সিমেন্ট ১ ব্যাগ ৫২০ টাকা'
+    ],
+    stockInHint: 'এলইডি বাল্ব ৫০টা স্টক যোগ করো কেনা ১১০',
+    stockInSuggestions: [
+      'এলইডি বাল্ব ৫০ পিস কেনা ১১০',
+      'পিপিআর পাইপ ১০০ ফুট কেনা ৩৫',
+      'পানির কল ২০ পিস কেনা ২৪০'
+    ],
+    productEntryHint: 'এলইডি বাল্ব ৫০ পিস কেনা ১১০ বিক্রয় ১৫০',
+    assistantSuggestions: [
+      'মিস্ত্রি রহিম ভাই ২০০০ টাকা বাকি নিল',
+      'আজকে কত মালামাল বিক্রি হলো?',
+      'বাল্বের স্টক কত আছে?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-mobile': {
+    quickSaleBannerHint: 'ফাস্ট চার্জার ১টা ৫৫০, টাইপ-সি ক্যাবল ১টা ১৫০',
+    quickSaleSuggestions: [
+      'স্ক্রিন গ্লাস ১টা ১০০ টাকা',
+      'টাইপ-সি ক্যাবল ১টা ১৫০ টাকা',
+      '২০W ফাস্ট চার্জার ১টা ৫৫০ টাকা',
+      'বেসাস হেডফোন ১টা ২২০ টাকা',
+      'ব্যাক কভার ১টা ১২০ টাকা',
+      'মেমোরি কার্ড ৩২GB ১টা ৪২০ টাকা'
+    ],
+    stockInHint: 'টাইপ-সি ক্যাবল ৩০টা স্টক যোগ করো কেনা ৯০',
+    stockInSuggestions: [
+      'টাইপ-সি ক্যাবল ৩০ পিস কেনা ৯০',
+      'চার্জার ২০ পিস কেনা ৩৫০',
+      'গ্লাস ৫০ পিস কেনা ৪০'
+    ],
+    productEntryHint: 'ফাস্ট চার্জার ২০ পিস কেনা ৩৫০ বিক্রয় ৫৫০',
+    assistantSuggestions: [
+      'কালাম ভাই ৫০০ টাকা বাকি নিল',
+      'চার্জারের স্টক কত আছে?',
+      'আজকে কত গ্যাজেট বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-restaurant': {
+    quickSaleBannerHint: 'চিকেন বিরিয়ানি ২ প্লেট ৩৬০, বোরহানি ২ বোতল ১৬০',
+    quickSaleSuggestions: [
+      'চিকেন দম বিরিয়ানি ২ প্লেট ৩৬০ টাকা',
+      'বিফ ভুনা খিচুড়ি ১ প্লেট ২২০ টাকা',
+      'মোগলাই পরোটা ২টা ১২০ টাকা',
+      'চিকেন গ্রিল ও নান ১ সেট ১৪০ টাকা',
+      'স্পেশাল ফালুদা ১ গ্লাস ১১০ টাকা',
+      'বোরহানি ৫০০ml ১ বোতল ৮০ টাকা'
+    ],
+    stockInHint: 'চাল ৫০ কেজি স্টক যোগ করো কেনা ৬৫',
+    stockInSuggestions: [
+      'পোলাও চাল ৫০ কেজি কেনা ১০০',
+      'মুরগি ২০ কেজি কেনা ১৯০'
+    ],
+    productEntryHint: 'চিকেন বিরিয়ানি ২০ প্লেট কেনা ১২০ বিক্রয় ১৮০',
+    assistantSuggestions: [
+      'আজকে মোট কত বিক্রি হলো?',
+      'আজকে কত লাভ হলো?',
+      'বিরিয়ানি কত প্লেট বিক্রি হলো?'
+    ]
+  },
+  'cat-tea': {
+    quickSaleBannerHint: 'দুধ চা ৪ কাপ ৬০, সিঙ্গাড়া ৪টা ৪০, বেনসন ২ শলা ৩০',
+    quickSaleSuggestions: [
+      'স্পেশাল দুধ চা ৪ কাপ ৬০ টাকা',
+      'লেবু রং চা ২ কাপ ২০ টাকা',
+      'গরম সিঙ্গাড়া ৪টা ৪০ টাকা',
+      'বেনসন সিগারেট ২ শলা ৩০ টাকা',
+      'মিষ্টি পান ২ খিলি ২০ টাকা',
+      'টোস্ট বিস্কুট ৪টা ৪০ টাকা'
+    ],
+    stockInHint: 'বেনসন ১ প্যাকেট স্টক যোগ করো কেনা ২৭০',
+    stockInSuggestions: [
+      'বেনসন ৫ প্যাকেট কেনা ২৭০',
+      'চা পাতা ২ কেজি কেনা ৪৫০',
+      'চিনি ৫ কেজি কেনা ১৩০'
+    ],
+    productEntryHint: 'দুধ চা ৫০ কাপ কেনা ৮ বিক্রয় ১৫',
+    assistantSuggestions: [
+      'আজকে মোট কত চা বিক্রি হলো?',
+      'আজকে কত বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-meat-fish': {
+    quickSaleBannerHint: 'গরুর মাংস ১ কেজি ৭৫০, ব্রয়লার মুরগি ২ কেজি ৪০০',
+    quickSaleSuggestions: [
+      'গরুর মাংস ১ কেজি ৭৫০ টাকা',
+      'খাসির মাংস ১ কেজি ১১০০ টাকা',
+      'ব্রয়লার মুরগি ২ কেজি ৪০০ টাকা',
+      'দেশি মুরগি ১টা ৪৫০ টাকা',
+      'রুই মাছ ২ কেজি ৬০০ টাকা',
+      'চিংড়ি মাছ ৫০০ গ্রাম ৪৫০ টাকা'
+    ],
+    stockInHint: 'গরুর মাংস ৫০ কেজি স্টক যোগ করো কেনা ৬৫০',
+    stockInSuggestions: [
+      'গরুর মাংস ৫০ কেজি কেনা ৬৫০',
+      'মুরগি ৪০ কেজি কেনা ১৭০',
+      'রুই মাছ ৩০ কেজি কেনা ২২০'
+    ],
+    productEntryHint: 'গরুর মাংস ৫০ কেজি কেনা ৬৫০ বিক্রয় ৭৫০',
+    assistantSuggestions: [
+      'আজকে কত কেজি মাংস বিক্রি হলো?',
+      'আজকে কত বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-bakery': {
+    quickSaleBannerHint: 'ভ্যানিলা কেক ১ পাউন্ড ৪৫০, রসগোল্লা ১ কেজি ৩২০',
+    quickSaleSuggestions: [
+      'ভ্যানিলা কেক ১ পাউন্ড ৪৫০ টাকা',
+      'স্পেশাল রসগোল্লা ১ কেজি ৩২০ টাকা',
+      'চকলেট পেস্ট্রি ২টা ১৬০ টাকা',
+      'স্পেশাল পাউরুটি ১টা ৬০ টাকা',
+      'বাটার বনরুটি ৪টা ৮০ টাকা',
+      'ঘিয়ে ভাজা নিমকি ৫০০ গ্রাম ১৫০ টাকা'
+    ],
+    stockInHint: 'পাউরুটি ৩০টা স্টক যোগ করো কেনা ৪৫',
+    stockInSuggestions: [
+      'পাউরুটি ৩০ পিস কেনা ৪৫',
+      'কেক ১০ পাউন্ড কেনা ৩০০'
+    ],
+    productEntryHint: 'ভ্যানিলা কেক ১০ পাউন্ড কেনা ৩০০ বিক্রয় ৪৫০',
+    assistantSuggestions: [
+      'আজকে কত টাকার মিষ্টি বিক্রি হলো?',
+      'আজকে কত বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-furniture': {
+    quickSaleBannerHint: 'সেগুন কাঠের খাট ১টা ৩৫০০০, ডাইনিং টেবিল ১টা ২২০০০',
+    quickSaleSuggestions: [
+      'সেগুন কাঠের খাট ১টা ৩৫০০০ টাকা',
+      'ডাইনিং টেবিল সেট ১টা ২২০০০ টাকা',
+      '৪ পাল্লার আলমিরা ১টা ২৮০০০ টাকা',
+      'সোফা সেট ১টা ৪৫০০০ টাকা',
+      'অফিস রিভলভিং চেয়ার ১টা ৪৫০০ টাকা'
+    ],
+    stockInHint: 'অফিস চেয়ার ৫টা স্টক যোগ করো কেনা ৩২০০',
+    stockInSuggestions: [
+      'অফিস চেয়ার ৫ পিস কেনা ৩২০০',
+      'ডাইনিং সেট ২টা কেনা ১৫০০০'
+    ],
+    productEntryHint: 'অফিস চেয়ার ৫ পিস কেনা ৩২০০ বিক্রয় ৪৫০০',
+    assistantSuggestions: [
+      'কালাম ভাই ১০০০০ টাকা বাকি দিল',
+      'আজকে কত ফার্নিচার বিক্রি হলো?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-stationery': {
+    quickSaleBannerHint: 'কাগজ ১ রিম ৪০০, জেল পেন ১ ডজন ১২০',
+    quickSaleSuggestions: [
+      'এ-ফোর সাইজ কাগজ ১ রিম ৪০০ টাকা',
+      'ম্যাটাদোর জেল পেন ১ ডজন ১২০ টাকা',
+      'ক্লাস নোটবুক খাতা ৩টা ১৮০ টাকা',
+      'জ্যামিতি বক্স ১টা ১৪০ টাকা',
+      'কালার পেন্সিল সেট ১টা ১২০ টাকা'
+    ],
+    stockInHint: 'কাগজ ১০ রিম স্টক যোগ করো কেনা ৩২০',
+    stockInSuggestions: [
+      'কাগজ ১০ রিম কেনা ৩২০',
+      'কলম ২০ ডজন কেনা ৮০'
+    ],
+    productEntryHint: 'এ-ফোর কাগজ ১০ রিম কেনা ৩২০ বিক্রয় ৪০০',
+    assistantSuggestions: [
+      'আজকে কত বই-খাতা বিক্রি হলো?',
+      'কাগজের স্টক কত আছে?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-cosmetics': {
+    quickSaleBannerHint: 'নিভিয়া বডি লোশন ১ বোতল ৩৫০, ফেসওয়াশ ১ টিউব ১৯০',
+    quickSaleSuggestions: [
+      'নিভিয়া বডি লোশন ১ বোতল ৩৫০ টাকা',
+      'হিমালয়া নিম ফেসওয়াশ ১ টিউব ১৯০ টাকা',
+      'ম্যাট লিপস্টিক ১টা ২৬০ টাকা',
+      'সানসিল্ক শ্যাম্পু ১ বোতল ২২০ টাকা',
+      'নেইলপলিশ ২টা ১৬০ টাকা',
+      'পারফিউম ১ বোতল ৫৫০ টাকা'
+    ],
+    stockInHint: 'বডি লোশন ২০ বোতল স্টক যোগ করো কেনা ২৭০',
+    stockInSuggestions: [
+      'বডি লোশন ২০ বোতল কেনা ২৭০',
+      'ফেসওয়াশ ৩০ টিউব কেনা ১৪০'
+    ],
+    productEntryHint: 'বডি লোশন ২০ বোতল কেনা ২৭০ বিক্রয় ৩৫০',
+    assistantSuggestions: [
+      'আজকে কত কসমেটিকস বিক্রি হলো?',
+      'লোশনের স্টক কত আছে?',
+      'আজকে কত লাভ হলো?'
+    ]
+  },
+  'cat-grocery': {
+    quickSaleBannerHint: 'চাল ২ কেজি ৬০, ডাল ১ কেজি ১৪০, তেল ১৮০',
+    quickSaleSuggestions: [
+      'চাল ২ কেজি ৬০ টাকা',
+      'ডাল ১ কেজি ১৪০ টাকা',
+      'সয়াবিন তেল ১ লিটার ১৮০ টাকা',
+      'চিনি ১ কেজি ১৪০ টাকা',
+      '১ হালি ডিম ৪৮ টাকা',
+      '২টা লাক্স সাবান ১২০ টাকা'
+    ],
+    stockInHint: 'চিনিতে ৫০ কেজি স্টক যোগ করো কেনা ১২০',
+    stockInSuggestions: [
+      'চিনি ৫০ কেজি কেনা ১২০',
+      'সয়াবিন তেল ৩০ লিটার কেনা ১৫৫',
+      'মিনিকেট চাল ১০০ কেজি কেনা ৫৮'
+    ],
+    productEntryHint: 'মিনিকেট চাল ৫০ কেজি কেনা ৫৮ বিক্রয় ৭০',
+    assistantSuggestions: [
+      'কালাম ভাই ৫০০ টাকা বাকি নিল',
+      'রহিম ভাই ২০০ টাকা বাকি দিল',
+      'চিনি ২ কেজি, ডাল ১ কেজি',
+      'আজকে কত বিক্রি হলো?',
+      'আজকে কত লাভ হলো?',
+      'তীর তেলের স্টক কত আছে?'
+    ]
+  }
+};
+
+export function getIndustryVoiceConfig(industryId?: string): IndustryVoiceConfig {
+  const key = industryId || 'cat-grocery';
+  return INDUSTRY_VOICE_CONFIGS[key] || INDUSTRY_VOICE_CONFIGS['cat-grocery'];
+}
+
+
 

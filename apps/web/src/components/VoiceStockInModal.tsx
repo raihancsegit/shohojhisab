@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceStockIn, VoiceStockInResult } from '../lib/voicePOSParser';
+import { getIndustryVoiceConfig } from '../lib/industryConfig';
 
 interface VoiceStockInModalProps {
   isOpen: boolean;
@@ -18,13 +19,14 @@ export default function VoiceStockInModal({
 }: VoiceStockInModalProps) {
   const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled } = useAuth();
   const currentTenantId = tenant?.id || 'tenant-1';
+  const voiceConfig = getIndustryVoiceConfig(tenant?.industryId);
 
   const [isListening, setIsListening] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [parsedStock, setParsedStock] = useState<VoiceStockInResult | null>(null);
-  const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন: যেমন "নাপা এক্সট্রা ৫০ পাতা স্টক যোগ করো কেনা ২২"');
+  const [lastActionMessage, setLastActionMessage] = useState<string>(`মাইক চালু আছে। সরাসরি মুখে বলুন: যেমন "${voiceConfig.stockInHint}"`);
 
   const recognitionRef = useRef<any>(null);
   const isComponentMounted = useRef<boolean>(true);
@@ -538,9 +540,30 @@ export default function VoiceStockInModal({
               <p style={{ fontWeight: '800', fontSize: '14px', margin: '0 0 6px 0', color: '#334155' }}>
                 কোনো পণ্য ও চালানের পরিমাণ মুখে বলুন অথবা উপরের বাটনে ক্লিক করুন
               </p>
-              <p style={{ fontSize: '12px', margin: 0, color: '#94a3b8' }}>
+              <p style={{ fontSize: '12px', margin: '0 0 12px', color: '#94a3b8' }}>
                 AI আপনার কথ্য কথার ভিত্তিতে ক্যাটালগের সঠিক পণ্য খুঁজে নিয়ে বর্তমান স্টকের সাথে যোগ করবে
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                {voiceConfig.stockInSuggestions.map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleProcessVoiceInput(sample)}
+                    style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📦 &quot;{sample}&quot;
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

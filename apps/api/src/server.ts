@@ -4142,20 +4142,51 @@ fastify.post('/api/voice-action', async (request, reply) => {
         customer.total_due = newDue;
       }
 
+      // Check if specific items were mentioned in voice command
+      let spokenItemsSummary = rawText
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি)/gi, '')
+        .replace(/(ভাইয়ের|ভাইকে|ভাইরে|ভাই|চাচার|চাচাকে|চাচারে|চাচা|মামার|মামা)/gi, '')
+        .replace(new RegExp(cleanName, 'gi'), '')
+        .trim();
+
       // Insert Due Sale Record
       const saleId = 'sale-' + uuidv4().slice(0, 8);
-      const invoiceNo = 'INV-' + Date.now().toString().slice(-4);
+      const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
+      const note = spokenItemsSummary || 'ভয়েস বাকি এন্ট্রি';
+      
       db.prepare(`
-        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, 'ভয়েস এআই', now);
+        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
 
-      const speech = `${customer.name} এর বাকি খাতায় ${amount} টাকা লেখা হয়েছে। মোট বকেয়া হলো ${customer.total_due} টাকা।`;
+      // Try matching products in inventory to deduct stock and record itemized sale_item
+      const matchedProd = db.prepare(`
+        SELECT * FROM products WHERE tenant_id = ? AND (
+          bangla_name LIKE ? OR name LIKE ? OR ? LIKE '%' || bangla_name || '%'
+        ) LIMIT 1
+      `).get(tenantId, `%${spokenItemsSummary}%`, `%${spokenItemsSummary}%`, rawText) as any;
+
+      const itemId = 'sitem-' + uuidv4().slice(0, 8);
+      if (matchedProd) {
+        db.prepare('UPDATE products SET stock = MAX(0, stock - 1) WHERE id = ?').run(matchedProd.id);
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, matchedProd.bangla_name || matchedProd.name, 1, amount, amount);
+      } else {
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, note || 'বাকি পণ্য সামগ্রী', 1, amount, amount);
+      }
+
+      const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা (${note}) লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
       return {
         success: true,
         action: 'due_given',
         speech,
-        data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo }
+        data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo, note }
       };
     }
   }
@@ -4188,11 +4219,17 @@ fastify.post('/api/voice-action', async (request, reply) => {
         const saleId = 'sale-' + uuidv4().slice(0, 8);
         const invoiceNo = 'PAY-' + Date.now().toString().slice(-4);
         db.prepare(`
-          INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'cash', customer.id, customer.name, 'ভয়েস এআই', now);
+          INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
 
-        const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বাকি ${newDue} টাকা।`;
+        const itemId = 'sitem-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, 'নগদ বাকি আদায় জমা', 1, amount, amount);
+
+        const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
         return {
           success: true,
           action: 'due_paid',
@@ -4200,7 +4237,7 @@ fastify.post('/api/voice-action', async (request, reply) => {
           data: { customerName: customer.name, paidAmount: amount, remainingDue: newDue }
         };
       } else {
-        const speech = `ক্যাশ বাক্সে ${amount} টাকা জমা রেকর্ড করা হয়েছে।`;
+        const speech = `ক্যাশ বাক্সে ৳${amount} টাকা জমা রেকর্ড করা হয়েছে।`;
         return { success: true, action: 'due_paid', speech, data: { paidAmount: amount } };
       }
     }

@@ -143,13 +143,17 @@ export default function ThermalReceipt({ invoice, tenant, onClose }: ThermalRece
               </tr>
             </thead>
             <tbody>
-              {(invoice?.items || []).map((item: any, i: number) => (
-                <tr key={i} style={{ borderBottom: '0.5px dotted #ccc' }}>
-                  <td style={{ padding: '3px 0', fontWeight: '600' }}>{item.productName || item.name}</td>
-                  <td style={{ padding: '3px 0', textAlign: 'center' }}>{item.quantity}</td>
-                  <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '700' }}>৳{item.totalPrice || (item.sellingPrice * item.quantity)}</td>
-                </tr>
-              ))}
+              {(invoice?.items || []).map((item: any, i: number) => {
+                const itemName = item.product?.banglaName || item.product?.name || item.productName || item.banglaName || item.name || 'পণ্য';
+                const itemPrice = item.totalPrice || ((item.unitPrice || item.sellingPrice || item.product?.sellingPrice || 0) * item.quantity);
+                return (
+                  <tr key={i} style={{ borderBottom: '0.5px dotted #ccc' }}>
+                    <td style={{ padding: '3px 0', fontWeight: '600' }}>{itemName}</td>
+                    <td style={{ padding: '3px 0', textAlign: 'center' }}>{item.quantity}</td>
+                    <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '700' }}>৳{itemPrice}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 

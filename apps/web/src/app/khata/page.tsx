@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import { exportToCSV } from '../../lib/exportUtils';
+import VoiceKhataModal from '../../components/VoiceKhataModal';
 
 export default function KhataPage() {
   const { tenant, speakAnnouncement, triggerHaptic } = useAuth();
@@ -40,6 +41,11 @@ export default function KhataPage() {
   // Detailed Due Ledger History Modal state
   const [selectedLedger, setSelectedLedger] = useState<any | null>(null);
   const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [cardHistoryData, setCardHistoryData] = useState<Record<string, any>>({});
+  const [cardHistoryOpen, setCardHistoryOpen] = useState<Record<string, boolean>>({});
+
+  // Dedicated Voice Khata Modal State
+  const [showVoiceKhataModal, setShowVoiceKhataModal] = useState(false);
 
   // Promise to Pay Date Modal
   const [showPromiseModal, setShowPromiseModal] = useState<any | null>(null);
@@ -184,6 +190,64 @@ export default function KhataPage() {
     } finally {
       setLedgerLoading(false);
     }
+  };
+
+  const toggleInCardHistory = async (customer: any) => {
+    const custId = customer.id;
+    triggerHaptic('light');
+    if (cardHistoryOpen[custId]) {
+      setCardHistoryOpen(prev => ({ ...prev, [custId]: false }));
+      return;
+    }
+
+    setCardHistoryOpen(prev => ({ ...prev, [custId]: true }));
+    if (!cardHistoryData[custId]) {
+      try {
+        const res = await fetch(`/api/customers/${custId}/ledger`);
+        if (res.ok) {
+          const data = await res.json();
+          setCardHistoryData(prev => ({ ...prev, [custId]: data.ledger || [] }));
+        }
+      } catch (e) {}
+    }
+  };
+
+  // Group ledger entries by Date (e.g. ৭ সেপ্টেম্বর ২০২৬, ৪ সেপ্টেম্বর ২০২৬)
+  const groupLedgerByDate = (ledger: any[]) => {
+    const groups: { [date: string]: any[] } = {};
+    (ledger || []).forEach(entry => {
+      const d = entry.date || 'পূর্বে';
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(entry);
+    });
+    return groups;
+  };
+
+  // Send a specific transaction memo to WhatsApp
+  const sendTransactionWhatsApp = (customer: any, entry: any) => {
+    const cleanPhone = customer?.phone ? customer.phone.replace(/[^0-9]/g, '') : '';
+    const isPay = entry.isPayment || entry.paymentMethod === 'due_payment';
+    const itemsList = entry.items && entry.items.length > 0 
+      ? entry.items.map((it: any) => `• ${it.name} (${it.quantity}টি × ৳${it.price || it.unitPrice || 0}) = ৳${it.total}`).join('\n')
+      : (entry.note || 'বাকি পণ্য সামগ্রী');
+
+    let msg = `*${tenant?.shopName || 'আমাদের দোকান'}*\n`;
+    msg += `তারিখ: ${entry.date} (${entry.time})\n`;
+    msg += `মেমো নং: #${entry.invoiceNo}\n`;
+    msg += `--------------------------\n`;
+    if (isPay) {
+      msg += `🟢 জমা গ্রহণ: ৳${entry.paidAmount} টাকা\n`;
+      msg += `বিবরণ: ${entry.note || 'বাকি আদায় জমা'}\n`;
+    } else {
+      msg += `🔴 বাকি নেওয়া পণ্যের ফর্দ:\n${itemsList}\n`;
+      msg += `মেমো মোট: ৳${entry.totalAmount} | জমা: ৳${entry.paidAmount}\n`;
+      msg += `যোগ হওয়া বাকি: ৳${entry.dueAmount} টাকা\n`;
+    }
+    msg += `--------------------------\n`;
+    msg += `বর্তমান সর্বমোট বকেয়া: ৳${Number(customer.totalDue || customer.total_due || 0).toLocaleString('en-US')} টাকা\n`;
+    msg += `ধন্যবাদ! 🛍️`;
+
+    window.open(`https://wa.me/88${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleSavePromiseDate = async (e: React.FormEvent) => {
@@ -383,13 +447,13 @@ export default function KhataPage() {
       <div
         onClick={() => {
           triggerHaptic('medium');
-          window.dispatchEvent(new CustomEvent('trigger-voice-assistant'));
+          setShowVoiceKhataModal(true);
         }}
         style={{
           background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
           border: '1.5px solid #fca5a5',
           borderRadius: '14px',
-          padding: '10px 12px',
+          padding: '10px 14px',
           marginBottom: '14px',
           display: 'flex',
           alignItems: 'center',
@@ -544,7 +608,7 @@ export default function KhataPage() {
         />
         <button
           type="button"
-          onClick={() => startVoiceInputForField(setSearch, false)}
+          onClick={() => setShowVoiceKhataModal(true)}
           style={{
             position: 'absolute',
             right: '22px',
@@ -560,7 +624,7 @@ export default function KhataPage() {
             display: 'grid',
             placeItems: 'center'
           }}
-          title="মুখে বলে কাস্টমার খুঁজুন"
+          title="মুখে বলে বাকি এন্ট্রি বা কাস্টমার খুঁজুন"
         >
           🎙️
         </button>
@@ -661,7 +725,7 @@ export default function KhataPage() {
                     <span style={{ fontSize: '16px' }}>🛍️</span>
                     <div>
                       <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
-                        কিসের বাকি / নেওয়া পণ্যের ফর্দ:
+                        সর্বশেষ বাকি পণ্য / ফর্দ:
                       </div>
                       <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#1e293b', marginTop: '1px' }}>
                         {c.lastItemsSummary || 'পূর্বের বাকি খাতা'}
@@ -674,6 +738,61 @@ export default function KhataPage() {
                     <span><strong>তারিখ:</strong> {c.lastDate || 'পূর্বের হিসাব'} {c.lastInvoiceNo ? `(#${c.lastInvoiceNo})` : ''}</span>
                   </div>
                 </div>
+
+                {/* In-Card Expandable Date-wise History Preview */}
+                {cardHistoryOpen[c.id] && (
+                  <div style={{
+                    background: '#f1f5f9',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    marginTop: '2px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
+                        📋 {c.name} এর বিগত ফর্দসমূহ (তারিখ অনুযায়ী):
+                      </span>
+                      <button
+                        onClick={() => loadCustomerLedger(c)}
+                        style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        ফুল খতিয়ান ➔
+                      </button>
+                    </div>
+
+                    {cardHistoryData[c.id] && cardHistoryData[c.id].length > 0 ? (
+                      <div style={{ display: 'grid', gap: '8px' }}>
+                        {cardHistoryData[c.id].slice(0, 4).map((hEntry: any) => {
+                          const isPay = hEntry.isPayment || hEntry.paymentMethod === 'due_payment';
+                          return (
+                            <div key={hEntry.id} style={{ background: '#fff', borderRadius: '8px', padding: '8px 10px', border: isPay ? '1px solid #a7f3d0' : '1px solid #e2e8f0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', marginBottom: '3px' }}>
+                                <span style={{ fontWeight: '800', color: isPay ? '#059669' : '#b45309' }}>
+                                  {isPay ? '🟢 জমা পরিশোধ' : `🔴 বাকি ক্রয় (#${hEntry.invoiceNo})`}
+                                </span>
+                                <span style={{ color: '#64748b' }}>📅 {hEntry.date} ({hEntry.time})</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: '700' }}>
+                                  {hEntry.items && hEntry.items.length > 0 
+                                    ? hEntry.items.map((it: any) => `${it.name} (${it.quantity}টি)`).join(', ')
+                                    : (hEntry.note || 'বাকি এন্ট্রি')}
+                                </span>
+                                <strong className="num-font" style={{ fontSize: '13px', color: isPay ? '#059669' : '#dc2626' }}>
+                                  {isPay ? `-৳${hEntry.paidAmount}` : `+৳${hEntry.dueAmount}`}
+                                </strong>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '11.5px', color: '#64748b', textAlign: 'center', padding: '10px' }}>
+                        ফর্দ লোড হচ্ছে...
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Bottom Row: Comprehensive Action Buttons Toolbar */}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', paddingTop: '4px' }}>
@@ -751,34 +870,10 @@ export default function KhataPage() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      setShowPromiseModal(c);
-                      setPromiseDateInput(c.promiseDate || c.promise_date || '');
-                      setPromiseNotesInput(c.address || '');
-                    }}
+                    onClick={() => toggleInCardHistory(c)}
                     style={{
-                      background: '#f8fafc',
-                      color: '#475569',
-                      border: '1px solid #cbd5e1',
-                      padding: '6px 9px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px'
-                    }}
-                    title="টাকা পরিশোধের প্রতিশ্রুত তারিখ সেট করুন"
-                  >
-                    <span>📅</span> তারিখ
-                  </button>
-
-                  <button
-                    onClick={() => loadCustomerLedger(c)}
-                    style={{
-                      background: '#f8fafc',
-                      color: '#334155',
+                      background: cardHistoryOpen[c.id] ? '#0f172a' : '#f8fafc',
+                      color: cardHistoryOpen[c.id] ? '#fff' : '#334155',
                       border: '1px solid #cbd5e1',
                       padding: '6px 10px',
                       borderRadius: '9px',
@@ -789,18 +884,38 @@ export default function KhataPage() {
                       alignItems: 'center',
                       gap: '4px'
                     }}
-                    title="কখন কোন তারিখে কি কি পণ্য নিয়েছে তার বিস্তারিত ফর্দ দেখুন"
+                    title="তারিখ অনুযায়ী কি কি নিয়েছে দেখুন"
                   >
-                    <span>📜</span> ফর্দ ও সময়
+                    <span>📋</span> {cardHistoryOpen[c.id] ? 'ফর্দ বন্ধ' : 'ফর্দ দেখুন'}
+                  </button>
+
+                  <button
+                    onClick={() => loadCustomerLedger(c)}
+                    style={{
+                      background: '#eff6ff',
+                      color: '#1e40af',
+                      border: '1px solid #bfdbfe',
+                      padding: '6px 10px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="কখন কোন তারিখে কি কি পণ্য নিয়েছে তার সম্পূর্ণ স্টেটমেন্ট"
+                  >
+                    <span>📜</span> ফুল খতিয়ান
                   </button>
 
                   <Link
                     href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
                     target="_blank"
                     style={{
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe',
+                      background: '#f8fafc',
+                      color: '#475569',
+                      border: '1px solid #cbd5e1',
                       padding: '6px 9px',
                       borderRadius: '9px',
                       fontSize: '11.5px',
@@ -810,7 +925,7 @@ export default function KhataPage() {
                       alignItems: 'center',
                       gap: '3px'
                     }}
-                    title="গ্রাহকের লাইভ ডিজিটাল পাসবুক দেখুন ও লিঙ্ক কপি করুন"
+                    title="গ্রাহকের লাইভ ডিজিটাল পাসবুক দেখুন"
                   >
                     <span>📖</span> পাসবুক
                   </Link>
@@ -1558,27 +1673,37 @@ export default function KhataPage() {
         </div>
       )}
 
-      {/* DETAILED DUE LEDGER & ITEM TIMESTAMPS MODAL */}
+      {/* DETAILED DUE LEDGER & ITEM TIMESTAMPS MODAL (DATE-WISE GROUPED CHRONOLOGICAL) */}
       {selectedLedger && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(6px)',
           zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
         }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '560px', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '24px',
+            padding: '22px',
+            width: '100%',
+            maxWidth: '620px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)'
+          }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
               <div>
-                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>
-                  📜 তারিখ, সময় ও পণ্যের বিস্তারিত ফর্দ
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', display: 'inline-block', marginBottom: '4px' }}>
+                  📜 তারিখভিত্তিক খতিয়ান ও ফর্দ বিবরণী
                 </span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '19px', fontWeight: '800', color: '#0f172a' }}>
-                  {selectedLedger.customer?.name} এর বাকি খতিয়ান
+                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', color: '#0f172a' }}>
+                  {selectedLedger.customer?.name} এর বাকি খাতা
                 </h3>
               </div>
               <button 
                 onClick={() => setSelectedLedger(null)} 
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', fontWeight: '800' }}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px', fontWeight: '800' }}
               >
                 ✕
               </button>
@@ -1590,119 +1715,168 @@ export default function KhataPage() {
               border: '1.5px solid #fecdd3',
               borderRadius: '16px',
               padding: '12px 16px',
-              marginBottom: '16px',
+              marginBottom: '14px',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px'
             }}>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>মোবাইল: {selectedLedger.customer?.phone || 'নেই'}</span>
-                <div style={{ fontSize: '12.5px', color: '#991b1b', fontWeight: '700', marginTop: '2px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>📱 {selectedLedger.customer?.phone || 'মোবাইল নেই'} {selectedLedger.customer?.address ? `• 📍 ${selectedLedger.customer.address}` : ''}</span>
+                <div style={{ fontSize: '12.5px', color: '#991b1b', fontWeight: '800', marginTop: '2px' }}>
                   মোট বকেয়া পাওনা:
                 </div>
               </div>
-              <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#dc2626' }}>
+              <div className="num-font" style={{ fontSize: '26px', fontWeight: '900', color: '#dc2626' }}>
                 ৳{Number(selectedLedger.customer?.totalDue || selectedLedger.customer?.total_due || 0).toLocaleString('en-US')}
               </div>
             </div>
 
-            {/* Transaction & Items Ledger List */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Transaction & Items Ledger List Grouped by Date */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {ledgerLoading ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>ফর্দ লোড হচ্ছে...</div>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <span className="animate-spin" style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>⏳</span>
+                  ফর্দ ও তারিখভিত্তিক হিসাব লোড হচ্ছে...
+                </div>
               ) : selectedLedger.ledger && selectedLedger.ledger.length > 0 ? (
-                selectedLedger.ledger.map((entry: any) => {
-                  const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
+                Object.entries(groupLedgerByDate(selectedLedger.ledger)).map(([dateStr, dayEntries]) => {
+                  const dayTotalDue = dayEntries.filter(e => !e.isPayment && e.paymentMethod !== 'due_payment').reduce((acc, e) => acc + (e.dueAmount || 0), 0);
+                  const dayTotalPaid = dayEntries.filter(e => e.isPayment || e.paymentMethod === 'due_payment').reduce((acc, e) => acc + (e.paidAmount || 0), 0);
+
                   return (
-                    <div 
-                      key={entry.id} 
-                      style={{ 
-                        background: isPayment ? '#f0fdf4' : '#fff', 
-                        border: isPayment ? '1.5px solid #bbf7d0' : '1.5px solid #e2e8f0', 
-                        borderRadius: '16px', 
-                        padding: '14px 16px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div key={dateStr} style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '14px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                      
+                      {/* Date Group Header Badge */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '8px', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            color: isPayment ? '#166534' : '#b45309',
-                            background: isPayment ? '#dcfce7' : '#fef3c7',
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            {isPayment ? '🟢 বাকি টাকা জমা' : `🔴 বাকি ক্রয় #${entry.invoiceNo}`}
+                          <span style={{ fontSize: '15px' }}>📅</span>
+                          <strong style={{ fontSize: '14px', color: '#0f172a' }}>{dateStr}</strong>
+                          <span style={{ fontSize: '10.5px', background: '#e2e8f0', color: '#475569', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>
+                            {dayEntries.length}টি এন্ট্রি
                           </span>
                         </div>
-                        <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700' }}>
-                          🕒 {entry.date}, {entry.time}
-                        </span>
+                        <div style={{ fontSize: '11.5px', fontWeight: '800' }}>
+                          {dayTotalDue > 0 && <span style={{ color: '#dc2626', marginRight: '8px' }}>বাকি: +৳{dayTotalDue}</span>}
+                          {dayTotalPaid > 0 && <span style={{ color: '#059669' }}>জমা: -৳{dayTotalPaid}</span>}
+                        </div>
                       </div>
 
-                      {isPayment ? (
-                        /* Payment Entry */
-                        <div style={{ background: '#ffffff', borderRadius: '10px', padding: '10px 12px', border: '1px solid #dcfce7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#166534', display: 'block' }}>
-                              ক্যাশ / আদায় জমা
-                            </span>
-                            <span style={{ fontSize: '11px', color: '#64748b' }}>
-                              {entry.note || 'বাকি হিসাব পরিশোধ'}
-                            </span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <strong className="num-font" style={{ fontSize: '16px', color: '#16a34a' }}>
-                              -৳{entry.paidAmount}
-                            </strong>
-                            <span style={{ display: 'block', fontSize: '10px', color: '#15803d', fontWeight: '700' }}>
-                              বাকি কমেছে
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Sale Memo with Itemized Breakdown */
-                        <div>
-                          <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '10px 12px', border: '1px solid #f1f5f9', marginBottom: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '800', color: '#475569', marginBottom: '6px', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px' }}>
-                              <span>🛒 নেওয়া পণ্য ও পরিমাণ</span>
-                              <span>দর ও মোট</span>
-                            </div>
-                            {entry.items && entry.items.length > 0 ? (
-                              entry.items.map((it: any, idx: number) => (
-                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', padding: '4px 0', borderBottom: idx < entry.items.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
+                      {/* Day Transactions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {dayEntries.map((entry: any) => {
+                          const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
+                          return (
+                            <div 
+                              key={entry.id} 
+                              style={{ 
+                                background: isPayment ? '#f0fdf4' : '#ffffff', 
+                                border: isPayment ? '1.5px solid #bbf7d0' : '1.5px solid #e2e8f0', 
+                                borderRadius: '12px', 
+                                padding: '12px 14px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: '900',
+                                    color: isPayment ? '#166534' : '#b45309',
+                                    background: isPayment ? '#dcfce7' : '#fef3c7',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px'
+                                  }}>
+                                    {isPayment ? '🟢 বাকি টাকা জমা' : `🔴 বাকি ক্রয় #${entry.invoiceNo}`}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: '#64748b' }}>🕒 {entry.time}</span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => sendTransactionWhatsApp(selectedLedger.customer, entry)}
+                                  style={{
+                                    background: '#25d366',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '10.5px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="এই মেমোর বিবরণ WhatsApp-এ পাঠান"
+                                >
+                                  <span>💬</span> স্লিপ পাঠান
+                                </button>
+                              </div>
+
+                              {isPayment ? (
+                                /* Payment Details */
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #dcfce7' }}>
                                   <div>
-                                    <span style={{ color: '#0f172a', fontWeight: '700' }}>{it.name}</span>
-                                    <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>
-                                      ({it.quantity} {it.unit || 'টি'} × ৳{it.unitPrice || it.price})
+                                    <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#166534', display: 'block' }}>
+                                      ক্যাশ / নগদ আদায় জমা
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: '#64748b' }}>
+                                      {entry.note || 'বাকি হিসাব পরিশোধ'}
                                     </span>
                                   </div>
-                                  <span className="num-font" style={{ color: '#0f172a', fontWeight: '700' }}>
-                                    ৳{it.total}
-                                  </span>
+                                  <div style={{ textAlign: 'right' }}>
+                                    <strong className="num-font" style={{ fontSize: '16px', color: '#16a34a' }}>
+                                      -৳{entry.paidAmount}
+                                    </strong>
+                                    <span style={{ display: 'block', fontSize: '9.5px', color: '#15803d', fontWeight: '800' }}>
+                                      বাকি হ্রাস
+                                    </span>
+                                  </div>
                                 </div>
-                              ))
-                            ) : (
-                              <span style={{ fontSize: '12px', color: '#94a3b8' }}>সরাসরি বাকি এন্ট্রি</span>
-                            )}
-                          </div>
+                              ) : (
+                                /* Due Purchase Details with Detailed Items Table */
+                                <div>
+                                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '8px 10px', border: '1px solid #f1f5f9', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: '800', color: '#64748b', marginBottom: '4px', borderBottom: '1px solid #e2e8f0', paddingBottom: '3px' }}>
+                                      <span>নেওয়া পণ্য ও পরিমাণ</span>
+                                      <span>দর ও মোট</span>
+                                    </div>
+                                    {entry.items && entry.items.length > 0 ? (
+                                      entry.items.map((it: any, idx: number) => (
+                                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '3px 0', borderBottom: idx < entry.items.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
+                                          <div>
+                                            <span style={{ color: '#0f172a', fontWeight: '700' }}>{it.name}</span>
+                                            <span style={{ fontSize: '10.5px', color: '#64748b', marginLeft: '6px' }}>
+                                              ({it.quantity} {it.unit || 'টি'} × ৳{it.price || it.unitPrice || 0})
+                                            </span>
+                                          </div>
+                                          <span className="num-font" style={{ color: '#0f172a', fontWeight: '800' }}>
+                                            ৳{it.total}
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div style={{ fontSize: '12px', color: '#334155', fontWeight: '700' }}>
+                                        {entry.note || 'বাকি পণ্য সামগ্রী'}
+                                      </div>
+                                    )}
+                                  </div>
 
-                          {/* Memo financial summary */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', paddingTop: '2px', color: '#475569' }}>
-                            <span>
-                              মেমো মোট: <strong className="num-font">৳{entry.totalAmount}</strong> | জমা: <strong className="num-font" style={{ color: '#059669' }}>৳{entry.paidAmount}</strong>
-                            </span>
-                            <span style={{ fontWeight: '800', color: '#dc2626' }}>
-                              যোগ হওয়া বাকি: ৳{entry.dueAmount}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', color: '#475569' }}>
+                                    <span>
+                                      মেমো মোট: <strong className="num-font">৳{entry.totalAmount}</strong> | জমা: <strong className="num-font" style={{ color: '#059669' }}>৳{entry.paidAmount}</strong>
+                                    </span>
+                                    <span style={{ fontWeight: '900', color: '#dc2626', fontSize: '13px' }}>
+                                      যোগ হওয়া বাকি: ৳{entry.dueAmount}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })
@@ -1716,7 +1890,34 @@ export default function KhataPage() {
             </div>
 
             {/* Modal Bottom Actions */}
-            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px' }}>
+            <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  const targetCust = selectedLedger.customer;
+                  setSelectedLedger(null);
+                  setShowAddDueModal(targetCust);
+                  setAddDueAmount('');
+                  setAddDueItems('');
+                  setSelectedDueProducts([]);
+                  setProductSearch('');
+                  setDueMode('stock');
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: '120px',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                ➕ নতুন বাকি দিন
+              </button>
+
               <button
                 onClick={() => {
                   const targetCust = selectedLedger.customer;
@@ -1726,18 +1927,20 @@ export default function KhataPage() {
                 }}
                 style={{
                   flex: 1,
+                  minWidth: '120px',
                   background: '#10b981',
                   color: '#fff',
                   border: 'none',
-                  padding: '12px',
+                  padding: '10px 14px',
                   borderRadius: '12px',
                   fontWeight: '800',
-                  fontSize: '13.5px',
+                  fontSize: '13px',
                   cursor: 'pointer'
                 }}
               >
-                💵 বাকি টাকা আদায় করুন
+                💵 টাকা আদায় করুন
               </button>
+
               {Number(selectedLedger.customer?.totalDue || selectedLedger.customer?.total_due || 0) > 0 && (
                 <button
                   onClick={() => sendWhatsAppReminder(selectedLedger.customer)}
@@ -1745,14 +1948,17 @@ export default function KhataPage() {
                     background: '#25d366',
                     color: '#fff',
                     border: 'none',
-                    padding: '12px 18px',
+                    padding: '10px 16px',
                     borderRadius: '12px',
                     fontWeight: '800',
-                    fontSize: '13.5px',
-                    cursor: 'pointer'
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  💬 তাগাদা
+                  <span>💬</span> তাগাদা পাঠান
                 </button>
               )}
             </div>
@@ -1832,6 +2038,25 @@ export default function KhataPage() {
         </div>
       )}
 
+      {/* 🎙️ Dedicated Interactive Voice Khata Modal */}
+      {showVoiceKhataModal && (
+        <VoiceKhataModal
+          isOpen={showVoiceKhataModal}
+          onClose={() => setShowVoiceKhataModal(false)}
+          currentTenantId={currentTenantId || ''}
+          customers={customers}
+          products={products}
+          industryId={tenant?.industryId || 'cat-grocery'}
+          speakAnnouncement={speakAnnouncement}
+          triggerHaptic={triggerHaptic}
+          onActionCompleted={() => {
+            loadCustomers();
+            loadProducts();
+          }}
+        />
+      )}
+
     </div>
   );
 }
+
