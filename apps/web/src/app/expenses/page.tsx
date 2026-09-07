@@ -158,7 +158,7 @@ export default function ExpensesPage() {
       {notice && <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '10px 14px', borderRadius: '12px', marginBottom: '12px', fontSize: '13px', fontWeight: '800' }}>{notice}</div>}
 
       {loading ? (
-        <DataLoader type="skeleton-list" count={4} text="খরচের হিসাব তালিকা লোড হচ্ছে..." />
+        <DataLoader type="table" count={5} text="খরচের হিসাব তালিকা লোড হচ্ছে..." />
       ) : expenses.length === 0 ? (
         <div className="mobile-card" style={{ textAlign: 'center', padding: '28px 14px' }}>
           <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>💸</span>

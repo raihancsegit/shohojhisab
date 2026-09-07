@@ -242,20 +242,62 @@ export default function DataLoader({
     );
   }
 
-  // 5. TABLE SKELETON
+  // 5. TABLE SKELETON (Realistic multi-column table with header & rows)
   if (type === 'table') {
     return (
-      <div style={{ width: '100%', background: '#ffffff', borderRadius: '16px', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
-        <div style={{ background: '#f8fafc', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-          <div style={{ height: '14px', width: '100px', background: '#e2e8f0', borderRadius: '4px' }} />
-          <div style={{ height: '14px', width: '60px', background: '#e2e8f0', borderRadius: '4px' }} />
+      <div style={{ width: '100%', background: '#ffffff', borderRadius: '18px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        {/* Table Skeleton Header */}
+        <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #6366f1', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+            <strong style={{ fontSize: '13px', color: '#334155', fontWeight: '800' }}>{text}</strong>
+          </div>
+          <div style={{ height: '12px', width: '70px', background: '#e2e8f0', borderRadius: '6px' }} />
         </div>
-        <div style={{ padding: '8px 16px', display: 'grid', gap: '12px' }}>
+
+        {/* Table Columns Header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '45px 2.5fr 1.5fr 1.2fr 1fr', gap: '12px', padding: '10px 18px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ height: '10px', width: '20px', background: '#cbd5e1', borderRadius: '4px' }} />
+          <div style={{ height: '10px', width: '80px', background: '#cbd5e1', borderRadius: '4px' }} />
+          <div style={{ height: '10px', width: '60px', background: '#cbd5e1', borderRadius: '4px' }} />
+          <div style={{ height: '10px', width: '50px', background: '#cbd5e1', borderRadius: '4px' }} />
+          <div style={{ height: '10px', width: '40px', background: '#cbd5e1', borderRadius: '4px' }} />
+        </div>
+
+        {/* Table Rows */}
+        <div style={{ padding: '4px 0' }}>
           {Array.from({ length: count }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < count - 1 ? '1px dashed #f1f5f9' : 'none', position: 'relative', overflow: 'hidden' }}>
+            <div
+              key={i}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '45px 2.5fr 1.5fr 1.2fr 1fr',
+                gap: '12px',
+                alignItems: 'center',
+                padding: '14px 18px',
+                borderBottom: i < count - 1 ? '1px solid #f1f5f9' : 'none',
+                position: 'relative',
+                overflow: 'hidden',
+                background: i % 2 === 0 ? '#ffffff' : '#fafafa'
+              }}
+            >
               <div className="shimmer-sweep" />
-              <div style={{ height: '12px', width: `${50 + (i % 3) * 15}%`, background: '#f1f5f9', borderRadius: '4px' }} />
-              <div style={{ height: '12px', width: '50px', background: '#f1f5f9', borderRadius: '4px' }} />
+              {/* SL */}
+              <div style={{ height: '14px', width: '22px', background: '#f1f5f9', borderRadius: '4px' }} />
+              {/* Name & Subtitle */}
+              <div style={{ display: 'grid', gap: '5px' }}>
+                <div style={{ height: '14px', width: `${60 + (i % 4) * 10}%`, background: '#e2e8f0', borderRadius: '4px' }} />
+                <div style={{ height: '10px', width: `${35 + (i % 3) * 15}%`, background: '#f1f5f9', borderRadius: '4px' }} />
+              </div>
+              {/* Category / Phone */}
+              <div style={{ height: '13px', width: `${50 + (i % 2) * 25}%`, background: '#f1f5f9', borderRadius: '4px' }} />
+              {/* Price / Balance */}
+              <div style={{ height: '16px', width: '55px', background: '#fee2e2', borderRadius: '6px' }} />
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ height: '26px', width: '38px', background: '#e0e7ff', borderRadius: '8px' }} />
+                <div style={{ height: '26px', width: '28px', background: '#f1f5f9', borderRadius: '8px' }} />
+              </div>
             </div>
           ))}
         </div>

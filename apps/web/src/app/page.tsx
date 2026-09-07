@@ -938,7 +938,9 @@ export default function ShopkeeperDashboard() {
               </Link>
             </div>
 
-            {recentSales.length === 0 ? (
+            {loading ? (
+              <DataLoader type="table" count={4} text="আজকের বিক্রয় ও মেমো তালিকা লোড হচ্ছে..." />
+            ) : recentSales.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '36px 14px', color: '#94a3b8' }}>
                 <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>🧾</span>
                 <strong style={{ fontSize: '14px', color: '#64748b', display: 'block' }}>আজকে এখনও কোনো মেমো কাটা হয়নি</strong>
