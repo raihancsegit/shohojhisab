@@ -348,207 +348,298 @@ export default function ProductsPage() {
 
       {/* Add / Edit Product Modal */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px' }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-              {editingProd ? 'পণ্য এডিট ও আপডেট' : 'নতুন পণ্য যুক্ত করুন'}
-            </h3>
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '480px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Sticky Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#ffffff',
+              flexShrink: 0
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{editingProd ? '✏️' : '➕'}</span>
+                <span>{editingProd ? 'পণ্য এডিট ও আপডেট' : 'নতুন পণ্য যুক্ত করুন'}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#64748b'
+                }}
+              >
+                ✕
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveProduct} style={{ display: 'grid', gap: '10px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম (বাংলা): *</label>
-                <input
-                  type="text"
-                  placeholder={getIndustryProductPlaceholder(tenant?.industryId)}
-                  value={banglaName}
-                  onChange={(e) => setBanglaName(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
-                />
-
-                {/* 💡 Quick Category Sample Suggestions Chips */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
-                  {getIndustryProductSuggestions(tenant?.industryId).slice(0, 4).map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setBanglaName(sug.name);
-                        setSellingPrice(String(sug.price));
-                        if (sug.costPrice) setPurchasePrice(String(sug.costPrice));
-                        if (sug.unit) setUnit(sug.unit);
-                        if (sug.generic) setGenericName(sug.generic);
-                        if (sug.brand) setBrand(sug.brand);
-                        if (sug.size) setSize(sug.size);
-                      }}
-                      style={{
-                        flexShrink: 0,
-                        padding: '3px 8px',
-                        borderRadius: '8px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: '#334155',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>বারকোড (স্ক্যান বা অটো):</label>
-                <input
-                  type="text"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, margin: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box', width: '100%' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>কেনা দাম (Cost ৳):</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম (বাংলা): *</label>
                   <input
-                    type="number"
-                    placeholder="0"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '15px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>বিক্রয় মূল্য (Price ৳): *</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
+                    type="text"
+                    placeholder={getIndustryProductPlaceholder(tenant?.industryId)}
+                    value={banglaName}
+                    onChange={(e) => setBanglaName(e.target.value)}
                     required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '2px solid #22c55e', fontSize: '16px', fontWeight: '900', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                   />
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {/* 💡 Quick Category Sample Suggestions Chips */}
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
+                    {getIndustryProductSuggestions(tenant?.industryId).slice(0, 5).map((sug, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setBanglaName(sug.name);
+                          setSellingPrice(String(sug.price));
+                          if (sug.costPrice) setPurchasePrice(String(sug.costPrice));
+                          if (sug.unit) setUnit(sug.unit);
+                          if (sug.generic) setGenericName(sug.generic);
+                          if (sug.brand) setBrand(sug.brand);
+                          if (sug.size) setSize(sug.size);
+                        }}
+                        style={{
+                          flexShrink: 0,
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>বর্তমান স্টক:</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বারকোড (স্ক্যান বা অটো):</label>
                   <input
-                    type="number"
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14.5px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                    type="text"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value)}
+                    style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>পরিমাপ ইউনিট:</label>
-                  <IndustryUnitSelect
-                    value={unit}
-                    onChange={setUnit}
-                    industryId={tenant?.industryId}
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>কেনা দাম (Cost ৳):</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      className="num-font"
+                      style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14.5px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বিক্রয় মূল্য (Price ৳): *</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={sellingPrice}
+                      onChange={(e) => setSellingPrice(e.target.value)}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '10px 12px', borderRadius: '10px', border: '2px solid #22c55e', fontSize: '15px', fontWeight: '900', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বর্তমান স্টক:</label>
+                    <input
+                      type="number"
+                      value={stock}
+                      onChange={(e) => setStock(e.target.value)}
+                      className="num-font"
+                      style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
+                    <IndustryUnitSelect
+                      value={unit}
+                      onChange={setUnit}
+                      industryId={tenant?.industryId}
+                    />
+                  </div>
+                </div>
+
+                {/* 💊 PHARMACY SPECIFIC FIELDS */}
+                {tenant?.industryId === 'cat-pharmacy' && (
+                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম (উপাদান):</label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: Paracetamol + Caffeine"
+                        value={genericName}
+                        onChange={(e) => setGenericName(e.target.value)}
+                        style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
+                        <input
+                          type="date"
+                          value={expiryDate}
+                          onChange={(e) => setExpiryDate(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
+                        <input
+                          type="text"
+                          placeholder={getIndustryBrandPlaceholder(tenant?.industryId)}
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 👗 CLOTHING & SHOES SPECIFIC FIELDS */}
+                {(tenant?.industryId === 'cat-clothing' || tenant?.industryId === 'cat-shoes') && (
+                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#5b21b6' }}>
+                      {tenant?.industryId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
+                        <input
+                          type="text"
+                          placeholder={tenant?.industryId === 'cat-shoes' ? '40, 41, 42' : 'M, L, XL, 32'}
+                          value={size}
+                          onChange={(e) => setSize(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
+                        <input
+                          type="text"
+                          placeholder="কালো / নীল / লাল"
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📱 MOBILE SPECIFIC FIELDS */}
+                {tenant?.industryId === 'cat-mobile' && (
+                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 গ্যাজেট ব্র্যান্ড ও ওয়ারেন্টি:</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                        <input
+                          type="text"
+                          placeholder="Samsung, Xiaomi"
+                          value={brand}
+                          onChange={(e) => setBrand(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি:</label>
+                        <input
+                          type="text"
+                          placeholder="১ বছর"
+                          value={warranty}
+                          onChange={(e) => setWarranty(e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* 💊 PHARMACY SPECIFIC FIELDS */}
-              {tenant?.industryId === 'cat-pharmacy' && (
-                <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম (উপাদান):</label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: Paracetamol + Caffeine"
-                      value={genericName}
-                      onChange={(e) => setGenericName(e.target.value)}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণ তারিখ:</label>
-                    <input
-                      type="date"
-                      value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
-                      style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 👗 CLOTHING & SHOES SPECIFIC FIELDS */}
-              {(tenant?.industryId === 'cat-clothing' || tenant?.industryId === 'cat-shoes') && (
-                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#5b21b6' }}>
-                    {tenant?.industryId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
-                  </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                      <input
-                        type="text"
-                        placeholder={tenant?.industryId === 'cat-shoes' ? '40, 41, 42' : 'M, L, XL, 32'}
-                        value={size}
-                        onChange={(e) => setSize(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                      <input
-                        type="text"
-                        placeholder="কালো / নীল / লাল"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 📱 MOBILE SPECIFIC FIELDS */}
-              {tenant?.industryId === 'cat-mobile' && (
-                <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 গ্যাজেট ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
-                      <input
-                        type="text"
-                        placeholder="Samsung, Xiaomi"
-                        value={brand}
-                        onChange={(e) => setBrand(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি:</label>
-                      <input
-                        type="text"
-                        placeholder="১ বছর"
-                        value={warranty}
-                        onChange={(e) => setWarranty(e.target.value)}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '10px', background: '#f1f5f9', border: 'none', borderRadius: '10px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>বাতিল</button>
-                <button type="submit" disabled={submitting} style={{ flex: 2, padding: '10px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' }}>
+              {/* Sticky Footer */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', background: '#ffffff', display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    flex: 2,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    fontSize: '14.5px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
                   {submitting ? 'হচ্ছে...' : '✓ পণ্য সেভ করুন'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  style={{
+                    flex: 1,
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
+                >
+                  বাতিল
                 </button>
               </div>
             </form>

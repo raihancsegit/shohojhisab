@@ -43,16 +43,21 @@ export default function IndustryUnitSelect({
       required={required}
       style={{
         width: '100%',
-        padding: '10px 12px',
+        maxWidth: '100%',
+        minWidth: 0,
+        padding: '10px 8px',
         borderRadius: '10px',
         border: '1.5px solid #cbd5e1',
-        fontSize: '13.5px',
+        fontSize: '13px',
         outline: 'none',
         background: '#fff',
         fontWeight: '700',
         color: '#0f172a',
         boxSizing: 'border-box',
         cursor: 'pointer',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
         ...style
       }}
     >

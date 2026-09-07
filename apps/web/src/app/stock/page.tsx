@@ -65,6 +65,36 @@ export default function StockPage() {
     warranty: ''
   });
 
+  // Auto-sync default unit when tenant industry loads
+  useEffect(() => {
+    const defaultUnit = indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-clothing' ? 'পিস' : indId === 'cat-grocery' ? 'কেজি' : 'পিস';
+    setAddForm(prev => ({
+      ...prev,
+      unit: prev.banglaName ? prev.unit : defaultUnit
+    }));
+  }, [indId]);
+
+  const openAddModal = () => {
+    const defaultUnit = indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-clothing' ? 'পিস' : indId === 'cat-grocery' ? 'কেজি' : 'পিস';
+    setAddForm({
+      banglaName: '',
+      sellingPrice: '',
+      purchasePrice: '',
+      stock: '50',
+      unit: defaultUnit,
+      barcode: '',
+      genericName: '',
+      expiryDate: '',
+      size: '',
+      color: '',
+      brand: '',
+      batchNumber: '',
+      warranty: ''
+    });
+    setShowAddModal(true);
+    triggerHaptic('light');
+  };
+
   // Inline quick editing states
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: 'sellingPrice' | 'purchasePrice' | 'stock'; val: string } | null>(null);
 
@@ -446,7 +476,7 @@ export default function StockPage() {
 
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
-            onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
+            onClick={openAddModal}
             style={{
               background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#fff',
@@ -1182,187 +1212,228 @@ export default function StockPage() {
       {editingProduct && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
-          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
         }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                ✏️ পণ্য তথ্য ও দাম সম্পাদনা
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '480px',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Sticky Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#ffffff',
+              flexShrink: 0
+            }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>✏️</span> <span>পণ্য তথ্য ও দাম সম্পাদনা</span>
               </h3>
-              <button onClick={() => setEditingProduct(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#64748b'
+                }}
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম:</label>
-                <input
-                  type="text"
-                  value={editForm.banglaName}
-                  onChange={(e) => setEditForm({ ...editForm, banglaName: e.target.value })}
-                  required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, margin: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box', width: '100%' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>ক্রয় মূল্য / কেনার দাম (৳):</label>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পণ্যের নাম: *</label>
                   <input
-                    type="number"
-                    value={editForm.purchasePrice}
-                    onChange={(e) => setEditForm({ ...editForm, purchasePrice: e.target.value })}
+                    type="text"
+                    value={editForm.banglaName}
+                    onChange={(e) => setEditForm({ ...editForm, banglaName: e.target.value })}
                     required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বিক্রয় মূল্য / দর (৳):</label>
-                  <input
-                    type="number"
-                    value={editForm.sellingPrice}
-                    onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })}
-                    required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বর্তমান স্টক:</label>
-                  <input
-                    type="number"
-                    value={editForm.stock}
-                    onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
-                    required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
-                  <IndustryUnitSelect
-                    value={editForm.unit}
-                    onChange={(val) => setEditForm({ ...editForm, unit: val })}
-                    industryId={indId}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বারকোড নম্বর:</label>
-                <input
-                  type="text"
-                  value={editForm.barcode}
-                  onChange={(e) => setEditForm({ ...editForm, barcode: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              {/* 💊 PHARMACY SPECIAL FIELDS */}
-              {indId === 'cat-pharmacy' && (
-                <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>কেনার দাম (৳):</label>
                     <input
-                      type="text"
-                      placeholder="যেমন: Paracetamol 500mg"
-                      value={editForm.genericName}
-                      onChange={(e) => setEditForm({ ...editForm, genericName: e.target.value })}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      type="number"
+                      value={editForm.purchasePrice}
+                      onChange={(e) => setEditForm({ ...editForm, purchasePrice: e.target.value })}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
-                      <input
-                        type="date"
-                        value={editForm.expiryDate}
-                        onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
-                      <input
-                        type="text"
-                        placeholder={getIndustryBrandPlaceholder(indId)}
-                        value={editForm.brand}
-                        onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বিক্রয় মূল্য (৳): *</label>
+                    <input
+                      type="number"
+                      value={editForm.sellingPrice}
+                      onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
-              {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
-                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
-                    {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
-                  </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                      <input
-                        type="text"
-                        placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
-                        value={editForm.size}
-                        onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: কালো, নীল, সাদা"
-                        value={editForm.color}
-                        onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বর্তমান স্টক:</label>
+                    <input
+                      type="number"
+                      value={editForm.stock}
+                      onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
+                    <IndustryUnitSelect
+                      value={editForm.unit}
+                      onChange={(val) => setEditForm({ ...editForm, unit: val })}
+                      industryId={indId}
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* 📱 MOBILE SPECIAL FIELDS */}
-              {indId === 'cat-mobile' && (
-                <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>বারকোড নম্বর:</label>
+                  <input
+                    type="text"
+                    value={editForm.barcode}
+                    onChange={(e) => setEditForm({ ...editForm, barcode: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {/* 💊 PHARMACY SPECIAL FIELDS */}
+                {indId === 'cat-pharmacy' && (
+                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: Samsung / Xiaomi"
-                        value={editForm.brand}
-                        onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        placeholder="যেমন: Paracetamol 500mg"
+                        value={editForm.genericName}
+                        onChange={(e) => setEditForm({ ...editForm, genericName: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: ১ বছর অফিসিয়াল"
-                        value={editForm.warranty}
-                        onChange={(e) => setEditForm({ ...editForm, warranty: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
+                        <input
+                          type="date"
+                          value={editForm.expiryDate}
+                          onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
+                        <input
+                          type="text"
+                          placeholder={getIndustryBrandPlaceholder(indId)}
+                          value={editForm.brand}
+                          onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
+                {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
+                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
+                      {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
+                        <input
+                          type="text"
+                          placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
+                          value={editForm.size}
+                          onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: কালো, নীল, সাদা"
+                          value={editForm.color}
+                          onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📱 MOBILE SPECIAL FIELDS */}
+                {indId === 'cat-mobile' && (
+                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: Samsung / Xiaomi"
+                          value={editForm.brand}
+                          onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: ১ বছর অফিসিয়াল"
+                          value={editForm.warranty}
+                          onChange={(e) => setEditForm({ ...editForm, warranty: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div style={{ padding: '14px 20px', borderTop: '1px solid #f1f5f9', background: '#ffffff', display: 'flex', gap: '10px', flexShrink: 0 }}>
                 <button
                   type="submit"
                   style={{
@@ -1370,11 +1441,12 @@ export default function StockPage() {
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
                     border: 'none',
-                    padding: '12px',
+                    padding: '13px',
                     borderRadius: '12px',
                     fontWeight: '900',
                     fontSize: '15px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                   }}
                 >
                   ✓ পরিবর্তন সেভ করুন
@@ -1386,7 +1458,7 @@ export default function StockPage() {
                     background: '#f1f5f9',
                     color: '#475569',
                     border: '1px solid #cbd5e1',
-                    padding: '12px 16px',
+                    padding: '13px 18px',
                     borderRadius: '12px',
                     fontWeight: '700',
                     cursor: 'pointer'
@@ -1404,275 +1476,319 @@ export default function StockPage() {
       {showAddModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
-          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
         }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                ➕ নতুন পণ্য যুক্ত করুন
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '480px',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            boxSizing: 'border-box'
+          }}>
+            {/* Sticky Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#ffffff',
+              flexShrink: 0
+            }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>➕</span> <span>নতুন পণ্য যুক্ত করুন</span>
               </h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleAddSubmit} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>পণ্যের নাম: *</label>
-                  <button
-                    type="button"
-                    onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, banglaName: v })), false, 'পণ্যের নাম')}
-                    style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#dc2626', cursor: 'pointer', fontWeight: '800' }}
-                  >
-                    🎙️ মুখে বলুন
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  placeholder={getIndustryProductPlaceholder(indId)}
-                  value={addForm.banglaName}
-                  onChange={(e) => setAddForm({ ...addForm, banglaName: e.target.value })}
-                  required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                />
-
-                {/* 💡 Quick Category Sample Suggestions Chips */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
-                  {getIndustryProductSuggestions(indId).slice(0, 5).map((sug, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setAddForm(prev => ({
-                          ...prev,
-                          banglaName: sug.name,
-                          sellingPrice: String(sug.price),
-                          purchasePrice: sug.costPrice ? String(sug.costPrice) : prev.purchasePrice,
-                          unit: sug.unit || prev.unit,
-                          genericName: sug.generic || prev.genericName,
-                          brand: sug.brand || prev.brand,
-                          size: sug.size || prev.size
-                        }));
-                        triggerHaptic('light');
-                      }}
-                      style={{
-                        flexShrink: 0,
-                        padding: '3px 8px',
-                        borderRadius: '8px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: '#334155',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title={`${sug.name} - দর: ৳${sug.price}`}
-                    >
-                      {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>বিক্রয় মূল্য: *</label>
-                    <button
-                      type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, sellingPrice: v })), true, 'বিক্রয় মূল্য (টাকা)')}
-                      style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#059669', cursor: 'pointer', fontWeight: '800' }}
-                    >
-                      🎙️
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    placeholder="৳ বিক্রয় মূল্য"
-                    value={addForm.sellingPrice}
-                    onChange={(e) => setAddForm({ ...addForm, sellingPrice: e.target.value })}
-                    required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>কেনার দাম:</label>
-                    <button
-                      type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, purchasePrice: v })), true, 'কেনার দাম (টাকা)')}
-                      style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
-                    >
-                      🎙️
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    placeholder="৳ কেনার দাম"
-                    value={addForm.purchasePrice}
-                    onChange={(e) => setAddForm({ ...addForm, purchasePrice: e.target.value })}
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>প্রাথমিক স্টক:</label>
-                    <button
-                      type="button"
-                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, stock: v })), true, 'প্রাথমিক স্টক (সংখ্যা)')}
-                      style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#ca8a04', cursor: 'pointer', fontWeight: '800' }}
-                    >
-                      🎙️
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    value={addForm.stock}
-                    onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
-                    required
-                    className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
-                  <IndustryUnitSelect
-                    value={addForm.unit}
-                    onChange={(val) => setAddForm({ ...addForm, unit: val })}
-                    industryId={indId}
-                  />
-                </div>
-              </div>
-
-              {/* 🧮 Multi-Unit Sub-Unit Price Breakdown & Converter */}
-              <MultiUnitBreakdownPreview
-                unit={addForm.unit}
-                price={Number(addForm.sellingPrice) || 0}
-                onApplyUnitPrice={(unitPrice) => setAddForm(prev => ({ ...prev, sellingPrice: String(unitPrice) }))}
-              />
-
-              {/* 💊 PHARMACY SPECIAL FIELDS */}
-              {indId === 'cat-pharmacy' && (
-                <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: Paracetamol 500mg"
-                      value={addForm.genericName}
-                      onChange={(e) => setAddForm({ ...addForm, genericName: e.target.value })}
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
-                      <input
-                        type="date"
-                        value={addForm.expiryDate}
-                        onChange={(e) => setAddForm({ ...addForm, expiryDate: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
-                      <input
-                        type="text"
-                        placeholder={getIndustryBrandPlaceholder(indId)}
-                        value={addForm.brand}
-                        onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
-              {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
-                <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
-                    {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও ব্র্যান্ড:' : '👗 পোশাকের সাইজ ও কালার:'}
-                  </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                      <input
-                        type="text"
-                        placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
-                        value={addForm.size}
-                        onChange={(e) => setAddForm({ ...addForm, size: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: কালো, নীল, সাদা"
-                        value={addForm.color}
-                        onChange={(e) => setAddForm({ ...addForm, color: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 📱 MOBILE SPECIAL FIELDS */}
-              {indId === 'cat-mobile' && (
-                <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: Samsung / Xiaomi"
-                        value={addForm.brand}
-                        onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: ১ বছর অফিসিয়াল"
-                        value={addForm.warranty}
-                        onChange={(e) => setAddForm({ ...addForm, warranty: e.target.value })}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <button
-                type="submit"
+                type="button"
+                onClick={() => setShowAddModal(false)}
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#fff',
+                  background: '#f1f5f9',
                   border: 'none',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  fontWeight: '900',
-                  fontSize: '15px',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'grid',
+                  placeItems: 'center',
                   cursor: 'pointer',
-                  marginTop: '6px'
+                  fontSize: '14px',
+                  color: '#64748b'
                 }}
               >
-                ✓ পণ্য যুক্ত করুন
+                ✕
               </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, margin: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', boxSizing: 'border-box', width: '100%' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>পণ্যের নাম: *</label>
+                    <button
+                      type="button"
+                      onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, banglaName: v })), false, 'পণ্যের নাম')}
+                      style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#dc2626', cursor: 'pointer', fontWeight: '800' }}
+                    >
+                      🎙️ মুখে বলুন
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={getIndustryProductPlaceholder(indId)}
+                    value={addForm.banglaName}
+                    onChange={(e) => setAddForm({ ...addForm, banglaName: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+
+                  {/* 💡 Quick Category Sample Suggestions Chips */}
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', marginTop: '6px' }} className="no-scrollbar">
+                    {getIndustryProductSuggestions(indId).slice(0, 5).map((sug, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setAddForm(prev => ({
+                            ...prev,
+                            banglaName: sug.name,
+                            sellingPrice: String(sug.price),
+                            purchasePrice: sug.costPrice ? String(sug.costPrice) : prev.purchasePrice,
+                            unit: sug.unit || prev.unit,
+                            genericName: sug.generic || prev.genericName,
+                            brand: sug.brand || prev.brand,
+                            size: sug.size || prev.size
+                          }));
+                          triggerHaptic('light');
+                        }}
+                        style={{
+                          flexShrink: 0,
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={`${sug.name} - দর: ৳${sug.price}`}
+                      >
+                        {sug.icon} {sug.name.split(' ')[0]} {sug.name.split(' ')[1] || ''}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>বিক্রয় মূল্য: *</label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, sellingPrice: v })), true, 'বিক্রয় মূল্য (টাকা)')}
+                        style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#059669', cursor: 'pointer', fontWeight: '800' }}
+                      >
+                        🎙️
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="৳ বিক্রয় মূল্য"
+                      value={addForm.sellingPrice}
+                      onChange={(e) => setAddForm({ ...addForm, sellingPrice: e.target.value })}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>কেনার দাম:</label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, purchasePrice: v })), true, 'কেনার দাম (টাকা)')}
+                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
+                      >
+                        🎙️
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="৳ কেনার দাম"
+                      value={addForm.purchasePrice}
+                      onChange={(e) => setAddForm({ ...addForm, purchasePrice: e.target.value })}
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>প্রাথমিক স্টক:</label>
+                      <button
+                        type="button"
+                        onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, stock: v })), true, 'প্রাথমিক স্টক (সংখ্যা)')}
+                        style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#ca8a04', cursor: 'pointer', fontWeight: '800' }}
+                      >
+                        🎙️
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={addForm.stock}
+                      onChange={(e) => setAddForm({ ...addForm, stock: e.target.value })}
+                      required
+                      className="num-font"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পরিমাপের একক:</label>
+                    <IndustryUnitSelect
+                      value={addForm.unit}
+                      onChange={(val) => setAddForm({ ...addForm, unit: val })}
+                      industryId={indId}
+                    />
+                  </div>
+                </div>
+
+                {/* 🧮 Multi-Unit Sub-Unit Price Breakdown & Converter */}
+                <MultiUnitBreakdownPreview
+                  unit={addForm.unit}
+                  price={Number(addForm.sellingPrice) || 0}
+                  onApplyUnitPrice={(unitPrice) => setAddForm(prev => ({ ...prev, sellingPrice: String(unitPrice) }))}
+                />
+
+                {/* 💊 PHARMACY SPECIAL FIELDS */}
+                {indId === 'cat-pharmacy' && (
+                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: Paracetamol 500mg"
+                        value={addForm.genericName}
+                        onChange={(e) => setAddForm({ ...addForm, genericName: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
+                        <input
+                          type="date"
+                          value={addForm.expiryDate}
+                          onChange={(e) => setAddForm({ ...addForm, expiryDate: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
+                        <input
+                          type="text"
+                          placeholder={getIndustryBrandPlaceholder(indId)}
+                          value={addForm.brand}
+                          onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
+                {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
+                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
+                      {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও ব্র্যান্ড:' : '👗 পোশাকের সাইজ ও কালার:'}
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
+                        <input
+                          type="text"
+                          placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
+                          value={addForm.size}
+                          onChange={(e) => setAddForm({ ...addForm, size: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: কালো, নীল, সাদা"
+                          value={addForm.color}
+                          onChange={(e) => setAddForm({ ...addForm, color: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📱 MOBILE SPECIAL FIELDS */}
+                {indId === 'cat-mobile' && (
+                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: Samsung / Xiaomi"
+                          value={addForm.brand}
+                          onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
+                        <input
+                          type="text"
+                          placeholder="যেমন: ১ বছর অফিসিয়াল"
+                          value={addForm.warranty}
+                          onChange={(e) => setAddForm({ ...addForm, warranty: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticky Footer */}
+              <div style={{ padding: '14px 20px', borderTop: '1px solid #f1f5f9', background: '#ffffff', flexShrink: 0 }}>
+                <button
+                  type="submit"
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '13px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    fontSize: '15px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  ✓ পণ্য যুক্ত করুন
+                </button>
+              </div>
             </form>
           </div>
         </div>
