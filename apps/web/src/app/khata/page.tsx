@@ -15,7 +15,9 @@ export default function KhataPage() {
   const theme = getIndustryTheme(tenant?.industryId);
   const indId = tenant?.industryId || 'cat-grocery';
 
+  // Filter and Search
   const [search, setSearch] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'due' | 'zero'>('all');
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,18 @@ export default function KhataPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState<any>(null);
   const [payAmount, setPayAmount] = useState('');
+
+  // Delete Customer state
+  const [customerToDelete, setCustomerToDelete] = useState<any | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  // Direct Customer Voice Entry state (In-Card & In-Ledger)
+  const [voiceCustomerModal, setVoiceCustomerModal] = useState<any | null>(null);
+  const [voiceCustomerListening, setVoiceCustomerListening] = useState(false);
+  const [voiceCustomerTranscript, setVoiceCustomerTranscript] = useState('');
+  const [voiceCustomerSubmitting, setVoiceCustomerSubmitting] = useState(false);
+  const [voiceCustomerStatus, setVoiceCustomerStatus] = useState('');
+  const [voiceRecognitionInstance, setVoiceRecognitionInstance] = useState<any>(null);
 
   // Quick Add Due Modal state with Stock Product Integration
   const [showAddDueModal, setShowAddDueModal] = useState<any>(null);
@@ -385,6 +399,170 @@ export default function KhataPage() {
     window.open(`https://wa.me/88${cleanPhone}?text=${textMsg}`, '_blank');
   };
 
+  // Customer Deletion Handler
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete?.id) return;
+    setDeleteSubmitting(true);
+    try {
+      const res = await fetch(`/api/customers/${customerToDelete.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        triggerHaptic('success');
+        speakAnnouncement(`${customerToDelete.name} এর খাতা মুছে ফেলা হয়েছে।`);
+        setNotice(`✓ "${customerToDelete.name}" বাকি খাতা থেকে সফলভাবে মুছে ফেলা হয়েছে!`);
+        if (selectedLedger?.customer?.id === customerToDelete.id) {
+          setSelectedLedger(null);
+        }
+        setCustomerToDelete(null);
+        await loadCustomers();
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'মুছে ফেলতে ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      console.error('Delete customer error', e);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  // Direct In-Ledger / In-Card Voice Entry
+  const handleDirectCustomerVoiceSubmit = async (cust: any, spokenText: string) => {
+    if (!cust?.id || !spokenText.trim()) return;
+    setVoiceCustomerSubmitting(true);
+    setVoiceCustomerStatus('এন্ট্রি প্রসেস হচ্ছে...');
+    try {
+      const res = await fetch(`/api/customers/${cust.id}/voice-entry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: spokenText })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        triggerHaptic('success');
+        const msg = result.message || 'বাকি আপডেট হয়েছে';
+        speakAnnouncement(msg);
+        setNotice(`✓ ${cust.name}: ${msg}`);
+        setVoiceCustomerStatus(`✓ ${msg}`);
+        await Promise.all([loadCustomers(), loadProducts()]);
+        if (selectedLedger?.customer?.id === cust.id) {
+          loadCustomerLedger(cust);
+        }
+        setTimeout(() => {
+          setVoiceCustomerModal(null);
+          setVoiceCustomerTranscript('');
+          setVoiceCustomerStatus('');
+        }, 1800);
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        triggerHaptic('warning');
+        setVoiceCustomerStatus(result.error || 'ভয়েস বোঝা যায়নি, আবার বলুন');
+      }
+    } catch (e) {
+      setVoiceCustomerStatus('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setVoiceCustomerSubmitting(false);
+    }
+  };
+
+  const startCustomerVoice = (cust: any) => {
+    triggerHaptic('medium');
+    setVoiceCustomerModal(cust);
+    setVoiceCustomerTranscript('');
+    setVoiceCustomerStatus('শুনছি... বলুন: "৫০ টাকা বাকি" বা "১০০ টাকা জমা" বা "১ প্যাকেট চিনি বাকি"');
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('আপনার ব্রাউজারে মাইক্রোফোন সাপোর্ট নেই।');
+      return;
+    }
+
+    try {
+      if (voiceRecognitionInstance) {
+        try { voiceRecognitionInstance.abort(); } catch (e) {}
+      }
+
+      const rec = new SpeechRecognition();
+      rec.lang = 'bn-BD';
+      rec.continuous = false;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        setVoiceCustomerListening(true);
+      };
+
+      rec.onresult = (event: any) => {
+        let finalStr = '';
+        for (let i = 0; i < event.results.length; i++) {
+          finalStr += event.results[i][0].transcript;
+        }
+        setVoiceCustomerTranscript(finalStr);
+      };
+
+      rec.onerror = (e: any) => {
+        console.warn('Customer speech error', e);
+        setVoiceCustomerListening(false);
+        setVoiceCustomerStatus('কথা বুঝতে সমস্যা হয়েছে। নিচের বাটনে আবার ক্লিক করুন।');
+      };
+
+      rec.onend = () => {
+        setVoiceCustomerListening(false);
+      };
+
+      setVoiceRecognitionInstance(rec);
+      rec.start();
+    } catch (err) {
+      console.error('Speech rec start error', err);
+      setVoiceCustomerListening(false);
+    }
+  };
+
+  const stopCustomerVoice = () => {
+    if (voiceRecognitionInstance) {
+      try {
+        voiceRecognitionInstance.stop();
+      } catch (e) {}
+    }
+    setVoiceCustomerListening(false);
+  };
+
+  // Date Check Helpers for Filtering
+  const isTodayDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  };
+
+  const isYesterdayDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return d.getDate() === y.getDate() && d.getMonth() === y.getMonth() && d.getFullYear() === y.getFullYear();
+  };
+
+  const isThisWeekDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
+    return diffDays >= 0 && diffDays <= 7;
+  };
+
+  const isThisMonthDate = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  };
+
   const handleExportKhata = () => {
     const exportData = filtered.map((c) => ({
       name: c.name || '',
@@ -408,14 +586,34 @@ export default function KhataPage() {
   const totalMarketDue = customers.reduce((acc, c) => acc + (Number(c.totalDue) || Number(c.total_due) || 0), 0);
   const dueCustomerCount = customers.filter(c => (Number(c.totalDue) || Number(c.total_due) || 0) > 0).length;
 
-  // Reset page to 1 if search changes
+  // Filter Counts
+  const countToday = customers.filter(c => isTodayDate(c.lastDateRaw || c.createdAt)).length;
+  const countYesterday = customers.filter(c => isYesterdayDate(c.lastDateRaw || c.createdAt)).length;
+  const countWeek = customers.filter(c => isThisWeekDate(c.lastDateRaw || c.createdAt)).length;
+  const countMonth = customers.filter(c => isThisMonthDate(c.lastDateRaw || c.createdAt)).length;
+  const countDue = customers.filter(c => (Number(c.totalDue || c.total_due || 0)) > 0).length;
+  const countZero = customers.filter(c => (Number(c.totalDue || c.total_due || 0)) <= 0).length;
+
+  // Reset page to 1 if search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, selectedFilter]);
 
   const filtered = customers.filter(c => {
     const q = search.toLowerCase();
-    return (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q));
+    const matchesSearch = (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q));
+    if (!matchesSearch) return false;
+
+    const due = Number(c.totalDue || c.total_due || 0);
+    const dateRef = c.lastDateRaw || c.createdAt;
+
+    if (selectedFilter === 'today') return isTodayDate(dateRef);
+    if (selectedFilter === 'yesterday') return isYesterdayDate(dateRef);
+    if (selectedFilter === 'week') return isThisWeekDate(dateRef);
+    if (selectedFilter === 'month') return isThisMonthDate(dateRef);
+    if (selectedFilter === 'due') return due > 0;
+    if (selectedFilter === 'zero') return due <= 0;
+    return true;
   });
 
   const totalKhataCustomers = filtered.length;
@@ -571,7 +769,7 @@ export default function KhataPage() {
       )}
 
       {/* Search Filter with Embedded Voice Mic */}
-      <div className="ui-card" style={{ padding: '12px 14px', marginBottom: '18px', position: 'relative' }}>
+      <div className="ui-card" style={{ padding: '12px 14px', marginBottom: '12px', position: 'relative' }}>
         <input
           type="text"
           placeholder="🔍 কাস্টমারের নাম বা মোবাইল নাম্বার দিয়ে খুঁজুন..."
@@ -609,6 +807,68 @@ export default function KhataPage() {
         >
           🎙️
         </button>
+      </div>
+
+      {/* 🏷️ Quick Date & Status Filter Pills */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        overflowX: 'auto',
+        paddingBottom: '8px',
+        marginBottom: '16px',
+        scrollbarWidth: 'thin'
+      }}>
+        {[
+          { id: 'all', label: 'সব খরিদ্দার', icon: '👥', count: customers.length, color: '#475569', activeBg: '#0f172a', activeText: '#ffffff' },
+          { id: 'today', label: 'আজকের বাকি', icon: '📅', count: countToday, color: '#dc2626', activeBg: '#dc2626', activeText: '#ffffff' },
+          { id: 'yesterday', label: 'গতকালকের বাকি', icon: '⏳', count: countYesterday, color: '#ea580c', activeBg: '#ea580c', activeText: '#ffffff' },
+          { id: 'week', label: 'এই সপ্তাহ', icon: '🗓️', count: countWeek, color: '#2563eb', activeBg: '#2563eb', activeText: '#ffffff' },
+          { id: 'month', label: 'এই মাস', icon: '📆', count: countMonth, color: '#7c3aed', activeBg: '#7c3aed', activeText: '#ffffff' },
+          { id: 'due', label: 'বকেয়া আছে', icon: '🔴', count: countDue, color: '#b91c1c', activeBg: '#ef4444', activeText: '#ffffff' },
+          { id: 'zero', label: 'পরিশোধিত', icon: '🟢', count: countZero, color: '#059669', activeBg: '#10b981', activeText: '#ffffff' },
+        ].map(f => {
+          const isActive = selectedFilter === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedFilter(f.id as any);
+                setCurrentPage(1);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 13px',
+                borderRadius: '999px',
+                fontSize: '12px',
+                fontWeight: '800',
+                border: isActive ? 'none' : '1px solid #e2e8f0',
+                background: isActive ? f.activeBg : '#ffffff',
+                color: isActive ? f.activeText : f.color,
+                boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.03)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{f.icon}</span>
+              <span>{f.label}</span>
+              <span style={{
+                fontSize: '10.5px',
+                padding: '1px 6px',
+                borderRadius: '99px',
+                background: isActive ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: isActive ? '#ffffff' : '#64748b',
+                fontWeight: '900'
+              }}>
+                {f.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Customer List Cards */}
@@ -779,6 +1039,29 @@ export default function KhataPage() {
 
                 {/* Bottom Row: Comprehensive Action Buttons Toolbar */}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', paddingTop: '4px' }}>
+                  {/* 🎙️ Direct Voice Action for this customer */}
+                  <button
+                    type="button"
+                    onClick={() => startCustomerVoice(c)}
+                    style={{
+                      background: '#fff1f2',
+                      color: '#b91c1c',
+                      border: '1px solid #fecdd3',
+                      padding: '6px 11px',
+                      borderRadius: '9px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.1)'
+                    }}
+                    title={`${c.name} এর জন্য মুখে বলে সরাসরি বাকি বা জমা এন্ট্রি করুন`}
+                  >
+                    <span>🎙️</span> মুখে বলুন
+                  </button>
+
                   {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') && (
                     <a
                       href={`tel:${c.phone}`}
@@ -931,6 +1214,29 @@ export default function KhataPage() {
                     }}
                   >
                     <span>💵</span> টাকা আদায়
+                  </button>
+
+                  {/* 🗑️ Delete Customer Button */}
+                  <button
+                    type="button"
+                    onClick={() => setCustomerToDelete(c)}
+                    style={{
+                      background: '#ffffff',
+                      color: '#94a3b8',
+                      border: '1px solid #e2e8f0',
+                      padding: '6px 8px',
+                      borderRadius: '9px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={`${c.name} এর খাতা মুছে ফেলুন`}
+                  >
+                    <span>🗑️</span>
                   </button>
                 </div>
               </div>
@@ -1675,7 +1981,7 @@ export default function KhataPage() {
             boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)'
           }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
               <div>
                 <span style={{ fontSize: '11px', fontWeight: '800', color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', display: 'inline-block', marginBottom: '4px' }}>
                   📜 তারিখভিত্তিক খতিয়ান ও ফর্দ বিবরণী
@@ -1684,12 +1990,54 @@ export default function KhataPage() {
                   {selectedLedger.customer?.name} এর বাকি খাতা
                 </h3>
               </div>
-              <button 
-                onClick={() => setSelectedLedger(null)} 
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px', fontWeight: '800' }}
-              >
-                ✕
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => startCustomerVoice(selectedLedger.customer)}
+                  style={{
+                    background: '#fff1f2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecdd3',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="এই গ্রাহকের জন্য সরাসরি মুখে বলে এন্ট্রি নিন"
+                >
+                  <span>🎙️</span> মুখে এন্ট্রি
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerToDelete(selectedLedger.customer)}
+                  style={{
+                    background: '#ffffff',
+                    color: '#dc2626',
+                    border: '1px solid #fca5a5',
+                    padding: '6px 8px',
+                    borderRadius: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}
+                  title="এই খাতা মুছে ফেলুন"
+                >
+                  <span>🗑️</span> মুছুন
+                </button>
+                <button 
+                  onClick={() => setSelectedLedger(null)} 
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px', fontWeight: '800' }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Quick Customer Summary Banner */}
@@ -1872,6 +2220,30 @@ export default function KhataPage() {
             {/* Modal Bottom Actions */}
             <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
+                type="button"
+                onClick={() => startCustomerVoice(selectedLedger.customer)}
+                style={{
+                  flex: 1,
+                  minWidth: '110px',
+                  background: '#fff1f2',
+                  color: '#b91c1c',
+                  border: '1.5px solid #fecdd3',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
+                title="এই গ্রাহকের জন্য মুখে বলে বাকি বা জমা এন্ট্রি করুন"
+              >
+                <span>🎙️</span> মুখে বলুন
+              </button>
+
+              <button
                 onClick={() => {
                   const targetCust = selectedLedger.customer;
                   setSelectedLedger(null);
@@ -1884,7 +2256,7 @@ export default function KhataPage() {
                 }}
                 style={{
                   flex: 1,
-                  minWidth: '120px',
+                  minWidth: '110px',
                   background: '#ef4444',
                   color: '#fff',
                   border: 'none',
@@ -1907,7 +2279,7 @@ export default function KhataPage() {
                 }}
                 style={{
                   flex: 1,
-                  minWidth: '120px',
+                  minWidth: '110px',
                   background: '#10b981',
                   color: '#fff',
                   border: 'none',
@@ -1928,7 +2300,7 @@ export default function KhataPage() {
                     background: '#25d366',
                     color: '#fff',
                     border: 'none',
-                    padding: '10px 16px',
+                    padding: '10px 14px',
                     borderRadius: '12px',
                     fontWeight: '800',
                     fontSize: '13px',
@@ -1938,10 +2310,165 @@ export default function KhataPage() {
                     gap: '4px'
                   }}
                 >
-                  <span>💬</span> তাগাদা পাঠান
+                  <span>💬</span> তাগাদা
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗑️ CUSTOMER DELETE CONFIRMATION MODAL */}
+      {customerToDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'grid', placeItems: 'center', fontSize: '20px' }}>
+                🗑️
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                  খাতা মুছে ফেলতে চান?
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  গ্রাহকের নাম: <strong>{customerToDelete.name}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '14px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '13px', color: '#334155', marginBottom: '6px' }}>
+                📱 <strong>মোবাইল:</strong> {customerToDelete.phone || 'মোবাইল নেই'}
+              </div>
+              {Number(customerToDelete.totalDue || customerToDelete.total_due || 0) > 0 ? (
+                <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', padding: '8px 12px', borderRadius: '10px', color: '#991b1b', fontSize: '12.5px', fontWeight: '800' }}>
+                  ⚠️ সতর্কবার্তা: এই খরিদ্দারের কাছে <strong>৳{Number(customerToDelete.totalDue || customerToDelete.total_due || 0).toLocaleString('en-US')}</strong> টাকা বকেয়া রয়েছে! খাতা মুছে ফেললে এই পাওনা হিসাব মুছে যাবে।
+                </div>
+              ) : (
+                <div style={{ color: '#059669', fontSize: '12.5px', fontWeight: '700' }}>
+                  ✓ এই গ্রাহকের কোনো বকেয়া পাওনা নেই।
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setCustomerToDelete(null)}
+                style={{ flex: 1, padding: '11px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '800', color: '#475569', cursor: 'pointer' }}
+              >
+                না, থাক
+              </button>
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={handleDeleteCustomer}
+                style={{ flex: 1.2, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '12px', fontWeight: '900', color: '#ffffff', cursor: deleteSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)' }}
+              >
+                {deleteSubmitting ? 'মুছে যাচ্ছে...' : '🗑️ হ্যাঁ, মুছুন'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🎙️ DIRECT CUSTOMER VOICE MODAL */}
+      {voiceCustomerModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{ background: '#ffffff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>🎙️</span>
+                <div style={{ textAlign: 'left' }}>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+                    {voiceCustomerModal.name} - ভয়েস এন্ট্রি
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>সরাসরি মুখে বলে বাকি বা জমা যোগ করুন</span>
+                </div>
+              </div>
+              <button onClick={() => { stopCustomerVoice(); setVoiceCustomerModal(null); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: '800' }}>✕</button>
+            </div>
+
+            {/* Pulsing Mic Visualizer */}
+            <div style={{ margin: '18px 0 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div
+                onClick={() => {
+                  if (voiceCustomerListening) {
+                    stopCustomerVoice();
+                  } else {
+                    startCustomerVoice(voiceCustomerModal);
+                  }
+                }}
+                style={{
+                  width: '74px',
+                  height: '74px',
+                  borderRadius: '50%',
+                  background: voiceCustomerListening ? 'radial-gradient(circle, #ef4444 0%, #dc2626 100%)' : '#f1f5f9',
+                  color: voiceCustomerListening ? '#ffffff' : '#64748b',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '32px',
+                  cursor: 'pointer',
+                  boxShadow: voiceCustomerListening ? '0 0 0 10px rgba(239, 68, 68, 0.2), 0 0 0 20px rgba(239, 68, 68, 0.1)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                🎙️
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: '800', color: voiceCustomerListening ? '#dc2626' : '#475569' }}>
+                {voiceCustomerListening ? '🔴 শুনছি... এখন বলুন' : 'মাইক্রোফোনে ক্লিক করে কথা বলুন'}
+              </span>
+            </div>
+
+            {/* Status / Instruction Text */}
+            <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '14px', textAlign: 'left' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>
+                💡 উদাহরণ: <em>"৫০ টাকা বাকি নিল"</em> বা <em>"১০০ টাকা জমা দিল"</em> বা <em>"১ প্যাকেট চিনি বাকি"</em>
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', minHeight: '36px' }}>
+                {voiceCustomerTranscript ? `🗣️ "${voiceCustomerTranscript}"` : voiceCustomerStatus}
+              </div>
+            </div>
+
+            {/* Manual Edit / Fallback Input */}
+            <div style={{ marginBottom: '14px' }}>
+              <input
+                type="text"
+                value={voiceCustomerTranscript}
+                onChange={(e) => setVoiceCustomerTranscript(e.target.value)}
+                placeholder="অথবা এখানে টাইপ করুন (যেমন: ৫০ টাকা বাকি)..."
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13.5px', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="button"
+              disabled={voiceCustomerSubmitting || !voiceCustomerTranscript.trim()}
+              onClick={() => handleDirectCustomerVoiceSubmit(voiceCustomerModal, voiceCustomerTranscript)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                border: 'none',
+                background: (!voiceCustomerTranscript.trim() || voiceCustomerSubmitting) ? '#cbd5e1' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: '#ffffff',
+                fontWeight: '900',
+                fontSize: '14.5px',
+                cursor: (!voiceCustomerTranscript.trim() || voiceCustomerSubmitting) ? 'not-allowed' : 'pointer',
+                boxShadow: voiceCustomerTranscript.trim() ? '0 4px 12px rgba(239, 68, 68, 0.3)' : 'none'
+              }}
+            >
+              {voiceCustomerSubmitting ? 'প্রসেস হচ্ছে...' : '✓ এন্ট্রি সম্পন্ন করুন'}
+            </button>
           </div>
         </div>
       )}

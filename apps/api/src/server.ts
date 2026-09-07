@@ -2640,8 +2640,9 @@ fastify.get('/api/customers', async (request) => {
     let lastDateFormatted = '';
     let lastInvoiceNo = '';
 
+    let lastSale: any = null;
     try {
-      const lastSale = getLastSale.get(r.id, r.name, tenantId) as any;
+      lastSale = getLastSale.get(r.id, r.name, tenantId) as any;
       if (lastSale) {
         lastInvoiceNo = lastSale.invoice_no || '';
         const items = getSaleItems.all(lastSale.id) as any[];
@@ -2667,6 +2668,7 @@ fastify.get('/api/customers', async (request) => {
       promiseDate: r.promise_date || '',
       createdAt: r.created_at,
       lastDate: lastDateFormatted,
+      lastDateRaw: lastSale ? lastSale.created_at : r.created_at,
       lastItemsSummary: lastItemsSummary || (Number(r.total_due) > 0 ? 'পূর্বের বকেয়া খাতা' : 'কোনো বকেয়া নেই'),
       lastInvoiceNo
     };
@@ -2831,6 +2833,140 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
   }
 
   return { success: true, message: 'বাকি ও পণ্যের ফর্দ সফলভাবে সংরক্ষিত হয়েছে' };
+});
+
+// Delete Customer & associated due records
+fastify.delete('/api/customers/:id', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  try {
+    const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
+    if (!cust) return reply.status(404).send({ error: 'Customer not found' });
+
+    db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+    return { success: true, message: `${cust.name}-কে বাকি খাতা থেকে মুছে ফেলা হয়েছে` };
+  } catch (err: any) {
+    return reply.status(400).send({ error: err.message });
+  }
+});
+
+// Direct Customer Specific Voice Entry (When inside customer profile / ledger)
+fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const body = request.body as any;
+  const { text } = body || {};
+
+  const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
+  if (!customer) return reply.status(404).send({ error: 'Customer not found' });
+
+  const tenantId = customer.tenant_id;
+  const now = new Date().toISOString();
+
+  // Spoken numbers and words dictionary
+  const parseSpokenBengaliNumbers = (str: string) => {
+    let s = String(str || '');
+    s = s.replace(/দেড়শো|দেড়শ|দেড়শো|দেড়শ/g, '150');
+    s = s.replace(/আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ/g, '250');
+    s = s.replace(/সাড়ে তিনশো|সাড়ে তিনশ/g, '350');
+    s = s.replace(/সাড়ে চারশো|সাড়ে চারশ/g, '450');
+    s = s.replace(/একশত|একশো|একশ/g, '100');
+    s = s.replace(/দুইশত|দুইশো|দুইশ/g, '200');
+    s = s.replace(/তিনশত|তিনশো|তিনশ/g, '300');
+    s = s.replace(/চারশত|চারশো|চারশ/g, '400');
+    s = s.replace(/পাঁচশত|পাঁচশো|পাঁচশ/g, '500');
+    s = s.replace(/ছয়শো|ছয়শ/g, '600');
+    s = s.replace(/সাতশো|সাতশ/g, '700');
+    s = s.replace(/আটশো|আটশ/g, '800');
+    s = s.replace(/নয়শো|নয়শ/g, '900');
+    s = s.replace(/দেড় হাজার|দেড় হাজার/g, '1500');
+    s = s.replace(/আড়াই হাজার|আড়াই হাজার/g, '2500');
+    s = s.replace(/এক হাজার/g, '1000');
+    s = s.replace(/দুই হাজার/g, '2000');
+    s = s.replace(/তিন হাজার/g, '3000');
+    s = s.replace(/পাঁচ হাজার/g, '5000');
+    s = s.replace(/দশ হাজার/g, '10000');
+    return s;
+  };
+
+  const toEnDigits = (str: string) => {
+    return String(str || '').replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
+  };
+
+  const rawText = String(text || '').trim();
+  const normalized = toEnDigits(parseSpokenBengaliNumbers(rawText.toLowerCase()));
+
+  // 1. Check if Payment received: e.g. "১০০ টাকা জমা" / "১০০ টাকা দিল" / "পরিশোধ"
+  const isPayment = /জমা|পরিশোধ|শোধ|দিল|দিলো|দিছে|পাইছি|পেয়েছি/.test(rawText);
+  const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
+  const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+
+  if (amount <= 0) {
+    return reply.status(400).send({ success: false, speech: 'টাকার পরিমাণ বুঝতে পারিনি। যেমন: "১০০ টাকা বাকি নিল" বা "৫০ টাকা জমা দিল" বলুন।' });
+  }
+
+  if (isPayment) {
+    // Record payment
+    const newDue = Math.max(0, (Number(customer.total_due) || 0) - amount);
+    db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+
+    const paymentId = 'pay-' + uuidv4().slice(0, 8);
+    const invoiceNo = 'PAY-' + Date.now().toString().slice(-4);
+    db.prepare(`
+      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, profit_amount, payment_method, note, cashier, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(paymentId, tenantId, invoiceNo, customer.id, customer.name, amount, amount, 0, 0, 'due_payment', 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
+
+    const itemId = 'sitem-' + uuidv4().slice(0, 8);
+    db.prepare(`
+      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(itemId, paymentId, 'নগদ বাকি আদায় জমা', 1, amount, amount);
+
+    const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
+    return { success: true, action: 'due_paid', speech, data: { customerName: customer.name, amount, totalDue: newDue } };
+  } else {
+    // Record due given with item parsing
+    const newDue = (Number(customer.total_due) || 0) + amount;
+    db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+
+    let cleanItems = rawText
+      .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+      .replace(/(দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|একশত|একশো|হাজার)/gi, '')
+      .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি|নিল|দিলাম|খাতায়|খাতা)/gi, '')
+      .replace(new RegExp(customer.name, 'gi'), '')
+      .replace(/(ভাই|চাচা|মামা)/gi, '')
+      .trim();
+
+    const note = cleanItems || 'বাকি পণ্য সামগ্রী';
+    const saleId = 'sale-' + uuidv4().slice(0, 8);
+    const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
+
+    db.prepare(`
+      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, profit_amount, payment_method, note, cashier, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(saleId, tenantId, invoiceNo, customer.id, customer.name, amount, 0, amount, Math.round(amount * 0.15), 'due', note, 'ভয়েস এআই', now);
+
+    // Match inventory product if named
+    const matchedProd = db.prepare(`
+      SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1
+    `).get(tenantId, `%${cleanItems}%`, `%${cleanItems}%`) as any;
+
+    const itemId = 'sitem-' + uuidv4().slice(0, 8);
+    if (matchedProd) {
+      db.prepare('UPDATE products SET stock = MAX(0, stock - 1) WHERE id = ?').run(matchedProd.id);
+      db.prepare(`
+        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, matchedProd.bangla_name || matchedProd.name, 1, amount, amount);
+    } else {
+      db.prepare(`
+        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, note, 1, amount, amount);
+    }
+
+    const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা (${note}) লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${newDue} টাকা।`;
+    return { success: true, action: 'due_given', speech, data: { customerName: customer.name, amount, totalDue: newDue, note } };
+  }
 });
 
 // Customer Public Passbook API (Open for customer statement link)
