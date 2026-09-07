@@ -4500,30 +4500,34 @@ fastify.post('/api/voice-action', async (request, reply) => {
   // ----------------------------------------------------
   // INTENT 9: EXPENSE LOGGING (চা নাস্তা / দোকান খরচ / বিদ্যুৎ বিল)
   // ----------------------------------------------------
-  if (/খরচ|নাস্তা|ভাড়া|বিল|আপ্যায়ন|যাতায়াত|বেতন/.test(rawText)) {
+  if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
       let cleanTitle = rawText
         .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka|খরচ)/gi, '')
+        .replace(/(খরচ\s*হলো|খরচ\s*লিখুন|খরচ\s*লেখো|খরচ\s*হয়েছে|খরচ\s*করলাম|খরচে\s*লেখো|বাবদ|লেখো|লিখুন)/gi, '')
         .trim();
-      if (!cleanTitle) cleanTitle = 'দোকানের বিবিধ খরচ';
+      if (!cleanTitle || cleanTitle.length < 2) cleanTitle = 'দোকানের বিবিধ খরচ';
 
       let category = 'সাধারণ খরচ';
       let icon = '💸';
-      if (/চা|নাস্তা|বিস্কুট|পানি/.test(rawText)) {
+      if (/চা|নাস্তা|বিস্কুট|পানি|খাওয়া|খাবার/.test(rawText)) {
         category = 'আপ্যায়ন / চা-নাস্তা';
         icon = '☕';
       } else if (/ভাড়া|ভাড়া/.test(rawText)) {
         category = 'দোকান ভাড়া';
         icon = '🏠';
-      } else if (/বিল|বিদ্যুৎ|কারেন্ট/.test(rawText)) {
+      } else if (/বিল|বিদ্যুৎ|কারেন্ট|গ্যাস|পানি/.test(rawText)) {
         category = 'বিদ্যুৎ বিল';
         icon = '💡';
-      } else if (/বেতন|স্টাফ/.test(rawText)) {
+      } else if (/বেতন|স্টাফ|কর্মচারী/.test(rawText)) {
         category = 'স্টাফ বেতন';
         icon = '💼';
+      } else if (/যাতায়াত|যাতায়াত|পরিবহন|কুলি|গাড়ি\s*ভাড়া|ভাড়া/.test(rawText)) {
+        category = 'পরিবহন / কুলি খরচ';
+        icon = '🚚';
       }
 
       const expId = 'exp-' + uuidv4().slice(0, 8);
@@ -4532,7 +4536,7 @@ fastify.post('/api/voice-action', async (request, reply) => {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(expId, tenantId, cleanTitle, amount, category, icon, now);
 
-      const speech = `${cleanTitle} ${amount} টাকা খরচ খাতায় লেখা হয়েছে।`;
+      const speech = `✓ ${cleanTitle} ৳${amount} টাকা খরচ খাতায় যুক্ত হয়েছে।`;
       return {
         success: true,
         action: 'expense_logged',

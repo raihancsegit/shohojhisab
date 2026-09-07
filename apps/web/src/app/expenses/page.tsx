@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
+import VoiceExpenseModal from '../../components/VoiceExpenseModal';
 
 export default function ExpensesPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -14,6 +15,7 @@ export default function ExpensesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVoiceExpenseModal, setShowVoiceExpenseModal] = useState(false);
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('দোকান ভাড়া');
@@ -89,7 +91,7 @@ export default function ExpensesPage() {
       <div
         onClick={() => {
           triggerHaptic('medium');
-          window.dispatchEvent(new CustomEvent('trigger-voice-assistant'));
+          setShowVoiceExpenseModal(true);
         }}
         style={{
           background: 'linear-gradient(135deg, #fff1f2 0%, #fee2e2 100%)',
@@ -252,6 +254,18 @@ export default function ExpensesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 🎙️ Interactive Voice Expense Modal */}
+      {showVoiceExpenseModal && (
+        <VoiceExpenseModal
+          isOpen={showVoiceExpenseModal}
+          onClose={() => setShowVoiceExpenseModal(false)}
+          currentTenantId={currentTenantId || ''}
+          onExpenseCreated={() => {
+            loadExpenses();
+          }}
+        />
       )}
     </div>
   );
