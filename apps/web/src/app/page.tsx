@@ -515,7 +515,7 @@ export default function ShopkeeperDashboard() {
               </div>
             </div>
 
-            {/* 📊 2x2 FLOATING-BADGE KPI METRIC CARDS */}
+            {/* 📊 2x2 FLOATING-BADGE KPI METRIC CARDS (Industry Tailored) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
@@ -523,7 +523,7 @@ export default function ShopkeeperDashboard() {
               marginBottom: '20px',
               paddingTop: '6px'
             }}>
-              {/* Card 1: মোট পাওনা ⓘ (Customer Due) */}
+              {/* Card 1: কাস্টমার বাকি (Customer Due) */}
               <Link
                 href="/khata"
                 style={{
@@ -533,11 +533,11 @@ export default function ShopkeeperDashboard() {
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 10px rgba(254, 215, 170, 0.15)',
+                  boxShadow: '0 4px 14px rgba(254, 215, 170, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '84px',
+                  minHeight: '88px',
                   transition: 'transform 0.15s ease'
                 }}
                 className="clickable-card"
@@ -558,20 +558,20 @@ export default function ShopkeeperDashboard() {
                   boxShadow: '0 2px 6px rgba(234, 88, 12, 0.2)',
                   border: '2px solid #ffffff'
                 }}>
-                  🪙
+                  📒
                 </div>
                 <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    মোট পাওনা <span style={{ fontSize: '10px' }}>ⓘ</span>
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {theme.khataLabel || 'কাস্টমার বাকি'} <span style={{ fontSize: '10px' }}>ⓘ</span>
                   </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#ea580c', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                     <span>{privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}</span>
                     <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
                   </div>
                 </div>
               </Link>
 
-              {/* Card 2: মোট দেনা ⓘ (Dealer Payable) */}
+              {/* Card 2: ডিলার / মহাজন দেনা (Dealer Payable) */}
               <Link
                 href="/dealers"
                 style={{
@@ -581,11 +581,11 @@ export default function ShopkeeperDashboard() {
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 10px rgba(186, 230, 253, 0.15)',
+                  boxShadow: '0 4px 14px rgba(186, 230, 253, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '84px',
+                  minHeight: '88px',
                   transition: 'transform 0.15s ease'
                 }}
                 className="clickable-card"
@@ -609,17 +609,17 @@ export default function ShopkeeperDashboard() {
                   🚚
                 </div>
                 <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    মোট দেনা <span style={{ fontSize: '10px' }}>ⓘ</span>
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {theme.dealerLabel || 'ডিলার দেনা'} <span style={{ fontSize: '10px' }}>ⓘ</span>
                   </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284c7', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                     <span>{privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}</span>
                     <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
                   </div>
                 </div>
               </Link>
 
-              {/* Card 3: পণ্য (Products Count) */}
+              {/* Card 3: পণ্য ও স্টক (Products Count) */}
               <Link
                 href="/stock"
                 style={{
@@ -629,11 +629,11 @@ export default function ShopkeeperDashboard() {
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 10px rgba(153, 246, 228, 0.15)',
+                  boxShadow: '0 4px 14px rgba(153, 246, 228, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '84px',
+                  minHeight: '88px',
                   transition: 'transform 0.15s ease'
                 }}
                 className="clickable-card"
@@ -654,20 +654,20 @@ export default function ShopkeeperDashboard() {
                   boxShadow: '0 2px 6px rgba(13, 148, 136, 0.2)',
                   border: '2px solid #ffffff'
                 }}>
-                  📦
+                  {theme.stockIcon || '📦'}
                 </div>
                 <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
-                    পণ্য
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800' }}>
+                    {theme.stockLabel || 'পণ্য ও স্টক'}
                   </span>
                   <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{products.length}</span>
+                    <span>{products.length} আইটেম</span>
                     <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
                   </div>
                 </div>
               </Link>
 
-              {/* Card 4: পার্টি (Parties Count) */}
+              {/* Card 4: কাস্টমার খাতা (Customer Count) */}
               <Link
                 href="/khata"
                 style={{
@@ -677,11 +677,11 @@ export default function ShopkeeperDashboard() {
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 10px rgba(253, 224, 71, 0.15)',
+                  boxShadow: '0 4px 14px rgba(253, 224, 71, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: '84px',
+                  minHeight: '88px',
                   transition: 'transform 0.15s ease'
                 }}
                 className="clickable-card"
@@ -705,11 +705,11 @@ export default function ShopkeeperDashboard() {
                   👥
                 </div>
                 <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
-                    পার্টি
+                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800' }}>
+                    {theme.name?.includes('ফার্মেসি') ? 'রোগী ও কাস্টমার' : theme.name?.includes('পোশাক') ? 'ফ্যাশন খদ্দের' : 'মোট কাস্টমার'}
                   </span>
                   <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{totalPartiesCount}</span>
+                    <span>{customers.length} জন</span>
                     <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
                   </div>
                 </div>

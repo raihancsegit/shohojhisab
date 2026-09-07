@@ -7,7 +7,7 @@ import Pagination from '../../components/Pagination';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceStockInModal from '../../components/VoiceStockInModal';
-import IndustryUnitSelect from '../../components/IndustryUnitSelect';
+import IndustryUnitSelect, { MultiUnitBreakdownPreview } from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 
@@ -1513,6 +1513,13 @@ export default function StockPage() {
                   />
                 </div>
               </div>
+
+              {/* 🧮 Multi-Unit Sub-Unit Price Breakdown & Converter */}
+              <MultiUnitBreakdownPreview
+                unit={addForm.unit}
+                price={Number(addForm.sellingPrice) || 0}
+                onApplyUnitPrice={(unitPrice) => setAddForm(prev => ({ ...prev, sellingPrice: String(unitPrice) }))}
+              />
 
               {/* 💊 PHARMACY SPECIAL FIELDS */}
               {indId === 'cat-pharmacy' && (
