@@ -2417,7 +2417,122 @@ fastify.post('/api/marketing/send-bulk', async (request, reply) => {
 // ==========================================
 // CENTRAL INTELLIGENT AI SHOP BUSINESS ENGINE
 // ==========================================
-function executeAiShopCommand(tenantId: string, text: string): {
+function normalizeBengali(str: string): string {
+  if (!str) return '';
+  let s = String(str).normalize('NFC').trim();
+  s = s.replace(/\u09AF\u09BC/g, '\u09DF'); // য়
+  s = s.replace(/\u09A1\u09BC/g, '\u09DC'); // ড়
+  s = s.replace(/\u09A2\u09BC/g, '\u09DD'); // ঢ়
+  // Phonetic vowel variants (e.g. রায়ান / রায়ান / রেয়ান -> রিয়ান)
+  s = s.replace(/রায়ান/g, 'রিয়ান').replace(/রায়ান/g, 'রিয়ান').replace(/রেয়ান/g, 'রিয়ান');
+  return s;
+}
+
+function transliterateBengaliToEnglish(str: string): string {
+  if (!str) return '';
+  const map: Record<string, string> = {
+    'অ': 'o', 'আ': 'a', 'ই': 'i', 'ঈ': 'i', 'উ': 'u', 'ঊ': 'u', 'এ': 'e', 'ঐ': 'oi', 'ও': 'o', 'ঔ': 'ou',
+    'ক': 'k', 'খ': 'kh', 'গ': 'g', 'ঘ': 'gh', 'ঙ': 'ng',
+    'চ': 'ch', 'ছ': 'ch', 'জ': 'j', 'ঝ': 'jh', 'ঞ': 'n',
+    'ট': 't', 'ঠ': 'th', 'ড': 'd', 'ঢ': 'dh', 'ণ': 'n',
+    'ত': 't', 'থ': 'th', 'দ': 'd', 'ধ': 'dh', 'ন': 'n',
+    'প': 'p', 'ফ': 'f', 'ব': 'b', 'ভ': 'bh', 'ম': 'm',
+    'য': 'y', 'র': 'r', 'ল': 'l', 'শ': 'sh', 'ষ': 'sh', 'স': 's', 'হ': 'h',
+    'ড়': 'r', 'ঢ়': 'rh', 'য়': 'y', 'ৎ': 't', 'ং': 'ng', 'ঃ': 'h',
+    'া': 'a', 'ি': 'i', 'ী': 'i', 'ু': 'u', 'ূ': 'u', 'ে': 'e', 'ৈ': 'oi', 'ো': 'o', 'ৌ': 'ou', '্': ''
+  };
+  let res = '';
+  for (const ch of str) {
+    res += map[ch] || ch;
+  }
+  return res.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function editDistance(a: string, b: string): number {
+  if (!a || !b) return (a || '').length + (b || '').length;
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function isNameMatch(dbName: string, candidate: string): boolean {
+  if (!dbName || !candidate) return false;
+  const rawDb = String(dbName).trim();
+  const rawCand = String(candidate).trim();
+
+  const cleanDb = rawDb.replace(/(ভাই|চাচা|মামা|কাকা|দাদা|আপা|সাহেব|বেগম|হাজী|ডাক্তার|মাস্টার|শেখ)/gi, '').trim();
+  const cleanCand = rawCand.replace(/(ভাই|চাচা|মামা|কাকা|দাদা|আপা|সাহেব|বেগম|হাজী|ডাক্তার|মাস্টার|শেখ)/gi, '').trim();
+
+  if (cleanDb.toLowerCase() === cleanCand.toLowerCase()) return true;
+
+  const normDb = normalizeBengali(cleanDb).toLowerCase();
+  const normCand = normalizeBengali(cleanCand).toLowerCase();
+  if (normDb === normCand) return true;
+  if (normDb.length >= 3 && (normCand.includes(normDb) || normDb.includes(normCand))) return true;
+
+  // Transliteration matching (handles English "Riyan" vs Bengali "রিয়ান" or "রায়ান")
+  const enDb = transliterateBengaliToEnglish(cleanDb);
+  const enCand = transliterateBengaliToEnglish(cleanCand);
+  if (enDb && enCand) {
+    if (enDb === enCand) return true;
+    if (enDb.includes(enCand) || enCand.includes(enDb)) return true;
+    if (enDb.length >= 4 && enCand.length >= 4 && editDistance(enDb, enCand) <= 1) return true;
+  }
+
+  return false;
+}
+
+function cleanCandidateWords(raw: string): string {
+  let s = String(raw || '');
+  s = s.replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, ' ');
+  const noiseWordRoots = new Set([
+    'টাকা', 'টাকার', 'tk', 'taka',
+    'বাকি', 'বাকিতে', 'বাকিদার', 'খাতা', 'খাতায়', 'খাতাতে',
+    'হিসাব', 'হিসাবে', 'জমা', 'পরিশোধ', 'শোধ',
+    'দিল', 'দিলো', 'দিছে', 'দিলাম', 'দিব', 'দাও', 'নিল', 'নিলো', 'নিয়েছে',
+    'লেখ', 'লেখা', 'লেখো', 'লিখুন', 'লিখে', 'রাখো', 'হলো', 'হবে', 'আছে',
+    'যোগ', 'যুক্ত', 'এড', 'add', 'নতুনভাবে', 'নতুন', 'আবার', 'আরও', 'আরো',
+    'নামে', 'নামের', 'নাম', 'কাস্টমার', 'কাস্টমারের', 'কাছে', 'থেকে',
+    'করো', 'করুন', 'করলাম', 'করব', 'দোকান', 'দোকানের', 'ভাই', 'ভাইয়ের', 'ভাইকে',
+    'চাচা', 'চাচার', 'চাচাকে', 'মামা', 'মামার', 'মামাকে', 'কাকা', 'কাকার', 'কাকাকে',
+    'দাদা', 'দাদার', 'দাদাকে', 'আপা', 'আপার', 'আপাকে', 'সাহেব', 'বেগম', 'হাজী',
+    'এর', 'এ', 'ও', 'এবং', 'আর', 'কত', 'পাবে', 'পাওনা', 'দেওয়া', 'দেয়া', 'বিক্রি'
+  ]);
+
+  const words = s.split(/[\s,।!?]+/).filter(Boolean);
+  const nameTokens: string[] = [];
+
+  for (let w of words) {
+    w = w.trim();
+    if (!w || noiseWordRoots.has(w)) continue;
+
+    let base = w.replace(/(দেরকে|দেররে|দের|ের|য়ের|কে|রে|ে|ো|তে)$/gi, '').trim();
+    if (/[ািীুূেো]র$/gi.test(base)) {
+      base = base.slice(0, -1).trim();
+    }
+    if (!base) base = w;
+    if (noiseWordRoots.has(base)) continue;
+
+    if (/^(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|লক্ষ|লাখ|কোটি)$/.test(w) ||
+        /^(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|লক্ষ|লাখ|কোটি)$/.test(base)) {
+      continue;
+    }
+
+    nameTokens.push(base);
+  }
+
+  return nameTokens.slice(0, 2).join(' ').trim();
+}
+
+function executeAiShopCommand(tenantId: string, text: string, customAssistantName?: string): {
   success: boolean;
   speech: string;
   reply?: string;
@@ -2452,7 +2567,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
     s = dedupedWords.join(' ');
 
-    // 2. Remove multi-word repeated phrases (e.g. "চা নাস্তা ৫০ টাকা চা নাস্তা ৫০ টাকা" -> "চা নাস্তা ৫০ টাকা")
+    // 2. Remove multi-word repeated phrases
     for (let len = 6; len >= 1; len--) {
       const pattern = new RegExp(`((?:\\S+\\s+){${len - 1}}\\S+)(?:\\s+\\1)+`, 'gi');
       s = s.replace(pattern, '$1');
@@ -2504,8 +2619,24 @@ function executeAiShopCommand(tenantId: string, text: string): {
   };
 
   const rawCleaned = cleanSpokenBengali(String(text).trim());
-  // Strip wake words if user calls assistant by name (e.g., "সহজহিসাব, আজকের বিক্রি কত", "ম্যানেজার, আজকের স্টক কত", "রোবট, রিয়ানের ২০ টাকা বাকি")
-  const rawText = rawCleaned.replace(/^(সহজহিসাব|সহজ\s*হিসাব|রোবট|ম্যানেজার|সহকারী|জার্ভিস|এআই|অ্যাসিস্ট্যান্ট|কম্পিউটার|ভাই|স্যার|ওহে|এই\s*যে)[,\s]+/i, '').trim() || rawCleaned;
+
+  // Dynamic Assistant Name & Wake Word Handling
+  const assistantNamePattern = customAssistantName
+    ? new RegExp(`^(${customAssistantName}|সহজহিসাব|সহজ\\s*হিসাব|রোবট|ম্যানেজার|সহকারী|জার্ভিস|এআই|অ্যাসিস্ট্যান্ট|কম্পিউটার|ভাই|স্যার|ওহে|এই\\s*যে)[,\\s]*`, 'i')
+    : /^(সহজহিসাব|সহজ\s*হিসাব|রোবট|ম্যানেজার|সহকারী|জার্ভিস|এআই|অ্যাসিস্ট্যান্ট|কম্পিউটার|ভাই|স্যার|ওহে|এই\s*যে)[,\s]*/i;
+
+  let rawText = rawCleaned.replace(assistantNamePattern, '').trim();
+  if (!rawText) {
+    // User just called the assistant by name (e.g. "সহজহিসাব" or "ম্যানেজার")
+    const displayName = customAssistantName || 'সহজহিসাব';
+    return {
+      success: true,
+      speech: `জি! আমি শুনছি। আজকের বিক্রি, স্টক বা বাকি লেখার জন্য যেকোনো নির্দেশ দিন।`,
+      reply: `🤖 **জি! আমি প্রস্তুত।**\nআমি আপনার দোকানের স্মার্ট সহকারী **${displayName}**।\n\nবলুন কীভাবে সহায়তা করতে পারি:\n• *"আজকের বিক্রি ও লাভ কত?"*\n• *"আজকের স্টক কত?"*\n• *"রিয়ানের ২০ টাকা বাকি যোগ করো"*\n• *"চা নাস্তা ৬০ টাকা খরচ লেখো"*`,
+      action: 'wake_acknowledged'
+    };
+  }
+
   const normalized = toEnDigits(parseSpokenBengaliNumbers(rawText.toLowerCase()));
   const now = new Date().toISOString();
   const todayDate = now.split('T')[0];
@@ -2519,19 +2650,21 @@ function executeAiShopCommand(tenantId: string, text: string): {
     `).all(tenantId) as any[];
 
     for (const bad of corruptedRows) {
-      // Look for real existing customer (e.g., "রিয়ান")
-      const allClean = db.prepare(`
-        SELECT * FROM customers WHERE tenant_id = ? AND id != ? AND name NOT LIKE '%নতুনভাবে%' AND name NOT LIKE '%খাতায়%'
-      `).all(tenantId, bad.id) as any[];
+      let cleanName = bad.name
+        .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+        .replace(/(নতুনভাবে|খাতায়|আবার|বাকি|যোগ|হবে|এর|খাতা|টাকা|ভাইয়ের|ভাইকে|ভাইরে)/gi, '')
+        .replace(/(দেরকে|দেররে|দের|ের|য়ের|কে|রে|ে|ো|তে)$/gi, '')
+        .trim();
+      cleanName = cleanName.replace(/\s+/g, ' ').trim() || 'সম্মানিত কাস্টমার';
 
-      const matchedReal = allClean.find((c: any) => bad.name.includes(c.name.replace(/(ভাই|চাচা|মামা)/g, '').trim()));
-      if (matchedReal) {
-        // Merge due and remove corrupted duplicate
-        db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(bad.total_due || 0, matchedReal.id);
+      const existing = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND id != ? AND (name = ? OR name = ? || " ভাই")').get(tenantId, bad.id, cleanName, cleanName) as any;
+      if (existing) {
+        db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(bad.total_due || 0, existing.id);
+        db.prepare('UPDATE sales SET customer_id = ?, customer_name = ? WHERE customer_id = ?').run(existing.id, existing.name, bad.id);
         db.prepare('DELETE FROM customers WHERE id = ?').run(bad.id);
       } else {
-        const cleanedName = bad.name.replace(/(নতুনভাবে|খাতায়|আবার|বো|হবে|বাকি|যোগ|টাকা|এর|খাতা)/gi, '').trim() || 'সম্মানিত কাস্টমার';
-        db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(cleanedName, bad.id);
+        db.prepare('UPDATE customers SET name = ? WHERE id = ?').run(cleanName, bad.id);
+        db.prepare('UPDATE sales SET customer_name = ? WHERE customer_id = ?').run(cleanName, bad.id);
       }
     }
   } catch (e) {}
@@ -2543,38 +2676,67 @@ function executeAiShopCommand(tenantId: string, text: string): {
   const findCustomerInUtterance = (utterance: string) => {
     if (!utterance || allCustomers.length === 0) return null;
     const lowerUtt = utterance.toLowerCase();
+    const candidateName = cleanCandidateWords(utterance);
 
-    // Sort by name length descending to prioritize exact full names ("রিয়ান আহমেদ" over "রিয়ান")
+    // 1. Direct candidate matching against all customers
+    if (candidateName && candidateName.length >= 2) {
+      for (const c of allCustomers) {
+        if (isNameMatch(c.name, candidateName)) {
+          return c;
+        }
+      }
+    }
+
+    // 2. Scan utterance for customer name variations
     const sorted = [...allCustomers].sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0));
-
     for (const c of sorted) {
       if (!c.name) continue;
       const rawCName = String(c.name).trim().toLowerCase();
       const cleanBase = rawCName.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী|মামা|ডাক্তার|শেখ)/gi, '').trim();
 
-      // Variations: "রিয়ান", "রিয়ানের", "রিয়ানকে", "রিয়ানরে", "রিয়ানে"
       const variations = [
         rawCName,
         cleanBase,
+        cleanBase + ' এর',
         cleanBase + 'ের',
-        cleanBase + 'র',
+        cleanBase + ' ভাইকে',
+        cleanBase + ' ভাইয়ের',
+        cleanBase + ' ভাই এর',
         cleanBase + 'কে',
         cleanBase + 'রে',
         cleanBase + 'েরে',
         cleanBase + 'ে',
+        cleanBase + ' নামের',
+        cleanBase + ' নামে',
+        cleanBase + 'র'
       ].filter(v => v.length >= 2);
 
       for (const v of variations) {
-        if (lowerUtt.includes(v)) {
+        if (lowerUtt.includes(v.toLowerCase())) {
           return c;
         }
+      }
+
+      // Vowel normalized match
+      const normBase = normalizeBengali(cleanBase);
+      if (normBase && normBase.length >= 2) {
+        if (lowerUtt.includes(normBase) || lowerUtt.includes(normBase + 'ের') || lowerUtt.includes(normBase + ' এর')) {
+          return c;
+        }
+      }
+
+      // Transliterated English match (e.g. spoken "রিয়ান" vs customer "Riyan")
+      const enDb = transliterateBengaliToEnglish(cleanBase);
+      const enUtt = transliterateBengaliToEnglish(lowerUtt);
+      if (enDb && enDb.length >= 3 && enUtt.includes(enDb)) {
+        return c;
       }
     }
     return null;
   };
 
   // 1. Proactive Navigation & Voice Narration for Stock & Reports
-  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে/.test(rawText)) {
+  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে|বিক্রি/.test(rawText)) {
     const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
     const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
     const totalCount = Number(totalProdRow?.total) || 0;
@@ -2584,7 +2746,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     let stockSummarySpeech = '';
     if (lowCount > 0) {
       const topLow = lowStockRows.slice(0, 3).map(p => `${p.bangla_name || p.name} (${p.stock} ${p.unit || 'টি'})`).join(', ');
-      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম—যেমন: ${topLow}।`;
+      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম—যেমন: ${topLow}। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
     } else {
       stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
     }
@@ -2599,23 +2761,21 @@ function executeAiShopCommand(tenantId: string, text: string): {
     };
   }
 
-  // Assistant Stock Helper ("আমার হয়ে স্টক যোগ করো")
-  if (/আমার\s*হয়ে\s*স্টক|স্টক\s*যোগ\s*করতে\s*চাই|স্টক\s*ম্যানেজার|সহকারী\s*স্টক/.test(rawText) && !/\d+/.test(normalized)) {
+  // Assistant Stock Helper ("আমার হয়ে স্টক যোগ করো", "আমার হয়ে স্টক এড করো")
+  if (/আমার\s*হয়ে\s*স্টক|স্টক\s*এড\s*করতে\s*চাই|স্টক\s*যোগ\s*করতে\s*চাই|স্টক\s*ম্যানেজার|সহকারী\s*স্টক|স্টক\s*এড\s*করো|স্টক\s*যোগ\s*করো/.test(rawText) && !/\d+/.test(normalized)) {
     return {
       success: true,
-      action: 'navigate',
+      action: 'trigger_add_stock',
       navigateTo: '/stock',
-      speech: 'স্টক পেজে এসেছি। আপনি সরাসরি মুখে পণ্যের নাম ও পরিমাণ বলুন (যেমন: নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো) অথবা বাল্ক যুক্ত করুন।',
+      speech: 'স্টক পেজে এসেছি এবং নতুন পণ্য যোগ করার উইন্ডো খুলে দিয়েছি। আপনি সরাসরি মুখে পণ্যের নাম ও পরিমাণ বলুন (যেমন: নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো) অথবা বাল্ক যুক্ত করুন।',
       reply: '📦 **স্টক যোগ করতে প্রস্তুত!**\nসরাসরি মুখে বলুন: *"নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো"*',
       actionLink: { text: 'স্টক পেজে যান →', href: '/stock' }
     };
   }
 
   // 2. Stock Restock & Multi-Item Addition ("নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো", "প্যারাসিটামল ১০০ পিস স্টক বাড়াও")
-  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ|স্টকে\s*এড/.test(rawText)) {
+  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ|স্টকে\s*এড|স্টক\s*এড/.test(rawText) && /\d+/.test(normalized)) {
     const numbersMatch = normalized.match(/(\d+(\.\d+)?)/g);
-    
-    // Split compound inputs if user gave multiple items (e.g., "নাপা ৫০ পাতা এবং চিনি ২০ কেজি")
     const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
     const updatedProducts: any[] = [];
 
@@ -2626,7 +2786,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
 
       let cleanProd = seg
         .replace(/(\d+|[০-৯]+)/g, '')
-        .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ)/gi, '')
+        .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ|এড\s*করো|এড)/gi, '')
         .trim();
 
       if (cleanProd && cleanProd.length >= 2) {
@@ -2641,7 +2801,6 @@ function executeAiShopCommand(tenantId: string, text: string): {
           db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
           updatedProducts.push({ name: product.bangla_name || product.name, added: addQty, unit: product.unit || 'পিস', total: newStock });
         } else {
-          // Auto-create missing product
           const newProdId = 'prod-' + uuidv4().slice(0, 8);
           const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/)?.[0] || 'পিস') : 'পিস';
           db.prepare(`
@@ -2670,7 +2829,66 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 3. Daily Live Report & Sales / Profit Narration
+  // 3. Stock-Based Product Selling ("নাপা ২ পাতা বিক্রি হলো নগদ ২০ টাকা", "চিনি ৫ কেজি বিক্রি হলো")
+  const isSaleCommand = /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো/.test(rawText) && !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট/.test(rawText);
+  if (isSaleCommand && /\d+/.test(normalized)) {
+    const numbersMatch = normalized.match(/(\d+(\.\d+)?)/g);
+    const qty = numbersMatch && numbersMatch[0] ? parseFloat(numbersMatch[0]) : 1;
+    const price = numbersMatch && numbersMatch[1] ? parseFloat(numbersMatch[1]) : (qty * 15);
+
+    // Try finding product in stock
+    const productsInTenant = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+    let matchedProd: any = null;
+    for (const p of productsInTenant) {
+      const pName = (p.bangla_name || p.name || '').toLowerCase();
+      if (pName && rawText.toLowerCase().includes(pName)) {
+        matchedProd = p;
+        break;
+      }
+    }
+
+    if (matchedProd) {
+      const currentStock = Number(matchedProd.stock) || 0;
+      const newStock = Math.max(0, currentStock - qty);
+      db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProd.id);
+
+      const saleId = 'sale-' + uuidv4().slice(0, 8);
+      const invoiceNo = 'MEMO-' + Date.now().toString().slice(-4);
+      const finalPrice = numbersMatch && numbersMatch.length > 1 ? price : (qty * Number(matchedProd.selling_price || 15));
+      const profit = Math.max(0, finalPrice - (qty * Number(matchedProd.purchase_price || 10)));
+
+      let customer = findCustomerInUtterance(rawText);
+      const isDue = /বাকি|বাকিতে/.test(rawText);
+
+      if (isDue && customer) {
+        const newDue = (Number(customer.total_due) || 0) + finalPrice;
+        db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+      }
+
+      db.prepare(`
+        INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(saleId, tenantId, invoiceNo, finalPrice, 0, finalPrice, isDue ? 0 : finalPrice, isDue ? finalPrice : 0, profit, isDue ? 'due' : 'cash', customer?.id || null, customer?.name || 'নগদ কাস্টমার', 'ভয়েস মেমো বিক্রি', 'ভয়েস এআই', now);
+
+      db.prepare(`
+        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('sitem-' + uuidv4().slice(0, 8), saleId, matchedProd.bangla_name || matchedProd.name, qty, finalPrice / qty, finalPrice);
+
+      const speech = `✓ ${matchedProd.bangla_name || matchedProd.name} ${qty} ${matchedProd.unit || 'টি'} বিক্রি সফল হয়েছে এবং স্টক আপডেট করা হয়েছে। অবশিষ্ট মজুদ ${newStock} ${matchedProd.unit || 'টি'}।`;
+      return {
+        success: true,
+        action: 'sale_recorded',
+        navigateTo: '/pos',
+        speech,
+        reply: `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!**\n• পণ্য: **${matchedProd.bangla_name || matchedProd.name}**\n• বিক্রির পরিমাণ: **${qty} ${matchedProd.unit || 'টি'}**\n• মূল্য: **৳${finalPrice.toLocaleString('en-US')}**\n• অবশিষ্ট স্টক: **${newStock} ${matchedProd.unit || 'টি'}**`,
+        actionLink: { text: 'ক্যাশ কাউন্টারে মেমো দেখুন →', href: '/pos' },
+        data: { productName: matchedProd.name, quantity: qty, finalPrice, remainingStock: newStock }
+      };
+    }
+  }
+
+  // 4. Daily Live Report & Sales / Profit Narration
   if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট/.test(rawText)) {
     const todaySales = db.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash, COALESCE(SUM(due_amount), 0) as due
@@ -2688,7 +2906,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
       action: 'navigate',
       navigateTo: '/day-end',
       speech,
-      reply: `📊 **আজকের লাইভ ক্লোজিং report (${todayDate}):**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${cash.toLocaleString('en-US')}**\n• খাঁটি নিট প্রফিট: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
+      reply: `📊 **আজকের লাইভ ক্লোজিং রিপোর্ট (${todayDate}):**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${cash.toLocaleString('en-US')}**\n• খাঁটি নিট প্রফিট: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
       actionLink: { text: 'দিনের ক্লোজিং রিপোর্ট দেখুন →', href: '/day-end' },
       data: { totalSales: s, netProfit: p, cashSales: cash, count }
     };
@@ -2738,7 +2956,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     };
   }
 
-  // 4. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
+  // 5. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
   if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText) && !/কত|রিপোর্ট|লাভ|খোলো|যান|যাও/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
@@ -2787,16 +3005,22 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 5. Due Payment Received ("কালাম ২০০ টাকা জমা দিল", "রিয়ান ২০ টাকা শোধ করল")
+  // 6. Due Payment Received ("কালাম ২০০ টাকা জমা দিল", "রিয়ান ২০ টাকা শোধ করল")
   const isPaymentIntent = /বাকি\s*শোধ|বাকি\s*জমা|বাকি\s*পরিশোধ|বাকি\s*দিল|টাকা\s*জমা\s*দিল|টাকা\s*দিল|টাকা\s*দিলো|জমা\s*দিল|জমা\s*দিলো|শোধ\s*দিল|জমা|পরিশোধ|শোধ/.test(rawText) ||
                           (/(দিল|দিলো|দিছে|পাইছি|পেয়েছি)/.test(rawText) && /\d+/.test(normalized));
 
-  if (isPaymentIntent && !/বাকি\s*কত|খরচ|ভাড়া|বিল|লাভ|রিপোর্ট|যান|যাও|খোলো/.test(rawText)) {
+  if (isPaymentIntent && !/বাকি\s*কত|খরচ|ভাড়া|বিল|লাভ|রিপোর্ট|যান|যাও|খোলো|বিক্রি/.test(rawText)) {
     const amountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
       let customer = findCustomerInUtterance(rawText);
+      if (!customer) {
+        const candidate = cleanCandidateWords(rawText);
+        if (candidate) {
+          customer = allCustomers.find((c: any) => isNameMatch(c.name, candidate));
+        }
+      }
       if (!customer) {
         customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND total_due > 0 ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
       }
@@ -2833,7 +3057,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 6. Due Given ("রিয়ানের আরও ২০ টাকা বাকি যোগ হবে", "কালাম ৫০০ টাকা বাকি নিল", "স্বপন ১০০ টাকা")
+  // 7. Due Given ("রিয়ানের আরও ২০ টাকা বাকি যোগ হবে", "রিয়ান এর আরো ৩০ টাকা বাকি এড হবে", "কালাম ৫০০ টাকা বাকি নিল", "স্বপন ১০০ টাকা")
   const hasAmount = /\d+/.test(normalized);
   const isDueIntent = /বাকি|বাকিতে|বাকি\s*যোগ|বাকি\s*হবে|বাকি\s*এড|add/.test(rawText) || (hasAmount && !/কত|দাম|দর|স্টক|রিপোর্ট|লাভ|খোলো|বিক্রি|ক্যাশ|লাভ|খরচ|ভাড়া|বিল|যান|যাও/.test(rawText));
 
@@ -2845,30 +3069,23 @@ function executeAiShopCommand(tenantId: string, text: string): {
       // 1. Direct utterance match against all existing customers
       let customer = findCustomerInUtterance(rawText);
 
+      // 2. If not found, try clean candidate words & isNameMatch
       if (!customer) {
-        // Extract clean name Candidate
-        let cleanName = rawText
-          .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
-          .replace(/(দেড়শো|দেড়শ|দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ|সাড়ে|একশত|একশো|একশ|দুইশত|দুইশো|দুইশ|তিনশত|তিনশো|তিনশ|চারশত|চারশো|চারশ|পাঁচশত|পাঁচশো|পাঁচশ|ছয়শো|ছয়শ|সাতশো|সাতশ|আটশো|আটশ|নয়শো|নয়শ|হাজার|টাকা|টাকার|tk|taka)/gi, '')
-          .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*লিখুন|বাকি\s*লিখে\s*রাখো|বাকি\s*হলো|বাকিতে\s*নিল|বাকি\s*আছে|বাকি\s*যোগ\s*হবে|বাকি\s*যোগ|বাকি\s*এড\s*হবে|বাকি\s*এড|বাকি|খাতায়|খাতা|এর|কে|রে)/gi, '')
-          .replace(/(নতুনভাবে|নতুন|আবার|হবে|আছে|হলো|নিল|দিলাম|দিব|দাও|লেখো|লিখুন|যোগ|যুক্ত|এড|ভাইয়ের|ভাইকে|চাচার|চাচাকে|মামার|মামা)/gi, '')
-          .trim();
+        const candidate = cleanCandidateWords(rawText);
+        if (candidate) {
+          customer = allCustomers.find((c: any) => isNameMatch(c.name, candidate));
+        }
 
-        cleanName = cleanName.replace(/(য়ের|দের|দেরকে|দেররে|ের|এর|র|কে|রে)$/gi, '').replace(/\s+/g, ' ').trim();
-
-        // Check if extracted cleanName is a valid 1-2 word name and not noise
-        const words = cleanName.split(/\s+/).filter(w => w.length >= 2 && !/নতুনভাবে|খাতায়|আবার|বো|বাকি|টাকা|যোগ|হবে/.test(w));
-        const finalName = words.slice(0, 2).join(' ');
-
-        if (finalName && finalName.length >= 2) {
-          const custDisplayName = finalName.includes('ভাই') || finalName.includes('চাচা') ? finalName : `${finalName} ভাই`;
+        // 3. Only if genuinely NO customer matched anywhere, insert clean new customer
+        if (!customer && candidate && candidate.length >= 2) {
+          const custDisplayName = candidate.includes('ভাই') || candidate.includes('চাচা') ? candidate : `${candidate} ভাই`;
           const custId = 'cust-' + uuidv4().slice(0, 8);
           db.prepare(`
             INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
           customer = { id: custId, name: custDisplayName, total_due: amount };
-        } else {
+        } else if (!customer) {
           // Fallback to most recent customer with dues
           customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
           if (customer) {
@@ -2878,7 +3095,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
           }
         }
       } else {
-        // Update matched existing customer due
+        // Update matched existing customer due (NO DUPLICATION)
         const newDue = (Number(customer.total_due) || 0) + amount;
         db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
         customer.total_due = newDue;
@@ -2908,9 +3125,15 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 7. Customer Due Inquiry ("রিয়ান ভাই কত পাবে", "কালামের বাকি কত")
+  // 8. Customer Due Inquiry ("রিয়ান ভাই কত পাবে", "কালামের বাকি কত")
   if (/বাকি\s*কত|হিসাব\s*কত|কত\s*পাবে|পাওনা\s*কত/.test(rawText) && !/মার্কেট|মোট\s*বাকি|আজকে\s*কত\s*বাকি/.test(rawText)) {
-    const customer = findCustomerInUtterance(rawText);
+    let customer = findCustomerInUtterance(rawText);
+    if (!customer) {
+      const candidate = cleanCandidateWords(rawText);
+      if (candidate) {
+        customer = allCustomers.find((c: any) => isNameMatch(c.name, candidate));
+      }
+    }
     if (customer) {
       const due = Number(customer.total_due) || 0;
       const speech = `${customer.name} এর দোকানে বর্তমান বকেয়া বাকি ৳${due} টাকা।`;
@@ -2926,7 +3149,7 @@ function executeAiShopCommand(tenantId: string, text: string): {
     }
   }
 
-  // 8. Market Total Due
+  // 9. Market Total Due
   if (/মোট\s*বাকি|মার্কেট\s*বাকি|পাওনা/.test(rawText)) {
     const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
     const marketDue = Number(totalMarketDueRow?.totalDue) || 0;
@@ -2964,30 +3187,31 @@ function executeAiShopCommand(tenantId: string, text: string): {
 // Real-Time Dynamic AI Business Assistant
 fastify.post('/api/ai-assistant/query', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, query, text } = body || {};
+  const { tenantId, query, text, assistantName } = body || {};
 
   if (!tenantId) return reply.status(400).send({ error: 'Tenant ID required' });
 
   const q = String(query || text || '').trim();
-  const res = executeAiShopCommand(tenantId, q);
+  const res = executeAiShopCommand(tenantId, q, assistantName);
   return {
     success: res.success,
     reply: res.reply || res.speech,
     speech: res.speech || res.reply,
     action: res.action,
     actionLink: res.actionLink,
+    navigateTo: res.navigateTo,
     data: res.data
   };
 });
 
 fastify.post('/api/ai-assistant/command', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, text, query } = body || {};
+  const { tenantId, text, query, assistantName } = body || {};
 
   if (!tenantId) return reply.status(400).send({ error: 'Tenant ID required' });
 
   const q = String(text || query || '').trim();
-  const res = executeAiShopCommand(tenantId, q);
+  const res = executeAiShopCommand(tenantId, q, assistantName);
   return res;
 });
 
@@ -4491,13 +4715,13 @@ fastify.post('/api/customers/:id/promise-date', async (request, reply) => {
 // ==========================================
 fastify.post('/api/voice-action', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, text } = body || {};
+  const { tenantId, text, assistantName } = body || {};
 
   if (!tenantId || !text) {
     return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
   }
 
-  const result = executeAiShopCommand(tenantId, text);
+  const result = executeAiShopCommand(tenantId, text, assistantName);
   return result;
 });
 

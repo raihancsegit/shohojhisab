@@ -52,12 +52,14 @@ export default function AiAssistantPage() {
     setLoading(true);
 
     try {
+      const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
       const res = await fetch('/api/ai-assistant/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenantId: currentTenantId || 'tenant-1',
-          query: q
+          query: q,
+          assistantName: savedAssistantName
         })
       });
 

@@ -239,9 +239,16 @@ export default function StockPage() {
       loadStock();
     };
 
+    const handleVoiceTriggerAdd = () => {
+      setShowAddModal(true);
+      triggerHaptic('success');
+    };
+
     window.addEventListener('voice-action-success', handleVoiceSuccess);
+    window.addEventListener('voice-trigger-add-stock', handleVoiceTriggerAdd);
     return () => {
       window.removeEventListener('voice-action-success', handleVoiceSuccess);
+      window.removeEventListener('voice-trigger-add-stock', handleVoiceTriggerAdd);
     };
   }, [currentTenantId]);
 

@@ -152,10 +152,11 @@ export default function VoiceAssistant() {
     triggerHaptic('medium');
 
     try {
+      const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
       const res = await fetch('/api/voice-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: tenant?.id || 'tenant-1', text: query })
+        body: JSON.stringify({ tenantId: tenant?.id || 'tenant-1', text: query, assistantName: savedAssistantName })
       });
 
       if (res.ok) {
@@ -174,8 +175,16 @@ export default function VoiceAssistant() {
           // Trigger live refresh event across active pages
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
 
+          if (data.action === 'trigger_add_stock') {
+            window.dispatchEvent(new CustomEvent('voice-trigger-add-stock', { detail: data }));
+          }
+
           if (data.navigateTo) {
             router.push(data.navigateTo);
+            // Smoothly auto-close modal so user sees destination page while hearing speech
+            setTimeout(() => {
+              setIsOpen(false);
+            }, 1200);
           }
 
           if (data.action === 'trigger_print') {
