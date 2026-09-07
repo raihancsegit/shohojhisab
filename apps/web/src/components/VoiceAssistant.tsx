@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
-import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
+import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -62,6 +62,11 @@ export default function VoiceAssistant() {
       return;
     }
 
+    // Cancel active TTS output so microphone doesn't transcribe speaker audio
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     triggerHaptic('medium');
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     latestTranscriptRef.current = '';
@@ -83,7 +88,7 @@ export default function VoiceAssistant() {
 
       recognition.onresult = (event: any) => {
         const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript) return;
+        if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);

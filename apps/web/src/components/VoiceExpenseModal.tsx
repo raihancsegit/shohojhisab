@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
+import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 
 interface VoiceExpenseModalProps {
   isOpen: boolean;
@@ -34,6 +34,11 @@ export default function VoiceExpenseModal({
       return;
     }
 
+    // Cancel any active TTS speech so mic doesn't hear the speaker
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     latestTranscriptRef.current = '';
     setLiveTranscript('');
@@ -54,7 +59,7 @@ export default function VoiceExpenseModal({
 
       recognition.onresult = (event: any) => {
         const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript) return;
+        if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
@@ -100,7 +105,7 @@ export default function VoiceExpenseModal({
   };
 
   const handleProcessExpense = async (spokenText: string) => {
-    if (!spokenText || !currentTenantId) return;
+    if (!spokenText || !currentTenantId || isEchoedTTSResponse(spokenText)) return;
     setSubmitting(true);
     stopListening();
     setFeedback(`প্রসেস হচ্ছে: "${spokenText}"...`);
@@ -117,17 +122,18 @@ export default function VoiceExpenseModal({
         if (result.success) {
           triggerHaptic('success');
           setFeedback(`✓ ${result.speech}`);
-          speakAnnouncement(result.speech);
           onExpenseCreated();
           setLiveTranscript('');
           latestTranscriptRef.current = '';
 
-          // Auto restart listening after 2 seconds for another entry
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              startListening();
-            }
-          }, 2200);
+          // Play announcement and only restart listening after the soundbox finishes speaking
+          speakAnnouncement(result.speech, () => {
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                startListening();
+              }
+            }, 800);
+          });
           return;
         } else {
           setFeedback(result.speech || 'খরচের পরিমাণ বুঝতে পারিনি। যেমন: "চা নাস্তা ৬০ টাকা" বলুন।');

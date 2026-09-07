@@ -74,7 +74,7 @@ interface AuthContextType {
   switchRoleMode: (mode: 'owner' | 'staff', pin?: string) => { success: boolean; error?: string };
   triggerHaptic: (type?: 'light' | 'medium' | 'success' | 'warning') => void;
   toggleSoundbox: () => void;
-  speakAnnouncement: (text: string) => void;
+  speakAnnouncement: (text: string, onComplete?: () => void) => void;
   toggleTheme: () => void;
   updateActiveTenant: (tenantData: ShopTenant) => void;
   isFeatureEnabled: (featureKey: keyof ShopFeatures) => boolean;
@@ -234,12 +234,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Digital Bengali Voice Soundbox (Strictly opt-in only to avoid microphone feedback)
-  const speakAnnouncement = (text: string) => {
+  const speakAnnouncement = (text: string, onComplete?: () => void) => {
     try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+        if (onComplete) onComplete();
+        return;
+      }
       // If soundbox is disabled, strictly cancel and do not speak
       if (!isSoundboxEnabled) {
         window.speechSynthesis.cancel();
+        if (onComplete) onComplete();
         return;
       }
       window.speechSynthesis.cancel();
@@ -247,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Convert English digits to Bengali digits and clean symbols
       const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
       let cleanText = String(text || '')
+        .replace(/✓/g, '')
         .replace(/\d/g, (d) => bnDigits[Number(d)] || d)
         .replace(/৳/g, '')
         .replace(/#INV-\d+/gi, '')
@@ -258,11 +263,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .replace(/\bnull\b|\bundefined\b/gi, '')
         .trim();
 
-      if (!cleanText) return;
+      if (!cleanText) {
+        if (onComplete) onComplete();
+        return;
+      }
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'bn-BD';
-      utterance.rate = 0.92;
+      utterance.rate = 0.95;
       utterance.pitch = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -277,9 +285,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         utterance.voice = bnVoice;
       }
 
+      utterance.onend = () => {
+        if (onComplete) onComplete();
+      };
+      utterance.onerror = () => {
+        if (onComplete) onComplete();
+      };
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.error('Speech synthesis error', e);
+      if (onComplete) onComplete();
     }
   };
 

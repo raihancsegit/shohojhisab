@@ -86,3 +86,13 @@ export function normalizeBengaliNumbers(str: string): string {
 
   return s;
 }
+
+/**
+ * Detects if the spoken transcript is the device speaker's own TTS output echoed back into the microphone
+ */
+export function isEchoedTTSResponse(text: string): boolean {
+  if (!text) return false;
+  const s = text.trim();
+  return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা\s*হয়েছে|বর্তমান\s*মোট\s*বকেয়া/i.test(s);
+}
+

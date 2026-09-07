@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
-import { extractTranscriptFromEvent, cleanSpokenBengali } from '../lib/banglaSpeechUtils';
+import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 
 interface VoiceKhataModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface VoiceKhataModalProps {
   products: any[];
   industryId?: string;
   onActionCompleted: () => void;
-  speakAnnouncement?: (text: string) => void;
+  speakAnnouncement?: (text: string, onComplete?: () => void) => void;
   triggerHaptic?: (type?: any) => void;
 }
 
@@ -65,6 +65,11 @@ export default function VoiceKhataModal({
       return;
     }
 
+    // Cancel active TTS output so microphone doesn't transcribe speaker audio
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     latestTranscriptRef.current = '';
     setLiveTranscript('');
@@ -85,7 +90,7 @@ export default function VoiceKhataModal({
 
       recognition.onresult = (event: any) => {
         const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript) return;
+        if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
@@ -131,7 +136,7 @@ export default function VoiceKhataModal({
   };
 
   const handleProcessCommand = async (spokenText: string) => {
-    if (!spokenText || !currentTenantId) return;
+    if (!spokenText || !currentTenantId || isEchoedTTSResponse(spokenText)) return;
     setIsProcessing(true);
     stopListening();
     playBeep(1100);
@@ -151,17 +156,20 @@ export default function VoiceKhataModal({
           playBeep(1300);
           if (triggerHaptic) triggerHaptic('success');
           setLastActionMessage(`✓ ${result.speech}`);
-          if (speakAnnouncement) speakAnnouncement(result.speech);
           onActionCompleted();
           setLiveTranscript('');
           latestTranscriptRef.current = '';
           
-          // Auto restart listening after 2 seconds for continuous multi-customer entry
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              startListening();
-            }
-          }, 2200);
+          // Speak announcement and restart listening only after TTS ends
+          if (speakAnnouncement) {
+            speakAnnouncement(result.speech, () => {
+              setTimeout(() => {
+                if (isMountedRef.current) {
+                  startListening();
+                }
+              }, 800);
+            });
+          }
           return;
         } else {
           setLastActionMessage(result.speech || 'কথাটি বুঝতে পারিনি। পরিষ্কারভাবে আবার বলুন।');
