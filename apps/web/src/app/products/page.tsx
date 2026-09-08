@@ -26,6 +26,8 @@ export default function ProductsPage() {
   const [sellingPrice, setSellingPrice] = useState('');
   const [stock, setStock] = useState('10');
   const [unit, setUnit] = useState('পিস');
+  const [subUnit, setSubUnit] = useState('');
+  const [conversionRatio, setConversionRatio] = useState('1');
   const [genericName, setGenericName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [size, setSize] = useState('');
@@ -58,6 +60,8 @@ export default function ProductsPage() {
     setSellingPrice('');
     setStock('15');
     setUnit(tenant?.industryId === 'cat-pharmacy' ? 'পাতা' : (tenant?.industryId === 'cat-hardware' ? 'ফুট' : tenant?.industryId === 'cat-shoes' ? 'জোড়া' : tenant?.industryId === 'cat-grocery' ? 'কেজি' : 'পিস'));
+    setSubUnit('');
+    setConversionRatio('1');
     setGenericName('');
     setExpiryDate('');
     setSize('');
@@ -76,6 +80,8 @@ export default function ProductsPage() {
     setSellingPrice(String(p.sellingPrice || ''));
     setStock(String(p.stock || '0'));
     setUnit(p.unit || 'পিস');
+    setSubUnit(p.subUnit || '');
+    setConversionRatio(String(p.conversionRatio || '1'));
     setGenericName(p.genericName || '');
     setExpiryDate(p.expiryDate || '');
     setSize(p.size || '');
@@ -100,6 +106,8 @@ export default function ProductsPage() {
       sellingPrice: Number(sellingPrice) || 0,
       stock: Number(stock) || 0,
       unit,
+      subUnit: subUnit.trim() || null,
+      conversionRatio: Number(conversionRatio) || 1,
       genericName: genericName || null,
       expiryDate: expiryDate || null,
       size: size || null,
@@ -118,6 +126,10 @@ export default function ProductsPage() {
         if (res.ok) {
           await loadProducts();
           setNotice(`✓ "${banglaName}" সফলভাবে আপডেট হয়েছে!`);
+          setShowModal(false);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || 'পণ্য আপডেট করতে সমস্যা হয়েছে');
         }
       } else {
         const res = await fetch('/api/products', {
@@ -129,13 +141,18 @@ export default function ProductsPage() {
           await loadProducts();
           setNotice(`✓ নতুন পণ্য "${banglaName}" সফলভাবে যুক্ত হয়েছে!`);
           speakAnnouncement(`নতুন পণ্য ${banglaName} ${sellingPrice} টাকা যুক্ত হয়েছে`);
+          setShowModal(false);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.error || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
         }
       }
-    } catch (e) {}
-
-    setShowModal(false);
-    setSubmitting(false);
-    setTimeout(() => setNotice(''), 4000);
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
+    } finally {
+      setSubmitting(false);
+      setTimeout(() => setNotice(''), 4000);
+    }
   };
 
   const handleDeleteProduct = async (id: string, name: string) => {
@@ -504,6 +521,42 @@ export default function ProductsPage() {
                       industryId={tenant?.industryId}
                     />
                   </div>
+                </div>
+
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক রূপান্তর (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        value={subUnit}
+                        onChange={(e) => setSubUnit(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {unit || 'মূল এককে'} কত {subUnit || 'সাব-একক'}?</label>
+                      <input
+                        type="number"
+                        placeholder="যেমন: 50"
+                        value={conversionRatio}
+                        onChange={(e) => setConversionRatio(e.target.value)}
+                        className="num-font"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  {subUnit && Number(conversionRatio) > 1 && (
+                    <div style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                      ✓ মেমোতে ১ {subUnit} বিক্রির সময় স্বয়ংক্রিয়ভাবে {Math.round((Number(sellingPrice || 0) / Number(conversionRatio)) * 100) / 100} টাকা দর হবে এবং স্টক থেকে ১/{conversionRatio} {unit} কমবে।
+                    </div>
+                  )}
                 </div>
 
                 {/* 💊 PHARMACY SPECIFIC FIELDS */}

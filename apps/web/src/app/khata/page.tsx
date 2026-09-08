@@ -437,6 +437,37 @@ export default function KhataPage() {
     }
   };
 
+  // Individual Ledger Entry (Sale / Payment) Deletion Handler
+  const handleDeleteEntry = async (entry: any) => {
+    const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
+    const entryLabel = isPayment ? `৳${entry.paidAmount} টাকার জমা এন্ট্রি` : `৳${entry.dueAmount || entry.totalAmount} টাকার বাকি মেমো #${entry.invoiceNo}`;
+
+    if (!confirm(`আপনি কি নিশ্চিত যে "${entryLabel}" মুছে ফেলতে চান?\nমুছে ফেললে কাস্টমারের মোট বাকি হিসাব স্বয়ংক্রিয়ভাবে সমন্বয় হবে।`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/sales/${entry.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        playDeleteSound();
+        triggerHaptic('success');
+        setNotice(`✓ "${entryLabel}" সফলভাবে মুছে ফেলা হয়েছে!`);
+        if (selectedLedger?.customer?.id) {
+          await loadCustomerLedger(selectedLedger.customer);
+        }
+        await loadCustomers();
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'এন্ট্রি মুছতে ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    }
+  };
+
   // Direct In-Ledger / In-Card Voice Entry
   const handleDirectCustomerVoiceSubmit = async (cust: any, spokenText: string) => {
     if (!cust?.id || !spokenText.trim()) return;
@@ -2145,26 +2176,48 @@ export default function KhataPage() {
                                   <span style={{ fontSize: '11px', color: '#64748b' }}>🕒 {entry.time}</span>
                                 </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() => sendTransactionWhatsApp(selectedLedger.customer, entry)}
-                                  style={{
-                                    background: '#25d366',
-                                    color: '#fff',
-                                    border: 'none',
-                                    padding: '3px 8px',
-                                    borderRadius: '6px',
-                                    fontSize: '10.5px',
-                                    fontWeight: '800',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '3px'
-                                  }}
-                                  title="এই মেমোর বিবরণ WhatsApp-এ পাঠান"
-                                >
-                                  <span>💬</span> স্লিপ পাঠান
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => sendTransactionWhatsApp(selectedLedger.customer, entry)}
+                                    style={{
+                                      background: '#25d366',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '10.5px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                    title="এই মেমোর বিবরণ WhatsApp-এ পাঠান"
+                                  >
+                                    <span>💬</span> স্লিপ পাঠান
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteEntry(entry)}
+                                    style={{
+                                      background: '#fef2f2',
+                                      color: '#dc2626',
+                                      border: '1px solid #fecaca',
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '10.5px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                    title="এই বাকি/জমা এন্ট্রিটি মুছে ফেলুন"
+                                  >
+                                    <span>🗑️</span> মুছুন
+                                  </button>
+                                </div>
                               </div>
 
                               {isPayment ? (

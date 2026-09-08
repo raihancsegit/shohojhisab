@@ -3361,42 +3361,128 @@ fastify.put('/api/products/:id', async (request, reply) => {
   const body = request.body as any;
 
   try {
+    const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
+    if (!existing) {
+      return reply.status(404).send({ error: 'পণ্য খুঁজে পাওয়া যায়নি' });
+    }
+
+    const banglaName = body.banglaName !== undefined ? body.banglaName : existing.bangla_name;
+    const name = body.name !== undefined ? body.name : (body.banglaName || existing.name);
+    const barcode = body.barcode !== undefined && String(body.barcode).trim() !== '' ? String(body.barcode).trim() : existing.barcode;
+    const purchasePrice = body.purchasePrice !== undefined ? Number(body.purchasePrice) : Number(existing.purchase_price);
+    const sellingPrice = body.sellingPrice !== undefined ? Number(body.sellingPrice) : Number(existing.selling_price);
+    const oldStock = Number(existing.stock) || 0;
+    const stock = body.stock !== undefined ? Number(body.stock) : oldStock;
+    const unit = body.unit !== undefined ? body.unit : existing.unit;
+    
+    // Sub-unit: if explicitly passed as null or empty string, clear it
+    let subUnit = existing.sub_unit;
+    if (body.subUnit !== undefined) {
+      subUnit = body.subUnit && String(body.subUnit).trim() !== '' ? String(body.subUnit).trim() : null;
+    }
+
+    // Conversion ratio: if sub-unit is null, ratio is 1
+    let conversionRatio = existing.conversion_ratio;
+    if (body.conversionRatio !== undefined) {
+      conversionRatio = Number(body.conversionRatio) || 1;
+    }
+    if (!subUnit) {
+      conversionRatio = 1;
+    }
+
+    const genericName = body.genericName !== undefined ? (body.genericName || null) : existing.generic_name;
+    const expiryDate = body.expiryDate !== undefined ? (body.expiryDate || null) : existing.expiry_date;
+    const brand = body.brand !== undefined ? (body.brand || null) : existing.brand;
+    const size = body.size !== undefined ? (body.size || null) : existing.size;
+    const color = body.color !== undefined ? (body.color || null) : existing.color;
+    const lowStockThreshold = body.lowStockThreshold !== undefined ? Number(body.lowStockThreshold) : Number(existing.low_stock_threshold || 5);
+
     const stmt = db.prepare(`
       UPDATE products SET
-        bangla_name = COALESCE(?, bangla_name),
-        name = COALESCE(?, name),
-        barcode = COALESCE(?, barcode),
-        purchase_price = COALESCE(?, purchase_price),
-        selling_price = COALESCE(?, selling_price),
-        stock = COALESCE(?, stock),
-        unit = COALESCE(?, unit),
-        sub_unit = COALESCE(?, sub_unit),
-        conversion_ratio = COALESCE(?, conversion_ratio),
-        generic_name = COALESCE(?, generic_name),
-        expiry_date = COALESCE(?, expiry_date),
-        size = COALESCE(?, size),
-        color = COALESCE(?, color)
+        bangla_name = ?,
+        name = ?,
+        barcode = ?,
+        purchase_price = ?,
+        selling_price = ?,
+        stock = ?,
+        unit = ?,
+        sub_unit = ?,
+        conversion_ratio = ?,
+        generic_name = ?,
+        expiry_date = ?,
+        brand = ?,
+        size = ?,
+        color = ?,
+        low_stock_threshold = ?
       WHERE id = ?
     `);
+
     stmt.run(
-      body.banglaName,
-      body.name,
-      body.barcode,
-      body.purchasePrice !== undefined ? Number(body.purchasePrice) : null,
-      body.sellingPrice !== undefined ? Number(body.sellingPrice) : null,
-      body.stock !== undefined ? Number(body.stock) : null,
-      body.unit,
-      body.subUnit !== undefined ? body.subUnit : null,
-      body.conversionRatio !== undefined ? Number(body.conversionRatio) : null,
-      body.genericName,
-      body.expiryDate,
-      body.size,
-      body.color,
+      banglaName,
+      name,
+      barcode,
+      purchasePrice,
+      sellingPrice,
+      stock,
+      unit,
+      subUnit,
+      conversionRatio,
+      genericName,
+      expiryDate,
+      brand,
+      size,
+      color,
+      lowStockThreshold,
       id
     );
-    return { success: true, message: 'পণ্য সফলভাবে আপডেট হয়েছে' };
+
+    // If stock changed directly via edit, record in stock_logs
+    if (body.stock !== undefined && stock !== oldStock) {
+      const delta = stock - oldStock;
+      const logId = 'stklog-' + uuidv4().slice(0, 8);
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'adjustment', ?, ?, ?, ?, 'স্টক এডিট', ?, ?)
+      `).run(
+        logId,
+        existing.tenant_id,
+        existing.id,
+        banglaName,
+        Math.abs(delta),
+        unit,
+        Math.abs(delta),
+        sellingPrice,
+        `স্টক পরিবর্তন: ${oldStock} থেকে ${stock} (${delta > 0 ? '+' : ''}${delta})`,
+        now
+      );
+    }
+
+    return { 
+      success: true, 
+      message: 'পণ্যের তথ্য ও স্টক সফলভাবে আপডেট হয়েছে',
+      product: {
+        id,
+        banglaName,
+        name,
+        barcode,
+        purchasePrice,
+        sellingPrice,
+        stock,
+        unit,
+        subUnit,
+        conversionRatio,
+        genericName,
+        expiryDate,
+        brand,
+        size,
+        color,
+        lowStockThreshold
+      }
+    };
   } catch (err: any) {
-    return reply.status(400).send({ error: err.message });
+    console.error('Error updating product:', err);
+    return reply.status(400).send({ error: err.message || 'পণ্য আপডেট করতে সমস্যা হয়েছে' });
   }
 });
 
@@ -3704,19 +3790,28 @@ fastify.delete('/api/customers/:id', async (request, reply) => {
   const { id } = request.params as { id: string };
   try {
     const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
-    if (!cust) return reply.status(404).send({ error: 'Customer not found' });
+    if (!cust) return reply.status(404).send({ error: 'কাস্টমার খুঁজে পাওয়া যায়নি' });
 
-    // Clean up sales and sale_items associated with this customer
-    const custSales = db.prepare('SELECT id FROM sales WHERE customer_id = ?').all(id) as any[];
-    for (const s of custSales) {
-      db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(s.id);
-    }
-    db.prepare('DELETE FROM sales WHERE customer_id = ?').run(id);
-    db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+    db.transaction(() => {
+      // Clean up sales and sale_items associated with this customer
+      const custSales = db.prepare('SELECT id FROM sales WHERE customer_id = ? OR (customer_name = ? AND tenant_id = ?)').all(id, cust.name, cust.tenant_id) as any[];
+      for (const s of custSales) {
+        db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(s.id);
+      }
+      db.prepare('DELETE FROM sales WHERE customer_id = ? OR (customer_name = ? AND tenant_id = ?)').run(id, cust.name, cust.tenant_id);
+      try {
+        db.prepare('DELETE FROM loyalty_logs WHERE customer_id = ?').run(id);
+      } catch (e) {}
+      try {
+        db.prepare('DELETE FROM running_tabs WHERE customer_id = ?').run(id);
+      } catch (e) {}
+      db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+    })();
 
-    return { success: true, message: `${cust.name}-কে বাকি খাতা থেকে মুছে ফেলা হয়েছে` };
+    return { success: true, message: `${cust.name}-কে বাকি খাতা থেকে সফলভাবে মুছে ফেলা হয়েছে` };
   } catch (err: any) {
-    return reply.status(400).send({ error: err.message });
+    console.error('Error deleting customer:', err);
+    return reply.status(400).send({ error: err.message || 'কাস্টমার মুছতে ব্যর্থ হয়েছে' });
   }
 });
 
@@ -4099,6 +4194,7 @@ fastify.post('/api/sales', async (request, reply) => {
           const prodRatio = Number(product.conversion_ratio) || 1;
           if (product.sub_unit && item.selectedUnit === product.sub_unit && prodRatio > 0) {
             baseQtyDeducted = qty / prodRatio;
+            cost = Math.round((cost / prodRatio) * 100) / 100;
           }
 
           deductStock.run(baseQtyDeducted, product.id);
@@ -4216,6 +4312,56 @@ fastify.post('/api/sales', async (request, reply) => {
     return { success: true, order: res };
   } catch (err: any) {
     return reply.status(500).send({ error: err.message });
+  }
+});
+
+// Delete Sale / Transaction (e.g. Voiding erroneous Baki or Sale from Khata)
+fastify.delete('/api/sales/:id', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  try {
+    const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(id) as any;
+    if (!sale) {
+      return reply.status(404).send({ error: 'মেমো বা লেনদেন খুঁজে পাওয়া যায়নি' });
+    }
+
+    db.transaction(() => {
+      // If sale had customer association, adjust customer's due balance
+      if (sale.customer_id) {
+        if (sale.payment_method === 'due_payment') {
+          // Deleting a payment -> due increases back
+          const paidAmount = Number(sale.paid_amount) || Number(sale.total_amount) || 0;
+          db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(paidAmount, sale.customer_id);
+        } else {
+          // Deleting a sale with due -> due decreases
+          const dueAmount = Number(sale.due_amount) || 0;
+          if (dueAmount > 0) {
+            db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(dueAmount, sale.customer_id);
+          }
+        }
+      } else if (sale.customer_name && sale.customer_name !== 'নগদ কাস্টমার') {
+        const cust = db.prepare('SELECT id, total_due FROM customers WHERE tenant_id = ? AND name = ?').get(sale.tenant_id, sale.customer_name) as any;
+        if (cust) {
+          if (sale.payment_method === 'due_payment') {
+            const paidAmount = Number(sale.paid_amount) || Number(sale.total_amount) || 0;
+            db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(paidAmount, cust.id);
+          } else {
+            const dueAmount = Number(sale.due_amount) || 0;
+            if (dueAmount > 0) {
+              db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(dueAmount, cust.id);
+            }
+          }
+        }
+      }
+
+      // Delete items and sale
+      db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(id);
+      db.prepare('DELETE FROM sales WHERE id = ?').run(id);
+    })();
+
+    return { success: true, message: 'লেনদেন/বাকি এন্ট্রি সফলভাবে মুছে ফেলা হয়েছে' };
+  } catch (err: any) {
+    console.error('Error deleting sale/baki entry:', err);
+    return reply.status(400).send({ error: err.message || 'মুছে ফেলতে সমস্যা হয়েছে' });
   }
 });
 

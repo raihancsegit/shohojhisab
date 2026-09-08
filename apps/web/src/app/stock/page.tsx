@@ -368,8 +368,13 @@ export default function StockPage() {
         setInlineEdit(null);
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'আপডেট করতে ব্যর্থ হয়েছে');
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    }
   };
 
   // Quick Stock Increment / Decrement Button
@@ -388,8 +393,13 @@ export default function StockPage() {
         speakAnnouncement(`${product.banglaName || product.name} এ ${sign} ${product.unit} স্টক আপডেট হয়েছে`);
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'স্টক আপডেট ব্যর্থ হয়েছে');
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    }
   };
 
   // Open Full Edit Modal
@@ -448,8 +458,13 @@ export default function StockPage() {
         setEditingProduct(null);
         await loadStock();
         setTimeout(() => setNotice(''), 3500);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'পণ্য সংরক্ষণ করতে ব্যর্থ হয়েছে');
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('সার্ভারে সমস্যা হয়েছে, পুনরায় চেষ্টা করুন');
+    }
   };
 
   // Handle Add Product Submit
@@ -1020,17 +1035,24 @@ export default function StockPage() {
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span className="num-font" style={{ fontSize: '14px', fontWeight: '900', color: isZero ? '#dc2626' : isLow ? '#d97706' : '#0f172a' }}>
-                                {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
-                              </span>
-                              <button
-                                onClick={() => { setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) }); triggerHaptic('light'); }}
-                                style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0px 3px', fontSize: '9px', cursor: 'pointer' }}
-                                title="স্টক সরাসরি সংশোধন করুন"
-                              >
-                                ✏️
-                              </button>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span className="num-font" style={{ fontSize: '14px', fontWeight: '900', color: isZero ? '#dc2626' : isLow ? '#d97706' : '#0f172a' }}>
+                                  {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
+                                </span>
+                                <button
+                                  onClick={() => { setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) }); triggerHaptic('light'); }}
+                                  style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0px 3px', fontSize: '9px', cursor: 'pointer' }}
+                                  title="স্টক সরাসরি সংশোধন করুন"
+                                >
+                                  ✏️
+                                </button>
+                              </div>
+                              {p.subUnit && Number(p.conversionRatio) > 1 && (
+                                <div style={{ fontSize: '10.5px', color: '#4338ca', fontWeight: '800', marginTop: '1px' }}>
+                                  ≈ {Math.round(p.stock * Number(p.conversionRatio) * 100) / 100} {p.subUnit}
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1264,6 +1286,11 @@ export default function StockPage() {
                       <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: isLow ? '#dc2626' : '#0f172a' }}>
                         {p.stock} <span style={{ fontSize: '11px', fontWeight: '600' }}>{p.unit}</span>
                       </span>
+                      {p.subUnit && Number(p.conversionRatio) > 1 && (
+                        <span style={{ display: 'block', fontSize: '10px', color: '#4338ca', fontWeight: '800' }}>
+                          ≈ {Math.round(p.stock * Number(p.conversionRatio) * 100) / 100} {p.subUnit}
+                        </span>
+                      )}
                     </div>
                   </div>
 

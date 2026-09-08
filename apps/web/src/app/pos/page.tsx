@@ -2351,7 +2351,7 @@ export default function PosPage() {
                     color: p.stock <= 5 ? '#dc2626' : '#64748b',
                     border: `1px solid ${p.stock <= 5 ? '#fca5a5' : '#e2e8f0'}`
                   }}>
-                    স্টক: {p.stock} {p.unit}
+                    স্টক: {p.stock} {p.unit}{p.subUnit && Number(p.conversionRatio) > 1 ? ` (${Math.round(p.stock * Number(p.conversionRatio) * 10) / 10} ${p.subUnit})` : ''}
                   </span>
                 </div>
 
@@ -2470,39 +2470,41 @@ export default function PosPage() {
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 1, p.subUnit)}
-                      style={{
-                        flex: 1,
-                        background: '#eef2ff',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: '6px',
-                        padding: '2px 4px',
-                        fontSize: '10px',
-                        fontWeight: '800',
-                        color: '#4338ca',
-                        cursor: 'pointer'
-                      }}
-                      title={`১ ${p.subUnit} বিক্রি করুন`}
-                    >
-                      ১ {p.subUnit}
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => addToCart(p, 1, p.unit)}
                       style={{
                         flex: 1,
                         background: '#f0fdf4',
-                        border: '1px solid #86efac',
+                        border: '1.5px solid #86efac',
                         borderRadius: '6px',
-                        padding: '2px 4px',
-                        fontSize: '10px',
+                        padding: '3px 4px',
+                        fontSize: '10.5px',
                         fontWeight: '800',
                         color: '#15803d',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        textAlign: 'center'
                       }}
-                      title={`১ পুরো ${p.unit} বিক্রি করুন`}
+                      title={`১ ${p.unit} বিক্রি করুন (৳${p.sellingPrice})`}
                     >
-                      ১ {p.unit}
+                      ১ {p.unit} (৳{p.sellingPrice})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.subUnit)}
+                      style={{
+                        flex: 1,
+                        background: '#eef2ff',
+                        border: '1.5px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '3px 4px',
+                        fontSize: '10.5px',
+                        fontWeight: '800',
+                        color: '#4338ca',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
+                      title={`১ ${p.subUnit} বিক্রি করুন (৳${Math.round((p.sellingPrice / (Number(p.conversionRatio) || 1)) * 100) / 100})`}
+                    >
+                      ১ {p.subUnit} (৳{Math.round((p.sellingPrice / (Number(p.conversionRatio) || 1)) * 100) / 100})
                     </button>
                   </div>
                 ) : null}
@@ -3475,7 +3477,7 @@ export default function PosPage() {
                   <tbody>
                     {(receipt.items || []).map((it: any, idx: number) => {
                       const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'পণ্য';
-                      const pUnit = it.product?.unit || it.unit || 'পিস';
+                      const pUnit = it.selectedUnit || it.unit || it.product?.unit || 'পিস';
                       const pUnitPrice = it.unitPrice || it.sellingPrice || it.product?.sellingPrice || 0;
                       const pTotalPrice = it.totalPrice || (pUnitPrice * it.quantity);
                       return (
@@ -3601,7 +3603,7 @@ export default function PosPage() {
                   </div>
                   {(receipt.items || []).map((it: any, idx: number) => {
                     const pName = it.product?.banglaName || it.product?.name || it.productName || it.banglaName || it.name || 'পণ্য';
-                    const pUnit = it.product?.unit || it.unit || 'পিস';
+                    const pUnit = it.selectedUnit || it.unit || it.product?.unit || 'পিস';
                     const pUnitPrice = it.unitPrice || it.sellingPrice || it.product?.sellingPrice || 0;
                     const pTotalPrice = it.totalPrice || (pUnitPrice * it.quantity);
                     const qtyDisplay = pUnit === 'হালি' ? `${Math.round(it.quantity * 4)}টা (${it.quantity} হালি)` : `${it.quantity} ${pUnit}`;
