@@ -815,10 +815,7 @@ export default function PosPage() {
       }
 
       const fullSpoken = (posTranscriptBufferRef.current + ' ' + interim).trim();
-      setVoiceNotice(`শোনা যাচ্ছে: "${fullSpoken}"`);
-      // Update search input live with spoken text and open search dropdown
-      setSearch(fullSpoken);
-      setShowSearchDropdown(true);
+      setVoiceNotice(`🎙️ শুনছি: "${fullSpoken}"`);
 
       // 1.2-second silence timer before finishing command
       if (posSilenceTimerRef.current) clearTimeout(posSilenceTimerRef.current);

@@ -403,6 +403,7 @@ try { db.prepare("ALTER TABLE dealers ADD COLUMN representative_name TEXT").run(
 try { db.prepare("ALTER TABLE dealers ADD COLUMN order_day TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN delivery_day TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE audit_logs ADD COLUMN user_id TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE sales ADD COLUMN note TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE audit_logs ADD COLUMN user_name TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE audit_logs ADD COLUMN ip_address TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE subscription_transactions ADD COLUMN coupon_code TEXT").run(); } catch (e) {}
@@ -3579,18 +3580,21 @@ fastify.post('/api/customers/due-payment', async (request, reply) => {
 
   try {
     db.prepare(`
-      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, payment_method, note, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       paymentId,
       customer.tenant_id,
       invoiceNo,
-      customer.id,
-      customer.name,
+      numAmount,
+      0,
       numAmount,
       numAmount,
       0,
+      0,
       'due_payment',
+      customer.id,
+      customer.name,
       note || 'নগদ বাকি টাকা জমা পরিশোধ',
       now
     );
@@ -3634,18 +3638,21 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
 
   try {
     db.prepare(`
-      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, payment_method, note, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       saleId,
       customer.tenant_id,
       invoiceNo,
-      customer.id,
-      customer.name,
       numAmount,
       0,
       numAmount,
+      0,
+      numAmount,
+      0,
       'due',
+      customer.id,
+      customer.name,
       finalSummary,
       now
     );
@@ -3699,7 +3706,14 @@ fastify.delete('/api/customers/:id', async (request, reply) => {
     const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
     if (!cust) return reply.status(404).send({ error: 'Customer not found' });
 
+    // Clean up sales and sale_items associated with this customer
+    const custSales = db.prepare('SELECT id FROM sales WHERE customer_id = ?').all(id) as any[];
+    for (const s of custSales) {
+      db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(s.id);
+    }
+    db.prepare('DELETE FROM sales WHERE customer_id = ?').run(id);
     db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+
     return { success: true, message: `${cust.name}-কে বাকি খাতা থেকে মুছে ফেলা হয়েছে` };
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
@@ -3780,9 +3794,9 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
     const paymentId = 'pay-' + uuidv4().slice(0, 8);
     const invoiceNo = 'PAY-' + Date.now().toString().slice(-4);
     db.prepare(`
-      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, profit_amount, payment_method, note, cashier, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(paymentId, tenantId, invoiceNo, customer.id, customer.name, amount, amount, 0, 0, 'due_payment', 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
+      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(paymentId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
 
     const itemId = 'sitem-' + uuidv4().slice(0, 8);
     db.prepare(`
@@ -3810,9 +3824,9 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
     const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
 
     db.prepare(`
-      INSERT INTO sales (id, tenant_id, invoice_no, customer_id, customer_name, total_amount, paid_amount, due_amount, profit_amount, payment_method, note, cashier, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(saleId, tenantId, invoiceNo, customer.id, customer.name, amount, 0, amount, Math.round(amount * 0.15), 'due', note, 'ভয়েস এআই', now);
+      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
 
     // Match inventory product if named
     const matchedProd = db.prepare(`

@@ -166,16 +166,7 @@ export default function VoicePOSCalculatorModal({
     console.log('Voice POS Parsed:', result);
 
     if (result.type === 'noise_ignored') {
-      // If user attempted to speak something resembling a product that doesn't match stock
-      const hasMeaningfulText = spokenText.trim().length >= 2 && !isMuted;
-      if (hasMeaningfulText && !/চালু|পজ|বন্ধ|হিসাব/.test(spokenText)) {
-        triggerHaptic('warning');
-        playBeep(450);
-        speakAnnouncement(`দুঃখিত, "${spokenText}" পণ্যটি আপনার স্টকে নেই!`);
-        setLastActionMessage(`⚠️ দুঃখিত, "${spokenText}" স্টকে মেলেনি। স্টকে থাকা পণ্য বলুন।`);
-      } else {
-        setLastActionMessage(`💬 "${spokenText}" (কথোপকথন এড়িয়ে যাওয়া হয়েছে)`);
-      }
+      setLastActionMessage(`🎙️ শুনছি... মুখে পণ্য ও দর বলুন (যেমন: "চিনি ১ কেজি")`);
       return;
     }
 
@@ -186,12 +177,37 @@ export default function VoicePOSCalculatorModal({
       const notFoundNames: string[] = [];
 
       for (const item of result.items) {
-        // Find product in store catalog
-        const prod = products.find(p =>
+        const qClean = (item.banglaName || item.name || '').toLowerCase().trim();
+        // Tier 1: Exact match
+        let prod = products.find(p =>
           (item.productId && p.id === item.productId) ||
-          (p.banglaName && p.banglaName.toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim()) ||
-          (p.name && p.name.toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
+          ((p.banglaName || '').toLowerCase().trim() === qClean) ||
+          ((p.name || '').toLowerCase().trim() === qClean)
         );
+
+        // Tier 2: Substring & candidate match
+        if (!prod) {
+          const candidates = products.filter(p => {
+            const bName = (p.banglaName || '').toLowerCase().trim();
+            const name = (p.name || '').toLowerCase().trim();
+            const gName = (p.genericName || '').toLowerCase().trim();
+            const brand = (p.brand || '').toLowerCase().trim();
+            return (bName && (bName.includes(qClean) || qClean.includes(bName))) ||
+                   (name && (name.includes(qClean) || qClean.includes(name))) ||
+                   (gName && (gName.includes(qClean) || qClean.includes(gName))) ||
+                   (brand && (brand.includes(qClean) || qClean.includes(brand)));
+          });
+
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => {
+              const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
+              const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
+              if (aInStock !== bInStock) return bInStock - aInStock;
+              return (a.banglaName || a.name || '').length - (b.banglaName || b.name || '').length;
+            });
+            prod = candidates[0];
+          }
+        }
 
         if (!prod) {
           notFoundNames.push(item.banglaName || item.name);
@@ -229,8 +245,8 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = notFoundNames.join(', ');
-        speakAnnouncement(`দুঃখিত, ${nameList} আপনার দোকানে বা স্টকে নেই!`);
-        setLastActionMessage(`⚠️ "${nameList}" পণ্যটি স্টকে পাওয়া যায়নি!`);
+        speakAnnouncement(`দুঃখিত, ${nameList} স্টকে পাওয়া যায়নি!`);
+        setLastActionMessage(`⚠️ "${nameList}" স্টকে পাওয়া যায়নি!`);
       }
 
       // Only add verified items that actually exist in stock!

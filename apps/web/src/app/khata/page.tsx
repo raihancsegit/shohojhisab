@@ -186,9 +186,13 @@ export default function KhataPage() {
         setSelectedDueProducts([]);
         setProductSearch('');
         setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'বাকি যোগ করতে সমস্যা হয়েছে');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to add due', e);
+      alert('বাকি যোগ করতে সমস্যা হয়েছে: ' + (e?.message || 'Error'));
     } finally {
       setAddDueSubmitting(false);
     }
@@ -416,6 +420,7 @@ export default function KhataPage() {
         if (selectedLedger?.customer?.id === customerToDelete.id) {
           setSelectedLedger(null);
         }
+        setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
         setCustomerToDelete(null);
         await loadCustomers();
         setTimeout(() => setNotice(''), 4000);
