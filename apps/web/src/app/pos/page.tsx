@@ -247,6 +247,8 @@ export default function PosPage() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -404,16 +406,26 @@ export default function PosPage() {
     } catch (e) {}
   };
 
-  const addToCart = (product: any, qty: number = 1) => {
+  const addToCart = (product: any, qty: number = 1, unit?: string) => {
     playBeep(880);
     triggerHaptic('light');
-    const unitP = Number(product.sellingPrice) || 0;
+
+    const primaryUnit = product.unit || 'পিস';
+    const subUnit = product.subUnit || null;
+    const ratio = Number(product.conversionRatio) || 1;
+    const itemUnit = unit || primaryUnit;
+
+    let baseRate = Number(product.sellingPrice) || 0;
+    if (subUnit && itemUnit === subUnit && ratio > 0) {
+      baseRate = Math.round((baseRate / ratio) * 100) / 100;
+    }
+
     setCart(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
+      const existing = prev.find(i => i.product.id === product.id && (i.selectedUnit || primaryUnit) === itemUnit);
       if (existing) {
         const newQty = Math.round((existing.quantity + qty) * 1000) / 1000;
-        const pPrice = existing.unitPrice !== undefined ? existing.unitPrice : unitP;
-        return prev.map(i => i.product.id === product.id ? {
+        const pPrice = existing.unitPrice !== undefined ? existing.unitPrice : baseRate;
+        return prev.map(i => (i.product.id === product.id && (i.selectedUnit || primaryUnit) === itemUnit) ? {
           ...i,
           quantity: newQty,
           totalPrice: Math.round(newQty * pPrice * 100) / 100
@@ -422,10 +434,36 @@ export default function PosPage() {
       return [...prev, {
         product,
         quantity: qty,
-        unitPrice: unitP,
-        totalPrice: Math.round(unitP * qty * 100) / 100
+        selectedUnit: itemUnit,
+        unitPrice: baseRate,
+        totalPrice: Math.round(baseRate * qty * 100) / 100
       }];
     });
+  };
+
+  const updateCartItemUnit = (id: string, newUnit: string) => {
+    playBeep(850);
+    triggerHaptic('light');
+    setCart(prev => prev.map(i => {
+      if (i.product.id === id) {
+        const primaryUnit = i.product.unit || 'পিস';
+        const subUnit = i.product.subUnit || null;
+        const ratio = Number(i.product.conversionRatio) || 1;
+
+        let unitP = Number(i.product.sellingPrice) || 0;
+        if (subUnit && newUnit === subUnit && ratio > 0) {
+          unitP = Math.round((unitP / ratio) * 100) / 100;
+        }
+
+        return {
+          ...i,
+          selectedUnit: newUnit,
+          unitPrice: unitP,
+          totalPrice: Math.round(i.quantity * unitP * 100) / 100
+        };
+      }
+      return i;
+    }));
   };
 
   const updateQty = (id: string, delta: number) => {
@@ -920,6 +958,14 @@ export default function PosPage() {
     );
 
     if (foundProd) {
+      if (Number(foundProd.stock || 0) <= 0) {
+        triggerHaptic('warning');
+        playBeep(450);
+        setVoiceNotice(`⚠️ দুঃখিত, "${foundProd.banglaName || foundProd.name}" পণ্যটি স্টকে নেই!`);
+        speakAnnouncement(`দুঃখিত, ${foundProd.banglaName || foundProd.name} পণ্যটি বর্তমানে স্টকে নেই!`);
+        return;
+      }
+
       const unitPrice = extractedPrice && extractedPrice > 0 ? extractedPrice : foundProd.sellingPrice;
       let finalQty = 1;
 
@@ -945,16 +991,22 @@ export default function PosPage() {
         finalQty = Math.round((targetTakaAmount / unitPrice) * 1000) / 1000;
       }
 
+      // Check requested unit (e.g. বস্তা vs কেজি)
+      let requestedUnit = foundProd.unit;
+      if (foundProd.subUnit && rawText.includes(foundProd.subUnit)) {
+        requestedUnit = foundProd.subUnit;
+      }
+
       const prodToAdd = { ...foundProd, sellingPrice: unitPrice };
-      addToCart(prodToAdd, finalQty);
+      addToCart(prodToAdd, finalQty, requestedUnit);
       triggerHaptic('success');
       playBeep(1100);
 
       const calculatedTotal = Math.round(finalQty * unitPrice * 100) / 100;
-      let unitLabel = `${finalQty} ${foundProd.unit}`;
-      if (foundProd.unit === 'হালি') {
+      let unitLabel = `${finalQty} ${requestedUnit}`;
+      if (foundProd.unit === 'হালি' && requestedUnit === 'হালি') {
         unitLabel = `${Math.round(finalQty * 4)}টা ডিম`;
-      } else if (foundProd.unit === 'পাতা') {
+      } else if (foundProd.unit === 'পাতা' && requestedUnit === 'পাতা') {
         unitLabel = `${Math.round(finalQty * 10)}টি ট্যাবলেট`;
       }
 
@@ -969,41 +1021,11 @@ export default function PosPage() {
         }).then(() => loadData()).catch(() => {});
       }
     } else {
-      const price = extractedPrice && extractedPrice > 0 ? extractedPrice : 50;
-      const finalName = cleanedName || 'নতুন পণ্য';
-      const newProdId = 'prod-v-' + Date.now().toString().slice(-6);
-      const autoBarcode = '894' + Math.floor(10000000 + Math.random() * 90000000);
-      const finalQty = targetQuantity || 1;
-
-      const newProductObj = {
-        id: newProdId,
-        tenantId: currentTenantId,
-        banglaName: finalName,
-        name: finalName,
-        sellingPrice: price,
-        purchasePrice: Math.round(price * 0.85),
-        stock: 50,
-        unit: 'পিস',
-        lowStockThreshold: 5,
-        barcode: autoBarcode,
-        imageEmoji: '📦'
-      };
-
-      addToCart(newProductObj, finalQty);
-      triggerHaptic('success');
-      playBeep(1200);
-      const calcTot = Math.round(finalQty * price * 100) / 100;
-      setVoiceNotice(`✓ নতুন পণ্য নিবন্ধিত ও কার্টে যুক্ত: ${finalName} (${finalQty} পিস - ৳${calcTot})`);
-      speakAnnouncement(`নতুন পণ্য ${finalName} ${calcTot} টাকা মেমো ও স্টকে যুক্ত হয়েছে।`);
-
-      try {
-        await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newProductObj)
-        });
-        loadData();
-      } catch (e) {}
+      triggerHaptic('warning');
+      playBeep(450);
+      const queryName = cleanedName || rawText;
+      setVoiceNotice(`⚠️ "${queryName}" পণ্যটি দোকানে বা স্টকে খুঁজে পাওয়া যায়নি!`);
+      speakAnnouncement(`দুঃখিত, ${queryName} পণ্যটি স্টকে নেই!`);
     }
   };
 
@@ -1083,6 +1105,7 @@ export default function PosPage() {
         productId: i.product.id,
         productName: i.product.banglaName || i.product.name,
         quantity: i.quantity,
+        selectedUnit: i.selectedUnit || i.product.unit || 'পিস',
         sellingPrice: i.unitPrice !== undefined ? i.unitPrice : i.product.sellingPrice,
         purchasePrice: i.product.purchasePrice,
         totalPrice: i.totalPrice
@@ -1273,22 +1296,29 @@ export default function PosPage() {
         alignItems: 'center',
         marginBottom: '12px'
       }}>
-        <div style={{
-          flex: 1,
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          background: '#ffffff',
-          borderRadius: '14px',
-          border: '1.5px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-        }}>
+        <div
+          ref={searchContainerRef}
+          style={{
+            flex: 1,
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            background: '#ffffff',
+            borderRadius: '14px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+          }}
+        >
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="🔍 পণ্য বা বারকোড খুঁজুন..."
+            placeholder="🔍 স্টকে থাকা পণ্য বা বারকোড খুঁজুন..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setShowSearchDropdown(true)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setShowSearchDropdown(true);
+            }}
             style={{
               width: '100%',
               padding: '12px 80px 12px 14px',
@@ -1338,6 +1368,141 @@ export default function PosPage() {
               🎙️
             </button>
           </div>
+
+          {/* 📦 সার্চেবল ইন-স্টক ড্রপডাউন সিলেক্টর (In-Stock Searchable Dropdown) */}
+          {showSearchDropdown && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '6px',
+                background: '#ffffff',
+                borderRadius: '16px',
+                border: '1.5px solid #cbd5e1',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                zIndex: 80,
+                maxHeight: '340px',
+                overflowY: 'auto',
+                padding: '8px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px 8px', borderBottom: '1px solid #f1f5f9' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b' }}>
+                  📦 ইন-স্টক পণ্য সিলেকশন {search ? `("${search}" এর ফলাফল)` : '(স্টকে থাকা পণ্য)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowSearchDropdown(false)}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {(() => {
+                const query = search.trim().toLowerCase();
+                const matched = products.filter(p => {
+                  if (!query) return true;
+                  return (p.banglaName && p.banglaName.toLowerCase().includes(query)) ||
+                    (p.name && p.name.toLowerCase().includes(query)) ||
+                    (p.barcode && p.barcode.includes(query)) ||
+                    (p.genericName && p.genericName.toLowerCase().includes(query));
+                });
+
+                if (matched.length === 0) {
+                  return (
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: '#ef4444', fontSize: '13px', fontWeight: '700' }}>
+                      ⚠️ এই নামের কোনো পণ্য স্টকে পাওয়া যায়নি!
+                    </div>
+                  );
+                }
+
+                return matched.slice(0, 20).map(p => {
+                  const inStock = Number(p.stock || 0) > 0;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        if (!inStock) {
+                          triggerHaptic('warning');
+                          playBeep(450);
+                          speakAnnouncement(`${p.banglaName || p.name} পণ্যটি স্টকে নেই!`);
+                          return;
+                        }
+                        addToCart(p, 1);
+                        setShowSearchDropdown(false);
+                      }}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        cursor: inStock ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: inStock ? '#ffffff' : '#fff5f5',
+                        borderBottom: '1px solid #f8fafc',
+                        opacity: inStock ? 1 : 0.65,
+                        transition: 'background 0.15s'
+                      }}
+                      className={inStock ? 'hover-bg-slate-50' : ''}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '20px' }}>{p.icon || '📦'}</span>
+                        <div>
+                          <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
+                            {p.banglaName || p.name}
+                          </strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>
+                              ৳{p.sellingPrice}/{p.unit}
+                            </span>
+                            {p.subUnit && Number(p.conversionRatio) > 1 && (
+                              <span style={{ fontSize: '10px', color: '#6366f1', background: '#eef2ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                                ১ {p.unit} = {p.conversionRatio} {p.subUnit} (৳{Math.round((p.sellingPrice / p.conversionRatio) * 100) / 100}/{p.subUnit})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        {inStock ? (
+                          <span style={{
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            color: '#15803d',
+                            background: '#dcfce7',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #bbf7d0',
+                            display: 'inline-block'
+                          }}>
+                            মজুদ: {p.stock} {p.unit}
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: '#dc2626',
+                            background: '#fee2e2',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #fca5a5',
+                            display: 'inline-block'
+                          }}>
+                            🚫 স্টক নেই
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
         </div>
 
         {/* Quick Add Custom Product Button */}
@@ -2266,6 +2431,45 @@ export default function PosPage() {
                       হাফ কেজি
                     </button>
                   </div>
+                ) : p.subUnit ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.subUnit)}
+                      style={{
+                        flex: 1,
+                        background: '#eef2ff',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#4338ca',
+                        cursor: 'pointer'
+                      }}
+                      title={`১ ${p.subUnit} বিক্রি করুন`}
+                    >
+                      ১ {p.subUnit}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.unit)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#15803d',
+                        cursor: 'pointer'
+                      }}
+                      title={`১ পুরো ${p.unit} বিক্রি করুন`}
+                    >
+                      ১ {p.unit}
+                    </button>
+                  </div>
                 ) : null}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #f1f5f9' }}>
@@ -2354,7 +2558,30 @@ export default function PosPage() {
                           style={{ width: '65px', padding: '2px 6px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '13px', fontWeight: '800', outline: 'none', background: '#fff' }}
                           title="বিক্রির সময় সরাসরি দর পরিবর্তন করুন"
                         />
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>× {item.quantity} {item.product.unit}</span>
+                        {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি) */}
+                        {item.product.subUnit ? (
+                          <select
+                            value={item.selectedUnit || item.product.unit}
+                            onChange={(e) => updateCartItemUnit(item.product.id, e.target.value)}
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #6366f1',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              color: '#4338ca',
+                              background: '#eef2ff',
+                              cursor: 'pointer'
+                            }}
+                            title="একক পরিবর্তন করুন (যেমন: বস্তা বনাম কেজি)"
+                          >
+                            <option value={item.product.unit}>{item.product.unit}</option>
+                            <option value={item.product.subUnit}>{item.product.subUnit}</option>
+                          </select>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>/{item.product.unit}</span>
+                        )}
+                        <span style={{ fontSize: '11px', color: '#64748b' }}>× {item.quantity} {item.selectedUnit || item.product.unit}</span>
                         <button
                           type="button"
                           onClick={() => savePriceToCatalog(item.product, item.unitPrice)}
@@ -2523,8 +2750,28 @@ export default function PosPage() {
                                 {it.product.color}
                               </span>
                             )}
+                            {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি) */}
+                            {it.product.subUnit ? (
+                              <select
+                                value={it.selectedUnit || it.product.unit}
+                                onChange={(e) => updateCartItemUnit(it.product.id, e.target.value)}
+                                style={{
+                                  padding: '2px 4px',
+                                  borderRadius: '6px',
+                                  border: '1.5px solid #6366f1',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  color: '#4338ca',
+                                  background: '#eef2ff',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value={it.product.unit}>{it.product.unit}</option>
+                                <option value={it.product.subUnit}>{it.product.subUnit}</option>
+                              </select>
+                            ) : null}
                             <span style={{ fontSize: '11px', color: '#64748b' }}>
-                              দর: ৳{unitP}/{it.product.unit || 'পিস'}
+                              দর: ৳{unitP}/{it.selectedUnit || it.product.unit || 'পিস'}
                             </span>
                           </div>
                         </div>

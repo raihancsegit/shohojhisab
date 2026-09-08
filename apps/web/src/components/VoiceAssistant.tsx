@@ -168,10 +168,6 @@ export default function VoiceAssistant() {
           playSuccessChime();
           triggerHaptic('success');
 
-          if (data.speech) {
-            speakAnnouncement(data.speech);
-          }
-
           // Trigger live refresh event across active pages
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
 
@@ -180,11 +176,28 @@ export default function VoiceAssistant() {
           }
 
           if (data.navigateTo) {
-            router.push(data.navigateTo);
-            // Smoothly auto-close modal so user sees destination page while hearing speech
-            setTimeout(() => {
+            // Save announcement for destination page
+            if (typeof window !== 'undefined' && data.speech) {
+              sessionStorage.setItem('pending_page_announcement', data.speech);
+            }
+
+            if (pathname !== data.navigateTo) {
+              // Navigating to another page: close assistant immediately so destination page is visible
               setIsOpen(false);
-            }, 1200);
+              router.push(data.navigateTo);
+            } else {
+              // Already on destination page: speak directly
+              if (data.speech) {
+                speakAnnouncement(data.speech);
+              }
+              setTimeout(() => {
+                setIsOpen(false);
+              }, 1200);
+            }
+          } else {
+            if (data.speech) {
+              speakAnnouncement(data.speech);
+            }
           }
 
           if (data.action === 'trigger_print') {

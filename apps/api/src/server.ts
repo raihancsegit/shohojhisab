@@ -145,6 +145,8 @@ db.exec(`
     selling_price REAL NOT NULL,
     stock REAL NOT NULL DEFAULT 0,
     unit TEXT NOT NULL DEFAULT 'পিস',
+    sub_unit TEXT,
+    conversion_ratio REAL DEFAULT 1,
     low_stock_threshold REAL NOT NULL DEFAULT 5,
     generic_name TEXT,
     expiry_date TEXT,
@@ -153,6 +155,21 @@ db.exec(`
     color TEXT,
     imei TEXT,
     icon TEXT DEFAULT '📦',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS stock_logs (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    type TEXT NOT NULL, -- 'stock_in' | 'sale' | 'return' | 'adjustment'
+    quantity REAL NOT NULL,
+    unit TEXT NOT NULL,
+    base_quantity REAL NOT NULL,
+    unit_price REAL,
+    source_ref TEXT,
+    note TEXT,
     created_at TEXT NOT NULL
   );
 
@@ -395,6 +412,9 @@ try { db.prepare("ALTER TABLE staff_users ADD COLUMN base_salary REAL DEFAULT 0"
 try { db.prepare("ALTER TABLE staff_users ADD COLUMN commission_percent REAL DEFAULT 0").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE staff_users ADD COLUMN max_discount_percent REAL DEFAULT 10").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE staff_users ADD COLUMN sales_target REAL DEFAULT 0").run(); } catch (e) {}
+
+try { db.prepare("ALTER TABLE products ADD COLUMN sub_unit TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN conversion_ratio REAL DEFAULT 1").run(); } catch (e) {}
 
 // Seed Default Subscription Plans if empty
 try {
@@ -2800,6 +2820,12 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
           const newStock = (Number(product.stock) || 0) + addQty;
           db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
           updatedProducts.push({ name: product.bangla_name || product.name, added: addQty, unit: product.unit || 'পিস', total: newStock });
+
+          const logId = 'stklog-' + uuidv4().slice(0, 8);
+          db.prepare(`
+            INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'ভয়েস রিস্টক', 'ভয়েস কমান্ডে স্টক যোগ', ?)
+          `).run(logId, tenantId, product.id, product.bangla_name || product.name, addQty, product.unit || 'পিস', addQty, Number(product.purchase_price) || 0, now);
         } else {
           const newProdId = 'prod-' + uuidv4().slice(0, 8);
           const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/)?.[0] || 'পিস') : 'পিস';
@@ -2808,6 +2834,12 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, 'cat-grocery', 10, 15, addQty, autoUnit, 5, '📦', now);
           updatedProducts.push({ name: cleanProd, added: addQty, unit: autoUnit, total: addQty });
+
+          const logId = 'stklog-' + uuidv4().slice(0, 8);
+          db.prepare(`
+            INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'ভয়েস নতুন পণ্য', 'ভয়েস কমান্ডে নতুন পণ্য ও স্টক', ?)
+          `).run(logId, tenantId, newProdId, cleanProd, addQty, autoUnit, addQty, 10, now);
         }
       }
     }
@@ -2874,6 +2906,12 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
         INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run('sitem-' + uuidv4().slice(0, 8), saleId, matchedProd.bangla_name || matchedProd.name, qty, finalPrice / qty, finalPrice);
+
+      const logId = 'stklog-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'ভয়েস মেমো বিক্রি', ?)
+      `).run(logId, tenantId, matchedProd.id, matchedProd.bangla_name || matchedProd.name, qty, matchedProd.unit || 'পিস', qty, finalPrice, invoiceNo, now);
 
       const speech = `✓ ${matchedProd.bangla_name || matchedProd.name} ${qty} ${matchedProd.unit || 'টি'} বিক্রি সফল হয়েছে এবং স্টক আপডেট করা হয়েছে। অবশিষ্ট মজুদ ${newStock} ${matchedProd.unit || 'টি'}।`;
       return {
@@ -3243,6 +3281,8 @@ fastify.get('/api/products', async (request) => {
     sellingPrice: Number(r.selling_price) || 0,
     stock: Number(r.stock) || 0,
     unit: r.unit,
+    subUnit: r.sub_unit || null,
+    conversionRatio: Number(r.conversion_ratio) || 1,
     lowStockThreshold: Number(r.low_stock_threshold) || 5,
     genericName: r.generic_name,
     expiryDate: r.expiry_date,
@@ -3257,11 +3297,15 @@ fastify.post('/api/products', async (request, reply) => {
   const body = request.body as any;
   const id = body.id || 'prod-' + uuidv4().slice(0, 8);
   const now = new Date().toISOString();
+  const initialStock = Number(body.stock) || 0;
+  const unit = body.unit || 'পিস';
+  const subUnit = body.subUnit || null;
+  const conversionRatio = Number(body.conversionRatio) || 1;
 
   try {
     const stmt = db.prepare(`
-      INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, sub_unit, conversion_ratio, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id,
@@ -3272,8 +3316,10 @@ fastify.post('/api/products', async (request, reply) => {
       body.categoryId || 'cat-grocery',
       Number(body.purchasePrice) || 0,
       Number(body.sellingPrice) || 0,
-      Number(body.stock) || 0,
-      body.unit || 'পিস',
+      initialStock,
+      unit,
+      subUnit,
+      conversionRatio,
       Number(body.lowStockThreshold) || 5,
       body.genericName || null,
       body.expiryDate || null,
@@ -3283,6 +3329,26 @@ fastify.post('/api/products', async (request, reply) => {
       body.imageEmoji || '📦',
       now
     );
+
+    // If initial stock was provided, log initial stock inflow
+    if (initialStock > 0) {
+      const logId = 'stklog-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'নতুন পণ্য এন্ট্রি', 'প্রাথমিক স্টক এন্ট্রি', ?)
+      `).run(
+        logId,
+        body.tenantId,
+        id,
+        body.banglaName || body.name,
+        initialStock,
+        unit,
+        initialStock,
+        Number(body.purchasePrice) || 0,
+        now
+      );
+    }
+
     return { success: true, id, message: 'পণ্য সফলভাবে যুক্ত হয়েছে' };
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
@@ -3303,6 +3369,8 @@ fastify.put('/api/products/:id', async (request, reply) => {
         selling_price = COALESCE(?, selling_price),
         stock = COALESCE(?, stock),
         unit = COALESCE(?, unit),
+        sub_unit = COALESCE(?, sub_unit),
+        conversion_ratio = COALESCE(?, conversion_ratio),
         generic_name = COALESCE(?, generic_name),
         expiry_date = COALESCE(?, expiry_date),
         size = COALESCE(?, size),
@@ -3317,6 +3385,8 @@ fastify.put('/api/products/:id', async (request, reply) => {
       body.sellingPrice !== undefined ? Number(body.sellingPrice) : null,
       body.stock !== undefined ? Number(body.stock) : null,
       body.unit,
+      body.subUnit !== undefined ? body.subUnit : null,
+      body.conversionRatio !== undefined ? Number(body.conversionRatio) : null,
       body.genericName,
       body.expiryDate,
       body.size,
@@ -3327,6 +3397,73 @@ fastify.put('/api/products/:id', async (request, reply) => {
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
   }
+});
+
+// Product Stock Logs & History
+fastify.get('/api/products/:id/stock-logs', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const rows = db.prepare('SELECT * FROM stock_logs WHERE product_id = ? ORDER BY created_at DESC LIMIT 100').all(id);
+  return rows;
+});
+
+// Tenant Stock Logs (All inventory transactions)
+fastify.get('/api/stock-logs', async (request, reply) => {
+  const { tenantId } = request.query as any;
+  if (!tenantId) return [];
+  const rows = db.prepare('SELECT * FROM stock_logs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200').all(tenantId);
+  return rows;
+});
+
+// Manual Restock / Stock-In API
+fastify.post('/api/stock-logs', async (request, reply) => {
+  const body = request.body as any;
+  const { tenantId, productId, quantity, unit, note, unitPrice, supplier } = body || {};
+
+  if (!tenantId || !productId || quantity === undefined) {
+    return reply.status(400).send({ error: 'Tenant ID, Product ID এবং পরিমাণ আবশ্যক' });
+  }
+
+  const product = db.prepare('SELECT * FROM products WHERE id = ? AND tenant_id = ?').get(productId, tenantId) as any;
+  if (!product) return reply.status(404).send({ error: 'পণ্য খুঁজে পাওয়া যায়নি' });
+
+  const addQty = Number(quantity) || 0;
+  const now = new Date().toISOString();
+
+  // If unit is sub_unit, convert to base unit
+  let baseQty = addQty;
+  const prodRatio = Number(product.conversion_ratio) || 1;
+  if (unit && product.sub_unit && unit === product.sub_unit && prodRatio > 0) {
+    baseQty = addQty / prodRatio;
+  }
+
+  const newStock = Math.max(0, (Number(product.stock) || 0) + baseQty);
+  db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+
+  const logId = 'stklog-' + uuidv4().slice(0, 8);
+  const sourceRef = supplier ? `ডিলার/সরবরাহকারী: ${supplier}` : 'ম্যানুয়াল রিস্টক';
+  db.prepare(`
+    INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+    VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    logId,
+    tenantId,
+    product.id,
+    product.bangla_name || product.name,
+    addQty,
+    unit || product.unit || 'পিস',
+    baseQty,
+    unitPrice !== undefined ? Number(unitPrice) : (Number(product.purchase_price) || 0),
+    sourceRef,
+    note || 'নতুন মাল স্টকে তোলা হয়েছে',
+    now
+  );
+
+  return {
+    success: true,
+    newStock,
+    unit: product.unit || 'পিস',
+    message: `✓ ${product.bangla_name || product.name} এর স্টক সফলভাবে ${addQty} ${unit || product.unit} বৃদ্ধি করা হয়েছে। বর্তমান মোট স্টক: ${newStock} ${product.unit}।`
+  };
 });
 
 fastify.delete('/api/products/:id', async (request, reply) => {
@@ -3915,9 +4052,17 @@ fastify.post('/api/sales', async (request, reply) => {
     let subtotal = 0;
     let totalProfit = 0;
     const processedItems: any[] = [];
+    const now = new Date().toISOString();
+
+    const saleCount = (db.prepare('SELECT COUNT(*) as count FROM sales WHERE tenant_id = ?').get(tenantId) as any).count;
+    const invoiceNo = 'INV-' + (saleCount + 1001);
 
     const getProduct = db.prepare('SELECT * FROM products WHERE id = ?');
     const deductStock = db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?');
+    const logStock = db.prepare(`
+      INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+      VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, ?, ?)
+    `);
 
     for (const item of items) {
       let cost = 0;
@@ -3925,6 +4070,7 @@ fastify.post('/api/sales', async (request, reply) => {
       let name = item.productName || item.name || item.product?.banglaName || item.product?.name || 'পণ্য';
       let prodId = item.productId || item.product?.id || ('custom-' + uuidv4().slice(0, 8));
       const qty = Number(item.quantity) || 1;
+      let usedUnit = item.selectedUnit || item.unit || 'পিস';
 
       if (item.productId || item.product?.id) {
         const product = getProduct.get(item.productId || item.product?.id) as any;
@@ -3932,7 +4078,32 @@ fastify.post('/api/sales', async (request, reply) => {
           cost = Number(product.purchase_price) || Math.round(price * 0.8);
           price = Number(item.sellingPrice || item.unitPrice || product.selling_price) || price;
           name = product.bangla_name || product.name || name;
-          deductStock.run(qty, product.id);
+          usedUnit = item.selectedUnit || item.unit || product.unit || 'পিস';
+
+          // Multi-unit ratio check: if item.selectedUnit matches sub_unit
+          let baseQtyDeducted = qty;
+          const prodRatio = Number(product.conversion_ratio) || 1;
+          if (product.sub_unit && item.selectedUnit === product.sub_unit && prodRatio > 0) {
+            baseQtyDeducted = qty / prodRatio;
+          }
+
+          deductStock.run(baseQtyDeducted, product.id);
+
+          // Log stock outflow / sale
+          const stkLogId = 'stklog-' + uuidv4().slice(0, 8);
+          logStock.run(
+            stkLogId,
+            tenantId,
+            product.id,
+            name,
+            qty,
+            usedUnit,
+            baseQtyDeducted,
+            price,
+            invoiceNo,
+            `মেমো বিক্রি (${paymentMethod === 'due' ? 'বাকি' : 'নগদ'})`,
+            now
+          );
         } else {
           cost = Number(item.purchasePrice) || Math.round(price * 0.8);
         }
@@ -3951,6 +4122,7 @@ fastify.post('/api/sales', async (request, reply) => {
         productId: prodId,
         productName: name,
         quantity: qty,
+        unit: usedUnit,
         purchasePrice: cost,
         sellingPrice: price,
         totalPrice: itemTotal,
@@ -3993,10 +4165,7 @@ fastify.post('/api/sales', async (request, reply) => {
       }
     }
 
-    const saleCount = (db.prepare('SELECT COUNT(*) as count FROM sales WHERE tenant_id = ?').get(tenantId) as any).count;
-    const invoiceNo = 'INV-' + (saleCount + 1001);
     const saleId = uuidv4();
-    const now = new Date().toISOString();
     const netProfit = totalProfit - Number(discount);
 
     db.prepare(`

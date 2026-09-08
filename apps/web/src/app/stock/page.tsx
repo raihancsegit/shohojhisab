@@ -30,6 +30,22 @@ export default function StockPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
+  // Stock Inflow & Outflow History Modal State
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyProduct, setHistoryProduct] = useState<any | null>(null);
+  const [historyLogs, setHistoryLogs] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Restock (মাল তুলুন) Modal State
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [restockProduct, setRestockProduct] = useState<any | null>(null);
+  const [restockQty, setRestockQty] = useState('');
+  const [restockUnit, setRestockUnit] = useState('');
+  const [restockCost, setRestockCost] = useState('');
+  const [restockSupplier, setRestockSupplier] = useState('');
+  const [restockNote, setRestockNote] = useState('');
+  const [submittingRestock, setSubmittingRestock] = useState(false);
+
   // Full Edit Product Modal state
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({
@@ -44,7 +60,9 @@ export default function StockPage() {
     size: '',
     color: '',
     brand: '',
-    warranty: ''
+    warranty: '',
+    subUnit: '',
+    conversionRatio: '1'
   });
 
   // Quick Add Product Modal state
@@ -55,6 +73,8 @@ export default function StockPage() {
     purchasePrice: '',
     stock: '50',
     unit: indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-grocery' ? 'কেজি' : 'পিস',
+    subUnit: '',
+    conversionRatio: '1',
     barcode: '',
     genericName: '',
     expiryDate: '',
@@ -82,6 +102,8 @@ export default function StockPage() {
       purchasePrice: '',
       stock: '50',
       unit: defaultUnit,
+      subUnit: '',
+      conversionRatio: '1',
       barcode: '',
       genericName: '',
       expiryDate: '',
@@ -93,6 +115,79 @@ export default function StockPage() {
     });
     setShowAddModal(true);
     triggerHaptic('light');
+  };
+
+  // Open History Modal
+  const openHistoryModal = async (product: any) => {
+    setHistoryProduct(product);
+    setShowHistoryModal(true);
+    setLoadingHistory(true);
+    triggerHaptic('light');
+    try {
+      const res = await fetch(`/api/products/${product.id}/stock-logs`);
+      if (res.ok) {
+        const logs = await res.json();
+        setHistoryLogs(Array.isArray(logs) ? logs : []);
+      }
+    } catch (e) {
+      setHistoryLogs([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Open Restock Modal
+  const openRestockModal = (product: any) => {
+    setRestockProduct(product);
+    setRestockQty('');
+    setRestockUnit(product.unit || 'পিস');
+    setRestockCost(String(product.purchasePrice || ''));
+    setRestockSupplier('');
+    setRestockNote('');
+    setShowRestockModal(true);
+    triggerHaptic('light');
+  };
+
+  // Handle Restock Submit
+  const handleRestockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restockProduct || !restockQty || !currentTenantId) return;
+    const qty = Number(restockQty);
+    if (isNaN(qty) || qty <= 0) return;
+
+    setSubmittingRestock(true);
+    triggerHaptic('success');
+
+    try {
+      const res = await fetch('/api/stock-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: currentTenantId,
+          productId: restockProduct.id,
+          productName: restockProduct.banglaName || restockProduct.name,
+          type: 'stock_in',
+          quantity: qty,
+          unit: restockUnit || restockProduct.unit,
+          unitPrice: Number(restockCost) || restockProduct.purchasePrice || 0,
+          sourceRef: restockSupplier ? `সাপ্লায়ার: ${restockSupplier}` : 'নতুন মাল তোলা',
+          note: restockNote || 'রিস্টক / মাল তোলা'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNotice(`✓ "${restockProduct.banglaName || restockProduct.name}"-এ +${qty} ${restockUnit} নতুন মাল তোলা হয়েছে!`);
+        speakAnnouncement(`${restockProduct.banglaName || restockProduct.name} এ ${qty} ${restockUnit} মাল তোলা হয়েছে`);
+        setShowRestockModal(false);
+        await loadStock();
+        setTimeout(() => setNotice(''), 3500);
+      }
+    } catch (e) {
+      alert('মাল তোলার সময় সমস্যা হয়েছে');
+    } finally {
+      setSubmittingRestock(false);
+    }
   };
 
   // Inline quick editing states
@@ -163,7 +258,6 @@ export default function StockPage() {
     let successCount = 0;
     try {
       for (const row of importPreview) {
-        // Find fields from possible Bengali or English headers
         const name = row['পণ্যের নাম'] || row['name'] || row['banglaName'] || Object.values(row)[0];
         const sellPrice = Number(row['বিক্রয় মূল্য (টাকা)'] || row['sellingPrice'] || row['price'] || 0);
         const buyPrice = Number(row['ক্রয় মূল্য (টাকা)'] || row['purchasePrice'] || row['cost'] || Math.round(sellPrice * 0.8));
@@ -307,6 +401,8 @@ export default function StockPage() {
       purchasePrice: String(p.purchasePrice || ''),
       stock: String(p.stock || '0'),
       unit: p.unit || 'পিস',
+      subUnit: p.subUnit || '',
+      conversionRatio: String(p.conversionRatio || '1'),
       barcode: p.barcode || '',
       genericName: p.genericName || '',
       expiryDate: p.expiryDate || '',
@@ -335,6 +431,8 @@ export default function StockPage() {
           purchasePrice: Number(editForm.purchasePrice) || 0,
           stock: Number(editForm.stock) || 0,
           unit: editForm.unit,
+          subUnit: editForm.subUnit.trim() || null,
+          conversionRatio: Number(editForm.conversionRatio) || 1,
           barcode: editForm.barcode,
           genericName: editForm.genericName || null,
           expiryDate: editForm.expiryDate || null,
@@ -377,6 +475,8 @@ export default function StockPage() {
           purchasePrice: Number(addForm.purchasePrice) || Math.round((Number(addForm.sellingPrice) || 0) * 0.8),
           stock: Number(addForm.stock) || 0,
           unit: addForm.unit,
+          subUnit: addForm.subUnit.trim() || null,
+          conversionRatio: Number(addForm.conversionRatio) || 1,
           barcode,
           genericName: addForm.genericName || null,
           expiryDate: addForm.expiryDate || null,
@@ -399,6 +499,8 @@ export default function StockPage() {
           purchasePrice: '',
           stock: '50',
           unit: indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-grocery' ? 'কেজি' : 'পিস',
+          subUnit: '',
+          conversionRatio: '1',
           barcode: '',
           genericName: '',
           expiryDate: '',
@@ -986,7 +1088,45 @@ export default function StockPage() {
 
                       {/* Column 5: Actions */}
                       <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => openRestockModal(p)}
+                            style={{
+                              background: '#ecfdf5',
+                              color: '#059669',
+                              border: '1px solid #a7f3d0',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title="নতুন মাল স্টকে তুলুন"
+                          >
+                            <span>➕</span> মাল তুলুন
+                          </button>
+                          <button
+                            onClick={() => openHistoryModal(p)}
+                            style={{
+                              background: '#f8fafc',
+                              color: '#475569',
+                              border: '1px solid #cbd5e1',
+                              padding: '4px 7px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title="স্টক ইন ও বিক্রির হিস্ট্রি অডিট দেখুন"
+                          >
+                            <span>📜</span> হিস্ট্রি
+                          </button>
                           <button
                             onClick={() => openEditModal(p)}
                             style={{
@@ -1170,12 +1310,26 @@ export default function StockPage() {
                       </button>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => openRestockModal(p)}
+                        style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '4px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                        title="নতুন মাল স্টকে তুলুন"
+                      >
+                        ➕ মাল তুলুন
+                      </button>
+                      <button
+                        onClick={() => openHistoryModal(p)}
+                        style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '4px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                        title="স্টক ইন ও বিক্রির হিস্ট্রি অডিট দেখুন"
+                      >
+                        📜 হিস্ট্রি
+                      </button>
                       <button
                         onClick={() => openEditModal(p)}
                         style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                       >
-                        ✏️ পূর্ণাঙ্গ এডিট
+                        ✏️ এডিট
                       </button>
                       <button
                         onClick={() => handleDeleteProduct(p)}
@@ -1328,6 +1482,42 @@ export default function StockPage() {
                       industryId={indId}
                     />
                   </div>
+                </div>
+
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        value={editForm.subUnit}
+                        onChange={(e) => setEditForm({ ...editForm, subUnit: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {editForm.unit || 'মূল এককে'} কত {editForm.subUnit || 'সাব-একক'}?</label>
+                      <input
+                        type="number"
+                        placeholder="যেমন: 50"
+                        value={editForm.conversionRatio}
+                        onChange={(e) => setEditForm({ ...editForm, conversionRatio: e.target.value })}
+                        className="num-font"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  {editForm.subUnit && Number(editForm.conversionRatio) > 1 && (
+                    <div style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                      ✓ মেমোতে ১ {editForm.subUnit} বিক্রির সময় স্বয়ংক্রিয়ভাবে {Math.round((Number(editForm.sellingPrice || 0) / Number(editForm.conversionRatio)) * 100) / 100} টাকা দর হবে এবং স্টক থেকে ১/{editForm.conversionRatio} {editForm.unit} কমবে।
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1668,6 +1858,42 @@ export default function StockPage() {
                       industryId={indId}
                     />
                   </div>
+                </div>
+
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        value={addForm.subUnit}
+                        onChange={(e) => setAddForm({ ...addForm, subUnit: e.target.value })}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {addForm.unit || 'মূল এককে'} কত {addForm.subUnit || 'সাব-একক'}?</label>
+                      <input
+                        type="number"
+                        placeholder="যেমন: 50"
+                        value={addForm.conversionRatio}
+                        onChange={(e) => setAddForm({ ...addForm, conversionRatio: e.target.value })}
+                        className="num-font"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  {addForm.subUnit && Number(addForm.conversionRatio) > 1 && (
+                    <div style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                      ✓ মেমোতে ১ {addForm.subUnit} বিক্রির সময় স্বয়ংক্রিয়ভাবে {Math.round((Number(addForm.sellingPrice || 0) / Number(addForm.conversionRatio)) * 100) / 100} টাকা দর হবে এবং স্টক থেকে ১/{addForm.conversionRatio} {addForm.unit} কমবে।
+                    </div>
+                  )}
                 </div>
 
                 {/* 🧮 Multi-Unit Sub-Unit Price Breakdown & Converter */}
@@ -2029,6 +2255,262 @@ export default function StockPage() {
           products={products}
           onStockUpdated={loadStock}
         />
+      )}
+
+      {/* ➕ মাল তুলুন (Restock Modal) */}
+      {showRestockModal && restockProduct && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+          zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+                  ➕ নতুন মাল তুলুন (Restock)
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  {restockProduct.banglaName || restockProduct.name} • বর্তমান মজুদ: {restockProduct.stock} {restockProduct.unit}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRestockModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRestockSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                    কত মাল তুলছেন? *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    autoFocus
+                    placeholder="যেমন: 2 বা 50"
+                    value={restockQty}
+                    onChange={(e) => setRestockQty(e.target.value)}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                    একক
+                  </label>
+                  <select
+                    value={restockUnit}
+                    onChange={(e) => setRestockUnit(e.target.value)}
+                    style={{ width: '100%', padding: '10px 8px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                  >
+                    <option value={restockProduct.unit}>{restockProduct.unit}</option>
+                    {restockProduct.subUnit && (
+                      <option value={restockProduct.subUnit}>{restockProduct.subUnit}</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  কেনার রেট / একক মূল্য (৳)
+                </label>
+                <input
+                  type="number"
+                  placeholder="৳ কেনার দাম"
+                  value={restockCost}
+                  onChange={(e) => setRestockCost(e.target.value)}
+                  className="num-font"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  মহাজন / সাপ্লায়ারের নাম (ঐচ্ছিক)
+                </label>
+                <input
+                  type="text"
+                  placeholder="যেমন: হাজী ট্রেডার্স / মেসার্স কালাম ব্রাদার্স"
+                  value={restockSupplier}
+                  onChange={(e) => setRestockSupplier(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  নোট বা বিবরণ (ঐচ্ছিক)
+                </label>
+                <input
+                  type="text"
+                  placeholder="যেমন: নতুন বস্তা লট নং ১২"
+                  value={restockNote}
+                  onChange={(e) => setRestockNote(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              {restockQty && restockProduct.subUnit && restockUnit === restockProduct.subUnit && Number(restockProduct.conversionRatio) > 1 && (
+                <div style={{ background: '#ecfdf5', padding: '8px 12px', borderRadius: '10px', fontSize: '11.5px', color: '#047857', border: '1px solid #a7f3d0' }}>
+                  💡 {restockQty} {restockUnit} মূল স্টক এককে রূপান্তর হয়ে +{(Number(restockQty) / Number(restockProduct.conversionRatio)).toFixed(2)} {restockProduct.unit} হিসেবে স্টকে যুক্ত হবে।
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRestockModal(false)}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRestock || !restockQty}
+                  style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  {submittingRestock ? 'মাল উঠছে...' : '✓ মাল স্টকে জমা করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📜 স্টক ইন ও বিক্রির হিস্ট্রি অডিট রিপোর্ট (Stock In/Out Timeline Modal) */}
+      {showHistoryModal && historyProduct && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+          zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '560px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexShrink: 0 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📜</span> <span>স্টক ইন ও বিক্রি হিস্ট্রি অডিট</span>
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  {historyProduct.banglaName || historyProduct.name} • বর্তমান মজুদ: <strong style={{ color: '#0f172a' }}>{historyProduct.stock} {historyProduct.unit}</strong>
+                  {historyProduct.subUnit && Number(historyProduct.conversionRatio) > 1 && (
+                    <span> ({Math.round(historyProduct.stock * historyProduct.conversionRatio)} {historyProduct.subUnit})</span>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+              {loadingHistory ? (
+                <DataLoader text="স্টক ও বিক্রির ইতিহাস লোড হচ্ছে..." />
+              ) : historyLogs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '32px', display: 'block', marginBottom: '6px' }}>📦</span>
+                  এই পণ্যের এখনো কোনো পৃথক স্টক বা বিক্রির হিস্ট্রি রেকর্ড নেই।
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {historyLogs.map((log: any) => {
+                    const isInflow = log.type === 'stock_in';
+                    const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
+                      year: 'numeric', month: 'short', day: 'numeric'
+                    }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+
+                    return (
+                      <div
+                        key={log.id}
+                        style={{
+                          background: isInflow ? '#f0fdf4' : '#fff7ed',
+                          border: `1px solid ${isInflow ? '#bbf7d0' : '#fed7aa'}`,
+                          borderRadius: '12px',
+                          padding: '10px 14px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '10px'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '900',
+                              padding: '2px 7px',
+                              borderRadius: '6px',
+                              background: isInflow ? '#dcfce7' : '#ffedd5',
+                              color: isInflow ? '#15803d' : '#c2410c'
+                            }}>
+                              {isInflow ? '📥 মাল তোলা (Stock In)' : '🛒 মেমো বিক্রি (Sale)'}
+                            </span>
+                            <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                              {log.source_ref || (isInflow ? 'মহাজন চালান' : 'মেমো')}
+                            </span>
+                          </div>
+                          {log.note && (
+                            <span style={{ fontSize: '11px', color: '#475569', display: 'block', marginTop: '3px' }}>
+                              নোট: {log.note}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '10.5px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                            📅 {formattedDate}
+                          </span>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <span
+                            className="num-font"
+                            style={{
+                              fontSize: '15px',
+                              fontWeight: '900',
+                              color: isInflow ? '#166534' : '#c2410c',
+                              display: 'block'
+                            }}
+                          >
+                            {isInflow ? `+${log.quantity}` : `-${log.quantity}`} {log.unit}
+                          </span>
+                          {log.base_quantity && log.unit !== historyProduct.unit && (
+                            <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>
+                              (মূল স্টক: {isInflow ? '+' : '-'}{log.base_quantity} {historyProduct.unit})
+                            </span>
+                          )}
+                          {log.unit_price > 0 && (
+                            <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+                              দর: ৳{log.unit_price}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(false)}
+                style={{ padding: '8px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', fontWeight: '800', cursor: 'pointer' }}
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

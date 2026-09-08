@@ -435,6 +435,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Proactive Navigation: Announce report and page status out loud when arriving on destination page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pendingAnnounce = sessionStorage.getItem('pending_page_announcement');
+      if (pendingAnnounce) {
+        sessionStorage.removeItem('pending_page_announcement');
+        setTimeout(() => {
+          speakAnnouncement(pendingAnnounce);
+        }, 350);
+      }
+    }
+  }, [pathname]);
+
   // Shopkeeper Login
   const loginShop = async (phone: string, pin: string) => {
     try {
