@@ -543,32 +543,46 @@ function parseSingleVoiceItem(
     return null;
   }
 
-  // 5. Match with Existing Catalog or Known Staples with Strict Prioritization
+  // 5. Match with Existing Catalog with Strict Prioritization
   let matchedProd: any = null;
   const qName = cleanedName.toLowerCase().trim();
 
-  // Tier 1: Exact Name Match
-  matchedProd = existingProducts.find(p => {
-    const bName = (p.banglaName || p.name || '').toLowerCase().trim();
-    return bName === qName || (p.name || '').toLowerCase().trim() === qName;
-  });
-
-  // Tier 2: Match by longest matching compound phrase (e.g. "নাপা এক্সট্রা" before "নাপা")
-  if (!matchedProd) {
-    const candidateMatches = existingProducts.filter(p => {
+  if (existingProducts && existingProducts.length > 0) {
+    // Tier 1: Exact Name Match
+    matchedProd = existingProducts.find(p => {
       const bName = (p.banglaName || p.name || '').toLowerCase().trim();
-      const gName = (p.genericName || '').toLowerCase().trim();
-      return (bName && (qName.includes(bName) || bName.includes(qName))) ||
-             (gName && (qName.includes(gName) || gName.includes(qName)));
+      return bName === qName || (p.name || '').toLowerCase().trim() === qName;
     });
 
-    if (candidateMatches.length > 0) {
-      candidateMatches.sort((a, b) => {
-        const aLen = (a.banglaName || a.name || '').length;
-        const bLen = (b.banglaName || b.name || '').length;
-        return bLen - aLen;
+    // Tier 2: Match by longest matching compound phrase (e.g. "নাপা এক্সট্রা" before "নাপা")
+    if (!matchedProd) {
+      const candidateMatches = existingProducts.filter(p => {
+        const bName = (p.banglaName || p.name || '').toLowerCase().trim();
+        const pName = (p.name || '').toLowerCase().trim();
+        const gName = (p.genericName || '').toLowerCase().trim();
+        const brand = (p.brand || '').toLowerCase().trim();
+        return (bName && (qName.includes(bName) || bName.includes(qName))) ||
+               (pName && (qName.includes(pName) || pName.includes(qName))) ||
+               (gName && (qName.includes(gName) || gName.includes(qName))) ||
+               (brand && (brand.includes(qName) || qName.includes(brand)));
       });
-      matchedProd = candidateMatches[0];
+
+      if (candidateMatches.length > 0) {
+        candidateMatches.sort((a, b) => {
+          const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
+          const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
+          if (aInStock !== bInStock) return bInStock - aInStock;
+          const aLen = (a.banglaName || a.name || '').length;
+          const bLen = (b.banglaName || b.name || '').length;
+          return bLen - aLen;
+        });
+        matchedProd = candidateMatches[0];
+      }
+    }
+
+    // STRICT: If not found in shop's existing products, reject! (No foreign items allowed)
+    if (!matchedProd) {
+      return null;
     }
   }
 
@@ -585,8 +599,8 @@ function parseSingleVoiceItem(
   // 6. Precise Unit Rate & Line Total Calculations
   let finalUnitPrice = 0;
   let finalTotalPrice = 0;
-
-  const defaultItem = COMMON_GROCERY_DEFAULTS[cleanedName] || (matchedProd ? COMMON_GROCERY_DEFAULTS[matchedProd.banglaName || matchedProd.name] : null);
+  const currentStock = matchedProd ? Number(matchedProd.stock || 0) : 0;
+  const isOutOfStock = matchedProd ? currentStock <= 0 : false;
 
   if (isTakaForWeight && extractedPrice && matchedProd) {
     // e.g. "৫০ টাকার তেল"
@@ -596,43 +610,13 @@ function parseSingleVoiceItem(
     finalUnitPrice = catalogRate;
     finalTotalPrice = extractedPrice;
   } else if (extractedPrice !== null && extractedPrice > 0) {
-    if (quantity > 1) {
-      const catalogRate = matchedProd ? (Number(matchedProd.sellingPrice) || 0) : (defaultItem ? defaultItem.price : 0);
-
-      if (isExplicitRate) {
-        // Explicitly mentioned unit rate (e.g. "ডাল ২ কেজি ৫০ টাকা কেজি")
-        finalUnitPrice = extractedPrice;
-        finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-      } else if (catalogRate > 0 && Math.abs(extractedPrice - (catalogRate * quantity)) <= 10) {
-        // Spoken amount matches total of catalog items (e.g. 2 x 50 = 100 spoken)
-        finalTotalPrice = extractedPrice;
-        finalUnitPrice = Math.round((extractedPrice / quantity) * 100) / 100;
-      } else if (catalogRate > 0 && Math.abs(extractedPrice - catalogRate) <= 5) {
-        // Spoken amount matches single unit catalog rate
-        finalUnitPrice = extractedPrice;
-        finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-      } else if (extractedPrice >= 300 && quantity <= 5) {
-        // High amount for few items (e.g. "২টা শার্ট ১০০০ টাকা" -> unit 500, total 1000)
-        finalTotalPrice = extractedPrice;
-        finalUnitPrice = Math.round((extractedPrice / quantity) * 100) / 100;
-      } else {
-        // Standard assumption: Spoken price is the Unit Rate (e.g. ডাল ২ কেজি ৫০ -> ৫০/কেজি, মোট ১০০)
-        finalUnitPrice = extractedPrice;
-        finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-      }
-    } else {
-      finalUnitPrice = extractedPrice;
-      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-    }
+    finalUnitPrice = extractedPrice;
+    finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
   } else if (matchedProd) {
-    finalUnitPrice = Number(matchedProd.sellingPrice) || 50;
+    finalUnitPrice = Number(matchedProd.sellingPrice) || 0;
     finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-  } else if (defaultItem) {
-    finalUnitPrice = defaultItem.price;
-    finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-    if (!unitMatched) unit = defaultItem.unit;
   } else {
-    // Default fallback unit price for unknown item without spoken price
+    // Fallback if no existingProducts provided (standalone mode)
     finalUnitPrice = 50;
     finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
   }
@@ -648,6 +632,8 @@ function parseSingleVoiceItem(
     totalPrice: finalTotalPrice,
     isExistingProduct: Boolean(matchedProd),
     productId: matchedProd?.id,
+    stock: currentStock,
+    isOutOfStock,
     category: matchedProd?.categoryId || detected.categoryId
   };
 }

@@ -816,8 +816,11 @@ export default function PosPage() {
 
       const fullSpoken = (posTranscriptBufferRef.current + ' ' + interim).trim();
       setVoiceNotice(`শোনা যাচ্ছে: "${fullSpoken}"`);
+      // Update search input live with spoken text and open search dropdown
+      setSearch(fullSpoken);
+      setShowSearchDropdown(true);
 
-      // 1.5-second silence timer before finishing command
+      // 1.2-second silence timer before finishing command
       if (posSilenceTimerRef.current) clearTimeout(posSilenceTimerRef.current);
       posSilenceTimerRef.current = setTimeout(() => {
         try {
@@ -830,7 +833,7 @@ export default function PosPage() {
           parseVoiceCommand(finalToParse);
         }
         setTimeout(() => setVoiceNotice(''), 4000);
-      }, 1500);
+      }, 1200);
     };
 
     recognition.onerror = (err: any) => {
@@ -949,20 +952,54 @@ export default function PosPage() {
       cleanedName = rawText.trim();
     }
 
-    // Find in existing products (Matches name, banglaName, genericName, brand)
-    let foundProd = products.find(p =>
-      (p.banglaName && (p.banglaName.toLowerCase().includes(cleanedName.toLowerCase()) || cleanedName.toLowerCase().includes(p.banglaName.toLowerCase()))) ||
-      (p.name && (p.name.toLowerCase().includes(cleanedName.toLowerCase()) || cleanedName.toLowerCase().includes(p.name.toLowerCase()))) ||
-      (p.genericName && (p.genericName.toLowerCase().includes(cleanedName.toLowerCase()) || cleanedName.toLowerCase().includes(p.genericName.toLowerCase()))) ||
-      (p.brand && (p.brand.toLowerCase().includes(cleanedName.toLowerCase()) || cleanedName.toLowerCase().includes(p.brand.toLowerCase())))
-    );
+    const querySearchName = cleanedName || rawText;
+    setSearch(querySearchName);
+    setShowSearchDropdown(true);
+
+    const qClean = querySearchName.toLowerCase().trim();
+
+    // 1. Find in existing products - Tier 1: Exact Match
+    let foundProd = products.find(p => {
+      const bName = (p.banglaName || '').toLowerCase().trim();
+      const name = (p.name || '').toLowerCase().trim();
+      return bName === qClean || name === qClean;
+    });
+
+    // Tier 2: Contains match (prioritizing in-stock products)
+    if (!foundProd) {
+      const candidates = products.filter(p => {
+        const bName = (p.banglaName || '').toLowerCase().trim();
+        const name = (p.name || '').toLowerCase().trim();
+        const gName = (p.genericName || '').toLowerCase().trim();
+        const brand = (p.brand || '').toLowerCase().trim();
+        return (bName && (bName.includes(qClean) || qClean.includes(bName))) ||
+               (name && (name.includes(qClean) || qClean.includes(name))) ||
+               (gName && (gName.includes(qClean) || qClean.includes(gName))) ||
+               (brand && (brand.includes(qClean) || qClean.includes(brand)));
+      });
+
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => {
+          const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
+          const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
+          if (aInStock !== bInStock) return bInStock - aInStock;
+          const aLen = (a.banglaName || a.name || '').length;
+          const bLen = (b.banglaName || b.name || '').length;
+          return aLen - bLen;
+        });
+        foundProd = candidates[0];
+      }
+    }
 
     if (foundProd) {
+      const finalSelectedName = foundProd.banglaName || foundProd.name;
+      setSearch(finalSelectedName);
+
       if (Number(foundProd.stock || 0) <= 0) {
         triggerHaptic('warning');
         playBeep(450);
-        setVoiceNotice(`⚠️ দুঃখিত, "${foundProd.banglaName || foundProd.name}" পণ্যটি স্টকে নেই!`);
-        speakAnnouncement(`দুঃখিত, ${foundProd.banglaName || foundProd.name} পণ্যটি বর্তমানে স্টকে নেই!`);
+        setVoiceNotice(`⚠️ দুঃখিত, "${finalSelectedName}" পণ্যটি স্টকে নেই!`);
+        speakAnnouncement(`দুঃখিত, ${finalSelectedName} পণ্যটি বর্তমানে স্টকে নেই!`);
         return;
       }
 
@@ -1010,8 +1047,9 @@ export default function PosPage() {
         unitLabel = `${Math.round(finalQty * 10)}টি ট্যাবলেট`;
       }
 
-      setVoiceNotice(`✓ কার্টে যুক্ত: ${foundProd.banglaName} (${unitLabel} - ৳${calculatedTotal})`);
-      speakAnnouncement(`${foundProd.banglaName} ${unitLabel} ${calculatedTotal} টাকা কার্টে যুক্ত হয়েছে।`);
+      setVoiceNotice(`✓ সিলেক্ট ও কার্টে যুক্ত: ${finalSelectedName} (${unitLabel} - ৳${calculatedTotal})`);
+      speakAnnouncement(`${finalSelectedName} সিলেক্ট করে কার্টে যুক্ত করা হয়েছে।`);
+      setShowSearchDropdown(false);
 
       if (extractedPrice && extractedPrice > 0 && extractedPrice !== foundProd.sellingPrice) {
         fetch(`/api/products/${foundProd.id}`, {
@@ -1023,9 +1061,9 @@ export default function PosPage() {
     } else {
       triggerHaptic('warning');
       playBeep(450);
-      const queryName = cleanedName || rawText;
-      setVoiceNotice(`⚠️ "${queryName}" পণ্যটি দোকানে বা স্টকে খুঁজে পাওয়া যায়নি!`);
-      speakAnnouncement(`দুঃখিত, ${queryName} পণ্যটি স্টকে নেই!`);
+      setSearch(querySearchName);
+      setVoiceNotice(`⚠️ "${querySearchName}" পণ্যটি দোকানে বা স্টকে খুঁজে পাওয়া যায়নি!`);
+      speakAnnouncement(`দুঃখিত, ${querySearchName} পণ্যটি আপনার দোকানে স্টকে নেই!`);
     }
   };
 

@@ -166,63 +166,102 @@ export default function VoicePOSCalculatorModal({
     console.log('Voice POS Parsed:', result);
 
     if (result.type === 'noise_ignored') {
-      setLastActionMessage(`💬 "${spokenText}" (কথোপকথন এড়িয়ে যাওয়া হয়েছে)`);
+      // If user attempted to speak something resembling a product that doesn't match stock
+      const hasMeaningfulText = spokenText.trim().length >= 2 && !isMuted;
+      if (hasMeaningfulText && !/চালু|পজ|বন্ধ|হিসাব/.test(spokenText)) {
+        triggerHaptic('warning');
+        playBeep(450);
+        speakAnnouncement(`দুঃখিত, "${spokenText}" পণ্যটি আপনার স্টকে নেই!`);
+        setLastActionMessage(`⚠️ দুঃখিত, "${spokenText}" স্টকে মেলেনি। স্টকে থাকা পণ্য বলুন।`);
+      } else {
+        setLastActionMessage(`💬 "${spokenText}" (কথোপকথন এড়িয়ে যাওয়া হয়েছে)`);
+      }
       return;
     }
 
-    triggerHaptic('success');
-
-    // 1. ADD ITEMS TO LIVE MEMO
+    // 1. ADD ITEMS TO LIVE MEMO (Strictly from current in-stock catalog only)
     if (result.type === 'add_items' && result.items && result.items.length > 0) {
-      playBeep(1100);
-      const newItems = [...itemsRef.current];
+      const validInStockItems: ParsedVoiceItem[] = [];
+      const outOfStockNames: string[] = [];
+      const notFoundNames: string[] = [];
 
-      result.items.forEach((item) => {
-        const existingIdx = newItems.findIndex(i => (i.banglaName || i.name).toLowerCase() === (item.banglaName || item.name).toLowerCase());
-        if (existingIdx >= 0) {
-          newItems[existingIdx].quantity += item.quantity;
-          newItems[existingIdx].totalPrice = Math.round(newItems[existingIdx].quantity * newItems[existingIdx].unitPrice * 100) / 100;
-        } else {
-          newItems.push({
-            ...item,
-            id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
-          });
+      for (const item of result.items) {
+        // Find product in store catalog
+        const prod = products.find(p =>
+          (item.productId && p.id === item.productId) ||
+          (p.banglaName && p.banglaName.toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim()) ||
+          (p.name && p.name.toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
+        );
+
+        if (!prod) {
+          notFoundNames.push(item.banglaName || item.name);
+          continue;
         }
-      });
 
-      setItems(newItems);
-      const newTotal = newItems.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
-      const spokenSummary = result.items.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
+        const currentStock = Number(prod.stock || 0);
+        if (currentStock <= 0) {
+          outOfStockNames.push(prod.banglaName || prod.name);
+          continue;
+        }
 
-      setLastActionMessage(`✓ যোগ হয়েছে: ${spokenSummary} (মোট: ৳${newTotal})`);
+        validInStockItems.push({
+          ...item,
+          productId: prod.id,
+          name: prod.name,
+          banglaName: prod.banglaName || prod.name,
+          unit: item.unit || prod.unit || 'পিস',
+          unitPrice: item.unitPrice || prod.sellingPrice || 0,
+          stock: currentStock,
+          isExistingProduct: true
+        });
+      }
 
-      // Auto-catalog any new/unknown product to database in background
-      result.items.forEach(async (item) => {
-        if (!item.isExistingProduct && currentTenantId) {
-          try {
-            const payload = {
-              tenantId: currentTenantId,
-              categoryId: item.category || 'cat-grocery',
-              banglaName: item.banglaName || item.name,
-              name: item.name || item.banglaName,
-              barcode: '894' + Math.floor(10000000 + Math.random() * 90000000),
-              purchasePrice: Math.round(item.unitPrice * 0.8),
-              sellingPrice: item.unitPrice,
-              stock: 50,
-              unit: item.unit || 'পিস'
-            };
-            const res = await fetch('/api/products', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
+      // If items not found or out of stock, announce clearly
+      if (outOfStockNames.length > 0) {
+        triggerHaptic('warning');
+        playBeep(450);
+        const nameList = outOfStockNames.join(', ');
+        speakAnnouncement(`দুঃখিত, ${nameList} পণ্যটি বর্তমানে স্টকে নেই!`);
+        setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই!`);
+      }
+
+      if (notFoundNames.length > 0) {
+        triggerHaptic('warning');
+        playBeep(450);
+        const nameList = notFoundNames.join(', ');
+        speakAnnouncement(`দুঃখিত, ${nameList} আপনার দোকানে বা স্টকে নেই!`);
+        setLastActionMessage(`⚠️ "${nameList}" পণ্যটি স্টকে পাওয়া যায়নি!`);
+      }
+
+      // Only add verified items that actually exist in stock!
+      if (validInStockItems.length > 0) {
+        playBeep(1100);
+        triggerHaptic('success');
+        const newItems = [...itemsRef.current];
+
+        validInStockItems.forEach((item) => {
+          const existingIdx = newItems.findIndex(i =>
+            (item.productId && i.productId === item.productId) ||
+            ((i.banglaName || i.name).toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
+          );
+          if (existingIdx >= 0) {
+            newItems[existingIdx].quantity += item.quantity;
+            newItems[existingIdx].totalPrice = Math.round(newItems[existingIdx].quantity * newItems[existingIdx].unitPrice * 100) / 100;
+          } else {
+            newItems.push({
+              ...item,
+              id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
             });
-            if (res.ok) {
-              const created = await res.json();
-              if (onProductAutoAdded) onProductAutoAdded(created);
-            }
-          } catch (e) {}
-        }
-      });
+          }
+        });
+
+        setItems(newItems);
+        const newTotal = newItems.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
+        const spokenSummary = validInStockItems.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
+
+        setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${newTotal})`);
+        speakAnnouncement(`${spokenSummary} মেমোতে যোগ হয়েছে।`);
+      }
       return;
     }
 
@@ -698,6 +737,11 @@ export default function VoicePOSCalculatorModal({
                         </td>
                         <td style={{ padding: '10px 12px', fontWeight: '800', color: '#0f172a' }}>
                           <span style={{ fontSize: '13.5px' }}>{it.banglaName || it.name}</span>
+                          {it.stock !== undefined && (
+                            <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#047857', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', fontWeight: '700' }}>
+                              স্টক: {it.stock} {it.unit}
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0369a1' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -763,13 +807,18 @@ export default function VoicePOSCalculatorModal({
                     gap: '8px'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '12px', fontWeight: '900', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>
                           {idx + 1}
                         </span>
                         <span style={{ fontSize: '15px', fontWeight: '900', color: '#0f172a' }}>
                           {it.banglaName || it.name}
                         </span>
+                        {it.stock !== undefined && (
+                          <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#047857', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                            স্টক: {it.stock} {it.unit}
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={() => removeItem(idx)}
