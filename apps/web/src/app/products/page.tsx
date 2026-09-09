@@ -118,18 +118,29 @@ export default function ProductsPage() {
 
     try {
       if (editingProd) {
-        const res = await fetch(`/api/products/${editingProd.id}`, {
+        let res = await fetch(`/api/products/${editingProd.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (!res.ok && res.status === 404) {
+          res = await fetch(`/api/products/${editingProd.id}/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
         if (res.ok) {
           await loadProducts();
           setNotice(`✓ "${banglaName}" সফলভাবে আপডেট হয়েছে!`);
           setShowModal(false);
         } else {
           const errData = await res.json().catch(() => ({}));
-          alert(errData.error || 'পণ্য আপডেট করতে সমস্যা হয়েছে');
+          if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+            alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+          } else {
+            alert(errData.error || errData.message || 'পণ্য আপডেট করতে সমস্যা হয়েছে');
+          }
         }
       } else {
         const res = await fetch('/api/products', {
@@ -144,11 +155,15 @@ export default function ProductsPage() {
           setShowModal(false);
         } else {
           const errData = await res.json().catch(() => ({}));
-          alert(errData.error || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
+          if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+            alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+          } else {
+            alert(errData.error || errData.message || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
+          }
         }
       }
     } catch (e) {
-      alert('সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     } finally {
       setSubmitting(false);
       setTimeout(() => setNotice(''), 4000);
@@ -159,15 +174,29 @@ export default function ProductsPage() {
     if (!confirm(`আপনি কি নিশ্চিত যে "${name}" পণ্যটি মুছে ফেলতে চান?`)) return;
 
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      let res = await fetch(`/api/products/${id}`, {
         method: 'DELETE'
       });
+      if (!res.ok && res.status === 404) {
+        res = await fetch(`/api/products/${id}/delete`, {
+          method: 'POST'
+        });
+      }
       if (res.ok) {
         await loadProducts();
         setNotice(`✓ "${name}" মুছে ফেলা হয়েছে!`);
         setTimeout(() => setNotice(''), 4000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'পণ্য ডিলিট করতে সমস্যা হয়েছে');
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+    }
   };
 
   const totalStockValue = products.reduce((acc, p) => acc + (p.sellingPrice * p.stock), 0);

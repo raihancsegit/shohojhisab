@@ -429,10 +429,19 @@ export default function KhataPage() {
     if (!customerToDelete?.id) return;
     setDeleteSubmitting(true);
     try {
-      const url = `/api/customers/${encodeURIComponent(customerToDelete.id)}?tenantId=${encodeURIComponent(currentTenantId || '')}`;
-      const res = await fetch(url, {
+      const deleteUrl = `/api/customers/${encodeURIComponent(customerToDelete.id)}?tenantId=${encodeURIComponent(currentTenantId || '')}`;
+      let res = await fetch(deleteUrl, {
         method: 'DELETE'
       });
+
+      // Fallback to POST alias if DELETE returns 404 (e.g. proxy or environment method restrictions)
+      if (!res.ok && res.status === 404) {
+        const postFallbackUrl = `/api/customers/${encodeURIComponent(customerToDelete.id)}/delete?tenantId=${encodeURIComponent(currentTenantId || '')}`;
+        res = await fetch(postFallbackUrl, {
+          method: 'POST'
+        });
+      }
+
       if (res.ok) {
         playDeleteSound();
         triggerHaptic('success');
@@ -447,12 +456,17 @@ export default function KhataPage() {
         setTimeout(() => setNotice(''), 4000);
       } else {
         playWarningSound();
-        const err = await res.json();
-        alert(err.error || 'মুছে ফেলতে ব্যর্থ হয়েছে');
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 404 && (err.error === 'Not Found' || !err.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! দয়া করে টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(err.error || err.message || 'মুছে ফেলতে ব্যর্থ হয়েছে');
+        }
       }
     } catch (e) {
       playWarningSound();
       console.error('Delete customer error', e);
+      alert('⚠️ সার্ভারের সাথে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     } finally {
       setDeleteSubmitting(false);
     }

@@ -3435,7 +3435,7 @@ fastify.post('/api/products', async (request, reply) => {
   }
 });
 
-fastify.put('/api/products/:id', async (request, reply) => {
+const handleUpdateProduct = async (request: any, reply: any) => {
   const { id } = request.params as { id: string };
   const body = request.body as any;
 
@@ -3563,7 +3563,11 @@ fastify.put('/api/products/:id', async (request, reply) => {
     console.error('Error updating product:', err);
     return reply.status(400).send({ error: err.message || 'পণ্য আপডেট করতে সমস্যা হয়েছে' });
   }
-});
+};
+
+fastify.put('/api/products/:id', handleUpdateProduct);
+fastify.post('/api/products/:id/update', handleUpdateProduct);
+fastify.post('/api/products/:id', handleUpdateProduct);
 
 // Product Stock Logs & History
 fastify.get('/api/products/:id/stock-logs', async (request, reply) => {
@@ -3643,15 +3647,22 @@ fastify.post('/api/stock-logs', async (request, reply) => {
   };
 });
 
-fastify.delete('/api/products/:id', async (request, reply) => {
-  const { id } = request.params as { id: string };
+const handleDeleteProduct = async (request: any, reply: any) => {
+  const { id } = (request.params as { id: string }) || {};
+  const queryOrBodyId = (request.query as any)?.id || (request.body as any)?.id;
+  const targetId = id || queryOrBodyId;
   try {
-    db.prepare('DELETE FROM products WHERE id = ?').run(id);
+    if (!targetId) return reply.status(400).send({ error: 'পণ্যের আইডি প্রয়োজন' });
+    db.prepare('DELETE FROM products WHERE id = ?').run(targetId);
     return { success: true, message: 'পণ্য সফলভাবে মুছে ফেলা হয়েছে' };
   } catch (err: any) {
-    return reply.status(400).send({ error: err.message });
+    return reply.status(400).send({ error: err.message || 'পণ্য মুছতে সমস্যা হয়েছে' });
   }
-});
+};
+
+fastify.delete('/api/products/:id', handleDeleteProduct);
+fastify.post('/api/products/:id/delete', handleDeleteProduct);
+fastify.post('/api/products/delete', handleDeleteProduct);
 
 // Customers
 fastify.get('/api/customers', async (request) => {
@@ -3876,10 +3887,11 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
 });
 
 // Delete Customer & associated due records
-fastify.delete('/api/customers/:id', async (request, reply) => {
-  const rawId = (request.params as { id: string }).id;
-  const decodedId = decodeURIComponent(rawId).trim();
-  const { tenantId } = (request.query as any) || {};
+const handleDeleteCustomer = async (request: any, reply: any) => {
+  const rawId = (request.params as { id: string })?.id || (request.query as any)?.id || (request.body as any)?.id;
+  if (!rawId) return reply.status(400).send({ error: 'কাস্টমার আইডি প্রয়োজন' });
+  const decodedId = decodeURIComponent(String(rawId)).trim();
+  const tenantId = (request.query as any)?.tenantId || (request.body as any)?.tenantId;
 
   try {
     let cust: any = null;
@@ -3918,7 +3930,11 @@ fastify.delete('/api/customers/:id', async (request, reply) => {
     console.error('Error deleting customer:', err);
     return reply.status(400).send({ error: err.message || 'কাস্টমার মুছতে ব্যর্থ হয়েছে' });
   }
-});
+};
+
+fastify.delete('/api/customers/:id', handleDeleteCustomer);
+fastify.post('/api/customers/:id/delete', handleDeleteCustomer);
+fastify.post('/api/customers/delete', handleDeleteCustomer);
 
 // Direct Customer Specific Voice Entry (When inside customer profile / ledger)
 fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
@@ -5189,6 +5205,17 @@ fastify.post('/api/voice-action', async (request, reply) => {
 
 // Health Checks
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+fastify.get('/api/health', async () => ({ status: 'healthy', timestamp: new Date().toISOString() }));
+
+// Custom 404 Handler for helpful diagnostic response
+fastify.setNotFoundHandler((request, reply) => {
+  reply.status(404).send({
+    success: false,
+    error: `অনুরোধকৃত রুট ব্যাকএন্ডে পাওয়া যায়নি (${request.method} ${request.url})`,
+    message: `Route ${request.method} ${request.url} not found on API server (Port ${process.env.PORT || 4005})`,
+    statusCode: 404
+  });
+});
 
 const start = async () => {
   try {

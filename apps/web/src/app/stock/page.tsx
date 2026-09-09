@@ -190,10 +190,14 @@ export default function StockPage() {
         setTimeout(() => setNotice(''), 3500);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'মাল তোলার সময় সমস্যা হয়েছে। দয়া করে তথ্য যাচাই করুন।');
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! দয়া করে টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'মাল তোলার সময় সমস্যা হয়েছে। দয়া করে তথ্য যাচাই করুন।');
+        }
       }
     } catch (e) {
-      alert('মাল তোলার সময় সমস্যা হয়েছে');
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     } finally {
       setSubmittingRestock(false);
     }
@@ -367,11 +371,18 @@ export default function StockPage() {
     updatePayload[field] = numVal;
 
     try {
-      const res = await fetch(`/api/products/${productId}`, {
+      let res = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload)
       });
+      if (!res.ok && res.status === 404) {
+        res = await fetch(`/api/products/${productId}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatePayload)
+        });
+      }
       if (res.ok) {
         setNotice(`✓ ${field === 'sellingPrice' ? 'বিক্রয় মূল্য' : field === 'purchasePrice' ? 'কেনার দাম' : 'স্টক'} সফলভাবে আপডেট হয়েছে!`);
         setInlineEdit(null);
@@ -379,10 +390,14 @@ export default function StockPage() {
         setTimeout(() => setNotice(''), 3000);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'আপডেট করতে ব্যর্থ হয়েছে');
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'আপডেট করতে ব্যর্থ হয়েছে');
+        }
       }
     } catch (e) {
-      alert('সার্ভারে যোগাযোগ করা যায়নি');
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     }
   };
 
@@ -391,11 +406,18 @@ export default function StockPage() {
     triggerHaptic('medium');
     const newStock = Math.max(0, Number(product.stock || 0) + deltaQty);
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
+      let res = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stock: newStock })
       });
+      if (!res.ok && res.status === 404) {
+        res = await fetch(`/api/products/${product.id}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stock: newStock })
+        });
+      }
       if (res.ok) {
         const sign = deltaQty > 0 ? `+${deltaQty}` : `${deltaQty}`;
         setNotice(`✓ ${product.banglaName || product.name}-এ ${sign} ${product.unit} স্টক আপডেট হয়েছে (মোট: ${newStock})`);
@@ -404,10 +426,14 @@ export default function StockPage() {
         setTimeout(() => setNotice(''), 3000);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'স্টক আপডেট ব্যর্থ হয়েছে');
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'স্টক আপডেট ব্যর্থ হয়েছে');
+        }
       }
     } catch (e) {
-      alert('সার্ভারে যোগাযোগ করা যায়নি');
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     }
   };
 
@@ -440,27 +466,37 @@ export default function StockPage() {
     triggerHaptic('success');
 
     try {
-      const res = await fetch(`/api/products/${editingProduct.id}`, {
+      const updatePayload = {
+        banglaName: editForm.banglaName,
+        name: editForm.banglaName,
+        sellingPrice: Number(editForm.sellingPrice) || 0,
+        purchasePrice: Number(editForm.purchasePrice) || 0,
+        stock: Number(editForm.stock) || 0,
+        unit: editForm.unit,
+        subUnit: editForm.subUnit.trim() || null,
+        conversionRatio: Number(editForm.conversionRatio) || 1,
+        barcode: editForm.barcode,
+        genericName: editForm.genericName || null,
+        expiryDate: editForm.expiryDate || null,
+        size: editForm.size || null,
+        color: editForm.color || null,
+        brand: editForm.brand || null,
+        warranty: editForm.warranty || null
+      };
+
+      let res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          banglaName: editForm.banglaName,
-          name: editForm.banglaName,
-          sellingPrice: Number(editForm.sellingPrice) || 0,
-          purchasePrice: Number(editForm.purchasePrice) || 0,
-          stock: Number(editForm.stock) || 0,
-          unit: editForm.unit,
-          subUnit: editForm.subUnit.trim() || null,
-          conversionRatio: Number(editForm.conversionRatio) || 1,
-          barcode: editForm.barcode,
-          genericName: editForm.genericName || null,
-          expiryDate: editForm.expiryDate || null,
-          size: editForm.size || null,
-          color: editForm.color || null,
-          brand: editForm.brand || null,
-          warranty: editForm.warranty || null
-        })
+        body: JSON.stringify(updatePayload)
       });
+
+      if (!res.ok && res.status === 404) {
+        res = await fetch(`/api/products/${editingProduct.id}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatePayload)
+        });
+      }
 
       if (res.ok) {
         setNotice(`✓ "${editForm.banglaName}" পণ্যের তথ্য ও দাম সফলভাবে সংরক্ষিত হয়েছে!`);
@@ -469,10 +505,14 @@ export default function StockPage() {
         setTimeout(() => setNotice(''), 3500);
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.error || 'পণ্য সংরক্ষণ করতে ব্যর্থ হয়েছে');
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'পণ্য সংরক্ষণ করতে ব্যর্থ হয়েছে');
+        }
       }
     } catch (e) {
-      alert('সার্ভারে সমস্যা হয়েছে, পুনরায় চেষ্টা করুন');
+      alert('⚠️ সার্ভারে সমস্যা হয়েছে। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
     }
   };
 
@@ -536,8 +576,17 @@ export default function StockPage() {
         });
         await loadStock();
         setTimeout(() => setNotice(''), 3500);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+    }
   };
 
   // Delete Product
@@ -546,15 +595,29 @@ export default function StockPage() {
     triggerHaptic('warning');
 
     try {
-      const res = await fetch(`/api/products/${p.id}`, {
+      let res = await fetch(`/api/products/${p.id}`, {
         method: 'DELETE'
       });
+      if (!res.ok && res.status === 404) {
+        res = await fetch(`/api/products/${p.id}/delete`, {
+          method: 'POST'
+        });
+      }
       if (res.ok) {
         setNotice(`✓ পণ্য "${p.banglaName || p.name}" মুছে ফেলা হয়েছে!`);
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
+          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
+        } else {
+          alert(errData.error || errData.message || 'পণ্য ডিলিট করতে ব্যর্থ হয়েছে');
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+    }
   };
 
   const generateReorderSheet = () => {

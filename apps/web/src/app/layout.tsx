@@ -1518,6 +1518,82 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
   );
 }
 
+function BackendHealthBanner() {
+  const [isOffline, setIsOffline] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  const checkHealth = async () => {
+    setChecking(true);
+    try {
+      const res = await fetch('/api/health', { method: 'GET', cache: 'no-store' });
+      if (res.ok) {
+        setIsOffline(false);
+      } else {
+        setIsOffline(true);
+      }
+    } catch (e) {
+      setIsOffline(true);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkHealth();
+    const interval = setInterval(checkHealth, 12000);
+    window.addEventListener('focus', checkHealth);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkHealth);
+    };
+  }, []);
+
+  if (!isOffline) return null;
+
+  return (
+    <div style={{
+      background: 'linear-gradient(90deg, #dc2626, #b91c1c)',
+      color: '#fff',
+      padding: '8px 16px',
+      fontSize: '13px',
+      fontWeight: '700',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '12px',
+      zIndex: 99999,
+      position: 'sticky',
+      top: 0,
+      boxShadow: '0 2px 10px rgba(220, 38, 38, 0.4)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '16px' }}>⚠️</span>
+        <span>
+          <strong>ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে!</strong> খাতা থেকে কাস্টমার ডিলিট বা স্টকে নতুন মাল তোলার জন্য টার্মিনালে <code>npm run dev</code> বা <code>npm run dev:api</code> চালু রাখুন।
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={checkHealth}
+        disabled={checking}
+        style={{
+          background: '#fff',
+          color: '#b91c1c',
+          border: 'none',
+          borderRadius: '8px',
+          padding: '4px 10px',
+          fontSize: '12px',
+          fontWeight: '800',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        {checking ? 'চেক হচ্ছে...' : '🔄 পুনরায় চেক'}
+      </button>
+    </div>
+  );
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
@@ -1536,6 +1612,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ margin: 0, fontFamily: 'var(--font-sans)' }}>
         <AuthProvider>
+          <BackendHealthBanner />
           <PWAInstaller />
           <ScreenLockOverlay />
           <HeaderNav onOpenMenuDrawer={() => setIsMenuDrawerOpen(true)} />
