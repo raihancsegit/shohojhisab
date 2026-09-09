@@ -905,30 +905,30 @@ export function getIndustryBrandPlaceholder(industryId?: string): string {
 export function getIndustrySearchPlaceholder(industryId?: string): string {
   switch (industryId) {
     case 'cat-pharmacy':
-      return '🔍 ঔষধের নাম, জেনেরিক বা বারকোড খুঁজুন...';
+      return 'ঔষধের নাম, জেনেরিক বা বারকোড খুঁজুন...';
     case 'cat-clothing':
-      return '🔍 পোশাকের নাম, সাইজ বা বারকোড খুঁজুন...';
+      return 'পোশাকের নাম, সাইজ বা বারকোড খুঁজুন...';
     case 'cat-shoes':
-      return '🔍 জুতো, স্যান্ডেল বা সাইজ খুঁজুন...';
+      return 'জুতো, স্যান্ডেল বা সাইজ খুঁজুন...';
     case 'cat-hardware':
-      return '🔍 হার্ডওয়্যার মালামাল বা কোড খুঁজুন...';
+      return 'হার্ডওয়্যার মালামাল বা কোড খুঁজুন...';
     case 'cat-mobile':
-      return '🔍 মোবাইল এক্সেসরিজ বা মডেল খুঁজুন...';
+      return 'মোবাইল এক্সেসরিজ বা মডেল খুঁজুন...';
     case 'cat-restaurant':
-      return '🔍 মেনু আইটেম বা খাবার খুঁজুন...';
+      return 'মেনু আইটেম বা খাবার খুঁজুন...';
     case 'cat-tea':
-      return '🔍 চা বা স্ন্যাক্স আইটেম খুঁজুন...';
+      return 'চা বা স্ন্যাক্স আইটেম খুঁজুন...';
     case 'cat-meat-fish':
-      return '🔍 মাংস বা মাছের নাম খুঁজুন...';
+      return 'মাংস বা মাছের নাম খুঁজুন...';
     case 'cat-sweet':
-      return '🔍 মিষ্টি বা বেকারি আইটেম খুঁজুন...';
+      return 'মিষ্টি বা বেকারি আইটেম খুঁজুন...';
     case 'cat-stationery':
-      return '🔍 বই-খাতা বা স্টেশনারি খুঁজুন...';
+      return 'বই-খাতা বা স্টেশনারি খুঁজুন...';
     case 'cat-cosmetics':
-      return '🔍 কসমেটিকস পণ্যের নাম খুঁজুন...';
+      return 'কসমেটিকস পণ্যের নাম খুঁজুন...';
     case 'cat-grocery':
     default:
-      return '🔍 মুদি পণ্যের নাম বা বারকোড খুঁজুন...';
+      return 'মুদি পণ্যের নাম বা বারকোড খুঁজুন...';
   }
 }
 

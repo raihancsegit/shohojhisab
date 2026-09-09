@@ -19,6 +19,8 @@ yarn-error.log*
 *.db-shm
 *.db-wal
 *.log
+local_business.db
+apps/api/*.db
 
 # OS files
 .DS_Store

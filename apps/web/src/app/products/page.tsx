@@ -293,15 +293,32 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Search Input */}
+      {/* Modern Search Input */}
       <div style={{ marginBottom: '14px' }}>
-        <input
-          type="text"
-          placeholder={getIndustrySearchPlaceholder(tenant?.industryId)}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '1.5px solid #cbd5e1', outline: 'none', fontSize: '14px', background: '#fff', boxSizing: 'border-box' }}
-        />
+        <div className="stock-search-wrap">
+          <span className="stock-search-icon-left">🔍</span>
+          <input
+            type="text"
+            placeholder={getIndustrySearchPlaceholder(tenant?.industryId)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="stock-search-input"
+            style={{ paddingRight: search ? '44px' : '16px' }}
+          />
+          {search && (
+            <div className="stock-search-actions">
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="stock-search-btn"
+                style={{ background: '#f1f5f9', color: '#64748b' }}
+                title="সার্চ মুছুন"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Product List Cards (Mobile Touch Friendly) */}

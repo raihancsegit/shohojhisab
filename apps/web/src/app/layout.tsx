@@ -63,23 +63,25 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   return (
     <header style={{
       background: authTheme === 'dark'
-        ? '#090d16'
-        : 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+        ? 'rgba(9, 13, 22, 0.95)'
+        : 'linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #312e81 100%)',
+      backdropFilter: 'blur(16px)',
       color: '#ffffff',
       borderBottom: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      boxShadow: authTheme === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.5)' : '0 2px 10px rgba(30, 27, 75, 0.2)'
+      boxShadow: authTheme === 'dark' ? '0 4px 20px -2px rgba(0, 0, 0, 0.6)' : '0 4px 20px -2px rgba(15, 23, 42, 0.25)'
     }}>
       {/* Top Main Bar */}
       <div style={{
         maxWidth: '1280px',
         margin: '0 auto',
-        padding: '10px 16px',
+        padding: '8px 12px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        gap: '8px'
       }}>
         {/* Left: Hamburger & Shop Name / Logo */}
         <div className="header-shop-container">
@@ -88,18 +90,18 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
               type="button"
               onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                border: 'none',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.14)',
                 borderRadius: '10px',
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: '19px',
+                fontSize: '18px',
                 color: '#ffffff',
                 cursor: 'pointer',
                 flexShrink: 0,
-                transition: 'background 0.2s ease'
+                transition: 'all 0.15s ease'
               }}
               title="মেনু ড্রয়ার খুলুন"
             >
@@ -118,7 +120,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 placeItems: 'center',
                 fontSize: '18px',
                 color: '#4f46e5',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                 flexShrink: 0
               }}>
                 {theme.icon}
@@ -127,12 +129,15 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 <h1 className="header-shop-title">
                   {tenant.shopName || 'সহজ হিসাব'}
                 </h1>
-                <p className="header-shop-meta">
-                  <span style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', marginRight: '3px' }}>
+                <div className="header-shop-meta">
+                  <span className="header-shop-badge">
+                    <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>
                     {theme.name}
                   </span>
-                  <span className="desktop-only">• {tenant.location || 'বাজার'}</span>
-                </p>
+                  <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
+                    • {tenant.location || 'বাজার'}
+                  </span>
+                </div>
               </div>
             </Link>
           ) : userRole === 'admin' ? (
@@ -171,15 +176,11 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   triggerHaptic('light');
                 }}
                 className="header-role-btn"
-                style={{
-                  background: activeRoleMode === 'owner' ? 'rgba(255, 255, 255, 0.22)' : '#fef3c7',
-                  color: activeRoleMode === 'owner' ? '#ffffff' : '#92400e',
-                }}
                 title="ক্যাশিয়ার বা ব্যবহারকারী শিফট পরিবর্তন করুন"
               >
                 <span>{activeRoleMode === 'owner' ? '👑' : '👤'}</span>
                 <span>{currentStaffUser && !currentStaffUser.isOwner ? currentStaffUser.name.split(' ')[0] : (activeRoleMode === 'owner' ? 'মালিক' : 'স্টাফ')}</span>
-                <span style={{ fontSize: '9px', opacity: 0.8 }}>▼</span>
+                <span style={{ fontSize: '8px', opacity: 0.7 }}>▼</span>
               </button>
 
               {/* Soundbox Voice Announcer Toggle */}
@@ -187,9 +188,10 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 onClick={toggleSoundbox}
                 className="header-icon-btn"
                 style={{
-                  background: isSoundboxEnabled ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.12)',
+                  background: isSoundboxEnabled ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                  border: isSoundboxEnabled ? '1px solid rgba(165, 180, 252, 0.5)' : '1px solid rgba(255, 255, 255, 0.14)',
                 }}
-                title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু' : 'সাউন্ডবক্স বন্ধ'}
+                title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু (ভয়েস সক্রিয়)' : 'সাউন্ডবক্স বন্ধ'}
               >
                 {isSoundboxEnabled ? '🔊' : '🔈'}
               </button>
@@ -201,6 +203,16 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 title="বিজ্ঞপ্তি"
               >
                 🔔
+                <span style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: '#f43f5e',
+                  boxShadow: '0 0 4px #f43f5e'
+                }} />
               </Link>
 
               {/* Instant Dark / Light Mode Toggle */}
@@ -212,10 +224,9 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 }}
                 className="header-icon-btn"
                 style={{
-                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                  border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.35)' : '1px solid rgba(255, 255, 255, 0.14)',
                   color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
-                  border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.4)' : 'none',
-                  fontSize: '15px'
                 }}
                 title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন (Light Mode)' : 'ডার্ক মোড চালু করুন (Dark Mode)'}
                 aria-label="Toggle Theme Mode"
