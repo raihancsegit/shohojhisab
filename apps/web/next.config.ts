@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
     cpus: 1,
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4005';
+    const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4005';
+    const backendUrl = rawUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
     return [
       {
         source: '/api/:path*',
