@@ -19,6 +19,8 @@ export interface ParsedVoiceItem {
   size?: string;
   color?: string;
   brand?: string;
+  stock?: number;
+  isOutOfStock?: boolean;
 }
 
 export interface VoicePOSParseResult {

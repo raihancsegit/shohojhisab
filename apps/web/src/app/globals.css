@@ -22,59 +22,133 @@
 }
 
 /* ==========================================================================
-   LIVE REAL-TIME DARK THEME ENGINE
+   LIVE REAL-TIME DARK THEME ENGINE (OLED Deep Slate Edition)
    ========================================================================== */
+:root {
+  --bg-canvas: #f8fafc;
+  --bg-card: #ffffff;
+  --border-card: #e2e8f0;
+  --border-card-subtle: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --accent-emerald: #10b981;
+  --accent-rose: #f43f5e;
+  --accent-indigo: #4f46e5;
+  --accent-amber: #f59e0b;
+  --card-glow: 0 4px 20px -4px rgba(79, 70, 229, 0.08);
+}
+
 html.dark, body.dark, .dark {
-  --background: #0f172a;
+  --background: #090d16;
   --foreground: #f8fafc;
-  --surface: #1e293b;
+  --surface: #131b2e;
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --primary-light: rgba(99, 102, 241, 0.15);
-  --primary-border: #4338ca;
+  --primary-border: #334155;
   --primary-dark: #818cf8;
-  --card-bg: #1e293b;
-  --card-border: #334155;
-  --card-border-subtle: #1e293b;
-  --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
-  --card-shadow-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.7);
+  --card-bg: #131b2e;
+  --card-border: #1e293b;
+  --card-border-subtle: #162035;
+  --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.6);
+  --card-shadow-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.8);
+  
+  --bg-canvas: #090d16;
+  --bg-card: #131b2e;
+  --border-card: #1e293b;
+  --border-card-subtle: #162035;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-emerald: #10b981;
+  --accent-rose: #f43f5e;
+  --accent-indigo: #6366f1;
+  --accent-amber: #f59e0b;
+  --card-glow: 0 0 20px rgba(99, 102, 241, 0.12);
   color-scheme: dark;
 }
 
 html.dark body, body.dark {
-  background-color: #0f172a !important;
+  background-color: #090d16 !important;
   color: #f8fafc !important;
 }
 
+/* Surface & Card Dark Overrides */
 html.dark .ui-card,
 html.dark .mobile-card,
 html.dark .app-container > div,
 html.dark [style*="background: #ffffff"],
 html.dark [style*="background: rgb(255, 255, 255)"],
-html.dark [style*="background-color: #ffffff"] {
-  background-color: #1e293b !important;
-  border-color: #334155 !important;
+html.dark [style*="background-color: #ffffff"],
+html.dark [style*="background: white"],
+html.dark [style*="background-color: white"] {
+  background-color: #131b2e !important;
+  border-color: #1e293b !important;
   color: #f8fafc !important;
 }
 
+/* Soft light backgrounds to deep slate container */
+html.dark [style*="background: #f8fafc"],
+html.dark [style*="background-color: #f8fafc"],
+html.dark [style*="background: #f1f5f9"],
+html.dark [style*="background-color: #f1f5f9"] {
+  background-color: #0d1424 !important;
+  border-color: #1e293b !important;
+}
+
+/* Form Inputs, Selects, and Textareas */
 html.dark input,
 html.dark select,
 html.dark textarea {
-  background-color: #0f172a !important;
-  border-color: #334155 !important;
+  background-color: #090d16 !important;
+  border-color: #1e293b !important;
   color: #f8fafc !important;
 }
 
-html.dark div,
-html.dark span,
-html.dark p,
-html.dark h1,
-html.dark h2,
-html.dark h3,
-html.dark h4,
-html.dark h5,
-html.dark h6 {
-  /* Retain bright text for dark mode readability */
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Inline Dark Text Contrast Fixes */
+html.dark [style*="color: #0f172a"],
+html.dark [style*="color: rgb(15, 23, 42)"],
+html.dark [style*="color: #1e293b"],
+html.dark [style*="color: rgb(30, 41, 59)"],
+html.dark [style*="color: #334155"] {
+  color: #f8fafc !important;
+}
+
+html.dark [style*="color: #475569"],
+html.dark [style*="color: #64748b"] {
+  color: #94a3b8 !important;
+}
+
+/* Border overrides */
+html.dark [style*="border: '1px solid #e2e8f0'"],
+html.dark [style*="border: '1px solid #f1f5f9'"],
+html.dark [style*="borderColor: '#e2e8f0'"],
+html.dark [style*="borderColor: '#f1f5f9'"] {
+  border-color: #1e293b !important;
+}
+
+/* Table Dark Enhancements */
+html.dark table th {
+  background-color: #0d1424 !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+html.dark table td {
+  border-bottom-color: #162035 !important;
+  color: #f8fafc !important;
+}
+
+html.dark table tr:hover td {
+  background-color: rgba(99, 102, 241, 0.06) !important;
 }
 
 *, *::before, *::after {

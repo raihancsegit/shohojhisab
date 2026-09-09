@@ -208,6 +208,17 @@ export default function PosPage() {
   const [submitting, setSubmitting] = useState(false);
   const [heldCarts, setHeldCarts] = useState<any[]>([]);
 
+  // 🔢 Amar Dokan Style Fast Numpad POS Mode
+  const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
+  const [numpadInput, setNumpadInput] = useState('');
+  const [numpadItems, setNumpadItems] = useState<Array<{ id: string; amount: number; note: string }>>([]);
+  const [numpadNote, setNumpadNote] = useState('');
+  const [numpadPaymentMethod, setNumpadPaymentMethod] = useState<'cash' | 'due'>('cash');
+  const [numpadCustomer, setNumpadCustomer] = useState('none');
+  const [numpadNewCustName, setNumpadNewCustName] = useState('');
+  const [numpadNewCustPhone, setNumpadNewCustPhone] = useState('');
+  const [numpadSubmitting, setNumpadSubmitting] = useState(false);
+
   // Industry-Tailored Workflows
   const industryId = tenant?.industryId || 'cat-grocery';
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
@@ -404,6 +415,207 @@ export default function PosPage() {
       osc.start();
       osc.stop(ctx.currentTime + 0.08);
     } catch (e) {}
+  };
+
+  // 🔢 Quick Numpad Helper Handlers
+  const handleNumpadDigit = (digit: string) => {
+    playBeep(850);
+    triggerHaptic('light');
+    if (digit === '.' && numpadInput.includes('.')) return;
+    setNumpadInput(prev => prev + digit);
+  };
+
+  const handleNumpadClear = () => {
+    playBeep(600);
+    triggerHaptic('light');
+    if (numpadInput) {
+      setNumpadInput('');
+    } else {
+      setNumpadItems([]);
+    }
+  };
+
+  const handleNumpadBackspace = () => {
+    playBeep(700);
+    triggerHaptic('light');
+    setNumpadInput(prev => prev.slice(0, -1));
+  };
+
+  const handleNumpadAddCurrent = () => {
+    const amt = parseFloat(numpadInput);
+    if (!amt || isNaN(amt) || amt <= 0) return;
+    playBeep(1100);
+    triggerHaptic('medium');
+    setNumpadItems(prev => [
+      ...prev,
+      { id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6), amount: amt, note: numpadNote.trim() || `আইটেম ${prev.length + 1}` }
+    ]);
+    setNumpadInput('');
+    setNumpadNote('');
+  };
+
+  const handleNumpadAddQuickAmount = (amt: number) => {
+    playBeep(1100);
+    triggerHaptic('medium');
+    setNumpadItems(prev => [
+      ...prev,
+      { id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6), amount: amt, note: numpadNote.trim() || `আইটেম ${prev.length + 1}` }
+    ]);
+    setNumpadNote('');
+  };
+
+  const removeNumpadItem = (id: string) => {
+    playBeep(600);
+    triggerHaptic('light');
+    setNumpadItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const numpadPendingVal = parseFloat(numpadInput) || 0;
+  const numpadTotal = numpadItems.reduce((sum, i) => sum + i.amount, 0) + numpadPendingVal;
+
+  const handleNumpadCheckout = async (method: 'cash' | 'due') => {
+    if (!currentTenantId) return;
+
+    let finalItems = [...numpadItems];
+    if (numpadPendingVal > 0) {
+      finalItems.push({
+        id: 'np-pending',
+        amount: numpadPendingVal,
+        note: numpadNote.trim() || `আইটেম ${finalItems.length + 1}`
+      });
+    }
+
+    if (finalItems.length === 0) {
+      alert('দয়া করে টাকার পরিমাণ লিখুন!');
+      return;
+    }
+
+    const totalAmt = finalItems.reduce((acc, it) => acc + it.amount, 0);
+    if (totalAmt <= 0) return;
+
+    const custObj = customers.find(c => c.id === numpadCustomer);
+    const finalCustName = numpadCustomer !== 'none' ? (custObj?.name || 'কাস্টমার') : numpadNewCustName.trim();
+    const finalCustPhone = numpadCustomer !== 'none' ? (custObj?.phone || '') : numpadNewCustPhone.trim();
+
+    if (method === 'due' && !finalCustName) {
+      alert('⚠️ বাকি বিক্রির জন্য গ্রাহক নির্বাচন করুন অথবা নতুন গ্রাহকের নাম লিখুন!');
+      return;
+    }
+
+    setNumpadSubmitting(true);
+    const paid = method === 'due' ? 0 : totalAmt;
+    const due = method === 'due' ? totalAmt : 0;
+
+    const payload = {
+      tenantId: currentTenantId,
+      customerId: numpadCustomer !== 'none' ? numpadCustomer : null,
+      customerName: finalCustName || 'নগদ কাস্টমার',
+      customerPhone: finalCustPhone || '',
+      items: finalItems.map(i => ({
+        productId: null,
+        productName: i.note ? `ক্যালকুলেটর বিক্রি (${i.note})` : 'দ্রুত নগদ/বাকি বিক্রি',
+        quantity: 1,
+        selectedUnit: 'আইটেম',
+        sellingPrice: i.amount,
+        purchasePrice: Math.round(i.amount * 0.85),
+        totalPrice: i.amount
+      })),
+      discount: 0,
+      totalAmount: totalAmt,
+      paidAmount: paid,
+      dueAmount: due,
+      paymentMethod: method,
+      cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক'
+    };
+
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        playBeep(1200);
+        triggerHaptic('success');
+        speakAnnouncement(`${totalAmt} টাকা ${method === 'cash' ? 'নগদ' : `${finalCustName} এর বাকি`} বিক্রি সম্পন্ন হয়েছে।`);
+
+        const indTheme = getIndustryTheme(tenant?.industryId);
+        setReceipt({
+          shopName: tenant?.shopName || 'আমার দোকান',
+          phone: tenant?.phone || '',
+          location: tenant?.location || 'বাজার',
+          industryId: tenant?.industryId || 'cat-grocery',
+          industrySubtitle: indTheme.receiptSubtitle,
+          terms: indTheme.terms,
+          invoiceNo: data.order?.invoiceNo || 'INV-' + Date.now().toString().slice(-6),
+          date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+          cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
+          items: finalItems.map(i => ({
+            product: { banglaName: i.note || 'ক্যালকুলেটর বিক্রি', unit: 'আইটেম', sellingPrice: i.amount },
+            quantity: 1,
+            unitPrice: i.amount,
+            totalPrice: i.amount
+          })),
+          subtotal: totalAmt,
+          discount: 0,
+          totalAmount: totalAmt,
+          paidAmount: paid,
+          dueAmount: due,
+          cashTendered: paid,
+          changeReturned: 0,
+          paymentMethod: method,
+          customerName: finalCustName || 'নগদ কাস্টমার',
+          customerPhone: finalCustPhone || ''
+        });
+
+        setNumpadItems([]);
+        setNumpadInput('');
+        setNumpadNote('');
+        setNumpadNewCustName('');
+        setNumpadNewCustPhone('');
+        setNumpadCustomer('none');
+      } else {
+        alert('বিক্রি সম্পন্ন হতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+      }
+    } catch (e) {
+      alert('সার্ভার যোগাযোগে সমস্যা হয়েছে।');
+    } finally {
+      setNumpadSubmitting(false);
+    }
+  };
+
+  const handleNumpadPushToCart = () => {
+    let finalItems = [...numpadItems];
+    if (numpadPendingVal > 0) {
+      finalItems.push({
+        id: 'np-pending',
+        amount: numpadPendingVal,
+        note: numpadNote.trim() || `আইটেম ${finalItems.length + 1}`
+      });
+    }
+    if (finalItems.length === 0) return;
+    playBeep(900);
+    triggerHaptic('medium');
+
+    finalItems.forEach(it => {
+      const customProd = {
+        id: 'custom-np-' + Math.random().toString(36).slice(2, 8),
+        name: it.note || 'ক্যালকুলেটর আইটেম',
+        banglaName: it.note || 'ক্যালকুলেটর আইটেম',
+        sellingPrice: it.amount,
+        purchasePrice: Math.round(it.amount * 0.85),
+        unit: 'আইটেম',
+        stock: 999
+      };
+      addToCart(customProd, 1);
+    });
+
+    setNumpadItems([]);
+    setNumpadInput('');
+    setNumpadNote('');
+    setPosMode('catalog');
   };
 
   const addToCart = (product: any, qty: number = 1, unit?: string) => {
@@ -1324,13 +1536,489 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* 🔍 1. TOP SEARCH, BARCODE SCAN & VOICE BAR */}
+      {/* 🎛️ POS Mode Switcher (Catalog Sale vs. Quick Numpad Sale - Amar Dokan Style) */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        alignItems: 'center',
-        marginBottom: '12px'
+        background: 'var(--bg-canvas)',
+        border: '1.5px solid var(--border-card)',
+        borderRadius: '16px',
+        padding: '4px',
+        marginBottom: '14px',
+        gap: '4px'
       }}>
+        <button
+          type="button"
+          onClick={() => { setPosMode('catalog'); triggerHaptic('light'); }}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: '12px',
+            border: 'none',
+            background: posMode === 'catalog' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
+            color: posMode === 'catalog' ? '#ffffff' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: posMode === 'catalog' ? '0 2px 8px rgba(79, 70, 229, 0.3)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <span>🛍️ ক্যাটালগ ও বারকোড বিক্রি</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setPosMode('numpad'); triggerHaptic('light'); }}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: '12px',
+            border: 'none',
+            background: posMode === 'numpad' ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'transparent',
+            color: posMode === 'numpad' ? '#ffffff' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: posMode === 'numpad' ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <span>🔢 ক্যালকুলেটর নামপ্যাড বিক্রি</span>
+          <span style={{ fontSize: '10px', background: posMode === 'numpad' ? 'rgba(255,255,255,0.25)' : '#10b981', color: '#fff', padding: '1px 6px', borderRadius: '99px', fontWeight: '900' }}>
+            দ্রুত
+          </span>
+        </button>
+      </div>
+
+      {/* 🔢 AMAR DOKAN STYLE FAST NUMPAD VIEW */}
+      {posMode === 'numpad' && (
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: '24px',
+          border: '1.5px solid var(--border-card)',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.05)',
+          padding: '20px',
+          marginBottom: '20px',
+          maxWidth: '560px',
+          margin: '0 auto 24px auto'
+        }}>
+          {/* Header Title */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '22px' }}>🔢</span>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                  ক্যালকুলেটর কুইক সেল
+                </h2>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  পণ্য সিলেক্ট ছাড়া সরাসরি টাকার অংকে দ্রুত বিক্রি
+                </span>
+              </div>
+            </div>
+            {numpadItems.length > 0 && (
+              <button
+                type="button"
+                onClick={handleNumpadClear}
+                style={{
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                সব মুছুন (C)
+              </button>
+            )}
+          </div>
+
+          {/* LED Display Screen */}
+          <div style={{
+            background: 'linear-gradient(135deg, #090d16 0%, #131b2e 100%)',
+            borderRadius: '18px',
+            padding: '16px 20px',
+            color: '#ffffff',
+            marginBottom: '16px',
+            border: '1.5px solid #1e293b',
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+          }}>
+            {/* Expression Equation */}
+            <div style={{ fontSize: '13px', color: '#94a3b8', minHeight: '20px', overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: '4px' }} className="num-font">
+              {numpadItems.length > 0
+                ? numpadItems.map((it, idx) => (
+                    <span key={it.id}>
+                      {idx > 0 ? ' + ' : ''}৳{it.amount} {it.note ? `(${it.note})` : ''}
+                    </span>
+                  ))
+                : 'টাকার অংক চাপুন...'}
+              {numpadInput && (
+                <span style={{ color: '#38bdf8' }}> {numpadItems.length > 0 ? '+' : ''} ৳{numpadInput}</span>
+              )}
+            </div>
+
+            {/* Big LED Total */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '800' }}>
+                মোট প্রদেয়:
+              </span>
+              <div style={{ fontSize: '36px', fontWeight: '900', color: '#10b981', lineHeight: 1 }} className="num-font">
+                ৳ {numpadTotal.toLocaleString('en-US')}
+              </div>
+            </div>
+          </div>
+
+          {/* Items Pills (if multiple amounts entered) */}
+          {numpadItems.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              overflowX: 'auto',
+              paddingBottom: '8px',
+              marginBottom: '12px'
+            }}>
+              {numpadItems.map((it) => (
+                <div
+                  key={it.id}
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: '10px',
+                    padding: '4px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>৳{it.amount} {it.note ? `• ${it.note}` : ''}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeNumpadItem(it.id)}
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '12px', fontWeight: '900' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Optional Note / Item Name Input */}
+          <div style={{ marginBottom: '12px' }}>
+            <input
+              type="text"
+              placeholder="📝 পণ্যের বিবরণ / নোট (ঐচ্ছিক, যেমন: সাবান বা তেল)..."
+              value={numpadNote}
+              onChange={(e) => setNumpadNote(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: '12px',
+                border: '1.5px solid var(--border-card)',
+                background: 'var(--bg-canvas)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Quick Amount Pills */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, 1fr)',
+            gap: '6px',
+            marginBottom: '14px'
+          }}>
+            {[10, 20, 50, 100, 500, 1000].map(amt => (
+              <button
+                key={amt}
+                type="button"
+                onClick={() => handleNumpadAddQuickAmount(amt)}
+                style={{
+                  background: 'var(--bg-canvas)',
+                  border: '1.5px solid var(--border-card)',
+                  borderRadius: '10px',
+                  padding: '7px 2px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                +৳{amt}
+              </button>
+            ))}
+          </div>
+
+          {/* Touch Numpad Grid (4x4) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '8px',
+            marginBottom: '16px'
+          }}>
+            {[
+              { label: '7', action: () => handleNumpadDigit('7') },
+              { label: '8', action: () => handleNumpadDigit('8') },
+              { label: '9', action: () => handleNumpadDigit('9') },
+              { label: '⌫', action: handleNumpadBackspace, bg: '#f1f5f9', color: '#dc2626' },
+
+              { label: '4', action: () => handleNumpadDigit('4') },
+              { label: '5', action: () => handleNumpadDigit('5') },
+              { label: '6', action: () => handleNumpadDigit('6') },
+              { label: 'C', action: handleNumpadClear, bg: '#fee2e2', color: '#b91c1c' },
+
+              { label: '1', action: () => handleNumpadDigit('1') },
+              { label: '2', action: () => handleNumpadDigit('2') },
+              { label: '3', action: () => handleNumpadDigit('3') },
+              { label: '+ যোগ', action: handleNumpadAddCurrent, bg: '#eef2ff', color: '#4f46e5', bold: true },
+
+              { label: '00', action: () => handleNumpadDigit('00') },
+              { label: '0', action: () => handleNumpadDigit('0') },
+              { label: '.', action: () => handleNumpadDigit('.') },
+              { label: '↵ আইটেম', action: handleNumpadAddCurrent, bg: '#ecfdf5', color: '#059669', bold: true },
+            ].map((btn, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={btn.action}
+                style={{
+                  height: '52px',
+                  borderRadius: '14px',
+                  border: '1.5px solid var(--border-card)',
+                  background: btn.bg || 'var(--bg-canvas)',
+                  color: btn.color || 'var(--text-primary)',
+                  fontSize: '18px',
+                  fontWeight: btn.bold ? '900' : '800',
+                  cursor: 'pointer',
+                  display: 'grid',
+                  placeItems: 'center',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.1s ease, background 0.15s ease'
+                }}
+                className="clickable-card"
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Customer Selection for Due/Cash tracking */}
+          <div style={{
+            background: 'var(--bg-canvas)',
+            borderRadius: '14px',
+            border: '1.5px solid var(--border-card)',
+            padding: '12px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                👤 কাস্টমার নির্বাচন (বাকি বিক্রির জন্য আবশ্যক):
+              </label>
+              <button
+                type="button"
+                onClick={() => setNumpadCustomer(numpadCustomer === 'new' ? 'none' : 'new')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                {numpadCustomer === 'new' ? 'তালিকা থেকে বাছুন' : '+ নতুন কাস্টমার'}
+              </button>
+            </div>
+
+            {numpadCustomer === 'new' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="কাস্টমারের নাম..."
+                  value={numpadNewCustName}
+                  onChange={(e) => setNumpadNewCustName(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-card)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12.5px',
+                    outline: 'none'
+                  }}
+                />
+                <input
+                  type="tel"
+                  placeholder="মোবাইল নম্বর..."
+                  value={numpadNewCustPhone}
+                  onChange={(e) => setNumpadNewCustPhone(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-card)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12.5px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            ) : (
+              <select
+                value={numpadCustomer}
+                onChange={(e) => setNumpadCustomer(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '10px',
+                  border: '1.5px solid var(--border-card)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  fontSize: '12.5px',
+                  outline: 'none'
+                }}
+              >
+                <option value="none">-- সাধারণ নগদ কাস্টমার --</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.phone ? `(${c.phone})` : ''} {c.totalDue > 0 ? `• বাকি: ৳${c.totalDue}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Previous Due Indicator */}
+            {numpadCustomer !== 'none' && numpadCustomer !== 'new' && (() => {
+              const matched = customers.find(c => c.id === numpadCustomer);
+              if (matched && matched.totalDue > 0) {
+                return (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    display: 'flex',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span>⚠️ গ্রাহকের পূর্বের মোট বাকি:</span>
+                    <strong className="num-font">৳{matched.totalDue.toLocaleString('en-US')}</strong>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+          </div>
+
+          {/* Instant Checkout Action Bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <button
+              type="button"
+              disabled={numpadSubmitting || numpadTotal <= 0}
+              onClick={() => handleNumpadCheckout('cash')}
+              style={{
+                padding: '14px 10px',
+                borderRadius: '16px',
+                border: 'none',
+                background: numpadTotal <= 0 ? '#cbd5e1' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '900',
+                cursor: (numpadSubmitting || numpadTotal <= 0) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '3px',
+                boxShadow: numpadTotal <= 0 ? 'none' : '0 6px 18px rgba(16, 185, 129, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>⚡ নগদ বিক্রি</span>
+              <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={numpadSubmitting || numpadTotal <= 0}
+              onClick={() => handleNumpadCheckout('due')}
+              style={{
+                padding: '14px 10px',
+                borderRadius: '16px',
+                border: 'none',
+                background: numpadTotal <= 0 ? '#cbd5e1' : 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '900',
+                cursor: (numpadSubmitting || numpadTotal <= 0) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '3px',
+                boxShadow: numpadTotal <= 0 ? 'none' : '0 6px 18px rgba(244, 63, 94, 0.35)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>🔴 বাকি বিক্রি</span>
+              <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={numpadTotal <= 0}
+            onClick={handleNumpadPushToCart}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: '12px',
+              border: '1.5px solid var(--border-card)',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: numpadTotal <= 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <span>🛒 সাধারণ পণ্যের কার্টে যোগ করুন ➔</span>
+          </button>
+        </div>
+      )}
+
+      {/* 🛍️ CATALOG MODE VIEW */}
+      {posMode === 'catalog' && (
+        <>
+          {/* 🔍 1. TOP SEARCH, BARCODE SCAN & VOICE BAR */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+            marginBottom: '12px'
+          }}>
         <div
           ref={searchContainerRef}
           style={{
@@ -2563,6 +3251,8 @@ export default function PosPage() {
           themeColor={getIndustryTheme(tenant?.industryId).primaryColor}
         />
       )}
+      </>
+    )}
 
       {/* Cart Drawer Modal */}
       {showCartDrawer && (
@@ -4298,54 +4988,89 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* 📱 Mobile Sticky Bottom Cart Pill (1-Tap Fast Checkout) */}
+      {/* 📱 Mobile Sticky Bottom Cart Pill (1-Tap Fast Checkout - Amar Dokan Style) */}
       {cart.length > 0 && (
         <div style={{
           position: 'fixed',
-          bottom: '74px',
+          bottom: '80px',
           left: '12px',
           right: '12px',
           maxWidth: '560px',
           margin: '0 auto',
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           color: '#ffffff',
-          borderRadius: '20px',
-          padding: '12px 18px',
-          zIndex: 50,
+          borderRadius: '22px',
+          padding: '10px 16px',
+          zIndex: 85,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
-          border: '1.5px solid #334155'
+          boxShadow: '0 14px 35px rgba(0,0,0,0.45), 0 0 15px rgba(16, 185, 129, 0.25)',
+          border: '1.5px solid #10b981',
+          animation: 'fadeIn 0.2s ease-in-out'
         }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>
-              কার্টে আছে {cart.length} টি পণ্য
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: 'rgba(16, 185, 129, 0.2)',
+              color: '#10b981',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '18px',
+              flexShrink: 0
+            }}>
+              🛒
             </div>
-            <div style={{ fontSize: '19px', fontWeight: '900', color: '#10b981' }} className="num-font">
-              ৳ {cart.reduce((acc, i) => acc + i.totalPrice, 0).toLocaleString('en-US')}
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>
+                {cart.length} প্রকার পণ্য
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: '900', color: '#10b981' }} className="num-font">
+                ৳ {cart.reduce((acc, i) => acc + i.totalPrice, 0).toLocaleString('en-US')}
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => { setShowCartDrawer(true); triggerHaptic('medium'); }}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '14px',
-              padding: '10px 18px',
-              fontWeight: '900',
-              fontSize: '14px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
-            }}
-          >
-            <span>🛒 বিল দেখুন</span>
-            <span>➔</span>
-          </button>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => { setShowCartDrawer(true); triggerHaptic('light'); }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '9px 12px',
+                fontWeight: '800',
+                fontSize: '12.5px',
+                cursor: 'pointer'
+              }}
+            >
+              আইটেম
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowCheckoutModal(true); triggerHaptic('medium'); }}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '9px 16px',
+                fontWeight: '900',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
+              }}
+            >
+              <span>বিক্রি করুন</span>
+              <span>➔</span>
+            </button>
+          </div>
         </div>
       )}
 

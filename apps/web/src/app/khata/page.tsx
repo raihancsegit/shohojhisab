@@ -21,6 +21,8 @@ export default function KhataPage() {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'due' | 'zero'>('all');
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [dealers, setDealers] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -317,13 +319,31 @@ export default function KhataPage() {
     }
   };
 
+  const loadDealers = async () => {
+    if (!currentTenantId) {
+      setDealers([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/dealers?tenantId=${currentTenantId}`);
+      if (res.ok) {
+        const list = await res.json();
+        setDealers(Array.isArray(list) ? list : []);
+      }
+    } catch (e) {
+      console.error('Failed to load dealers', e);
+    }
+  };
+
   useEffect(() => {
     loadCustomers();
     loadProducts();
+    loadDealers();
 
     const handleVoiceSuccess = () => {
       loadCustomers();
       loadProducts();
+      loadDealers();
     };
 
     window.addEventListener('voice-action-success', handleVoiceSuccess);
@@ -639,8 +659,13 @@ export default function KhataPage() {
     ]);
   };
 
-  const totalMarketDue = customers.reduce((acc, c) => acc + (Number(c.totalDue) || Number(c.total_due) || 0), 0);
-  const dueCustomerCount = customers.filter(c => (Number(c.totalDue) || Number(c.total_due) || 0) > 0).length;
+  const totalReceivable = customers.reduce((acc, c) => acc + (Number(c.totalDue) || Number(c.total_due) || 0), 0);
+  const receivableCount = customers.filter(c => (Number(c.totalDue) || Number(c.total_due) || 0) > 0).length;
+  const totalPayable = dealers.reduce((acc, d) => acc + (Number(d.payable_due || d.payableDue) || 0), 0);
+  const payableCount = dealers.filter(d => (Number(d.payable_due || d.payableDue) || 0) > 0).length;
+  const netBalance = totalReceivable - totalPayable;
+  const totalMarketDue = totalReceivable;
+  const dueCustomerCount = receivableCount;
 
   // Filter Counts
   const countToday = customers.filter(c => isTodayDate(c.lastDateRaw || c.createdAt)).length;
@@ -791,30 +816,102 @@ export default function KhataPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px' }}>
-        <div className="ui-card" style={{ borderLeft: '4px solid #ef4444' }}>
-          <span style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>
-            বাজারে মোট বকেয়া বাকি
-          </span>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#b91c1c', margin: '4px 0' }}>
-            ৳{totalMarketDue.toLocaleString('en-US')}
+      {/* 🌟 Amar Dokan Style High-Contrast Hero Cockpit */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+        {/* 🟢 মোট পাবো (Customer Receivable) */}
+        <div className="ui-card" style={{
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%)',
+          border: '1.5px solid #10b981',
+          borderRadius: '16px',
+          padding: '16px 18px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🟢</span> মোট পাবো (গ্রাহক বাকি)
+            </span>
+            <span style={{ fontSize: '11px', fontWeight: '800', background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '99px' }}>
+              {receivableCount} জন বাকিদার
+            </span>
           </div>
-          <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: '700' }}>
-            {dueCustomerCount} জন গ্রাহকের কাছে পাওনা
-          </span>
+          <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#047857', margin: '4px 0' }}>
+            ৳{totalReceivable.toLocaleString('en-US')}
+          </div>
+          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+            দোকানের মোট নিবন্ধিত খরিদ্দার: {customers.length} জন
+          </div>
         </div>
 
-        <div className="ui-card" style={{ borderLeft: '4px solid #10b981' }}>
-          <span style={{ fontSize: '12.5px', color: '#64748b', fontWeight: '700', display: 'block' }}>
-            মোট গ্রাহক তালিকা
-          </span>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
-            {customers.length}
+        {/* 🔴 মোট দেবো (Dealer / Supplier Payable) */}
+        <div className="ui-card" style={{
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.04) 100%)',
+          border: '1.5px solid #ef4444',
+          borderRadius: '16px',
+          padding: '16px 18px',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🔴</span> মোট দেবো (মহাজন দেনা)
+            </span>
+            <Link
+              href="/dealers"
+              style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                background: '#fee2e2',
+                color: '#991b1b',
+                padding: '2px 8px',
+                borderRadius: '99px',
+                textDecoration: 'none'
+              }}
+            >
+              {payableCount} জন ডিলার ➔
+            </Link>
           </div>
-          <span style={{ fontSize: '12px', color: '#059669', fontWeight: '700' }}>
-            খাতায় নিবন্ধিত নিয়মিত খরিদ্দার
-          </span>
+          <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#b91c1c', margin: '4px 0' }}>
+            ৳{totalPayable.toLocaleString('en-US')}
+          </div>
+          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+            কোম্পানি / সরবরাহকারী মহাজনদের খাতা
+          </div>
+        </div>
+
+        {/* ⚖️ নীট ব্যালেন্স / খাতা স্থিতি */}
+        <div className="ui-card" style={{
+          background: 'var(--bg-card, #ffffff)',
+          border: '1.5px solid #cbd5e1',
+          borderRadius: '16px',
+          padding: '16px 18px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>⚖️</span> নীট খাতা স্থিতি
+            </span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '800',
+              padding: '2px 8px',
+              borderRadius: '99px',
+              background: netBalance >= 0 ? '#ecfdf5' : '#fff1f2',
+              color: netBalance >= 0 ? '#065f46' : '#991b1b'
+            }}>
+              {netBalance >= 0 ? 'পাওনা উদ্বৃত্ত' : 'দেনা অতিরিক্ত'}
+            </span>
+          </div>
+          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: netBalance >= 0 ? '#047857' : '#b91c1c', margin: '4px 0' }}>
+            ৳{Math.abs(netBalance).toLocaleString('en-US')}
+          </div>
+          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+            {netBalance >= 0
+              ? 'মহাজনদের দেনা শোধের পরও আপনার উদ্বৃত্ত থাকবে'
+              : 'গ্রাহকদের বাকি আদায়ের পরও মহাজনদের বাড়তি পরিশোধ করতে হবে'}
+          </div>
         </div>
       </div>
 
@@ -927,12 +1024,218 @@ export default function KhataPage() {
         })}
       </div>
 
-      {/* Customer List Cards */}
+      {/* 🔀 View Mode & Results Counter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-card, #ffffff)', border: '1px solid #cbd5e1', padding: '3px', borderRadius: '12px' }}>
+          <button
+            type="button"
+            onClick={() => { triggerHaptic('light'); setViewMode('cards'); }}
+            style={{
+              background: viewMode === 'cards' ? '#059669' : 'transparent',
+              color: viewMode === 'cards' ? '#fff' : '#64748b',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '9px',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>📇</span> কার্ড ভিউ
+          </button>
+          <button
+            type="button"
+            onClick={() => { triggerHaptic('light'); setViewMode('table'); }}
+            style={{
+              background: viewMode === 'table' ? '#059669' : 'transparent',
+              color: viewMode === 'table' ? '#fff' : '#64748b',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '9px',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>📋</span> টেবিল ভিউ
+          </button>
+        </div>
+
+        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+          মোট পাওয়া গেছে: <strong style={{ color: '#0f172a' }}>{filtered.length}</strong> জন গ্রাহক
+        </span>
+      </div>
+
+      {/* Customer List Cards / Table */}
       {loading ? (
         <DataLoader type="skeleton-list" count={5} text="বাকি খাতার গ্রাহক তালিকা লোড হচ্ছে..." />
       ) : filtered.length === 0 ? (
         <div className="ui-card" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
           কোনো গ্রাহক পাওয়া যায়নি। "নতুন বাকি খাতা এন্ট্রি" বাটনে ক্লিক করে খরিদ্দার যুক্ত করুন।
+        </div>
+      ) : viewMode === 'table' ? (
+        <div className="ui-card" style={{ padding: '0', overflowX: 'auto', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '800' }}>
+                <th style={{ padding: '12px 16px' }}>খরিদ্দার</th>
+                <th style={{ padding: '12px 14px' }}>যোগাযোগ</th>
+                <th style={{ padding: '12px 14px' }}>সর্বশেষ বাকি পণ্য ও তারিখ</th>
+                <th style={{ padding: '12px 14px' }}>দেওয়ার তারিখ</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>বর্তমান বকেয়া</th>
+                <th style={{ padding: '12px 16px', textAlign: 'center' }}>অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedCustomers.map((c, idx) => {
+                const due = Number(c.totalDue || c.total_due || 0);
+                return (
+                  <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'transparent' : 'rgba(248, 250, 252, 0.4)' }}>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: due > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                          color: due > 0 ? '#b91c1c' : '#047857',
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontWeight: '900',
+                          fontSize: '15px',
+                          flexShrink: 0
+                        }}>
+                          {c.name ? c.name.charAt(0) : '👤'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '13.5px' }}>{c.name}</div>
+                          {due > Number(c.creditLimit || c.credit_limit || 5000) && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px' }}>
+                              সীমা পার
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: '700', color: '#334155' }}>
+                        <a href={`tel:${c.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          📱 {c.phone}
+                        </a>
+                      </div>
+                      {c.address && <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {c.address}</div>}
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '12.5px' }}>{c.lastItemsSummary || 'পূর্বের বাকি'}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>📅 {c.lastDate || 'পূর্বের হিসাব'} {c.lastInvoiceNo ? `(#${c.lastInvoiceNo})` : ''}</div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      {c.promiseDate || c.promise_date ? (
+                        <span style={{ fontSize: '11px', fontWeight: '800', background: '#eff6ff', color: '#1e40af', padding: '3px 8px', borderRadius: '6px' }}>
+                          📅 {c.promiseDate || c.promise_date}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>নির্ধারিত নেই</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <div className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
+                        ৳{due.toLocaleString('en-US')}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {due > 0 && (
+                          <button
+                            onClick={() => sendWhatsAppReminder(c)}
+                            style={{
+                              background: '#25d366',
+                              color: '#fff',
+                              border: 'none',
+                              padding: '5px 9px',
+                              borderRadius: '7px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title="WhatsApp তাগাদা"
+                          >
+                            💬
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
+                          style={{
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '5px 9px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="টাকা আদায়"
+                        >
+                          💵 আদায়
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddDueModal(c);
+                            setAddDueAmount('');
+                            setAddDueItems('');
+                            setSelectedDueProducts([]);
+                            setProductSearch('');
+                            setDueMode('stock');
+                          }}
+                          style={{
+                            background: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '5px 9px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="বাকি দিন"
+                        >
+                          ➕ বাকি
+                        </button>
+                        <button
+                          onClick={() => loadCustomerLedger(c)}
+                          style={{
+                            background: '#f1f5f9',
+                            color: '#334155',
+                            border: '1px solid #cbd5e1',
+                            padding: '5px 8px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="ফুল খতিয়ান"
+                        >
+                          📜
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -959,13 +1262,15 @@ export default function KhataPage() {
                       width: '44px',
                       height: '44px',
                       borderRadius: '12px',
-                      background: due > 0 ? '#fef2f2' : '#ecfdf5',
+                      background: due > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                      color: due > 0 ? '#b91c1c' : '#047857',
                       display: 'grid',
                       placeItems: 'center',
-                      fontSize: '20px',
+                      fontSize: '18px',
+                      fontWeight: '900',
                       flexShrink: 0
                     }}>
-                      {c.avatar || '👤'}
+                      {c.name ? c.name.charAt(0) : '👤'}
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

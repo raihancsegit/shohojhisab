@@ -11,7 +11,7 @@ import VoiceAssistant from '../components/VoiceAssistant';
 import { getIndustryTheme } from '../lib/industryConfig';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
-  const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled } = useAuth();
+  const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme } = useAuth();
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
 
@@ -201,6 +201,26 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 🔔
               </Link>
 
+              {/* Instant Dark / Light Mode Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  toggleTheme();
+                }}
+                className="header-icon-btn"
+                style={{
+                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                  color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                  border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.4)' : 'none',
+                  fontSize: '15px'
+                }}
+                title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন (Light Mode)' : 'ডার্ক মোড চালু করুন (Dark Mode)'}
+                aria-label="Toggle Theme Mode"
+              >
+                {authTheme === 'dark' ? '☀️' : '🌙'}
+              </button>
+
               {/* Primary Fast POS Button (Desktop Only) */}
               <Link
                 href="/pos"
@@ -222,6 +242,25 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 <span>⚡</span> POS বিক্রি
               </Link>
             </>
+          )}
+
+          {userRole !== 'shopkeeper' && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                toggleTheme();
+              }}
+              className="header-icon-btn"
+              style={{
+                background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
+                color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                fontSize: '15px'
+              }}
+              title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন' : 'ডার্ক মোড চালু করুন'}
+            >
+              {authTheme === 'dark' ? '☀️' : '🌙'}
+            </button>
           )}
 
           {userRole === 'admin' && (
@@ -248,8 +287,8 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
       {/* Secondary Clean Horizontal Sub-Nav (Desktop/Tablet Only) */}
       {userRole === 'shopkeeper' && (
         <div className="desktop-nav-menu" style={{
-          background: '#f8fafc',
-          borderTop: '1px solid #e2e8f0',
+          background: authTheme === 'dark' ? '#0d1424' : '#f8fafc',
+          borderTop: authTheme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
           padding: '0 18px'
         }}>
           <div style={{
@@ -270,10 +309,11 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                     padding: '9px 14px',
                     fontSize: '13px',
                     fontWeight: active ? '800' : '600',
-                    color: active ? theme.primaryColor : '#475569',
+                    color: active ? (authTheme === 'dark' ? '#818cf8' : theme.primaryColor) : (authTheme === 'dark' ? '#94a3b8' : '#475569'),
                     textDecoration: 'none',
-                    borderBottom: active ? `2.5px solid ${theme.primaryColor}` : '2.5px solid transparent',
-                    background: active ? '#ffffff' : 'transparent',
+                    borderBottom: active ? `2.5px solid ${authTheme === 'dark' ? '#818cf8' : theme.primaryColor}` : '2.5px solid transparent',
+                    background: active ? (authTheme === 'dark' ? '#131b2e' : '#ffffff') : 'transparent',
+                    borderRadius: '8px 8px 0 0',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -1339,9 +1379,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
    SMART 5-TAB MOBILE BOTTOM DOCK (Clean SVG Icons & Crisp Contrast)
    ========================================================================== */
 function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void }) {
-  const { userRole, triggerHaptic } = useAuth();
+  const { userRole, triggerHaptic, theme: authTheme } = useAuth();
   const pathname = usePathname();
   if (userRole !== 'shopkeeper') return null;
+
+  const isDark = authTheme === 'dark';
 
   return (
     <nav className="mobile-bottom-nav" style={{
@@ -1349,14 +1391,14 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
       bottom: 0,
       left: 0,
       right: 0,
-      background: '#ffffff',
-      borderTop: '1px solid #e2e8f0',
+      background: isDark ? '#131b2e' : '#ffffff',
+      borderTop: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0',
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
       padding: '8px 6px 12px',
       zIndex: 90,
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.06)'
+      boxShadow: isDark ? '0 -4px 20px rgba(0,0,0,0.5)' : '0 -4px 20px rgba(0,0,0,0.06)'
     }}>
       {/* 1. Home */}
       <Link
@@ -1369,7 +1411,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/' ? '#4f46e5' : '#64748b'
+          color: pathname === '/' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -1390,7 +1432,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/khata' ? '#4f46e5' : '#64748b'
+          color: pathname === '/khata' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/khata' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -1407,7 +1449,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
         style={{
           background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
           color: '#ffffff',
-          border: '3px solid #ffffff',
+          border: isDark ? '3px solid #131b2e' : '3px solid #ffffff',
           width: '52px',
           height: '52px',
           borderRadius: '50%',
@@ -1437,7 +1479,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/stock' ? '#4f46e5' : '#64748b'
+          color: pathname === '/stock' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/stock' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -1460,7 +1502,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/pos' ? '#4f46e5' : '#64748b'
+          color: pathname === '/pos' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/pos' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -1490,7 +1532,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="ShohojHisab" />
       </head>
-      <body style={{ background: '#f8fafc', color: '#0f172a', margin: 0, fontFamily: 'var(--font-sans)' }}>
+      <body style={{ margin: 0, fontFamily: 'var(--font-sans)' }}>
         <AuthProvider>
           <PWAInstaller />
           <ScreenLockOverlay />
