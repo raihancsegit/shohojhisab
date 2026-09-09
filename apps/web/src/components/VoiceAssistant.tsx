@@ -1,9 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
-import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 
@@ -12,17 +10,17 @@ export default function VoiceAssistant() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isOpen, setIsOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
   const [lastSpoken, setLastSpoken] = useState('');
-  const [actionResult, setActionResult] = useState<any>(null);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackType, setFeedbackType] = useState<'listening' | 'processing' | 'success' | 'error' | null>(null);
   const [isSupported, setIsSupported] = useState(true);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
+  const autoDismissTimerRef = useRef<any>(null);
   const latestTranscriptRef = useRef<string>('');
   const isListeningRef = useRef<boolean>(false);
 
@@ -33,49 +31,46 @@ export default function VoiceAssistant() {
     }
 
     const handleTrigger = () => {
-      openAssistantAndListen();
+      startListening();
     };
     window.addEventListener('trigger-voice-assistant', handleTrigger);
-    return () => window.removeEventListener('trigger-voice-assistant', handleTrigger);
+    return () => {
+      window.removeEventListener('trigger-voice-assistant', handleTrigger);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+    };
   }, []);
-
-  const openAssistantAndListen = () => {
-    setIsOpen(true);
-    setActionResult(null);
-    setErrorMessage('');
-    setLiveTranscript('');
-    latestTranscriptRef.current = '';
-    setTimeout(() => {
-      startListening();
-    }, 150);
-  };
 
   const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setErrorMessage('আপনার ব্রাউজারে বাংলা স্পিচ সাপোর্ট নেই। Google Chrome ব্যবহার করুন।');
+      setFeedbackType('error');
+      setFeedbackText('আপনার ব্রাউজারে বাংলা ভয়েস সাপোর্ট নেই। Chrome ব্যবহার করুন।');
       return;
     }
 
-    // Stop active TTS
+    // Stop any active speech
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
 
-    triggerHaptic('medium');
+    triggerHaptic?.('medium');
     playMicStartSound();
+
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+
     latestTranscriptRef.current = '';
     setLiveTranscript('');
-    setErrorMessage('');
-    setActionResult(null);
+    setFeedbackType('listening');
+    setFeedbackText('');
     isListeningRef.current = true;
     setIsListening(true);
     setIsProcessing(false);
 
     try {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try { recognitionRef.current.abort(); } catch (e) {}
       }
 
       const recognition = new SpeechRecognition();
@@ -103,7 +98,8 @@ export default function VoiceAssistant() {
       recognition.onerror = (err: any) => {
         if (err.error === 'no-speech') return;
         if (err.error === 'not-allowed') {
-          setErrorMessage('মাইক্রোফোনের অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংসে গিয়ে অনুমতি দিন।');
+          setFeedbackType('error');
+          setFeedbackText('মাইক্রোফোন পারমিশন প্রয়োজন। ব্রাউজারে অনুমতি দিন।');
           setIsListening(false);
           isListeningRef.current = false;
         }
@@ -123,6 +119,7 @@ export default function VoiceAssistant() {
       console.error('Failed to start speech recognition:', err);
       setIsListening(false);
       isListeningRef.current = false;
+      setFeedbackType(null);
     }
   };
 
@@ -143,13 +140,19 @@ export default function VoiceAssistant() {
     stopListeningOnly();
     const query = cleanSpokenBengali(spokenText || latestTranscriptRef.current || liveTranscript);
     if (!query || isEchoedTTSResponse(query)) {
-      setErrorMessage('কোনো স্পষ্ট কথা শোনা যায়নি। আবার বলুন।');
+      setFeedbackType('error');
+      setFeedbackText('কথা বোঝা যায়নি, আবার বলুন।');
+      autoDismissTimerRef.current = setTimeout(() => {
+        setFeedbackType(null);
+      }, 3000);
       return;
     }
 
     setLastSpoken(query);
     setIsProcessing(true);
-    triggerHaptic('medium');
+    setFeedbackType('processing');
+    setFeedbackText(`"${query}" প্রসেস হচ্ছে...`);
+    triggerHaptic?.('medium');
 
     try {
       const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
@@ -162,11 +165,12 @@ export default function VoiceAssistant() {
       if (res.ok) {
         const data = await res.json();
         setIsProcessing(false);
-        setActionResult(data);
 
         if (data.success) {
           playSuccessChime();
-          triggerHaptic('success');
+          triggerHaptic?.('success');
+          setFeedbackType('success');
+          setFeedbackText(data.speech || 'কাজ সম্পন্ন হয়েছে।');
 
           // Trigger live refresh event across active pages
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
@@ -175,28 +179,19 @@ export default function VoiceAssistant() {
             window.dispatchEvent(new CustomEvent('voice-trigger-add-stock', { detail: data }));
           }
 
+          // Directly speak out loud with forceSpeak = true
+          if (data.speech) {
+            speakAnnouncement(data.speech, undefined, true);
+          }
+
           if (data.navigateTo) {
-            // Save announcement for destination page
+            // Save announcement for destination page as safety fallback
             if (typeof window !== 'undefined' && data.speech) {
               sessionStorage.setItem('pending_page_announcement', data.speech);
             }
 
             if (pathname !== data.navigateTo) {
-              // Navigating to another page: close assistant immediately so destination page is visible
-              setIsOpen(false);
               router.push(data.navigateTo);
-            } else {
-              // Already on destination page: speak directly
-              if (data.speech) {
-                speakAnnouncement(data.speech);
-              }
-              setTimeout(() => {
-                setIsOpen(false);
-              }, 1200);
-            }
-          } else {
-            if (data.speech) {
-              speakAnnouncement(data.speech);
             }
           }
 
@@ -204,69 +199,186 @@ export default function VoiceAssistant() {
             window.dispatchEvent(new CustomEvent('voice-trigger-print'));
             setTimeout(() => window.print(), 600);
           }
+
+          // Auto-dismiss feedback bubble after 4.5s
+          autoDismissTimerRef.current = setTimeout(() => {
+            setFeedbackType(null);
+          }, 4500);
         } else {
           playWarningSound();
-          setErrorMessage(data.speech || 'কথাটি বুঝতে পারিনি। আবার চেষ্টা করুন।');
+          setFeedbackType('error');
+          setFeedbackText(data.speech || 'কথাটি বুঝতে পারিনি। আবার বলুন।');
+          if (data.speech) {
+            speakAnnouncement(data.speech, undefined, true);
+          }
+          autoDismissTimerRef.current = setTimeout(() => {
+            setFeedbackType(null);
+          }, 3500);
         }
       } else {
         setIsProcessing(false);
         playWarningSound();
-        setErrorMessage('সার্ভার থেকে রেসপন্স পাওয়া যায়নি।');
+        setFeedbackType('error');
+        setFeedbackText('সার্ভার থেকে রেসপন্স পাওয়া যায়নি।');
+        autoDismissTimerRef.current = setTimeout(() => {
+          setFeedbackType(null);
+        }, 3000);
       }
     } catch (err) {
       setIsProcessing(false);
       playWarningSound();
-      setErrorMessage('সার্ভার সংযোগে ত্রুটি। ইন্টারনেট বা নেটওয়ার্ক চেক করুন।');
+      setFeedbackType('error');
+      setFeedbackText('সার্ভার সংযোগে ত্রুটি। আবার চেষ্টা করুন।');
+      autoDismissTimerRef.current = setTimeout(() => {
+        setFeedbackType(null);
+      }, 3000);
     }
   };
 
-  const closeAssistant = () => {
+  const cancelVoice = () => {
     stopListeningOnly();
-    setIsOpen(false);
-    setActionResult(null);
-    setErrorMessage('');
+    setFeedbackType(null);
     setLiveTranscript('');
+    setFeedbackText('');
   };
 
   if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
 
   return (
-    <>
-      {/* Floating Smart AI Assistant Button */}
-      <div style={{
-        position: 'fixed',
-        bottom: pathname === '/pos' ? '180px' : '76px',
-        right: '14px',
-        zIndex: 55,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        <button
-          onClick={openAssistantAndListen}
-          style={{
-            height: '46px',
-            padding: '0 16px 0 12px',
-            borderRadius: '99px',
-            background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
-            color: '#ffffff',
-            border: '2px solid rgba(255,255,255,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13.5px',
-            fontWeight: '900',
-            cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(79, 70, 229, 0.4)',
-            transition: 'all 0.2s ease'
-          }}
-          className="shimmer-btn"
-          title="এআই সহকারী — মুখে বলে যেকোনো কাজ করাতে চাপুন"
-        >
-          <span style={{ fontSize: '18px', animation: 'spin 4s linear infinite' }}>🤖</span>
-          <span>এআই সহকারী</span>
+    <div style={{
+      position: 'fixed',
+      bottom: pathname === '/pos' ? '180px' : '76px',
+      right: '14px',
+      zIndex: 90,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: '8px',
+      pointerEvents: 'auto'
+    }}>
+      {/* 🗣️ Non-blocking Floating Feedback Toast/Bubble */}
+      {feedbackType && (
+        <div style={{
+          background: feedbackType === 'error' ? '#991b1b' : feedbackType === 'listening' ? '#0f172a' : '#1e1b4b',
+          color: '#ffffff',
+          borderRadius: '16px',
+          padding: '10px 14px',
+          maxWidth: '320px',
+          fontSize: '12.5px',
+          fontWeight: '700',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
+          border: '1.5px solid rgba(255, 255, 255, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          animation: 'fadeInUp 0.2s ease',
+          backdropFilter: 'blur(8px)'
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {feedbackType === 'listening' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }} />
+                <span style={{ color: '#93c5fd', fontSize: '11px', fontWeight: '800' }}>শুনছি...</span>
+              </div>
+            )}
+            <div style={{ marginTop: '2px', wordBreak: 'break-word', color: '#f8fafc', fontSize: '12px' }}>
+              {feedbackType === 'listening'
+                ? (liveTranscript ? `"${liveTranscript}"` : 'বলুন: "আজকে স্টক কত", "বাকি খাতায় যাও", "৫০ টাকা খরচ"')
+                : feedbackText}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
+            {feedbackType === 'listening' && liveTranscript && (
+              <button
+                type="button"
+                onClick={() => stopAndExecute(liveTranscript)}
+                style={{
+                  background: '#10b981',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                ✓ সম্পন্ন
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={cancelVoice}
+              style={{
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                width: '24px',
+                height: '24px',
+                display: 'grid',
+                placeItems: 'center',
+                cursor: 'pointer',
+                fontSize: '11px'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🎙️ Floating Smart Voice Button */}
+      <button
+        type="button"
+        onClick={() => {
+          if (isListening) {
+            if (latestTranscriptRef.current) {
+              stopAndExecute(latestTranscriptRef.current);
+            } else {
+              cancelVoice();
+            }
+          } else {
+            startListening();
+          }
+        }}
+        style={{
+          height: '46px',
+          padding: isListening ? '0 18px' : '0 16px 0 12px',
+          borderRadius: '99px',
+          background: isListening
+            ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+            : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+          color: '#ffffff',
+          border: '2px solid rgba(255, 255, 255, 0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          fontWeight: '900',
+          cursor: 'pointer',
+          boxShadow: isListening
+            ? '0 0 20px rgba(239, 68, 68, 0.6), 0 8px 24px rgba(239, 68, 68, 0.4)'
+            : '0 8px 24px rgba(79, 70, 229, 0.4)',
+          transition: 'all 0.2s ease',
+          transform: isListening ? 'scale(1.05)' : 'scale(1)'
+        }}
+        title="মুখের কথায় যেকোনো পেজে যান বা হিসাব জানুন"
+      >
+        <span style={{
+          fontSize: '18px',
+          display: 'inline-block',
+          animation: isListening ? 'bounce 0.8s infinite alternate' : 'none'
+        }}>
+          {isListening ? '🎙️' : '🤖'}
+        </span>
+        <span>
+          {isListening ? 'শুনছি... (থামুন)' : 'এআই সহকারী'}
+        </span>
+        {!isListening && (
           <span style={{
-            background: 'rgba(255,255,255,0.2)',
+            background: 'rgba(255, 255, 255, 0.2)',
             borderRadius: '99px',
             padding: '2px 8px',
             fontSize: '11px',
@@ -274,332 +386,8 @@ export default function VoiceAssistant() {
           }}>
             🎙️ বলুন
           </span>
-        </button>
-      </div>
-
-      {/* Full AI Assistant Interactive Modal */}
-      {isOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.82)',
-          backdropFilter: 'blur(10px)',
-          zIndex: 110,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '28px',
-            padding: '28px 22px',
-            maxWidth: '460px',
-            width: '100%',
-            textAlign: 'center',
-            boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.45)',
-            border: '1.5px solid rgba(255,255,255,0.8)',
-            animation: 'fadeIn 0.2s ease-out',
-            position: 'relative'
-          }}>
-            
-            {/* Close Cross */}
-            <button
-              onClick={closeAssistant}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: 'none',
-                background: '#f1f5f9',
-                color: '#64748b',
-                fontWeight: '900',
-                cursor: 'pointer',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '14px'
-              }}
-            >
-              ✕
-            </button>
-
-            {/* Glowing AI Voice Pulse Orb */}
-            <div style={{
-              width: '90px',
-              height: '90px',
-              borderRadius: '50%',
-              margin: '0 auto 16px',
-              background: isListening
-                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : isProcessing
-                ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                : actionResult?.success
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              color: '#ffffff',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: '40px',
-              boxShadow: isListening
-                ? '0 0 0 14px rgba(239, 68, 68, 0.25), 0 0 35px rgba(239, 68, 68, 0.4)'
-                : '0 0 0 8px rgba(99, 102, 241, 0.2)',
-              animation: isListening ? 'pulse 1.4s infinite' : 'none',
-              transition: 'all 0.3s ease'
-            }}>
-              {isListening ? '🎙️' : isProcessing ? '⏳' : actionResult?.success ? '✓' : '🤖'}
-            </div>
-
-            {/* Assistant Name Badge & Customizer */}
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#e0e7ff',
-              color: '#4338ca',
-              padding: '4px 12px',
-              borderRadius: '99px',
-              fontSize: '12px',
-              fontWeight: '800',
-              marginBottom: '12px'
-            }}>
-              <span>🤖 সহকারীর নাম:</span>
-              <input
-                type="text"
-                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব'}
-                onChange={(e) => {
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('lbos_assistant_name', e.target.value.trim() || 'সহজহিসাব');
-                  }
-                }}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #c7d2fe',
-                  borderRadius: '6px',
-                  padding: '1px 6px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  color: '#3730a3',
-                  width: '80px',
-                  textAlign: 'center'
-                }}
-                title="এআই সহকারীর নাম পরিবর্তন করুন"
-              />
-              <span style={{ fontSize: '10px', color: '#6366f1' }}>✎ ডাকনাম</span>
-            </div>
-
-            <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
-              {isListening
-                ? 'পরিষ্কার বাংলায় বলুন, কাজ হয়ে যাবে...'
-                : isProcessing
-                ? 'এআই হিসাব প্রসেস করছে...'
-                : actionResult?.success
-                ? 'কাজ সম্পন্ন হয়েছে!'
-                : 'এআই সহকারী প্রস্তুত'}
-            </h2>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
-              {isListening
-                ? 'বাকি লেখা, টাকা জমা, স্টক বাড়ানো বা বিক্রি জানতে কথা বলুন'
-                : 'মুখে বলুন অথবা নিচে ক্লিক করে নির্দেশ দিন'}
-            </p>
-
-            {/* Real-time Subtitle / Spoken Transcript */}
-            <div style={{
-              minHeight: '68px',
-              background: liveTranscript ? '#f0fdf4' : '#f8fafc',
-              border: liveTranscript ? '2px solid #22c55e' : '1.5px dashed #cbd5e1',
-              borderRadius: '16px',
-              padding: '12px 16px',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center'
-            }}>
-              {liveTranscript ? (
-                <span style={{ fontSize: '16.5px', fontWeight: '800', color: '#15803d', lineHeight: 1.4 }}>
-                  "{liveTranscript}"
-                </span>
-              ) : isListening ? (
-                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-                  🔊 আপনার কথা শুনছি... (যেমন: "আজকের স্টক কত" বা "রিয়ানের ২০ টাকা বাকি")
-                </span>
-              ) : lastSpoken ? (
-                <span style={{ fontSize: '14px', color: '#475569', fontWeight: '700' }}>
-                  শোনা গেছে: "{lastSpoken}"
-                </span>
-              ) : (
-                <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-                  মাইক চালু করতে নিচের "শুনুন" বাটনে চাপুন
-                </span>
-              )}
-            </div>
-
-            {/* AI Action Result Success Box */}
-            {actionResult?.success && (
-              <div style={{
-                background: '#f8fafc',
-                border: '1.5px solid #e2e8f0',
-                borderRadius: '18px',
-                padding: '16px',
-                textAlign: 'left',
-                marginBottom: '16px',
-                animation: 'fadeIn 0.2s ease'
-              }}>
-                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                  {actionResult.reply || actionResult.speech}
-                </div>
-
-                {actionResult.actionLink && (
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                    <Link
-                      href={actionResult.actionLink.href}
-                      onClick={closeAssistant}
-                      style={{
-                        background: '#6366f1',
-                        color: '#fff',
-                        padding: '8px 16px',
-                        borderRadius: '10px',
-                        fontSize: '12.5px',
-                        fontWeight: '800',
-                        textDecoration: 'none',
-                        display: 'inline-block'
-                      }}
-                    >
-                      {actionResult.actionLink.text}
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Error Message Box */}
-            {errorMessage && (
-              <div style={{
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: '14px',
-                padding: '12px',
-                color: '#b91c1c',
-                fontSize: '13px',
-                fontWeight: '700',
-                marginBottom: '16px'
-              }}>
-                ⚠️ {errorMessage}
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-              {isListening ? (
-                <button
-                  type="button"
-                  onClick={() => stopAndExecute()}
-                  style={{
-                    flex: 1,
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '14px',
-                    borderRadius: '14px',
-                    fontWeight: '900',
-                    fontSize: '14.5px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
-                  }}
-                >
-                  ✓ কথা শেষ (হিসাব সম্পন্ন করুন)
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={startListening}
-                  style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '14px',
-                    borderRadius: '14px',
-                    fontWeight: '900',
-                    fontSize: '14.5px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
-                  }}
-                >
-                  <span>🎙️</span>
-                  <span>{actionResult ? 'আরও কিছু বলুন' : 'কথা বলা শুরু করুন'}</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={closeAssistant}
-                style={{
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
-                  padding: '14px 18px',
-                  borderRadius: '14px',
-                  fontWeight: '800',
-                  fontSize: '13.5px',
-                  cursor: 'pointer'
-                }}
-              >
-                বন্ধ
-              </button>
-            </div>
-
-            {/* Fast Suggestion Chips */}
-            <div style={{ textAlign: 'left' }}>
-              <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b' }}>
-                💡 মুখে বলুন অথবা ট্যাপ করুন:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                {[
-                  '📦 আজকের স্টক কত?',
-                  '📊 আজকের বিক্রি কত?',
-                  '➕ নাপা ৫০ পাতা স্টক যোগ করো',
-                  '📖 রিয়ানের ২০ টাকা বাকি',
-                  '💵 রিয়ান ২০ টাকা জমা দিল',
-                  '☕ চা নাস্তা ৬০ টাকা খরচ লেখো',
-                  '⚠️ কোন কোন মালের স্টক কম?',
-                  '📖 বাজারে মোট বাকি কত?'
-                ].map((chip, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      stopListeningOnly();
-                      stopAndExecute(chip.replace(/^[^\s]+\s+/, ''));
-                    }}
-                    style={{
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
-                      fontSize: '11.5px',
-                      fontWeight: '700',
-                      color: '#334155',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-    </>
+        )}
+      </button>
+    </div>
   );
 }

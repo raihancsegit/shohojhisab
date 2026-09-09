@@ -74,7 +74,7 @@ interface AuthContextType {
   switchRoleMode: (mode: 'owner' | 'staff', pin?: string) => { success: boolean; error?: string };
   triggerHaptic: (type?: 'light' | 'medium' | 'success' | 'warning') => void;
   toggleSoundbox: () => void;
-  speakAnnouncement: (text: string, onComplete?: () => void) => void;
+  speakAnnouncement: (text: string, onComplete?: () => void, forceSpeak?: boolean) => void;
   toggleTheme: () => void;
   updateActiveTenant: (tenantData: ShopTenant) => void;
   isFeatureEnabled: (featureKey: keyof ShopFeatures) => boolean;
@@ -233,15 +233,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   };
 
-  // Digital Bengali Voice Soundbox (Strictly opt-in only to avoid microphone feedback)
-  const speakAnnouncement = (text: string, onComplete?: () => void) => {
+  // Digital Bengali Voice Soundbox (Strictly opt-in for auto-events, always available for direct assistant)
+  const speakAnnouncement = (text: string, onComplete?: () => void, forceSpeak = false) => {
     try {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
         if (onComplete) onComplete();
         return;
       }
-      // If soundbox is disabled, strictly cancel and do not speak
-      if (!isSoundboxEnabled) {
+      // If soundbox is disabled and not forced by user voice action, cancel and do not speak
+      if (!isSoundboxEnabled && !forceSpeak) {
         window.speechSynthesis.cancel();
         (window as any).__IS_TTS_SPEAKING__ = false;
         if (onComplete) onComplete();
@@ -442,7 +442,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (pendingAnnounce) {
         sessionStorage.removeItem('pending_page_announcement');
         setTimeout(() => {
-          speakAnnouncement(pendingAnnounce);
+          speakAnnouncement(pendingAnnounce, undefined, true);
         }, 350);
       }
     }

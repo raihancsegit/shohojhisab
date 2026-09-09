@@ -78,9 +78,18 @@ html.dark body, body.dark {
 html.dark .ui-card,
 html.dark .mobile-card,
 html.dark .app-container > div,
+html.dark [style*="background: #fff"],
+html.dark [style*="background:#fff"],
 html.dark [style*="background: #ffffff"],
+html.dark [style*="background:#ffffff"],
 html.dark [style*="background: rgb(255, 255, 255)"],
+html.dark [style*="background: rgb(255,255,255)"],
+html.dark [style*="background-color: #fff"],
+html.dark [style*="background-color:#fff"],
 html.dark [style*="background-color: #ffffff"],
+html.dark [style*="background-color:#ffffff"],
+html.dark [style*="background-color: rgb(255, 255, 255)"],
+html.dark [style*="background-color: rgb(255,255,255)"],
 html.dark [style*="background: white"],
 html.dark [style*="background-color: white"] {
   background-color: #131b2e !important;
@@ -90,11 +99,76 @@ html.dark [style*="background-color: white"] {
 
 /* Soft light backgrounds to deep slate container */
 html.dark [style*="background: #f8fafc"],
+html.dark [style*="background:#f8fafc"],
+html.dark [style*="background: rgb(248, 250, 252)"],
+html.dark [style*="background: rgb(248,250,252)"],
 html.dark [style*="background-color: #f8fafc"],
+html.dark [style*="background-color:#f8fafc"],
 html.dark [style*="background: #f1f5f9"],
-html.dark [style*="background-color: #f1f5f9"] {
+html.dark [style*="background:#f1f5f9"],
+html.dark [style*="background: rgb(241, 245, 249)"],
+html.dark [style*="background: rgb(241,245,249)"],
+html.dark [style*="background-color: #f1f5f9"],
+html.dark [style*="background-color:#f1f5f9"],
+html.dark [style*="background: #f3f4f6"],
+html.dark [style*="background:#f3f4f6"],
+html.dark [style*="background: #f9fafb"],
+html.dark [style*="background:#f9fafb"],
+html.dark [style*="background: #e2e8f0"],
+html.dark [style*="background:#e2e8f0"],
+html.dark [style*="background-color: #e2e8f0"],
+html.dark [style*="background-color:#e2e8f0"] {
   background-color: #0d1424 !important;
   border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* Pastel Card & Alert Tints in Dark Mode */
+html.dark [style*="#fef2f2"], html.dark [style*="rgb(254, 242, 242)"],
+html.dark [style*="#fee2e2"], html.dark [style*="rgb(254, 226, 226)"],
+html.dark [style*="#fff1f2"], html.dark [style*="rgb(255, 241, 242)"] {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark [style*="#ecfdf5"], html.dark [style*="rgb(236, 253, 245)"],
+html.dark [style*="#d1fae5"], html.dark [style*="rgb(209, 250, 229)"],
+html.dark [style*="#e6fcf5"] {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark [style*="#eff6ff"], html.dark [style*="rgb(239, 246, 255)"],
+html.dark [style*="#eef2ff"], html.dark [style*="rgb(238, 242, 255)"],
+html.dark [style*="#f5f3ff"], html.dark [style*="rgb(245, 243, 255)"],
+html.dark [style*="#ede9fe"], html.dark [style*="rgb(237, 233, 254)"] {
+  background-color: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #a5b4fc !important;
+}
+
+html.dark [style*="#fffbeb"], html.dark [style*="rgb(254, 243, 199)"],
+html.dark [style*="#fef3c7"], html.dark [style*="rgb(254, 243, 199)"] {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #fde68a !important;
+}
+
+/* Modals & Dialogs in Dark Mode */
+html.dark div[style*="position: fixed"] > div[style*="background: #fff"],
+html.dark div[style*="position: fixed"] > div[style*="background: #ffffff"],
+html.dark div[style*="position: fixed"] > div[style*="background-color: #fff"],
+html.dark div[style*="position: fixed"] > div[style*="background-color: #ffffff"],
+html.dark div[style*="position:fixed"] > div[style*="background: #fff"],
+html.dark div[style*="position:fixed"] > div[style*="background: #ffffff"],
+html.dark div[style*="position: fixed"] > div[style*="border-radius"],
+html.dark div[style*="position:fixed"] > div[style*="border-radius"] {
+  background-color: #131b2e !important;
+  border: 1.5px solid #1e293b !important;
+  color: #f8fafc !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
 }
 
 /* Form Inputs, Selects, and Textareas */
@@ -106,6 +180,11 @@ html.dark textarea {
   color: #f8fafc !important;
 }
 
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
 html.dark input:focus,
 html.dark select:focus,
 html.dark textarea:focus {
@@ -114,32 +193,50 @@ html.dark textarea:focus {
 }
 
 /* Inline Dark Text Contrast Fixes */
-html.dark [style*="color: #0f172a"],
-html.dark [style*="color: rgb(15, 23, 42)"],
-html.dark [style*="color: #1e293b"],
-html.dark [style*="color: rgb(30, 41, 59)"],
-html.dark [style*="color: #334155"] {
+html.dark [style*="color: #0f172a"], html.dark [style*="color:#0f172a"], html.dark [style*="color: rgb(15, 23, 42)"],
+html.dark [style*="color: #1e293b"], html.dark [style*="color:#1e293b"], html.dark [style*="color: rgb(30, 41, 59)"],
+html.dark [style*="color: #334155"], html.dark [style*="color:#334155"], html.dark [style*="color: rgb(51, 65, 85)"],
+html.dark [style*="color: #111827"], html.dark [style*="color:#111827"], html.dark [style*="color: rgb(17, 24, 39)"],
+html.dark [style*="color: #1f2937"], html.dark [style*="color:#1f2937"],
+html.dark [style*="color: #000"], html.dark [style*="color:#000"],
+html.dark [style*="color: #000000"], html.dark [style*="color: rgb(0, 0, 0)"] {
   color: #f8fafc !important;
 }
 
-html.dark [style*="color: #475569"],
-html.dark [style*="color: #64748b"] {
+html.dark [style*="color: #475569"], html.dark [style*="color:#475569"], html.dark [style*="color: rgb(71, 85, 105)"],
+html.dark [style*="color: #64748b"], html.dark [style*="color:#64748b"], html.dark [style*="color: rgb(100, 116, 139)"],
+html.dark [style*="color: #6b7280"], html.dark [style*="color:#6b7280"], html.dark [style*="color: rgb(107, 114, 128)"] {
   color: #94a3b8 !important;
 }
 
 /* Border overrides */
-html.dark [style*="border: '1px solid #e2e8f0'"],
-html.dark [style*="border: '1px solid #f1f5f9'"],
+html.dark [style*="border: 1px solid #e2e8f0"],
+html.dark [style*="border: 1.5px solid #e2e8f0"],
+html.dark [style*="border: 1px solid #f1f5f9"],
+html.dark [style*="border: 1px solid #cbd5e1"],
+html.dark [style*="border: 1.5px solid #cbd5e1"],
 html.dark [style*="borderColor: '#e2e8f0'"],
-html.dark [style*="borderColor: '#f1f5f9'"] {
+html.dark [style*="borderColor: '#f1f5f9'"],
+html.dark [style*="borderColor: '#cbd5e1'"] {
   border-color: #1e293b !important;
 }
 
 /* Table Dark Enhancements */
+html.dark table {
+  background-color: transparent !important;
+  color: #f8fafc !important;
+}
+
+html.dark thead tr,
 html.dark table th {
   background-color: #0d1424 !important;
   color: #94a3b8 !important;
   border-bottom-color: #1e293b !important;
+}
+
+html.dark tbody tr {
+  background-color: transparent !important;
+  border-bottom-color: #162035 !important;
 }
 
 html.dark table td {
@@ -148,7 +245,7 @@ html.dark table td {
 }
 
 html.dark table tr:hover td {
-  background-color: rgba(99, 102, 241, 0.06) !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
 }
 
 *, *::before, *::after {

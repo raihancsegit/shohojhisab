@@ -2927,7 +2927,41 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
     }
   }
 
-  // 4. Daily Live Report & Sales / Profit Narration
+  // 4. Stock Inventory Status & Direct Navigation ("আজকে স্টক কত", "স্টক কত", "স্টকে যাও", "মজুদ কত")
+  if (/স্টক\s*কত|আজকের\s*স্টক|মজুদ\s*কত|স্টক\s*দেখাও|স্টক\s*পেজ|স্টকে\s*যাও|স্টকে\s*যান|মজুদ\s*পণ্য|স্টকের\s*খবর|মাল\s*কত|পণ্য\s*কত/.test(rawText)) {
+    const stockStats = db.prepare(`
+      SELECT 
+        COUNT(*) as totalProducts, 
+        COALESCE(SUM(stock), 0) as totalQty, 
+        COALESCE(SUM(stock * COALESCE(purchase_price, 0)), 0) as stockValue,
+        SUM(CASE WHEN stock <= COALESCE(low_stock_threshold, 5) THEN 1 ELSE 0 END) as lowCount
+      FROM products WHERE tenant_id = ?
+    `).get(tenantId) as any;
+
+    const totalProducts = Number(stockStats?.totalProducts) || 0;
+    const totalQty = Number(stockStats?.totalQty) || 0;
+    const stockValue = Math.round(Number(stockStats?.stockValue) || 0);
+    const lowCount = Number(stockStats?.lowCount) || 0;
+
+    let speech = `দোকানে বর্তমানে মোট ${totalProducts}টি পণ্য মজুদ রয়েছে, যার মোট ক্রয়মূল্য ৳${stockValue} টাকা।`;
+    if (lowCount > 0) {
+      speech += ` এর মধ্যে ${lowCount}টি পণ্যের স্টক কম রয়েছে।`;
+    } else {
+      speech += ` সব পণ্যের পর্যাপ্ত স্টক রয়েছে।`;
+    }
+
+    return {
+      success: true,
+      action: 'navigate_stock',
+      navigateTo: '/stock',
+      speech,
+      reply: `📦 **দোকানের লাইভ স্টক ও ইনভেন্টরি:**\n• মোট তালিকাভুক্ত পণ্য: **${totalProducts}টি**\n• মোট মজুদ সংখ্যা: **${totalQty}টি**\n• মোট স্টক সম্পদ মূল্য: **৳${stockValue.toLocaleString('en-US')}**\n• কম স্টকের পণ্য: **${lowCount}টি**\n\nস্টক পেজে নিয়ে যাওয়া হচ্ছে...`,
+      actionLink: { text: 'লাইভ স্টক পেজ দেখুন →', href: '/stock' },
+      data: { totalProducts, totalQty, stockValue, lowStockCount: lowCount }
+    };
+  }
+
+  // 5. Daily Live Report & Sales / Profit Narration
   if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট/.test(rawText)) {
     const todaySales = db.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash, COALESCE(SUM(due_amount), 0) as due
@@ -2948,6 +2982,51 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
       reply: `📊 **আজকের লাইভ ক্লোজিং রিপোর্ট (${todayDate}):**\n• মোট বিক্রি: **৳${s.toLocaleString('en-US')}** (${count} টি ইনভয়েস)\n• নগদ ক্যাশ আদায়: **৳${cash.toLocaleString('en-US')}**\n• খাঁটি নিট প্রফিট: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট পেজে নিয়ে যাওয়া হচ্ছে...`,
       actionLink: { text: 'দিনের ক্লোজিং রিপোর্ট দেখুন →', href: '/day-end' },
       data: { totalSales: s, netProfit: p, cashSales: cash, count }
+    };
+  }
+
+  // 6. Navigation Commands to Pages
+  if (/পণ্য\s*পেজ|প্রোডাক্ট\s*পেজ|পণ্য\s*তালিকা|প্রোডাক্টে\s*যাও|নতুন\s*পণ্য\s*যোগ/.test(rawText) && !/\d+/.test(normalized)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/products',
+      speech: 'পণ্য ও ক্যাটালগ পেজে এসেছি। নতুন পণ্য যোগ ও এডিট করতে পারবেন।',
+      reply: '📦 **পণ্য ও ক্যাটালগ তালিকা ওপেন করা হচ্ছে...**',
+      actionLink: { text: 'পণ্য তালিকা দেখুন →', href: '/products' }
+    };
+  }
+
+  if (/ডিলারে\s*যাও|ডিলার\s*খাতা|মহাজন\s*খাতা|মহাজন|সাপ্লায়ার|সরবরাহকারী/.test(rawText) && !/\d+/.test(normalized)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/dealers',
+      speech: 'ডিলার ও সরবরাহকারী মহাজনদের খাতায় এসেছি।',
+      reply: '🚚 **ডিলার ও সরবরাহকারী খাতা ওপেন করা হচ্ছে...**',
+      actionLink: { text: 'ডিলার খাতা দেখুন →', href: '/dealers' }
+    };
+  }
+
+  if (/দিন\s*শেষ|দিন\s*শেষের\s*হিসাব|ক্যাশ\s*মেলাও|ক্যাশ\s*ড্রয়ার|ক্লোজিং\s*করো/.test(rawText) && !/\d+/.test(normalized)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/day-end',
+      speech: 'দিন শেষের ক্যাশ ড্রয়ার ও ক্লোজিং পেজে এসেছি।',
+      reply: '🌙 **দিন শেষের ক্যাশ ড্রয়ার ওপেন করা হচ্ছে...**',
+      actionLink: { text: 'দিন সমাপ্ত করুন →', href: '/day-end' }
+    };
+  }
+
+  if (/হোমে\s*যাও|ড্যাশবোর্ডে\s*যাও|মূল\s*পাতায়|হোম\s*পেজ/.test(rawText)) {
+    return {
+      success: true,
+      action: 'navigate',
+      navigateTo: '/',
+      speech: 'দোকানের প্রধান ড্যাশবোর্ডে ফিরে এসেছি।',
+      reply: '🏠 **প্রধান ড্যাশবোর্ড লোড করা হচ্ছে...**',
+      actionLink: { text: 'ড্যাশবোর্ড দেখুন →', href: '/' }
     };
   }
 
