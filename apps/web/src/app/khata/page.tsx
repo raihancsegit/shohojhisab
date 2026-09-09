@@ -429,7 +429,8 @@ export default function KhataPage() {
     if (!customerToDelete?.id) return;
     setDeleteSubmitting(true);
     try {
-      const res = await fetch(`/api/customers/${customerToDelete.id}`, {
+      const url = `/api/customers/${encodeURIComponent(customerToDelete.id)}?tenantId=${encodeURIComponent(currentTenantId || '')}`;
+      const res = await fetch(url, {
         method: 'DELETE'
       });
       if (res.ok) {

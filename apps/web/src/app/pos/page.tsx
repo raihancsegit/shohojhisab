@@ -630,6 +630,18 @@ export default function PosPage() {
     let baseRate = Number(product.sellingPrice) || 0;
     if (subUnit && itemUnit === subUnit && ratio > 0) {
       baseRate = Math.round((baseRate / ratio) * 100) / 100;
+    } else if (itemUnit !== primaryUnit) {
+      if (primaryUnit === 'কেজি' && itemUnit === 'গ্রাম') {
+        baseRate = Math.round((baseRate / 1000) * 1000) / 1000;
+      } else if (primaryUnit === 'লিটার' && itemUnit === 'মিলি') {
+        baseRate = Math.round((baseRate / 1000) * 1000) / 1000;
+      } else if (primaryUnit === 'ডজন' && (itemUnit === 'পিস' || itemUnit === 'টা')) {
+        baseRate = Math.round((baseRate / 12) * 100) / 100;
+      } else if (primaryUnit === 'হালি' && (itemUnit === 'পিস' || itemUnit === 'টা')) {
+        baseRate = Math.round((baseRate / 4) * 100) / 100;
+      } else if (primaryUnit === 'পাতা' && (itemUnit === 'ট্যাবলেট' || itemUnit === 'ক্যাপসুল' || itemUnit === 'পিস')) {
+        baseRate = Math.round((baseRate / (ratio > 1 ? ratio : 10)) * 100) / 100;
+      }
     }
 
     setCart(prev => {
@@ -665,6 +677,18 @@ export default function PosPage() {
         let unitP = Number(i.product.sellingPrice) || 0;
         if (subUnit && newUnit === subUnit && ratio > 0) {
           unitP = Math.round((unitP / ratio) * 100) / 100;
+        } else if (newUnit !== primaryUnit) {
+          if (primaryUnit === 'কেজি' && newUnit === 'গ্রাম') {
+            unitP = Math.round((unitP / 1000) * 1000) / 1000;
+          } else if (primaryUnit === 'লিটার' && newUnit === 'মিলি') {
+            unitP = Math.round((unitP / 1000) * 1000) / 1000;
+          } else if (primaryUnit === 'ডজন' && (newUnit === 'পিস' || newUnit === 'টা')) {
+            unitP = Math.round((unitP / 12) * 100) / 100;
+          } else if (primaryUnit === 'হালি' && (newUnit === 'পিস' || newUnit === 'টা')) {
+            unitP = Math.round((unitP / 4) * 100) / 100;
+          } else if (primaryUnit === 'পাতা' && (newUnit === 'ট্যাবলেট' || newUnit === 'ক্যাপসুল' || newUnit === 'পিস')) {
+            unitP = Math.round((unitP / (ratio > 1 ? ratio : 10)) * 100) / 100;
+          }
         }
 
         return {
@@ -3285,29 +3309,41 @@ export default function PosPage() {
                           style={{ width: '65px', padding: '2px 6px', borderRadius: '6px', border: '1.5px solid #cbd5e1', fontSize: '13px', fontWeight: '800', outline: 'none', background: '#fff' }}
                           title="বিক্রির সময় সরাসরি দর পরিবর্তন করুন"
                         />
-                        {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি) */}
-                        {item.product.subUnit ? (
-                          <select
-                            value={item.selectedUnit || item.product.unit}
-                            onChange={(e) => updateCartItemUnit(item.product.id, e.target.value)}
-                            style={{
-                              padding: '2px 6px',
-                              borderRadius: '6px',
-                              border: '1.5px solid #6366f1',
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              color: '#4338ca',
-                              background: '#eef2ff',
-                              cursor: 'pointer'
-                            }}
-                            title="একক পরিবর্তন করুন (যেমন: বস্তা বনাম কেজি)"
-                          >
-                            <option value={item.product.unit}>{item.product.unit}</option>
-                            <option value={item.product.subUnit}>{item.product.subUnit}</option>
-                          </select>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: '#64748b' }}>/{item.product.unit}</span>
-                        )}
+                        {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি, কেজি vs গ্রাম) */}
+                        {(() => {
+                          const availUnits = [item.product.unit || 'পিস'];
+                          if (item.product.subUnit && !availUnits.includes(item.product.subUnit)) availUnits.push(item.product.subUnit);
+                          if (item.product.unit === 'কেজি' && !availUnits.includes('গ্রাম')) availUnits.push('গ্রাম');
+                          if (item.product.unit === 'লিটার' && !availUnits.includes('মিলি')) availUnits.push('মিলি');
+                          if (item.product.unit === 'ডজন' && !availUnits.includes('পিস')) availUnits.push('পিস');
+                          if (item.product.unit === 'হালি' && !availUnits.includes('পিস')) availUnits.push('পিস');
+                          if (item.product.unit === 'পাতা' && !availUnits.includes('ট্যাবলেট')) availUnits.push('ট্যাবলেট');
+
+                          if (availUnits.length > 1) {
+                            return (
+                              <select
+                                value={item.selectedUnit || item.product.unit}
+                                onChange={(e) => updateCartItemUnit(item.product.id, e.target.value)}
+                                style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '6px',
+                                  border: '1.5px solid #6366f1',
+                                  fontSize: '11.5px',
+                                  fontWeight: '800',
+                                  color: '#4338ca',
+                                  background: '#eef2ff',
+                                  cursor: 'pointer'
+                                }}
+                                title="একক পরিবর্তন করুন (যেমন: বস্তা বনাম কেজি বা কেজি বনাম গ্রাম)"
+                              >
+                                {availUnits.map(u => (
+                                  <option key={u} value={u}>{u}</option>
+                                ))}
+                              </select>
+                            );
+                          }
+                          return <span style={{ fontSize: '11px', color: '#64748b' }}>/{item.product.unit}</span>;
+                        })()}
                         <span style={{ fontSize: '11px', color: '#64748b' }}>× {item.quantity} {item.selectedUnit || item.product.unit}</span>
                         <button
                           type="button"
@@ -3477,26 +3513,40 @@ export default function PosPage() {
                                 {it.product.color}
                               </span>
                             )}
-                            {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি) */}
-                            {it.product.subUnit ? (
-                              <select
-                                value={it.selectedUnit || it.product.unit}
-                                onChange={(e) => updateCartItemUnit(it.product.id, e.target.value)}
-                                style={{
-                                  padding: '2px 4px',
-                                  borderRadius: '6px',
-                                  border: '1.5px solid #6366f1',
-                                  fontSize: '11px',
-                                  fontWeight: '800',
-                                  color: '#4338ca',
-                                  background: '#eef2ff',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <option value={it.product.unit}>{it.product.unit}</option>
-                                <option value={it.product.subUnit}>{it.product.subUnit}</option>
-                              </select>
-                            ) : null}
+                            {/* ⚖️ Multi-Unit Selector (e.g. বস্তা vs কেজি, কেজি vs গ্রাম) */}
+                            {(() => {
+                              const availUnits = [it.product.unit || 'পিস'];
+                              if (it.product.subUnit && !availUnits.includes(it.product.subUnit)) availUnits.push(it.product.subUnit);
+                              if (it.product.unit === 'কেজি' && !availUnits.includes('গ্রাম')) availUnits.push('গ্রাম');
+                              if (it.product.unit === 'লিটার' && !availUnits.includes('মিলি')) availUnits.push('মিলি');
+                              if (it.product.unit === 'ডজন' && !availUnits.includes('পিস')) availUnits.push('পিস');
+                              if (it.product.unit === 'হালি' && !availUnits.includes('পিস')) availUnits.push('পিস');
+                              if (it.product.unit === 'পাতা' && !availUnits.includes('ট্যাবলেট')) availUnits.push('ট্যাবলেট');
+
+                              if (availUnits.length > 1) {
+                                return (
+                                  <select
+                                    value={it.selectedUnit || it.product.unit}
+                                    onChange={(e) => updateCartItemUnit(it.product.id, e.target.value)}
+                                    style={{
+                                      padding: '2px 4px',
+                                      borderRadius: '6px',
+                                      border: '1.5px solid #6366f1',
+                                      fontSize: '11px',
+                                      fontWeight: '800',
+                                      color: '#4338ca',
+                                      background: '#eef2ff',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {availUnits.map(u => (
+                                      <option key={u} value={u}>{u}</option>
+                                    ))}
+                                  </select>
+                                );
+                              }
+                              return null;
+                            })()}
                             <span style={{ fontSize: '11px', color: '#64748b' }}>
                               দর: ৳{unitP}/{it.selectedUnit || it.product.unit || 'পিস'}
                             </span>

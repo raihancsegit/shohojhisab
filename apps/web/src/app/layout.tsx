@@ -62,13 +62,15 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
 
   return (
     <header style={{
-      background: 'linear-gradient(135deg, #5b50e6 0%, #4338ca 100%)',
+      background: authTheme === 'dark'
+        ? '#090d16'
+        : 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
       color: '#ffffff',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      borderBottom: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      boxShadow: '0 2px 10px rgba(91, 80, 230, 0.2)'
+      boxShadow: authTheme === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.5)' : '0 2px 10px rgba(30, 27, 75, 0.2)'
     }}>
       {/* Top Main Bar */}
       <div style={{
@@ -611,7 +613,7 @@ function ScreenLockOverlay() {
    HISABPATI-STYLE SIDE MENU DRAWER (Left Slide-in matching Screenshot 1)
    ========================================================================== */
 function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { tenant, isFeatureEnabled, logout } = useAuth();
+  const { tenant, isFeatureEnabled, logout, theme: authTheme } = useAuth();
   const pathname = usePathname();
   const theme = getIndustryTheme(tenant?.industryId);
 
@@ -653,21 +655,21 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         width: '310px',
         maxWidth: '85vw',
         height: '100%',
-        background: '#ffffff',
+        background: authTheme === 'dark' ? '#090d16' : '#ffffff',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '8px 0 30px rgba(0,0,0,0.25)',
+        boxShadow: authTheme === 'dark' ? '8px 0 30px rgba(0,0,0,0.6)' : '8px 0 30px rgba(0,0,0,0.25)',
         zIndex: 2,
         overflowY: 'auto'
       }}>
         {/* Solid Royal Violet Header (Matching Hisabpati Screenshot 1) */}
         <div style={{
-          background: 'linear-gradient(135deg, #5b50e6 0%, #4f46e5 100%)',
+          background: authTheme === 'dark' ? '#0d1424' : 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
           color: '#ffffff',
           padding: '30px 20px 22px',
           textAlign: 'center',
           position: 'relative',
-          boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)'
+          boxShadow: authTheme === 'dark' ? '0 4px 14px rgba(0, 0, 0, 0.4)' : '0 4px 14px rgba(30, 27, 75, 0.3)'
         }}>
           {/* Close button inside header */}
           <button

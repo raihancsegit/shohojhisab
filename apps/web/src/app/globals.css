@@ -221,6 +221,34 @@ html.dark [style*="borderColor: '#cbd5e1'"] {
   border-color: #1e293b !important;
 }
 
+/* Dark Mode Harmonization for Purple / Indigo Accents */
+html.dark [style*="background: linear-gradient(135deg, #5b50e6"],
+html.dark [style*="background:linear-gradient(135deg, #5b50e6"],
+html.dark [style*="background: linear-gradient(135deg, #5b50e6 0%, #4338ca 100%)"],
+html.dark [style*="background: linear-gradient(135deg, #5b50e6 0%, #4f46e5 100%)"] {
+  background: #0d1424 !important;
+  border-color: #1e293b !important;
+}
+
+html.dark [style*="color: #4f46e5"],
+html.dark [style*="color:#4f46e5"],
+html.dark [style*="color: #5b50e6"],
+html.dark [style*="color:#5b50e6"],
+html.dark [style*="color: #4338ca"],
+html.dark [style*="color:#4338ca"],
+html.dark [style*="color: #3730a3"],
+html.dark [style*="color:#3730a3"] {
+  color: #818cf8 !important;
+}
+
+html.dark [style*="border-color: #c7d2fe"],
+html.dark [style*="border: 1.5px solid #c7d2fe"],
+html.dark [style*="border: 1px solid #c7d2fe"],
+html.dark [style*="border: 1.5px solid #6366f1"],
+html.dark [style*="border: 1px solid #6366f1"] {
+  border-color: #334155 !important;
+}
+
 /* Table Dark Enhancements */
 html.dark table {
   background-color: transparent !important;

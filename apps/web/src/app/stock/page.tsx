@@ -42,6 +42,7 @@ export default function StockPage() {
   const [restockQty, setRestockQty] = useState('');
   const [restockUnit, setRestockUnit] = useState('');
   const [restockCost, setRestockCost] = useState('');
+  const [updatePurchasePrice, setUpdatePurchasePrice] = useState(true);
   const [restockSupplier, setRestockSupplier] = useState('');
   const [restockNote, setRestockNote] = useState('');
   const [submittingRestock, setSubmittingRestock] = useState(false);
@@ -64,6 +65,7 @@ export default function StockPage() {
     subUnit: '',
     conversionRatio: '1'
   });
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   // Quick Add Product Modal state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -126,15 +128,17 @@ export default function StockPage() {
     try {
       const res = await fetch(`/api/products/${product.id}/stock-logs`);
       if (res.ok) {
-        const logs = await res.json();
-        setHistoryLogs(Array.isArray(logs) ? logs : []);
+        const data = await res.json();
+        setHistoryLogs(Array.isArray(data) ? data : []);
       }
     } catch (e) {
+      console.error(e);
       setHistoryLogs([]);
     } finally {
       setLoadingHistory(false);
     }
   };
+  const openStockHistory = openHistoryModal;
 
   // Open Restock Modal
   const openRestockModal = (product: any) => {
@@ -142,6 +146,7 @@ export default function StockPage() {
     setRestockQty('');
     setRestockUnit(product.unit || 'পিস');
     setRestockCost(String(product.purchasePrice || ''));
+    setUpdatePurchasePrice(true);
     setRestockSupplier('');
     setRestockNote('');
     setShowRestockModal(true);
@@ -170,6 +175,7 @@ export default function StockPage() {
           quantity: qty,
           unit: restockUnit || restockProduct.unit,
           unitPrice: Number(restockCost) || restockProduct.purchasePrice || 0,
+          updatePurchasePrice: updatePurchasePrice,
           sourceRef: restockSupplier ? `সাপ্লায়ার: ${restockSupplier}` : 'নতুন মাল তোলা',
           note: restockNote || 'রিস্টক / মাল তোলা'
         })
@@ -177,11 +183,14 @@ export default function StockPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setNotice(`✓ "${restockProduct.banglaName || restockProduct.name}"-এ +${qty} ${restockUnit} নতুন মাল তোলা হয়েছে!`);
+        setNotice(data.message || `✓ "${restockProduct.banglaName || restockProduct.name}"-এ +${qty} ${restockUnit} নতুন মাল তোলা হয়েছে!`);
         speakAnnouncement(`${restockProduct.banglaName || restockProduct.name} এ ${qty} ${restockUnit} মাল তোলা হয়েছে`);
         setShowRestockModal(false);
         await loadStock();
         setTimeout(() => setNotice(''), 3500);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'মাল তোলার সময় সমস্যা হয়েছে। দয়া করে তথ্য যাচাই করুন।');
       }
     } catch (e) {
       alert('মাল তোলার সময় সমস্যা হয়েছে');
@@ -2357,6 +2366,17 @@ export default function StockPage() {
                   className="num-font"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                 />
+                {Number(restockCost) > 0 && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#059669', fontWeight: '700', marginTop: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={updatePurchasePrice}
+                      onChange={(e) => setUpdatePurchasePrice(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    পণ্যের ক্রয়মূল্য (কেনার দর) ৳{restockCost}-এ আপডেট করুন
+                  </label>
+                )}
               </div>
 
               <div>

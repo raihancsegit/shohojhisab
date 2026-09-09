@@ -3583,13 +3583,16 @@ fastify.get('/api/stock-logs', async (request, reply) => {
 // Manual Restock / Stock-In API
 fastify.post('/api/stock-logs', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, productId, quantity, unit, note, unitPrice, supplier } = body || {};
+  const { tenantId, productId, quantity, unit, note, unitPrice, supplier, sourceRef, updatePurchasePrice } = body || {};
 
   if (!tenantId || !productId || quantity === undefined) {
     return reply.status(400).send({ error: 'Tenant ID, Product ID এবং পরিমাণ আবশ্যক' });
   }
 
-  const product = db.prepare('SELECT * FROM products WHERE id = ? AND tenant_id = ?').get(productId, tenantId) as any;
+  let product = db.prepare('SELECT * FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL OR tenant_id = \'\')').get(productId, tenantId) as any;
+  if (!product) {
+    product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId) as any;
+  }
   if (!product) return reply.status(404).send({ error: 'পণ্য খুঁজে পাওয়া যায়নি' });
 
   const addQty = Number(quantity) || 0;
@@ -3603,10 +3606,17 @@ fastify.post('/api/stock-logs', async (request, reply) => {
   }
 
   const newStock = Math.max(0, (Number(product.stock) || 0) + baseQty);
-  db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+  
+  // Sync purchase price if provided and updatePurchasePrice is not explicitly false
+  const newUnitPrice = unitPrice !== undefined && Number(unitPrice) > 0 ? Number(unitPrice) : null;
+  if (newUnitPrice !== null && updatePurchasePrice !== false) {
+    db.prepare('UPDATE products SET stock = ?, purchase_price = ? WHERE id = ?').run(newStock, newUnitPrice, product.id);
+  } else {
+    db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+  }
 
   const logId = 'stklog-' + uuidv4().slice(0, 8);
-  const sourceRef = supplier ? `ডিলার/সরবরাহকারী: ${supplier}` : 'ম্যানুয়াল রিস্টক';
+  const finalSourceRef = sourceRef || (supplier ? `ডিলার/সরবরাহকারী: ${supplier}` : 'ম্যানুয়াল রিস্টক');
   db.prepare(`
     INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
     VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
@@ -3618,8 +3628,8 @@ fastify.post('/api/stock-logs', async (request, reply) => {
     addQty,
     unit || product.unit || 'পিস',
     baseQty,
-    unitPrice !== undefined ? Number(unitPrice) : (Number(product.purchase_price) || 0),
-    sourceRef,
+    newUnitPrice !== null ? newUnitPrice : (Number(product.purchase_price) || 0),
+    finalSourceRef,
     note || 'নতুন মাল স্টকে তোলা হয়েছে',
     now
   );
@@ -3628,6 +3638,7 @@ fastify.post('/api/stock-logs', async (request, reply) => {
     success: true,
     newStock,
     unit: product.unit || 'পিস',
+    purchasePrice: newUnitPrice !== null && updatePurchasePrice !== false ? newUnitPrice : product.purchase_price,
     message: `✓ ${product.bangla_name || product.name} এর স্টক সফলভাবে ${addQty} ${unit || product.unit} বৃদ্ধি করা হয়েছে। বর্তমান মোট স্টক: ${newStock} ${product.unit}।`
   };
 });
@@ -3866,25 +3877,40 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
 
 // Delete Customer & associated due records
 fastify.delete('/api/customers/:id', async (request, reply) => {
-  const { id } = request.params as { id: string };
+  const rawId = (request.params as { id: string }).id;
+  const decodedId = decodeURIComponent(rawId).trim();
+  const { tenantId } = (request.query as any) || {};
+
   try {
-    const cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(id) as any;
+    let cust: any = null;
+    if (tenantId) {
+      cust = db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(decodedId, tenantId)
+        || db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(rawId, tenantId)
+        || db.prepare('SELECT * FROM customers WHERE name = ? AND tenant_id = ?').get(decodedId, tenantId)
+        || db.prepare('SELECT * FROM customers WHERE name = ? AND tenant_id = ?').get(rawId, tenantId);
+    }
+    if (!cust) {
+      cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(decodedId)
+        || db.prepare('SELECT * FROM customers WHERE id = ?').get(rawId)
+        || db.prepare('SELECT * FROM customers WHERE name = ?').get(decodedId)
+        || db.prepare('SELECT * FROM customers WHERE name = ?').get(rawId);
+    }
     if (!cust) return reply.status(404).send({ error: 'কাস্টমার খুঁজে পাওয়া যায়নি' });
 
     db.transaction(() => {
       // Clean up sales and sale_items associated with this customer
-      const custSales = db.prepare('SELECT id FROM sales WHERE customer_id = ? OR (customer_name = ? AND tenant_id = ?)').all(id, cust.name, cust.tenant_id) as any[];
+      const custSales = db.prepare('SELECT id FROM sales WHERE customer_id = ? OR customer_id = ? OR (customer_name = ? AND tenant_id = ?)').all(cust.id, decodedId, cust.name, cust.tenant_id) as any[];
       for (const s of custSales) {
         db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(s.id);
       }
-      db.prepare('DELETE FROM sales WHERE customer_id = ? OR (customer_name = ? AND tenant_id = ?)').run(id, cust.name, cust.tenant_id);
+      db.prepare('DELETE FROM sales WHERE customer_id = ? OR customer_id = ? OR (customer_name = ? AND tenant_id = ?)').run(cust.id, decodedId, cust.name, cust.tenant_id);
       try {
-        db.prepare('DELETE FROM loyalty_logs WHERE customer_id = ?').run(id);
+        db.prepare('DELETE FROM loyalty_logs WHERE customer_id = ? OR customer_id = ?').run(cust.id, decodedId);
       } catch (e) {}
       try {
-        db.prepare('DELETE FROM running_tabs WHERE customer_id = ?').run(id);
+        db.prepare('DELETE FROM running_tabs WHERE customer_id = ? OR customer_id = ?').run(cust.id, decodedId);
       } catch (e) {}
-      db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+      db.prepare('DELETE FROM customers WHERE id = ? OR id = ?').run(cust.id, decodedId);
     })();
 
     return { success: true, message: `${cust.name}-কে বাকি খাতা থেকে সফলভাবে মুছে ফেলা হয়েছে` };
@@ -4268,13 +4294,41 @@ fastify.post('/api/sales', async (request, reply) => {
           name = product.bangla_name || product.name || name;
           usedUnit = item.selectedUnit || item.unit || product.unit || 'পিস';
 
-          // Multi-unit ratio check: if item.selectedUnit matches sub_unit
+          // Multi-unit ratio check: if item.selectedUnit matches sub_unit or standard fractional units
           let baseQtyDeducted = qty;
           const prodRatio = Number(product.conversion_ratio) || 1;
           if (product.sub_unit && item.selectedUnit === product.sub_unit && prodRatio > 0) {
             baseQtyDeducted = qty / prodRatio;
             cost = Math.round((cost / prodRatio) * 100) / 100;
+          } else if (item.selectedUnit && item.selectedUnit !== product.unit) {
+            // Built-in smart conversions
+            if (product.unit === 'কেজি' && item.selectedUnit === 'গ্রাম') {
+              baseQtyDeducted = qty / 1000;
+              cost = cost / 1000;
+            } else if (product.unit === 'লিটার' && item.selectedUnit === 'মিলি') {
+              baseQtyDeducted = qty / 1000;
+              cost = cost / 1000;
+            } else if (product.unit === 'ডজন' && (item.selectedUnit === 'পিস' || item.selectedUnit === 'টা')) {
+              baseQtyDeducted = qty / 12;
+              cost = cost / 12;
+            } else if (product.unit === 'হালি' && (item.selectedUnit === 'পিস' || item.selectedUnit === 'টা')) {
+              baseQtyDeducted = qty / 4;
+              cost = cost / 4;
+            } else if (product.unit === 'বস্তা' && item.selectedUnit === 'কেজি') {
+              const bagRatio = prodRatio > 1 ? prodRatio : 50;
+              baseQtyDeducted = qty / bagRatio;
+              cost = cost / bagRatio;
+            } else if (product.unit === 'পাতা' && (item.selectedUnit === 'ট্যাবলেট' || item.selectedUnit === 'ক্যাপসুল' || item.selectedUnit === 'পিস')) {
+              const stripRatio = prodRatio > 1 ? prodRatio : 10;
+              baseQtyDeducted = qty / stripRatio;
+              cost = cost / stripRatio;
+            } else if (product.unit === 'কার্টন' && (item.selectedUnit === 'পিস' || item.selectedUnit === 'প্যাকেট')) {
+              const ctnRatio = prodRatio > 1 ? prodRatio : 24;
+              baseQtyDeducted = qty / ctnRatio;
+              cost = cost / ctnRatio;
+            }
           }
+          baseQtyDeducted = Math.round(baseQtyDeducted * 10000) / 10000;
 
           deductStock.run(baseQtyDeducted, product.id);
 
