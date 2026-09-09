@@ -211,8 +211,11 @@ export default function PosPage() {
   // 🔢 Amar Dokan Style Fast Numpad POS Mode
   const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
   const [numpadInput, setNumpadInput] = useState('');
-  const [numpadItems, setNumpadItems] = useState<Array<{ id: string; amount: number; note: string }>>([]);
+  const [numpadItems, setNumpadItems] = useState<Array<{ id: string; amount: number; note: string; productId?: string | null; unit?: string }>>([]);
   const [numpadNote, setNumpadNote] = useState('');
+  const [numpadSelectedProduct, setNumpadSelectedProduct] = useState<any | null>(null);
+  const [showNumpadProductDropdown, setShowNumpadProductDropdown] = useState(false);
+  const numpadSearchContainerRef = useRef<HTMLDivElement | null>(null);
   const [numpadPaymentMethod, setNumpadPaymentMethod] = useState<'cash' | 'due'>('cash');
   const [numpadCustomer, setNumpadCustomer] = useState('none');
   const [numpadNewCustName, setNumpadNewCustName] = useState('');
@@ -278,7 +281,21 @@ export default function PosPage() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+      if (numpadSearchContainerRef.current && !numpadSearchContainerRef.current.contains(e.target as Node)) {
+        setShowNumpadProductDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const loadRunningTabs = async () => {
@@ -432,6 +449,9 @@ export default function PosPage() {
       setNumpadInput('');
     } else {
       setNumpadItems([]);
+      setNumpadSelectedProduct(null);
+      setNumpadNote('');
+      setShowNumpadProductDropdown(false);
     }
   };
 
@@ -446,12 +466,21 @@ export default function PosPage() {
     if (!amt || isNaN(amt) || amt <= 0) return;
     playBeep(1100);
     triggerHaptic('medium');
+    const itemNote = numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${numpadItems.length + 1}`);
     setNumpadItems(prev => [
       ...prev,
-      { id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6), amount: amt, note: numpadNote.trim() || `আইটেম ${prev.length + 1}` }
+      {
+        id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+        amount: amt,
+        note: itemNote,
+        productId: numpadSelectedProduct?.id || null,
+        unit: numpadSelectedProduct?.unit || 'পিস'
+      }
     ]);
     setNumpadInput('');
     setNumpadNote('');
+    setNumpadSelectedProduct(null);
+    setShowNumpadProductDropdown(false);
   };
 
   const handleNumpadAddQuickAmount = (amt: number) => {
@@ -481,7 +510,9 @@ export default function PosPage() {
       finalItems.push({
         id: 'np-pending',
         amount: numpadPendingVal,
-        note: numpadNote.trim() || `আইটেম ${finalItems.length + 1}`
+        note: numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${finalItems.length + 1}`),
+        productId: numpadSelectedProduct?.id || null,
+        unit: numpadSelectedProduct?.unit || 'আইটেম'
       });
     }
 
@@ -512,10 +543,10 @@ export default function PosPage() {
       customerName: finalCustName || 'নগদ কাস্টমার',
       customerPhone: finalCustPhone || '',
       items: finalItems.map(i => ({
-        productId: null,
-        productName: i.note ? `ক্যালকুলেটর বিক্রি (${i.note})` : 'দ্রুত নগদ/বাকি বিক্রি',
+        productId: i.productId || null,
+        productName: i.note ? i.note : 'দ্রুত নগদ/বাকি বিক্রি',
         quantity: 1,
-        selectedUnit: 'আইটেম',
+        selectedUnit: i.unit || 'আইটেম',
         sellingPrice: i.amount,
         purchasePrice: Math.round(i.amount * 0.85),
         totalPrice: i.amount
@@ -573,6 +604,8 @@ export default function PosPage() {
         setNumpadItems([]);
         setNumpadInput('');
         setNumpadNote('');
+        setNumpadSelectedProduct(null);
+        setShowNumpadProductDropdown(false);
         setNumpadNewCustName('');
         setNumpadNewCustPhone('');
         setNumpadCustomer('none');
@@ -592,7 +625,9 @@ export default function PosPage() {
       finalItems.push({
         id: 'np-pending',
         amount: numpadPendingVal,
-        note: numpadNote.trim() || `আইটেম ${finalItems.length + 1}`
+        note: numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${finalItems.length + 1}`),
+        productId: numpadSelectedProduct?.id || null,
+        unit: numpadSelectedProduct?.unit || 'আইটেম'
       });
     }
     if (finalItems.length === 0) return;
@@ -600,13 +635,14 @@ export default function PosPage() {
     triggerHaptic('medium');
 
     finalItems.forEach(it => {
-      const customProd = {
+      const pMatch = products.find(p => p.id === it.productId);
+      const customProd = pMatch || {
         id: 'custom-np-' + Math.random().toString(36).slice(2, 8),
         name: it.note || 'ক্যালকুলেটর আইটেম',
         banglaName: it.note || 'ক্যালকুলেটর আইটেম',
         sellingPrice: it.amount,
         purchasePrice: Math.round(it.amount * 0.85),
-        unit: 'আইটেম',
+        unit: it.unit || 'আইটেম',
         stock: 999
       };
       addToCart(customProd, 1);
@@ -615,6 +651,8 @@ export default function PosPage() {
     setNumpadItems([]);
     setNumpadInput('');
     setNumpadNote('');
+    setNumpadSelectedProduct(null);
+    setShowNumpadProductDropdown(false);
     setPosMode('catalog');
   };
 
@@ -1738,25 +1776,272 @@ export default function PosPage() {
             </div>
           )}
 
-          {/* Optional Note / Item Name Input */}
-          <div style={{ marginBottom: '12px' }}>
-            <input
-              type="text"
-              placeholder="📝 পণ্যের বিবরণ / নোট (ঐচ্ছিক, যেমন: সাবান বা তেল)..."
-              value={numpadNote}
-              onChange={(e) => setNumpadNote(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
+          {/* 📦 Stock Connected Product Search & Selector */}
+          <div ref={numpadSearchContainerRef} style={{ position: 'relative', marginBottom: '12px' }}>
+            {numpadSelectedProduct ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
                 borderRadius: '12px',
-                border: '1.5px solid var(--border-card)',
-                background: 'var(--bg-canvas)',
-                color: 'var(--text-primary)',
-                fontSize: '13px',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
+                background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                border: '1.5px solid #a7f3d0',
+                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <span style={{ fontSize: '18px' }}>{numpadSelectedProduct.icon || '📦'}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong style={{ fontSize: '13px', color: '#065f46', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {numpadSelectedProduct.banglaName || numpadSelectedProduct.name}
+                      </strong>
+                      <span style={{ fontSize: '10px', background: '#ffffff', color: '#047857', padding: '1px 5px', borderRadius: '4px', fontWeight: '800' }}>
+                        মজুদ: {numpadSelectedProduct.stock} {numpadSelectedProduct.unit}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                      দর: ৳{numpadSelectedProduct.sellingPrice}/{numpadSelectedProduct.unit}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNumpadSelectedProduct(null);
+                    setNumpadNote('');
+                  }}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #6ee7b7',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontWeight: '900',
+                    flexShrink: 0
+                  }}
+                  title="সিলেকশন মুছুন"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 স্টক থেকে পণ্য খুঁজুন বা নাম লিখুন..."
+                  value={numpadNote}
+                  onFocus={() => setShowNumpadProductDropdown(true)}
+                  onChange={(e) => {
+                    setNumpadNote(e.target.value);
+                    setShowNumpadProductDropdown(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 36px 10px 34px',
+                    borderRadius: '12px',
+                    border: '1.5px solid var(--border-card)',
+                    background: 'var(--bg-canvas)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none' }}>
+                  🔍
+                </span>
+                {numpadNote && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNumpadNote('');
+                      setShowNumpadProductDropdown(false);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: '#f1f5f9',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '10px',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      display: 'grid',
+                      placeItems: 'center'
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Instant Stock Products Dropdown in Numpad Calculator */}
+            {showNumpadProductDropdown && !numpadSelectedProduct && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '6px',
+                  background: '#ffffff',
+                  borderRadius: '14px',
+                  border: '1.5px solid #cbd5e1',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                  zIndex: 100,
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  padding: '6px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px 6px', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>
+                    📦 স্টকের পণ্য নির্বাচন {numpadNote ? `("${numpadNote}")` : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNumpadProductDropdown(false)}
+                    style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '10px', color: '#64748b' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {(() => {
+                  const q = numpadNote.trim().toLowerCase();
+                  const matched = products.filter(p => {
+                    if (!q) return true;
+                    const tokens = q.split(/\s+/).filter(Boolean);
+                    const targetStr = `${p.banglaName || ''} ${p.name || ''} ${p.barcode || ''} ${p.genericName || ''} ${p.brand || ''}`.toLowerCase();
+                    return tokens.every(token => targetStr.includes(token));
+                  });
+
+                  if (matched.length === 0) {
+                    return (
+                      <div style={{ padding: '14px 8px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+                        স্টকে মিল পাওয়া যায়নি। কাস্টম নাম হিসাবে <strong>"{numpadNote}"</strong> সংরক্ষিত হবে।
+                      </div>
+                    );
+                  }
+
+                  return matched.slice(0, 15).map(p => {
+                    const inStock = Number(p.stock || 0) > 0;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setNumpadSelectedProduct(p);
+                          setNumpadNote(p.banglaName || p.name);
+                          if (!numpadInput || Number(numpadInput) === 0) {
+                            setNumpadInput(String(p.sellingPrice));
+                          }
+                          setShowNumpadProductDropdown(false);
+                          playBeep(950);
+                          triggerHaptic('light');
+                        }}
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '6px',
+                          borderBottom: '1px solid #f8fafc',
+                          transition: 'background 0.12s'
+                        }}
+                        className="hover-bg-slate-50"
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '16px' }}>{p.icon || '📦'}</span>
+                          <div>
+                            <strong style={{ fontSize: '12.5px', color: '#0f172a', display: 'block' }}>
+                              {p.banglaName || p.name}
+                            </strong>
+                            <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700' }}>
+                              ৳{p.sellingPrice}/{p.unit}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '800',
+                          color: inStock ? '#15803d' : '#dc2626',
+                          background: inStock ? '#dcfce7' : '#fee2e2',
+                          padding: '2px 6px',
+                          borderRadius: '4px'
+                        }}>
+                          {inStock ? `${p.stock} ${p.unit}` : 'স্টক নেই'}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+
+            {/* Quick frequent stock items chips */}
+            {!numpadSelectedProduct && products.length > 0 && (
+              <div style={{
+                display: 'flex',
+                gap: '5px',
+                overflowX: 'auto',
+                paddingTop: '6px',
+                paddingBottom: '2px',
+                scrollbarWidth: 'none'
+              }}>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', alignSelf: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  ⚡ স্টক পণ্য:
+                </span>
+                {products.slice(0, 8).map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setNumpadSelectedProduct(p);
+                      setNumpadNote(p.banglaName || p.name);
+                      if (!numpadInput || Number(numpadInput) === 0) {
+                        setNumpadInput(String(p.sellingPrice));
+                      }
+                      playBeep(950);
+                      triggerHaptic('light');
+                    }}
+                    style={{
+                      background: 'var(--bg-canvas)',
+                      border: '1px solid var(--border-card)',
+                      borderRadius: '8px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title={`${p.banglaName || p.name} (৳${p.sellingPrice})`}
+                  >
+                    <span>{p.icon || '📦'}</span>
+                    <span>{p.banglaName || p.name}</span>
+                    <strong style={{ color: '#059669' }}>৳{p.sellingPrice}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick Amount Pills */}

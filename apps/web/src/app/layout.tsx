@@ -673,49 +673,56 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         zIndex: 2,
         overflowY: 'auto'
       }}>
-        {/* Solid Royal Violet Header (Matching Hisabpati Screenshot 1) */}
+        {/* Modern Glassmorphic Indigo Header */}
         <div style={{
-          background: authTheme === 'dark' ? '#0d1424' : 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+          background: authTheme === 'dark'
+            ? 'linear-gradient(145deg, #090d16 0%, #111827 50%, #1e1b4b 100%)'
+            : 'linear-gradient(145deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
           color: '#ffffff',
-          padding: '30px 20px 22px',
+          padding: '20px 18px 16px',
           textAlign: 'center',
           position: 'relative',
-          boxShadow: authTheme === 'dark' ? '0 4px 14px rgba(0, 0, 0, 0.4)' : '0 4px 14px rgba(30, 27, 75, 0.3)'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
         }}>
-          {/* Close button inside header */}
+          {/* Frosted Close button */}
           <button
             onClick={onClose}
             style={{
               position: 'absolute',
               top: '12px',
               right: '12px',
-              background: 'rgba(255, 255, 255, 0.2)',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '28px',
+              height: '28px',
               color: '#ffffff',
-              fontSize: '15px',
+              fontSize: '13px',
               cursor: 'pointer',
               display: 'grid',
-              placeItems: 'center'
+              placeItems: 'center',
+              transition: 'all 0.15s ease'
             }}
+            title="মেনু বন্ধ করুন"
           >
             ✕
           </button>
 
           {/* Avatar with Edit Badge */}
-          <div style={{ position: 'relative', width: '64px', height: '64px', margin: '0 auto 12px' }}>
+          <div style={{ position: 'relative', width: '52px', height: '52px', margin: '0 auto 10px' }}>
             <div style={{
               width: '100%',
               height: '100%',
-              borderRadius: '50%',
-              background: '#818cf8',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              border: '2px solid rgba(255, 255, 255, 0.35)',
               display: 'grid',
               placeItems: 'center',
-              fontSize: '30px',
+              fontSize: '24px',
               color: '#ffffff',
-              boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+              boxShadow: '0 6px 16px rgba(0,0,0,0.25)'
             }}>
               🏪
             </div>
@@ -724,52 +731,53 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               onClick={onClose}
               style={{
                 position: 'absolute',
-                bottom: 0,
-                right: 0,
+                bottom: -2,
+                right: -2,
                 background: '#ffffff',
                 color: '#4f46e5',
-                width: '22px',
-                height: '22px',
+                width: '20px',
+                height: '20px',
                 borderRadius: '50%',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: '11px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+                fontSize: '10px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
                 textDecoration: 'none'
               }}
-              title="প্রোফাইল এডিট"
+              title="দোকান প্রোফাইল এডিট"
             >
               ✏️
             </Link>
           </div>
 
-          <h3 style={{ margin: '0 0 2px', fontSize: '18px', fontWeight: '900', color: '#ffffff', letterSpacing: '0.3px' }}>
+          <h3 style={{ margin: '0 0 2px', fontSize: '16px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.2px' }}>
             {tenant?.shopName || 'আমার ডিজিটাল দোকান'}
           </h3>
-          <p style={{ margin: '0 0 10px', fontSize: '12.5px', color: '#c7d2fe', fontWeight: '600' }}>
+          <p style={{ margin: '0 0 8px', fontSize: '11.5px', color: '#c7d2fe', fontWeight: '600' }}>
             📱 {tenant?.phone || '০১৯৮৬২৩৩২৩৪'}
           </p>
 
-          {/* Shop Switcher Pill Dropdown */}
+          {/* Shop Switcher Pill */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
-            background: '#ffffff',
-            color: '#4f46e5',
-            padding: '5px 14px',
+            gap: '5px',
+            background: 'rgba(255, 255, 255, 0.16)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            color: '#ffffff',
+            padding: '4px 12px',
             borderRadius: '99px',
-            fontSize: '12px',
-            fontWeight: '900',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+            fontSize: '11px',
+            fontWeight: '800'
           }}>
             <span>{tenant?.shopName || 'মূল দোকান শাখা'}</span>
-            <span style={{ fontSize: '10px' }}>▼</span>
+            <span style={{ fontSize: '9px', opacity: 0.8 }}>▼</span>
           </div>
         </div>
 
-        {/* Scrollable Menu Items */}
-        <div style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {/* Scrollable Menu Items (Tighter, Ergonomic Spacing) */}
+        <div style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {menuItems.filter(item => item.show !== false).map((item, idx) => {
             const active = pathname === item.href;
             return (
@@ -781,46 +789,47 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '11px 14px',
-                  borderRadius: '12px',
+                  padding: '7px 10px',
+                  borderRadius: '10px',
                   textDecoration: 'none',
-                  background: active ? '#f5f3ff' : 'transparent',
-                  border: active ? '1px solid #e0e7ff' : '1px solid transparent',
-                  transition: 'all 0.15s ease'
+                  background: active ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#f5f3ff') : 'transparent',
+                  border: active ? '1px solid #c7d2fe' : '1px solid transparent',
+                  transition: 'all 0.12s ease'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
                   <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
                     background: item.iconBg,
                     color: item.iconColor,
                     display: 'grid',
                     placeItems: 'center',
-                    fontSize: '18px'
+                    fontSize: '15px',
+                    flexShrink: 0
                   }}>
                     {item.icon}
                   </div>
-                  <span style={{ fontSize: '13.5px', fontWeight: active ? '800' : '700', color: active ? '#4f46e5' : '#1e293b' }}>
+                  <span style={{ fontSize: '13px', fontWeight: active ? '800' : '650', color: active ? '#4f46e5' : (authTheme === 'dark' ? '#f1f5f9' : '#1e293b') }}>
                     {item.label}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   {item.badge && (
                     <span style={{
-                      fontSize: '10px',
+                      fontSize: '9.5px',
                       fontWeight: '800',
-                      padding: '2px 7px',
-                      borderRadius: '6px',
+                      padding: '1px 6px',
+                      borderRadius: '5px',
                       background: item.badge === 'নতুন' ? '#ecfdf5' : '#fee2e2',
                       color: item.badge === 'নতুন' ? '#059669' : '#dc2626'
                     }}>
                       {item.badge}
                     </span>
                   )}
-                  <span style={{ fontSize: '13px', color: '#cbd5e1' }}>›</span>
+                  <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
                 </div>
               </Link>
             );
