@@ -5206,7 +5206,6 @@ fastify.post('/api/voice-action', async (request, reply) => {
 // Root & Health Checks
 fastify.get('/', async () => ({ status: 'online', service: 'ShohojHisab API', message: 'ShohojHisab Dynamic API is running successfully!', timestamp: new Date().toISOString() }));
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
-fastify.get('/api/health', async () => ({ status: 'healthy', timestamp: new Date().toISOString() }));
 
 // Custom 404 Handler for helpful diagnostic response
 fastify.setNotFoundHandler((request, reply) => {
