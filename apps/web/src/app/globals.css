@@ -581,7 +581,8 @@ body {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(99, 102, 241, 0.08);
 }
 
-.stock-search-icon-left {
+.stock-search-icon-left,
+.stock-search-icon {
   position: absolute;
   left: 14px;
   pointer-events: none;
@@ -647,6 +648,50 @@ body {
 
 .stock-pill:active {
   transform: scale(0.96);
+}
+
+/* Dual-card 2-column Mobile Grid Layout */
+.mobile-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .mobile-grid-2col {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-grid-2col {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+}
+
+/* Compact Khata customer card */
+.khata-grid-card {
+  background: var(--bg-card, #ffffff);
+  border-radius: 14px;
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  justifyContent: space-between;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.khata-grid-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.khata-grid-card:active {
+  transform: scale(0.98);
 }
 
 /* Page Heading Scalability */

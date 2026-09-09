@@ -203,16 +203,11 @@ export default function ProductsPage() {
   const lowStockCount = products.filter(p => p.stock <= (p.lowStockThreshold || 5)).length;
 
   const filtered = products.filter(p => {
-    const q = search.toLowerCase();
-    return (
-      (p.banglaName && p.banglaName.toLowerCase().includes(q)) ||
-      (p.name && p.name.toLowerCase().includes(q)) ||
-      (p.barcode && p.barcode.includes(q)) ||
-      (p.genericName && p.genericName.toLowerCase().includes(q)) ||
-      (p.brand && p.brand.toLowerCase().includes(q)) ||
-      (p.size && p.size.toLowerCase().includes(q)) ||
-      (p.color && p.color.toLowerCase().includes(q))
-    );
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const searchableText = `${p.banglaName || ''} ${p.name || ''} ${p.barcode || ''} ${p.genericName || ''} ${p.brand || ''} ${p.size || ''} ${p.color || ''} ${p.category || ''}`.toLowerCase();
+    return tokens.every(token => searchableText.includes(token));
   });
 
   return (

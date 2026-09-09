@@ -1464,7 +1464,7 @@ export default function StockPage() {
           <DataLoader type="skeleton-grid" count={8} text="পণ্য কার্ড লোড হচ্ছে..." />
         ) : (
           totalStockCount > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
+            <div className="mobile-grid-2col">
           {paginatedProducts.map(p => {
             const isLow = p.stock <= (p.lowStockThreshold || 5);
             return (
@@ -1475,19 +1475,19 @@ export default function StockPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  padding: '16px',
+                  padding: '12px 10px',
                   border: isLow ? '1.5px solid #fca5a5' : '1px solid #e2e8f0',
                   background: isLow ? '#fffaf0' : '#ffffff',
                   borderRadius: '16px'
                 }}
               >
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '26px' }}>{p.icon || '📦'}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '24px' }}>{p.icon || '📦'}</span>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '10px',
                       fontWeight: '800',
-                      padding: '2px 8px',
+                      padding: '2px 6px',
                       borderRadius: '99px',
                       background: isLow ? '#fee2e2' : '#ecfdf5',
                       color: isLow ? '#dc2626' : '#059669'
@@ -1496,67 +1496,67 @@ export default function StockPage() {
                     </span>
                   </div>
 
-                  <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block', marginBottom: '2px' }}>
+                  <strong
+                    style={{
+                      fontSize: '13.5px',
+                      color: '#0f172a',
+                      display: 'block',
+                      marginBottom: '2px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    title={p.banglaName || p.name}
+                  >
                     {p.banglaName || p.name}
                   </strong>
-                  <span style={{ fontSize: '11.5px', color: '#94a3b8', display: 'block' }}>
-                    বারকোড: #{p.barcode}
+                  <span style={{ fontSize: '10.5px', color: '#94a3b8', display: 'block' }}>
+                    #{p.barcode}
                   </span>
                   {p.genericName && (
-                    <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                    <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       🧪 {p.genericName}
                     </span>
                   )}
                   {p.size && (
-                    <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
-                      🏷️ সাইজ: {p.size}
+                    <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                      🏷️ {p.size}
                     </span>
                   )}
                 </div>
 
-                <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                     <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>কেনার দাম</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span className="num-font" style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                          ৳{p.purchasePrice || 0}
+                      <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>বিক্রয় দর</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <span className="num-font" style={{ fontSize: '15px', fontWeight: '900', color: '#059669' }}>
+                          ৳{p.sellingPrice}
                         </span>
                         <button
-                          onClick={() => { setInlineEdit({ id: p.id, field: 'purchasePrice', val: String(p.purchasePrice || 0) }); triggerHaptic('light'); }}
-                          style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '1px 4px', fontSize: '9px', cursor: 'pointer' }}
+                          onClick={() => { setInlineEdit({ id: p.id, field: 'sellingPrice', val: String(p.sellingPrice) }); triggerHaptic('light'); }}
+                          style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '4px', padding: '1px 4px', fontSize: '9px', fontWeight: '800', cursor: 'pointer' }}
                         >
                           ✏️
                         </button>
                       </div>
                     </div>
 
-                    <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>বিক্রয় মূল্য</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}>
-                          ৳{p.sellingPrice}
-                        </span>
-                        <button
-                          onClick={() => { setInlineEdit({ id: p.id, field: 'sellingPrice', val: String(p.sellingPrice) }); triggerHaptic('light'); }}
-                          style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '4px', padding: '1px 5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                        >
-                          ✏️ দর
-                        </button>
-                      </div>
-                    </div>
-
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>বর্তমান স্টক</span>
-                      <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: isLow ? '#dc2626' : '#0f172a' }}>
-                        {p.stock} <span style={{ fontSize: '11px', fontWeight: '600' }}>{p.unit}</span>
+                      <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>বর্তমান স্টক</span>
+                      <span className="num-font" style={{ fontSize: '15px', fontWeight: '900', color: isLow ? '#dc2626' : '#0f172a' }}>
+                        {p.stock} <span style={{ fontSize: '10px', fontWeight: '600' }}>{p.unit}</span>
                       </span>
-                      {p.subUnit && Number(p.conversionRatio) > 1 && (
-                        <span style={{ display: 'block', fontSize: '10px', color: '#4338ca', fontWeight: '800' }}>
-                          ≈ {Math.round(p.stock * Number(p.conversionRatio) * 100) / 100} {p.subUnit}
-                        </span>
-                      )}
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#64748b', marginBottom: '8px' }}>
+                    <span>কেনার দর: ৳{p.purchasePrice || 0}</span>
+                    {p.subUnit && Number(p.conversionRatio) > 1 && (
+                      <span style={{ color: '#4338ca', fontWeight: '700' }}>
+                        ≈ {Math.round(p.stock * Number(p.conversionRatio) * 10) / 10} {p.subUnit}
+                      </span>
+                    )}
                   </div>
 
                   {/* Inline quick edit input in card */}
@@ -1568,68 +1568,74 @@ export default function StockPage() {
                         onChange={(e) => handleInlineValChange(e.target.value)}
                         className="num-font"
                         autoFocus
-                        style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1.5px solid #10b981', fontSize: '13px', outline: 'none' }}
+                        style={{ flex: 1, padding: '5px', borderRadius: '6px', border: '1.5px solid #10b981', fontSize: '12px', outline: 'none' }}
                       />
                       <button
                         onClick={() => inlineEdit && handleSaveInline(p.id, inlineEdit.field, inlineEdit.val)}
-                        style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 10px', fontWeight: '800', cursor: 'pointer' }}
+                        style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 8px', fontWeight: '800', cursor: 'pointer' }}
                       >
                         ✓
                       </button>
                       <button
                         onClick={() => setInlineEdit(null)}
-                        style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer' }}
+                        style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer' }}
                       >
                         ✕
                       </button>
                     </div>
                   )}
 
-                  {/* Quick Add Stock +10 / +50 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                  {/* Quick Add Stock +10 / +50 & Restock */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', gap: '3px' }}>
                       <button
                         onClick={() => handleQuickAddStock(p, 10)}
-                        style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                        style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 6px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                        title="স্টকে ১০টি যোগ করুন"
                       >
                         +১০
                       </button>
                       <button
                         onClick={() => handleQuickAddStock(p, 50)}
-                        style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 6px', borderRadius: '6px', fontSize: '10.5px', fontWeight: '800', cursor: 'pointer' }}
+                        style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 5px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                        title="স্টকে ৫০টি যোগ করুন"
                       >
                         +৫০
                       </button>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      <button
-                        onClick={() => openRestockModal(p)}
-                        style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '4px 7px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                        title="নতুন মাল স্টকে তুলুন"
-                      >
-                        ➕ মাল তুলুন
-                      </button>
-                      <button
-                        onClick={() => openHistoryModal(p)}
-                        style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '4px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
-                        title="স্টক ইন ও বিক্রির হিস্ট্রি অডিট দেখুন"
-                      >
-                        📜 হিস্ট্রি
-                      </button>
-                      <button
-                        onClick={() => openEditModal(p)}
-                        style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        ✏️ এডিট
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(p)}
-                        style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '4px 6px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => openRestockModal(p)}
+                      style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                      title="নতুন মাল স্টকে তুলুন"
+                    >
+                      ➕ মাল তুলুন
+                    </button>
+                  </div>
+
+                  {/* Micro Actions Bar: History, Edit, Delete */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
+                    <button
+                      onClick={() => openHistoryModal(p)}
+                      style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}
+                      title="স্টক হিস্ট্রি দেখুন"
+                    >
+                      📜 হিস্ট্রি
+                    </button>
+                    <button
+                      onClick={() => openEditModal(p)}
+                      style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
+                      title="পণ্য এডিট করুন"
+                    >
+                      ✏️ এডিট
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(p)}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', cursor: 'pointer' }}
+                      title="পণ্য মুছুন"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               </div>

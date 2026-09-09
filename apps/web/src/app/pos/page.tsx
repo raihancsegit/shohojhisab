@@ -1457,16 +1457,13 @@ export default function PosPage() {
   }, [search, selectedCategory]);
 
   const filteredProducts = products.filter(p => {
-    const q = search.toLowerCase();
-    const matchesSearch = !q ||
-                          (p.banglaName && p.banglaName.toLowerCase().includes(q)) ||
-                          (p.name && p.name.toLowerCase().includes(q)) ||
-                          (p.genericName && p.genericName.toLowerCase().includes(q)) ||
-                          (p.brand && p.brand.toLowerCase().includes(q)) ||
-                          (p.size && p.size.toLowerCase().includes(q)) ||
-                          (p.color && p.color.toLowerCase().includes(q)) ||
-                          (p.barcode && p.barcode.includes(q));
-    if (!matchesSearch) return false;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const targetStr = `${p.banglaName || ''} ${p.name || ''} ${p.genericName || ''} ${p.brand || ''} ${p.size || ''} ${p.color || ''} ${p.barcode || ''} ${p.sku || ''} ${p.category || ''}`.toLowerCase();
+      const matchesSearch = tokens.every(token => targetStr.includes(token));
+      if (!matchesSearch) return false;
+    }
 
     if (selectedCategory === 'all') return true;
 
@@ -2045,39 +2042,40 @@ export default function PosPage() {
           }}>
         <div
           ref={searchContainerRef}
-          style={{
-            flex: 1,
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            background: '#ffffff',
-            borderRadius: '14px',
-            border: '1.5px solid #e2e8f0',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-          }}
+          className="stock-search-wrap"
+          style={{ flex: 1 }}
         >
+          <span className="stock-search-icon">🔍</span>
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="🔍 স্টকে থাকা পণ্য বা বারকোড খুঁজুন..."
+            placeholder="স্টকে থাকা পণ্য, বারকোড বা ব্র্যান্ড খুঁজুন..."
             value={search}
             onFocus={() => setShowSearchDropdown(true)}
             onChange={(e) => {
               setSearch(e.target.value);
               setShowSearchDropdown(true);
             }}
+            className="stock-search-input"
             style={{
-              width: '100%',
-              padding: '12px 80px 12px 14px',
-              borderRadius: '14px',
-              border: 'none',
-              outline: 'none',
-              fontSize: '14px',
-              background: 'transparent',
-              boxSizing: 'border-box'
+              paddingRight: search ? '108px' : '76px'
             }}
           />
           <div style={{ position: 'absolute', right: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setShowSearchDropdown(false);
+                }}
+                className="stock-search-clear"
+                title="সার্চ মুছুন"
+                style={{ position: 'static' }}
+              >
+                ✕
+              </button>
+            )}
             <button
               type="button"
               onClick={openCameraScanner}
@@ -2152,10 +2150,9 @@ export default function PosPage() {
                 const query = search.trim().toLowerCase();
                 const matched = products.filter(p => {
                   if (!query) return true;
-                  return (p.banglaName && p.banglaName.toLowerCase().includes(query)) ||
-                    (p.name && p.name.toLowerCase().includes(query)) ||
-                    (p.barcode && p.barcode.includes(query)) ||
-                    (p.genericName && p.genericName.toLowerCase().includes(query));
+                  const tokens = query.split(/\s+/).filter(Boolean);
+                  const targetStr = `${p.banglaName || ''} ${p.name || ''} ${p.barcode || ''} ${p.genericName || ''} ${p.brand || ''} ${p.sku || ''} ${p.category || ''}`.toLowerCase();
+                  return tokens.every(token => targetStr.includes(token));
                 });
 
                 if (matched.length === 0) {
@@ -3014,12 +3011,7 @@ export default function PosPage() {
       {loading ? (
         <DataLoader type="skeleton-grid" count={8} text="কাউন্টার পণ্য ও ক্যাটালগ লোড হচ্ছে..." />
       ) : (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-        gap: '12px',
-        marginBottom: '20px'
-      }}>
+      <div className="mobile-grid-2col" style={{ marginBottom: '20px' }}>
         {paginatedProducts.map(p => {
           const isExpired = p.expiryDate && new Date(p.expiryDate) < new Date();
           const isExpiringSoon = p.expiryDate && !isExpired && (new Date(p.expiryDate).getTime() - new Date().getTime()) < 30 * 24 * 60 * 60 * 1000;
@@ -3033,8 +3025,8 @@ export default function PosPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: '18px',
+                padding: '10px 10px',
+                borderRadius: '16px',
                 border: isExpired ? '1.5px solid #fca5a5' : '1.5px solid #f1f5f9',
                 background: '#ffffff',
                 boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'

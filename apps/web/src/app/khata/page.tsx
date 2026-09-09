@@ -696,9 +696,13 @@ export default function KhataPage() {
   }, [search, selectedFilter]);
 
   const filtered = customers.filter(c => {
-    const q = search.toLowerCase();
-    const matchesSearch = (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q));
-    if (!matchesSearch) return false;
+    const q = search.trim().toLowerCase();
+    if (q) {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const targetStr = `${c.name || ''} ${c.phone || ''} ${c.address || ''} ${c.lastItemsSummary || ''} ${c.lastInvoiceNo || ''} ${c.notes || c.note || ''}`.toLowerCase();
+      const matchesSearch = tokens.every(token => targetStr.includes(token));
+      if (!matchesSearch) return false;
+    }
 
     const due = Number(c.totalDue || c.total_due || 0);
     const dateRef = c.lastDateRaw || c.createdAt;
@@ -936,45 +940,50 @@ export default function KhataPage() {
         </div>
       )}
 
-      {/* Search Filter with Embedded Voice Mic */}
-      <div className="ui-card" style={{ padding: '12px 14px', marginBottom: '12px', position: 'relative' }}>
-        <input
-          type="text"
-          placeholder="🔍 কাস্টমারের নাম বা মোবাইল নাম্বার দিয়ে খুঁজুন..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 44px 10px 14px',
-            borderRadius: '12px',
-            border: '1px solid #cbd5e1',
-            fontSize: '14px',
-            outline: 'none',
-            boxSizing: 'border-box'
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => setShowVoiceKhataModal(true)}
-          style={{
-            position: 'absolute',
-            right: '22px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: '#fee2e2',
-            border: '1px solid #fca5a5',
-            borderRadius: '8px',
-            padding: '3px 7px',
-            color: '#dc2626',
-            cursor: 'pointer',
-            fontSize: '13.5px',
-            display: 'grid',
-            placeItems: 'center'
-          }}
-          title="মুখে বলে বাকি এন্ট্রি বা কাস্টমার খুঁজুন"
-        >
-          🎙️
-        </button>
+      {/* Modern Search Filter with Embedded Voice Mic & Clear Button */}
+      <div style={{ marginBottom: '12px' }}>
+        <div className="stock-search-wrap">
+          <span className="stock-search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="কাস্টমারের নাম, মোবাইল বা ঠিকানা দিয়ে খুঁজুন..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="stock-search-input"
+            style={{ paddingRight: search ? '80px' : '48px' }}
+          />
+          <div style={{ position: 'absolute', right: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="stock-search-clear"
+                title="সার্চ মুছুন"
+                style={{ position: 'static' }}
+              >
+                ✕
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowVoiceKhataModal(true)}
+              style={{
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                borderRadius: '8px',
+                padding: '4px 8px',
+                color: '#dc2626',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'grid',
+                placeItems: 'center'
+              }}
+              title="মুখে বলে বাকি এন্ট্রি বা কাস্টমার খুঁজুন"
+            >
+              🎙️
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 🏷️ Quick Date & Status Filter Pills */}
@@ -1253,367 +1262,363 @@ export default function KhataPage() {
           </table>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: '12px' }}>
+        <div className="mobile-grid-2col">
           {paginatedCustomers.map(c => {
             const due = Number(c.totalDue || c.total_due || 0);
+            const isOverLimit = due > Number(c.creditLimit || c.credit_limit || 5000);
             return (
               <div
                 key={c.id}
-                className="ui-card"
+                className="khata-grid-card"
                 style={{
-                  padding: '16px 18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  border: due > 0 ? '1.5px solid #fecdd3' : '1px solid #e2e8f0',
-                  boxShadow: due > 0 ? '0 2px 10px rgba(239, 68, 68, 0.05)' : '0 2px 6px rgba(0, 0, 0, 0.02)',
-                  borderRadius: '16px'
+                  border: due > 0 ? (isOverLimit ? '1.5px solid #f87171' : '1px solid #fecdd3') : '1px solid #e2e8f0',
+                  boxShadow: due > 0 ? '0 2px 8px rgba(239, 68, 68, 0.06)' : '0 1px 4px rgba(0, 0, 0, 0.03)',
+                  background: '#ffffff'
                 }}
               >
-                {/* Top Row: Customer Info & Due Balance */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '12px',
-                      background: due > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                      color: due > 0 ? '#b91c1c' : '#047857',
-                      display: 'grid',
-                      placeItems: 'center',
-                      fontSize: '18px',
-                      fontWeight: '900',
-                      flexShrink: 0
-                    }}>
-                      {c.name ? c.name.charAt(0) : '👤'}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '800', color: '#0f172a' }}>
+                <div>
+                  {/* Top Customer Header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '10px',
+                        background: due > 0 ? '#fee2e2' : '#ecfdf5',
+                        color: due > 0 ? '#b91c1c' : '#047857',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '14px',
+                        fontWeight: '900',
+                        flexShrink: 0
+                      }}>
+                        {c.name ? c.name.charAt(0) : '👤'}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4
+                          style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            color: '#0f172a',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                          title={c.name}
+                        >
                           {c.name}
                         </h4>
-                        {due > Number(c.creditLimit || c.credit_limit || 5000) && (
-                          <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '2px 7px', borderRadius: '6px' }}>
-                            🚨 বাকি সীমা পার (লিমিট ৳{Number(c.creditLimit || c.credit_limit || 5000)})
-                          </span>
-                        )}
-                        {(c.promiseDate || c.promise_date) && (
-                          <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#eff6ff', color: '#2563eb', padding: '2px 7px', borderRadius: '6px' }}>
-                            📅 দেওয়ার তারিখ: {c.promiseDate || c.promise_date}
-                          </span>
-                        )}
+                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          📱 {c.phone || 'নাম্বার নেই'}
+                        </span>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                        <span>📱 {c.phone}</span>
-                        {c.address && <span>• 📍 {c.address}</span>}
-                      </span>
                     </div>
+
+                    {/* Delete Icon Button */}
+                    <button
+                      type="button"
+                      onClick={() => setCustomerToDelete(c)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        fontSize: '12px',
+                        lineHeight: 1
+                      }}
+                      title={`${c.name} এর খাতা মুছে ফেলুন`}
+                    >
+                      🗑️
+                    </button>
                   </div>
 
-                  {/* Due Amount Badge */}
+                  {/* Badges: Credit limit / Promise date if available */}
+                  {(isOverLimit || c.promiseDate || c.promise_date) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                      {isOverLimit && (
+                        <span style={{ fontSize: '9px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px' }}>
+                          🚨 লিমিট পার
+                        </span>
+                      )}
+                      {(c.promiseDate || c.promise_date) && (
+                        <span style={{ fontSize: '9px', fontWeight: '700', background: '#eff6ff', color: '#2563eb', padding: '1px 5px', borderRadius: '4px' }}>
+                          📅 {c.promiseDate || c.promise_date}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Due Amount Highlight Box */}
                   <div style={{
                     background: due > 0 ? '#fff1f2' : '#ecfdf5',
-                    border: due > 0 ? '1.5px solid #fca5a5' : '1.5px solid #a7f3d0',
-                    padding: '6px 14px',
-                    borderRadius: '12px',
-                    textAlign: 'right',
-                    alignSelf: 'center'
+                    border: due > 0 ? '1px solid #fecdd3' : '1px solid #a7f3d0',
+                    borderRadius: '10px',
+                    padding: '6px 8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
                   }}>
-                    <span style={{ fontSize: '11px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '700', display: 'block' }}>
-                      বর্তমান বকেয়া বাকি
+                    <span style={{ fontSize: '10px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '700' }}>
+                      {due > 0 ? 'বকেয়া বাকি' : 'পরিশোধিত'}
                     </span>
-                    <div className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
+                    <strong className="num-font" style={{ fontSize: '15px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
                       ৳{due.toLocaleString('en-US')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Middle Row: কিসের বাকি ও শেষ ক্রয়ের তারিখ / ফর্দ প্যানেল */}
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '9px 12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px' }}>
-                    <span style={{ fontSize: '16px' }}>🛍️</span>
-                    <div>
-                      <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
-                        সর্বশেষ বাকি পণ্য / ফর্দ:
-                      </div>
-                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#1e293b', marginTop: '1px' }}>
-                        {c.lastItemsSummary || 'পূর্বের বাকি খাতা'}
-                      </div>
-                    </div>
+                    </strong>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#64748b', background: '#ffffff', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <span>📅</span>
-                    <span><strong>তারিখ:</strong> {c.lastDate || 'পূর্বের হিসাব'} {c.lastInvoiceNo ? `(#${c.lastInvoiceNo})` : ''}</span>
-                  </div>
-                </div>
-
-                {/* In-Card Expandable Date-wise History Preview */}
-                {cardHistoryOpen[c.id] && (
+                  {/* Last Items Snippet */}
                   <div style={{
-                    background: '#f1f5f9',
-                    border: '1.5px solid #cbd5e1',
-                    borderRadius: '12px',
-                    padding: '12px',
-                    marginTop: '2px'
+                    fontSize: '10.5px',
+                    color: '#64748b',
+                    background: '#f8fafc',
+                    borderRadius: '8px',
+                    padding: '4px 6px',
+                    marginBottom: '8px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    border: '1px solid #f1f5f9'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
-                        📋 {c.name} এর বিগত ফর্দসমূহ (তারিখ অনুযায়ী):
-                      </span>
-                      <button
-                        onClick={() => loadCustomerLedger(c)}
-                        style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        ফুল খতিয়ান ➔
-                      </button>
-                    </div>
-
-                    {cardHistoryData[c.id] && cardHistoryData[c.id].length > 0 ? (
-                      <div style={{ display: 'grid', gap: '8px' }}>
-                        {cardHistoryData[c.id].slice(0, 4).map((hEntry: any) => {
-                          const isPay = hEntry.isPayment || hEntry.paymentMethod === 'due_payment';
-                          return (
-                            <div key={hEntry.id} style={{ background: '#fff', borderRadius: '8px', padding: '8px 10px', border: isPay ? '1px solid #a7f3d0' : '1px solid #e2e8f0' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', marginBottom: '3px' }}>
-                                <span style={{ fontWeight: '800', color: isPay ? '#059669' : '#b45309' }}>
-                                  {isPay ? '🟢 জমা পরিশোধ' : `🔴 বাকি ক্রয় (#${hEntry.invoiceNo})`}
-                                </span>
-                                <span style={{ color: '#64748b' }}>📅 {hEntry.date} ({hEntry.time})</span>
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: '700' }}>
-                                  {hEntry.items && hEntry.items.length > 0 
-                                    ? hEntry.items.map((it: any) => `${it.name} (${it.quantity}টি)`).join(', ')
-                                    : (hEntry.note || 'বাকি এন্ট্রি')}
-                                </span>
-                                <strong className="num-font" style={{ fontSize: '13px', color: isPay ? '#059669' : '#dc2626' }}>
-                                  {isPay ? `-৳${hEntry.paidAmount}` : `+৳${hEntry.dueAmount}`}
-                                </strong>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '11.5px', color: '#64748b', textAlign: 'center', padding: '10px' }}>
-                        ফর্দ লোড হচ্ছে...
-                      </div>
-                    )}
+                    🛍️ {c.lastItemsSummary || 'পূর্বের বাকি হিসাব'}
                   </div>
-                )}
+                </div>
 
-                {/* Bottom Row: Comprehensive Action Buttons Toolbar */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', paddingTop: '4px' }}>
-                  {/* 🎙️ Direct Voice Action for this customer */}
-                  <button
-                    type="button"
-                    onClick={() => startCustomerVoice(c)}
-                    style={{
-                      background: '#fff1f2',
-                      color: '#b91c1c',
-                      border: '1px solid #fecdd3',
-                      padding: '6px 11px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 1px 3px rgba(239, 68, 68, 0.1)'
-                    }}
-                    title={`${c.name} এর জন্য মুখে বলে সরাসরি বাকি বা জমা এন্ট্রি করুন`}
-                  >
-                    <span>🎙️</span> মুখে বলুন
-                  </button>
-
-                  {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') && (
-                    <a
-                      href={`tel:${c.phone}`}
-                      style={{
-                        background: '#ecfdf5',
-                        color: '#059669',
-                        border: '1px solid #a7f3d0',
-                        padding: '6px 10px',
-                        borderRadius: '9px',
-                        fontSize: '11.5px',
-                        fontWeight: '800',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      title="সরাসরি মোবাইলে কল দিন"
-                    >
-                      <span>📞</span> কল
-                    </a>
+                <div>
+                  {/* Expanded In-card history if toggled */}
+                  {cardHistoryOpen[c.id] && (
+                    <div style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '8px',
+                      marginBottom: '8px',
+                      fontSize: '10.5px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontWeight: '800', color: '#334155' }}>📋 বিগত ফর্দ:</span>
+                        <button
+                          onClick={() => loadCustomerLedger(c)}
+                          style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '2px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                          খতিয়ান ➔
+                        </button>
+                      </div>
+                      {cardHistoryData[c.id] && cardHistoryData[c.id].length > 0 ? (
+                        <div style={{ display: 'grid', gap: '4px' }}>
+                          {cardHistoryData[c.id].slice(0, 3).map((hEntry: any) => {
+                            const isPay = hEntry.isPayment || hEntry.paymentMethod === 'due_payment';
+                            return (
+                              <div key={hEntry.id} style={{ background: '#fff', borderRadius: '6px', padding: '4px 6px', border: isPay ? '1px solid #a7f3d0' : '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px' }}>
+                                  <span style={{ fontWeight: '700', color: isPay ? '#059669' : '#b45309' }}>
+                                    {isPay ? '🟢 জমা' : `🔴 বাকি`}
+                                  </span>
+                                  <strong className="num-font" style={{ color: isPay ? '#059669' : '#dc2626' }}>
+                                    {isPay ? `-৳${hEntry.paidAmount}` : `+৳${hEntry.dueAmount}`}
+                                  </strong>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', color: '#64748b' }}>লোড হচ্ছে...</div>
+                      )}
+                    </div>
                   )}
 
-                  {due > 0 && (
+                  {/* Primary 2-button row: [+ বাকি] and [✓ জমা] */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', marginBottom: '6px' }}>
                     <button
-                      onClick={() => sendWhatsAppReminder(c)}
+                      type="button"
+                      onClick={() => {
+                        setShowAddDueModal(c);
+                        setAddDueAmount('');
+                        setAddDueItems('');
+                        setSelectedDueProducts([]);
+                        setProductSearch('');
+                        setDueMode('stock');
+                      }}
                       style={{
-                        background: '#25d366',
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '6px 11px',
-                        borderRadius: '9px',
-                        fontSize: '11.5px',
+                        padding: '6px 4px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
-                        display: 'inline-flex',
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(37, 211, 102, 0.2)'
+                        justifyContent: 'center',
+                        gap: '3px',
+                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
                       }}
-                      title="WhatsApp-এ বকেয়া পরিশোধের তাগাদা মেসেজ পাঠান"
+                      title="বাকি পণ্য যোগ করুন"
                     >
-                      <span>💬</span> তাগাদা
+                      <span>➕</span> বাকি দিন
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => {
-                      setShowAddDueModal(c);
-                      setAddDueAmount('');
-                      setAddDueItems('');
-                      setSelectedDueProducts([]);
-                      setProductSearch('');
-                      setDueMode('stock');
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
-                    }}
-                    title="গ্রাহকের খাতায় স্টক পণ্য থেকে বাকি মেমো যোগ করুন"
-                  >
-                    <span>➕</span> বাকি দিন
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '6px 4px',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px',
+                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                      }}
+                      title="টাকা আদায় / জমা নিন"
+                    >
+                      <span>💵</span> জমা নিন
+                    </button>
+                  </div>
 
-                  <button
-                    onClick={() => toggleInCardHistory(c)}
-                    style={{
-                      background: cardHistoryOpen[c.id] ? '#0f172a' : '#f8fafc',
-                      color: cardHistoryOpen[c.id] ? '#fff' : '#334155',
-                      border: '1px solid #cbd5e1',
-                      padding: '6px 10px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="তারিখ অনুযায়ী কি কি নিয়েছে দেখুন"
-                  >
-                    <span>📋</span> {cardHistoryOpen[c.id] ? 'ফর্দ বন্ধ' : 'ফর্দ দেখুন'}
-                  </button>
+                  {/* Micro Actions Bar: [📞] [💬] [🎙️] [📋] [📜] [📖] */}
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
+                    {/* Call button */}
+                    {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') ? (
+                      <a
+                        href={`tel:${c.phone}`}
+                        style={{
+                          background: '#ecfdf5',
+                          color: '#059669',
+                          border: '1px solid #a7f3d0',
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '6px',
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: '11px',
+                          textDecoration: 'none'
+                        }}
+                        title="সরাসরি কল দিন"
+                      >
+                        📞
+                      </a>
+                    ) : (
+                      <span style={{ width: '26px' }} />
+                    )}
 
-                  <button
-                    onClick={() => loadCustomerLedger(c)}
-                    style={{
-                      background: '#eff6ff',
-                      color: '#1e40af',
-                      border: '1px solid #bfdbfe',
-                      padding: '6px 10px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="কখন কোন তারিখে কি কি পণ্য নিয়েছে তার সম্পূর্ণ স্টেটমেন্ট"
-                  >
-                    <span>📜</span> ফুল খতিয়ান
-                  </button>
+                    {/* WhatsApp Reminder if due > 0 */}
+                    {due > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => sendWhatsAppReminder(c)}
+                        style={{
+                          background: '#25d366',
+                          color: '#fff',
+                          border: 'none',
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '6px',
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: '11px',
+                          cursor: 'pointer'
+                        }}
+                        title="WhatsApp তাগাদা"
+                      >
+                        💬
+                      </button>
+                    )}
 
-                  <Link
-                    href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
-                    target="_blank"
-                    style={{
-                      background: '#f8fafc',
-                      color: '#475569',
-                      border: '1px solid #cbd5e1',
-                      padding: '6px 9px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px'
-                    }}
-                    title="গ্রাহকের লাইভ ডিজিটাল পাসবুক দেখুন"
-                  >
-                    <span>📖</span> পাসবুক
-                  </Link>
+                    {/* Voice action */}
+                    <button
+                      type="button"
+                      onClick={() => startCustomerVoice(c)}
+                      style={{
+                        background: '#fff1f2',
+                        color: '#b91c1c',
+                        border: '1px solid #fecdd3',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '6px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '11px',
+                        cursor: 'pointer'
+                      }}
+                      title="ভয়েস এন্ট্রি"
+                    >
+                      🎙️
+                    </button>
 
-                  <button
-                    onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
-                    style={{
-                      background: '#10b981',
-                      color: '#fff',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '9px',
-                      fontSize: '11.5px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
-                    }}
-                  >
-                    <span>💵</span> টাকা আদায়
-                  </button>
+                    {/* Expand history */}
+                    <button
+                      type="button"
+                      onClick={() => toggleInCardHistory(c)}
+                      style={{
+                        background: cardHistoryOpen[c.id] ? '#0f172a' : '#f8fafc',
+                        color: cardHistoryOpen[c.id] ? '#fff' : '#334155',
+                        border: '1px solid #cbd5e1',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '6px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '11px',
+                        cursor: 'pointer'
+                      }}
+                      title="বিগত ফর্দ দেখুন"
+                    >
+                      📋
+                    </button>
 
-                  {/* 🗑️ Delete Customer Button */}
-                  <button
-                    type="button"
-                    onClick={() => setCustomerToDelete(c)}
-                    style={{
-                      background: '#ffffff',
-                      color: '#94a3b8',
-                      border: '1px solid #e2e8f0',
-                      padding: '6px 8px',
-                      borderRadius: '9px',
-                      fontSize: '12px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title={`${c.name} এর খাতা মুছে ফেলুন`}
-                  >
-                    <span>🗑️</span>
-                  </button>
+                    {/* Full Ledger */}
+                    <button
+                      type="button"
+                      onClick={() => loadCustomerLedger(c)}
+                      style={{
+                        background: '#eff6ff',
+                        color: '#1e40af',
+                        border: '1px solid #bfdbfe',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '6px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '11px',
+                        cursor: 'pointer'
+                      }}
+                      title="ফুল খতিয়ান"
+                    >
+                      📜
+                    </button>
+
+                    {/* Passbook Link */}
+                    <Link
+                      href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
+                      target="_blank"
+                      style={{
+                        background: '#f8fafc',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '6px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '11px',
+                        textDecoration: 'none'
+                      }}
+                      title="ডিজিটাল পাসবুক"
+                    >
+                      📖
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
