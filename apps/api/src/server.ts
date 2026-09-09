@@ -5203,7 +5203,8 @@ fastify.post('/api/voice-action', async (request, reply) => {
   return result;
 });
 
-// Health Checks
+// Root & Health Checks
+fastify.get('/', async () => ({ status: 'online', service: 'ShohojHisab API', message: 'ShohojHisab Dynamic API is running successfully!', timestamp: new Date().toISOString() }));
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 fastify.get('/api/health', async () => ({ status: 'healthy', timestamp: new Date().toISOString() }));
 
