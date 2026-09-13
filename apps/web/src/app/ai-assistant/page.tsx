@@ -1,11 +1,13 @@
 'use client';
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../../lib/audioFeedbackUtils';
 
 export default function AiAssistantPage() {
+  const router = useRouter();
   const { tenant, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
 
@@ -84,6 +86,13 @@ export default function AiAssistantPage() {
         // Trigger real-time refresh event across open pages
         if (data.action) {
           window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
+        }
+
+        // Automatic smooth navigation to destination page
+        if (data.navigateTo) {
+          setTimeout(() => {
+            router.push(data.navigateTo);
+          }, 1500);
         }
       } else {
         playWarningSound();

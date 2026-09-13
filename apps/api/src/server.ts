@@ -2553,7 +2553,7 @@ function cleanCandidateWords(raw: string): string {
   return nameTokens.slice(0, 2).join(' ').trim();
 }
 
-function executeAiShopCommand(tenantId: string, text: string, customAssistantName?: string): {
+export function executeAiShopCommand(tenantId: string, text: string, customAssistantName?: string): {
   success: boolean;
   speech: string;
   reply?: string;
@@ -2600,6 +2600,7 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
 
   const parseSpokenBengaliNumbers = (str: string) => {
     let s = String(str || '');
+    // Thousands & hundreds
     s = s.replace(/দেড়শো|দেড়শ|দেড়শো|দেড়শ/g, '150');
     s = s.replace(/আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ/g, '250');
     s = s.replace(/সাড়ে তিনশো|সাড়ে তিনশ/g, '350');
@@ -2620,18 +2621,53 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
     s = s.replace(/তিন হাজার/g, '3000');
     s = s.replace(/পাঁচ হাজার/g, '5000');
     s = s.replace(/দশ হাজার/g, '10000');
+
+    // Fractional kilograms & grams
     s = s.replace(/দেড় কেজি|দেড় কেজি/g, '1.5 কেজি');
     s = s.replace(/আড়াই কেজি|আড়াই কেজি/g, '2.5 কেজি');
+    s = s.replace(/সাড়ে তিন কেজি|সাড়ে ৩ কেজি/g, '3.5 কেজি');
+    s = s.replace(/সাড়ে চার কেজি|সাড়ে ৪ কেজি/g, '4.5 কেজি');
+    s = s.replace(/সাড়ে পাঁচ কেজি|সাড়ে ৫ কেজি/g, '5.5 কেজি');
     s = s.replace(/আধা কেজি|আধ কেজি|হাফ কেজি/g, '0.5 কেজি');
     s = s.replace(/এক পোয়া|১ পোয়া|এক পোয়া|১ পোয়া|পোয়া|পোয়া/g, '0.25 কেজি');
     s = s.replace(/আধ পোয়া|আধ পোয়া|হাফ পোয়া|হাফ পোয়া/g, '0.125 কেজি');
     s = s.replace(/তিন পোয়া|তিন পোয়া|৩ পোয়া|৩ পোয়া/g, '0.75 কেজি');
-    s = s.replace(/এক কুড়ি|১ কুড়ি|এক কুড়ি|১ কুড়ি/g, '20টি');
-    s = s.replace(/দুই কুড়ি|২ কুড়ি|দুই কুড়ি|২ কুড়ি/g, '40টি');
+    s = s.replace(/দেড়শো গ্রাম|দেড়শো গ্রাম|১৫০ গ্রাম/g, '0.15 কেজি');
+    s = s.replace(/আড়াইশো গ্রাম|আড়াইশো গ্রাম|২৫০ গ্রাম/g, '0.25 কেজি');
+    s = s.replace(/পাঁচশো গ্রাম|৫০০ গ্রাম/g, '0.5 কেজি');
+
+    // Counts & Halis/Dozens
+    s = s.replace(/এক হালি|১ হালি/g, '4টি');
+    s = s.replace(/দুই হালি|২ হালি/g, '8টি');
+    s = s.replace(/তিন হালি|৩ হালি/g, '12টি');
+    s = s.replace(/চার হালি|৪ হালি/g, '16টি');
+    s = s.replace(/পাঁচ হালি|৫ হালি/g, '20টি');
     s = s.replace(/এক ডজন|১ ডজন/g, '12টি');
     s = s.replace(/হাফ ডজন|আধা ডজন|আধ ডজন/g, '6টি');
     s = s.replace(/দেড় ডজন|দেড় ডজন/g, '18টি');
     s = s.replace(/দুই ডজন|২ ডজন/g, '24টি');
+    s = s.replace(/এক কুড়ি|১ কুড়ি|এক কুড়ি|১ কুড়ি/g, '20টি');
+    s = s.replace(/দুই কুড়ি|২ কুড়ি|দুই কুড়ি|২ কুড়ি/g, '40টি');
+
+    // General standalone fractional and word numbers
+    s = s.replace(/আড়াই|আড়াই/g, '2.5');
+    s = s.replace(/দেড়|দেড়/g, '1.5');
+    s = s.replace(/সাড়ে তিন/g, '3.5');
+    s = s.replace(/সাড়ে চার/g, '4.5');
+    s = s.replace(/সাড়ে পাঁচ/g, '5.5');
+    s = s.replace(/আধা|আধ|হাফ/g, '0.5');
+
+    s = s.replace(/\bএক\b/g, '1');
+    s = s.replace(/\bদুই\b/g, '2');
+    s = s.replace(/\bতিন\b/g, '3');
+    s = s.replace(/\bচার\b/g, '4');
+    s = s.replace(/\bপাঁচ\b/g, '5');
+    s = s.replace(/\bছয়\b|\bছয়\b/g, '6');
+    s = s.replace(/\bসাত\b/g, '7');
+    s = s.replace(/\bআট\b/g, '8');
+    s = s.replace(/\bনয়\b|\bনয়\b/g, '9');
+    s = s.replace(/\bদশ\b/g, '10');
+
     return s;
   };
 
@@ -2756,30 +2792,114 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
     return null;
   };
 
-  // 1. Proactive Navigation & Voice Narration for Stock & Reports
-  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে|বিক্রি/.test(rawText)) {
-    const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
-    const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
-    const totalCount = Number(totalProdRow?.total) || 0;
-    const totalVal = Number(totalProdRow?.totalValuation) || 0;
-    const lowCount = lowStockRows.length;
+  // 1. Category-Aware Route Whitelisting
+  const tenantRow = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId) as any;
+  const tenantCategory = tenantRow?.industry_category_id || 'cat-grocery';
 
-    let stockSummarySpeech = '';
-    if (lowCount > 0) {
-      const topLow = lowStockRows.slice(0, 3).map(p => `${p.bangla_name || p.name} (${p.stock} ${p.unit || 'টি'})`).join(', ');
-      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম—যেমন: ${topLow}। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
-    } else {
-      stockSummarySpeech = `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
+  const categoryAllowedRoutes: Record<string, string[]> = {
+    'cat-pharmacy': ['/pos', '/stock', '/khata', '/expiry-tracker', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings', '/challan-ocr'],
+    'cat-grocery': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/expiry-tracker', '/day-end', '/settings', '/challan-ocr'],
+    'cat-mobile': ['/pos', '/stock', '/khata', '/installments', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings'],
+    'cat-furniture': ['/pos', '/stock', '/khata', '/installments', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings'],
+    'cat-clothing': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/barcode-generator', '/day-end', '/settings'],
+    'cat-shoes': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/barcode-generator', '/day-end', '/settings'],
+    'cat-hardware': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings'],
+    'cat-bakery': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/expiry-tracker', '/day-end', '/settings'],
+    'cat-restaurant': ['/pos', '/expenses', '/reports', '/settings', '/day-end'],
+    'cat-meat-fish': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings'],
+    'cat-stationery': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/day-end', '/settings'],
+    'cat-cosmetics': ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/products', '/expiry-tracker', '/day-end', '/settings'],
+  };
+
+  const allowedRoutes = categoryAllowedRoutes[tenantCategory] || ['/pos', '/stock', '/khata', '/expenses', '/reports', '/dealers', '/settings', '/day-end'];
+
+  const checkAndNavigate = (targetRoute: string, successSpeech: string, replyText: string, linkLabel: string) => {
+    if (!allowedRoutes.includes(targetRoute)) {
+      return {
+        success: false,
+        speech: `দুঃখিত, এই পেজটি আপনার দোকানের ক্যাটাগরির অন্তর্ভুক্ত নয়। আপনার ড্যাশবোর্ডের অনুমোদিত মেনুসমূহ ব্যবহার করুন।`,
+        reply: `⚠️ **অননুমোদিত পেজ:**\nআপনার দোকানের ক্যাটাগরির জন্য এই ফিচারটি প্রযোজ্য নয়।`
+      };
     }
-
     return {
       success: true,
       action: 'navigate',
-      navigateTo: '/stock',
-      speech: stockSummarySpeech,
-      reply: `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n• মোট ইনভেন্টরি মূল্য: **৳${totalVal.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`,
-      actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
+      navigateTo: targetRoute,
+      speech: successSpeech,
+      reply: replyText,
+      actionLink: { text: linkLabel, href: targetRoute }
     };
+  };
+
+  // Navigation: POS / Cash Counter / Sales Memo
+  if (/মেমো\s*কাট|মেমো\s*কর|মেমো\s*বানাও|মেমো\s*পেজ|বিক্রি\s*পেজ|ক্যাশ\s*কাউন্টার|কাউন্টারে\s*যাও|কাউন্টারে\s*যান|ক্যাশ\s*পেজ|পিওএস|বিল\s*পেজ|বিল\s*কাট|নতুন\s*বিক্রি|বিক্রি\s*করতে\s*চাই/.test(rawText) && !/বিক্রি\s*হলো|বেচা\s*হলো|বাকি\s*নিল|টাকা|কেজি|পাতা|পিস|প্যাকেট/.test(rawText)) {
+    return checkAndNavigate('/pos', 'ক্যাশ কাউন্টারে এসেছি। নতুন বিক্রি ও মেমো কাটার জন্য প্রস্তুত।', '🧾 **ক্যাশ কাউন্টার / বিক্রি পেজ:**\nবিক্রির জন্য প্রস্তুত। সরাসরি মুখে বলুন অথবা পণ্য স্ক্যান করুন।', 'ক্যাশ কাউন্টারে যান →');
+  }
+
+  // Navigation: Customer Dues / Khata
+  if (/বাকির\s*খাতা|বাকি\s*পেজ|কাস্টমার\s*খাতা|দেনাদার|কার\s*কাছে\s*কত|বাকি\s*লিস্ট|খাতা\s*পেজ|বাকিদার|বাকি\s*দেখাও|বাকি\s*দেখব|বাকি\s*দেখতে\s*চাই/.test(rawText) && !/বাকি\s*(নিল|দিল|টাকা|জমা|লেখো)/.test(rawText)) {
+    const marketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as count FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
+    const dueAmt = Math.round(Number(marketDueRow?.totalDue) || 0);
+    const count = Number(marketDueRow?.count) || 0;
+    return checkAndNavigate('/khata', `বাকির খাতায় এসেছি। বর্তমানে মোট ${count} জন কাস্টমারের কাছে মোট ৳${dueAmt.toLocaleString('en-US')} টাকা বাকি রয়েছে।`, `📖 **বাকির খাতা:**\n• দেনাদার কাস্টমার: **${count} জন**\n• মোট মার্কেট বাকি: **৳${dueAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'বাকির খাতা দেখুন →');
+  }
+
+  // Navigation: Stock & Inventory
+  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি|মজুদ\s*মাল|গুদামের\s*খবর|গুদাম/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে|বিক্রি/.test(rawText)) {
+    const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
+    const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
+    const totalCount = Number(totalProdRow?.total) || 0;
+    const totalVal = Math.round(Number(totalProdRow?.totalValuation) || 0);
+    const lowCount = lowStockRows.length;
+    const speech = lowCount > 0 
+      ? `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`
+      : `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
+    return checkAndNavigate('/stock', speech, `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n• মোট ইনভেন্টরি মূল্য: **৳${totalVal.toLocaleString('en-US')}**`, 'স্টক খাতা দেখুন →');
+  }
+
+  // Navigation: Expenses
+  if (/খরচের\s*খাতা|খরচ\s*পেজ|ব্যয়ের\s*খাতা|ব্যয়\s*পেজ|খরচ\s*দেখাও|খরচপাতি|আজকের\s*খরচ\s*কত/.test(rawText) && !/খরচ\s*(লেখো|করলাম|হলো|লিখুন|\d+)/.test(rawText)) {
+    const todayExpRow = db.prepare('SELECT COALESCE(SUM(amount), 0) as totalExp FROM expenses WHERE tenant_id = ? AND date = ?').get(tenantId, todayDate) as any;
+    const expAmt = Math.round(Number(todayExpRow?.totalExp) || 0);
+    return checkAndNavigate('/expenses', `খরচের খাতায় এসেছি। আজকের মোট খরচ ৳${expAmt.toLocaleString('en-US')} টাকা।`, `💸 **দোকানের খরচের খাতা:**\n• আজকের মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'খরচ পেজে যান →');
+  }
+
+  // Navigation: Reports & Profits
+  if (/রিপোর্ট\s*পেজ|লাভ\s*লস|লাভের\s*হিসাব|আজকের\s*লাভ|বিক্রি\s*ও\s*লাভ|মাসিক\s*হিসাব|রিপোর্ট\s*দেখাও|হিসাব\s*নিকাশ|সামারি/.test(rawText) && !/বিক্রি\s*হলো|বেচা\s*হলো/.test(rawText)) {
+    const todaySalesRow = db.prepare('SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as totalProfit FROM sales WHERE tenant_id = ? AND date(created_at) = ?').get(tenantId, todayDate) as any;
+    const s = Math.round(Number(todaySalesRow?.totalSales) || 0);
+    const p = Math.round(Number(todaySalesRow?.totalProfit) || 0);
+    return checkAndNavigate('/reports', `রিপোর্ট পেজে এসেছি। আজকের মোট বিক্রি ৳${s.toLocaleString('en-US')} টাকা এবং নিট লাভ ৳${p.toLocaleString('en-US')} টাকা।`, `📊 **দৈনিক ব্যবসায়িক রিপোর্ট:**\n• আজকের বিক্রি: **৳${s.toLocaleString('en-US')}**\n• আজকের লাভ: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট তৈরি হচ্ছে...`, 'রিপোর্ট দেখুন →');
+  }
+
+  // Navigation: Dealers & Wholesalers
+  if (/মহাজন\s*পেজ|মহাজনের\s*খাতা|ডিলার\s*পেজ|ডিলারদের\s*খাতা|সাপ্লায়ার|পাইকারি\s*পার্টি|মহাজন\s*লিস্ট|পাওনাদার/.test(rawText)) {
+    return checkAndNavigate('/dealers', 'মহাজন ও ডিলারদের খাতায় এসেছি। আপনি নতুন চালান তুলতে বা মহাজনের পাওনা পরিশোধ করতে পারেন।', '🏢 **ডিলার ও মহাজন খাতা:**\nসাপ্লায়ারদের হিসাব পরিচালনা করুন।', 'মহাজন খাতা দেখুন →');
+  }
+
+  // Navigation: Expiry Tracker
+  if (/মেয়াদ\s*পেজ|মেয়াদোত্তীর্ণ|এক্সপায়ারি|ডেট\s*ফেল|মেয়াদ\s*শেষ/.test(rawText)) {
+    return checkAndNavigate('/expiry-tracker', 'মেয়াদ পর্যবেক্ষণ পেজে এসেছি। এখানে যেসকল পণ্যের মেয়াদ দ্রুত শেষ হতে যাচ্ছে তা দেখতে পারেন।', '⏳ **মেয়াদ পর্যবেক্ষণ পেজ:**\nমেয়াদোত্তীর্ণ পণ্য ট্র্যাক করুন।', 'মেয়াদ পেজ দেখুন →');
+  }
+
+  // Navigation: Day End / Closing
+  if (/দিন\s*শেষ|ক্যাশ\s*ক্লোজিং|ক্লোজিং\s*পেজ|আজকের\s*ক্লোজিং|হিসাব\s*বন্ধ/.test(rawText)) {
+    return checkAndNavigate('/day-end', 'আজকের দিন শেষ ও ক্যাশ ক্লোজিং পেজে এসেছি। সারাদিনের নগদ টাকা মিলিয়ে হিসাব ক্লোজ করুন।', '🌙 **দিন শেষ ও ক্লোজিং:**\nআজকের দিনের হিসাব বন্ধ করুন।', 'ক্লোজিং পেজ দেখুন →');
+  }
+
+  // Navigation: Installments
+  if (/কিস্তির\s*খাতা|কিস্তি\s*পেজ|কিস্তির\s*হিসাব|ইন্সটলমেন্ট/.test(rawText)) {
+    return checkAndNavigate('/installments', 'কিস্তির খাতায় এসেছি। সকল গ্রাহকের মাসিক কিস্তির খতিয়ান দেখতে পারেন।', '📱 **কিস্তির খাতা:**\nগ্রাহকদের কিস্তি আদায় ও কিস্তির খতিয়ান।', 'কিস্তি পেজ দেখুন →');
+  }
+
+  // Navigation: Products List
+  if (/পণ্য\s*তালিকা|নতুন\s*পণ্য|প্রোডাক্ট\s*পেজ|আইটেম\s*লিস্ট/.test(rawText) && !/স্টক\s*যোগ/.test(rawText)) {
+    return checkAndNavigate('/products', 'পণ্য তালিকা পেজে এসেছি। এখানে নতুন পণ্য যোগ বা পণ্যের মূল্য পরিবর্তন করতে পারেন।', '🏷️ **পণ্য ও মূল্য তালিকা:**\nসকল আইটেম ও বিক্রয়মূল্য পরিচালনা করুন।', 'পণ্য তালিকা দেখুন →');
+  }
+
+  // Navigation: Settings
+  if (/সেটিংস\s*পেজ|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল/.test(rawText)) {
+    return checkAndNavigate('/settings', 'দোকানের সেটিংস পেজে এসেছি।', '⚙️ **দোকানের সেটিংস পেজ:**\nদোকানের নাম, ঠিকানা ও কনফিগারেশন পরিবর্তন করুন।', 'সেটিংস পেজে যান →');
   }
 
   // Assistant Stock Helper ("আমার হয়ে স্টক যোগ করো", "আমার হয়ে স্টক এড করো")
@@ -2862,67 +2982,213 @@ function executeAiShopCommand(tenantId: string, text: string, customAssistantNam
     }
   }
 
-  // 3. Stock-Based Product Selling ("নাপা ২ পাতা বিক্রি হলো নগদ ২০ টাকা", "চিনি ৫ কেজি বিক্রি হলো")
-  const isSaleCommand = /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো/.test(rawText) && !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট/.test(rawText);
-  if (isSaleCommand && /\d+/.test(normalized)) {
-    const numbersMatch = normalized.match(/(\d+(\.\d+)?)/g);
-    const qty = numbersMatch && numbersMatch[0] ? parseFloat(numbersMatch[0]) : 1;
-    const price = numbersMatch && numbersMatch[1] ? parseFloat(numbersMatch[1]) : (qty * 15);
+  // 3. Stock-Based Product Selling with Dynamic Multi-Unit Conversion (পাতা, পিস, কেজি, প্যাকেট, বস্তা, ইত্যাদি)
+  const isSaleCommand = /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|নগদ\s*বিক্রি/.test(rawText) && 
+    !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট/.test(rawText);
 
-    // Try finding product in stock
-    const productsInTenant = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
-    let matchedProd: any = null;
-    for (const p of productsInTenant) {
-      const pName = (p.bangla_name || p.name || '').toLowerCase();
-      if (pName && rawText.toLowerCase().includes(pName)) {
-        matchedProd = p;
-        break;
+  if (isSaleCommand && /\d+/.test(normalized)) {
+    // Check customer if credit / বাকি
+    let customer = findCustomerInUtterance(rawText);
+    const isDue = /বাকি|বাকিতে|বাকি\s*নিল/.test(rawText);
+
+    // Split multiple items in single utterance: "নাপা ২ পাতা এবং চিনি ১ কেজি"
+    const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
+    const processedItems: any[] = [];
+    let totalSaleAmount = 0;
+    let totalProfitAmount = 0;
+
+    const allProducts = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+
+    for (const seg of segments) {
+      const segNorm = toEnDigits(parseSpokenBengaliNumbers(seg.toLowerCase()));
+      const numMatch = segNorm.match(/(\d+(\.\d+)?)/);
+      if (!numMatch) continue;
+      const qty = parseFloat(numMatch[1]);
+      if (qty <= 0) continue;
+
+      // Extract spoken unit
+      const unitMatch = seg.match(/পাতা|বক্স|বাক্স|প্যাকেট|প্যাক|শলা|কাঠি|কেজি|গ্রাম|পিস|টি|টা|বস্তা|লিটার|মিলি|ফুট|মিটার|জোড়া|হালি|ডজন|কুড়ি/);
+      const spokenUnit = unitMatch ? unitMatch[0] : 'পিস';
+
+      // Clean segment to isolate product candidate name from segNorm
+      const cleanProdCandidate = segNorm
+        .replace(/(\d+(\.\d+)?)/g, '')
+        .replace(/(পাতা|বক্স|বাক্স|প্যাকেট|প্যাক|শলা|কাঠি|কেজি|গ্রাম|পিস|টি|টা|বস্তা|লিটার|মিলি|ফুট|মিটার|জোড়া|হালি|ডজন|কুড়ি)/gi, '')
+        .replace(/(বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|বাকি|নগদ|টাকা|টাকার|tk|ভাই|কাকা|চাচা|আপা|কে|রে|দাও|নিল|করো)/gi, '')
+        .replace(/[^\u0980-\u09FFa-zA-Z\s]/g, ' ')
+        .trim();
+
+      // Find matching product
+      let matchedProd: any = null;
+      const cleanCand = cleanProdCandidate.toLowerCase().trim();
+
+      if (cleanCand && cleanCand.length >= 2) {
+        for (const p of allProducts) {
+          const pBangla = (p.bangla_name || '').toLowerCase();
+          const pName = (p.name || '').toLowerCase();
+          const pGen = (p.generic_name || '').toLowerCase();
+          if (pBangla.includes(cleanCand) || pName.includes(cleanCand) || cleanCand.includes(pBangla) || (pGen && pGen.includes(cleanCand))) {
+            matchedProd = p;
+            break;
+          }
+        }
+      }
+
+      // Fallback: search key words in segment
+      if (!matchedProd) {
+        const wordsInSeg = segNorm.split(/\s+/).map(w => w.replace(/[^\u0980-\u09FFa-zA-Z]/g, '').trim()).filter(w => w.length >= 3);
+        for (const p of allProducts) {
+          const pBangla = (p.bangla_name || '').toLowerCase();
+          const pName = (p.name || '').toLowerCase();
+          for (const w of wordsInSeg) {
+            if (['বিক্রি', 'বেচা', 'মেমো', 'নগদ', 'বাকি', 'টাকা', 'কেজি', 'পাতা', 'পিস', 'প্যাকেট', 'করলাম'].includes(w)) continue;
+            if (pBangla.includes(w) || pName.includes(w)) {
+              matchedProd = p;
+              break;
+            }
+          }
+          if (matchedProd) break;
+        }
+      }
+
+      if (matchedProd) {
+        let baseSellingPrice = Number(matchedProd.selling_price) || 0;
+        let basePurchasePrice = Number(matchedProd.purchase_price) || 0;
+        const ratio = Number(matchedProd.conversion_ratio) || 1;
+        const baseUnit = (matchedProd.unit || '').trim().toLowerCase();
+        const subUnit = (matchedProd.sub_unit || '').trim().toLowerCase();
+
+        let effectivePricePerSpokenUnit = baseSellingPrice;
+        let effectivePurchasePerSpokenUnit = basePurchasePrice;
+        let stockDeduction = qty;
+        let displayUnit = spokenUnit;
+
+        // Condition 1: Spoken unit matches sub_unit (e.g. spoken 'পাতা', base 'বক্স', ratio 10)
+        if (subUnit && (spokenUnit.includes(subUnit) || subUnit.includes(spokenUnit))) {
+          effectivePricePerSpokenUnit = ratio > 0 ? (baseSellingPrice / ratio) : baseSellingPrice;
+          effectivePurchasePerSpokenUnit = ratio > 0 ? (basePurchasePrice / ratio) : basePurchasePrice;
+          stockDeduction = ratio > 0 ? (qty / ratio) : qty;
+          displayUnit = matchedProd.sub_unit || spokenUnit;
+        }
+        // Condition 2: Spoken unit is gram while product is in KG
+        else if (spokenUnit === 'গ্রাম' && (baseUnit.includes('কেজি') || subUnit.includes('কেজি'))) {
+          effectivePricePerSpokenUnit = baseSellingPrice / 1000;
+          effectivePurchasePerSpokenUnit = basePurchasePrice / 1000;
+          stockDeduction = qty / 1000;
+          displayUnit = 'গ্রাম';
+        }
+        // Condition 3: Spoken unit matches base unit (e.g. 'বক্স', 'বস্তা', 'কেজি')
+        else {
+          displayUnit = matchedProd.unit || spokenUnit;
+          stockDeduction = qty;
+        }
+
+        const lineTotal = Math.round(qty * effectivePricePerSpokenUnit);
+        const lineProfit = Math.max(0, Math.round(lineTotal - (stockDeduction * effectivePurchasePerSpokenUnit)));
+
+        const currentStock = Number(matchedProd.stock) || 0;
+        const newStock = Math.max(0, parseFloat((currentStock - stockDeduction).toFixed(3)));
+
+        // Update product stock in DB
+        db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProd.id);
+
+        totalSaleAmount += lineTotal;
+        totalProfitAmount += lineProfit;
+
+        processedItems.push({
+          product: matchedProd,
+          qty,
+          displayUnit,
+          lineTotal,
+          lineProfit,
+          stockDeduction,
+          newStock
+        });
       }
     }
 
-    if (matchedProd) {
-      const currentStock = Number(matchedProd.stock) || 0;
-      const newStock = Math.max(0, currentStock - qty);
-      db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProd.id);
-
+    if (processedItems.length > 0) {
       const saleId = 'sale-' + uuidv4().slice(0, 8);
       const invoiceNo = 'MEMO-' + Date.now().toString().slice(-4);
-      const finalPrice = numbersMatch && numbersMatch.length > 1 ? price : (qty * Number(matchedProd.selling_price || 15));
-      const profit = Math.max(0, finalPrice - (qty * Number(matchedProd.purchase_price || 10)));
-
-      let customer = findCustomerInUtterance(rawText);
-      const isDue = /বাকি|বাকিতে/.test(rawText);
 
       if (isDue && customer) {
-        const newDue = (Number(customer.total_due) || 0) + finalPrice;
+        const newDue = (Number(customer.total_due) || 0) + totalSaleAmount;
         db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
       }
 
+      // Record sale in DB
       db.prepare(`
         INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(saleId, tenantId, invoiceNo, finalPrice, 0, finalPrice, isDue ? 0 : finalPrice, isDue ? finalPrice : 0, profit, isDue ? 'due' : 'cash', customer?.id || null, customer?.name || 'নগদ কাস্টমার', 'ভয়েস মেমো বিক্রি', 'ভয়েস এআই', now);
+      `).run(
+        saleId,
+        tenantId,
+        invoiceNo,
+        totalSaleAmount,
+        0,
+        totalSaleAmount,
+        isDue ? 0 : totalSaleAmount,
+        isDue ? totalSaleAmount : 0,
+        totalProfitAmount,
+        isDue ? 'due' : 'cash',
+        customer?.id || null,
+        customer?.name || (isDue ? 'বাকি কাস্টমার' : 'নগদ কাস্টমার'),
+        'ভয়েস স্মার্ট মেমো',
+        'ভয়েস এআই',
+        now
+      );
 
-      db.prepare(`
-        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run('sitem-' + uuidv4().slice(0, 8), saleId, matchedProd.bangla_name || matchedProd.name, qty, finalPrice / qty, finalPrice);
+      // Record items and stock logs
+      for (const item of processedItems) {
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          'sitem-' + uuidv4().slice(0, 8),
+          saleId,
+          item.product.id,
+          item.product.bangla_name || item.product.name,
+          item.qty,
+          Number(item.product.purchase_price) || 0,
+          Math.round(item.lineTotal / item.qty),
+          item.lineTotal,
+          item.lineProfit
+        );
 
-      const logId = 'stklog-' + uuidv4().slice(0, 8);
-      db.prepare(`
-        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
-        VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'ভয়েস মেমো বিক্রি', ?)
-      `).run(logId, tenantId, matchedProd.id, matchedProd.bangla_name || matchedProd.name, qty, matchedProd.unit || 'পিস', qty, finalPrice, invoiceNo, now);
+        const logId = 'stklog-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+          VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'ভয়েস মেমো বিক্রি', ?)
+        `).run(
+          logId,
+          tenantId,
+          item.product.id,
+          item.product.bangla_name || item.product.name,
+          item.stockDeduction,
+          item.product.unit || 'পিস',
+          item.stockDeduction,
+          item.lineTotal,
+          invoiceNo,
+          now
+        );
+      }
 
-      const speech = `✓ ${matchedProd.bangla_name || matchedProd.name} ${qty} ${matchedProd.unit || 'টি'} বিক্রি সফল হয়েছে এবং স্টক আপডেট করা হয়েছে। অবশিষ্ট মজুদ ${newStock} ${matchedProd.unit || 'টি'}।`;
+      const summaryList = processedItems.map(i => `${i.product.bangla_name || i.product.name} ${i.qty} ${i.displayUnit}`).join(', ');
+      const paymentStatus = isDue ? (customer ? `${customer.name}-এর বাকি` : 'বাকিতে') : 'নগদ';
+      const speech = `✓ ${summaryList} মোট ৳${totalSaleAmount} টাকা ${paymentStatus} বিক্রি সফল হয়েছে। স্টক আপডেট করা হয়েছে।`;
+
+      const replyItemsMarkdown = processedItems.map(i => 
+        `• **${i.product.bangla_name || i.product.name}**: ${i.qty} ${i.displayUnit} = **৳${i.lineTotal.toLocaleString('en-US')}** (অবশিষ্ট স্টক: ${i.newStock} ${i.product.unit || ''})`
+      ).join('\n');
+
       return {
         success: true,
         action: 'sale_recorded',
         navigateTo: '/pos',
         speech,
-        reply: `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!**\n• পণ্য: **${matchedProd.bangla_name || matchedProd.name}**\n• বিক্রির পরিমাণ: **${qty} ${matchedProd.unit || 'টি'}**\n• মূল্য: **৳${finalPrice.toLocaleString('en-US')}**\n• অবশিষ্ট স্টক: **${newStock} ${matchedProd.unit || 'টি'}**`,
+        reply: `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!** (ইনভয়েস: #${invoiceNo})\n${replyItemsMarkdown}\n\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• মাধ্যম: **${paymentStatus}**`,
         actionLink: { text: 'ক্যাশ কাউন্টারে মেমো দেখুন →', href: '/pos' },
-        data: { productName: matchedProd.name, quantity: qty, finalPrice, remainingStock: newStock }
+        data: { invoiceNo, totalAmount: totalSaleAmount, items: processedItems }
       };
     }
   }
@@ -5228,5 +5494,7 @@ const start = async () => {
   }
 };
 
-start();
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
 
