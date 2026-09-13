@@ -870,8 +870,10 @@ try {
         now
       );
 
-      // Auto import starter products for each category
-      autoImportStarterPack(dt.id, dt.cat);
+      // Auto import starter products for each category (skip if AUTO_SEED=false)
+      if (process.env.AUTO_SEED !== 'false') {
+        autoImportStarterPack(dt.id, dt.cat);
+      }
 
       // Seed Staff for each shop
       insertStaff.run('staff-' + dt.id + '-cashier', dt.id, 'সাকিব হাসান (ক্যাশিয়ার)', dt.phone, '2222', 'cashier', JSON.stringify(['pos', 'khata_view', 'khata_collect', 'expenses_create', 'soundbox']), null, now);
@@ -1491,7 +1493,9 @@ fastify.post('/api/admin/tenants', async (request, reply) => {
       VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)
     `).run('br-' + uuidv4().slice(0, 8), id, 'প্রধান শাখা', body.location || 'বাজার রোড', body.phone, body.ownerName, now);
 
-    autoImportStarterPack(id, categoryId);
+    if (body.importStarterPack !== false && process.env.AUTO_SEED !== 'false') {
+      autoImportStarterPack(id, categoryId);
+    }
 
     const createdTenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
     const cat = db.prepare('SELECT * FROM categories WHERE id = ?').get(categoryId) as any;

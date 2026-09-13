@@ -1981,8 +1981,412 @@ export default function PosPage() {
         </div>
       </div>
 
-      {/* ⚡ SMART NATURAL VOICE & EXPRESS ITEM ENTRY BAR */}
+      {/* 🎛️ POS Mode Switcher (Catalog & Express Sale vs. Clean Calculator Sale) */}
       <div style={{
+        display: 'flex',
+        background: 'var(--bg-canvas)',
+        border: '1.5px solid var(--border-card)',
+        borderRadius: '16px',
+        padding: '4px',
+        marginBottom: '14px',
+        gap: '4px'
+      }}>
+        <button
+          type="button"
+          onClick={() => { setPosMode('catalog'); triggerHaptic('light'); }}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: '12px',
+            border: 'none',
+            background: posMode === 'catalog' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
+            color: posMode === 'catalog' ? '#ffffff' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: posMode === 'catalog' ? '0 2px 8px rgba(79, 70, 229, 0.3)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <span>🛍️ ক্যাটালগ ও এক্সপ্রেস মেমো</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setPosMode('numpad'); triggerHaptic('light'); }}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: '12px',
+            border: 'none',
+            background: posMode === 'numpad' ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'transparent',
+            color: posMode === 'numpad' ? '#ffffff' : 'var(--text-secondary)',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: posMode === 'numpad' ? '0 2px 8px rgba(5, 150, 105, 0.3)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <span>🔢 ক্যালকুলেটর কুইক সেল</span>
+        </button>
+      </div>
+
+      {/* 🔢 CLEAN CALCULATOR QUICK SALE VIEW */}
+      {posMode === 'numpad' && (
+        <div style={{
+          background: 'var(--bg-card)',
+          borderRadius: '24px',
+          border: '1.5px solid var(--border-card)',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.05)',
+          padding: '20px',
+          marginBottom: '20px',
+          maxWidth: '560px',
+          margin: '0 auto 24px auto'
+        }}>
+          {/* Header Title */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '22px' }}>🔢</span>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                  ক্যালকুলেটর কুইক সেল
+                </h2>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  সরাসরি টাকার অংকে দ্রুত বিক্রি ও বাকি হিসাব
+                </span>
+              </div>
+            </div>
+            {numpadItems.length > 0 && (
+              <button
+                type="button"
+                onClick={handleNumpadClear}
+                style={{
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                সব মুছুন (C)
+              </button>
+            )}
+          </div>
+
+          {/* LED Display Screen */}
+          <div style={{
+            background: 'linear-gradient(135deg, #090d16 0%, #131b2e 100%)',
+            borderRadius: '18px',
+            padding: '16px 20px',
+            color: '#ffffff',
+            marginBottom: '16px',
+            border: '1.5px solid #1e293b',
+            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
+          }}>
+            {/* Expression Equation */}
+            <div style={{ fontSize: '13px', color: '#94a3b8', minHeight: '20px', overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: '4px' }} className="num-font">
+              {numpadItems.length > 0
+                ? numpadItems.map((it, idx) => (
+                    <span key={it.id}>
+                      {idx > 0 ? ' + ' : ''}৳{it.amount} {it.note ? `(${it.note})` : ''}
+                    </span>
+                  ))
+                : 'টাকার অংক চাপুন...'}
+              {numpadInput && (
+                <span style={{ color: '#38bdf8' }}> {numpadItems.length > 0 ? '+' : ''} ৳{numpadInput}</span>
+              )}
+            </div>
+
+            {/* Big LED Total */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '800' }}>
+                মোট প্রদেয়:
+              </span>
+              <div style={{ fontSize: '36px', fontWeight: '900', color: '#10b981', lineHeight: 1 }} className="num-font">
+                ৳ {numpadTotal.toLocaleString('en-US')}
+              </div>
+            </div>
+          </div>
+
+          {/* Items Pills (if multiple amounts entered) */}
+          {numpadItems.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              overflowX: 'auto',
+              paddingBottom: '8px',
+              marginBottom: '12px'
+            }}>
+              {numpadItems.map((it) => (
+                <div
+                  key={it.id}
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: '10px',
+                    padding: '4px 8px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>৳{it.amount} {it.note ? `• ${it.note}` : ''}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeNumpadItem(it.id)}
+                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '12px', fontWeight: '900' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick Amount Pills */}
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            marginBottom: '12px',
+            overflowX: 'auto',
+            paddingBottom: '4px'
+          }}>
+            {[10, 20, 50, 100, 200, 500].map(amt => (
+              <button
+                key={amt}
+                type="button"
+                onClick={() => {
+                  playBeep(900);
+                  triggerHaptic('light');
+                  setNumpadInput(String(amt));
+                }}
+                style={{
+                  background: 'var(--bg-canvas)',
+                  border: '1px solid var(--border-card)',
+                  borderRadius: '10px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  flexShrink: 0
+                }}
+              >
+                +৳{amt}
+              </button>
+            ))}
+          </div>
+
+          {/* 4x4 Numpad Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '8px',
+            marginBottom: '14px'
+          }}>
+            {[
+              { label: '7', action: () => handleNumpadDigit('7') },
+              { label: '8', action: () => handleNumpadDigit('8') },
+              { label: '9', action: () => handleNumpadDigit('9') },
+              { label: '⌫', action: handleNumpadBackspace, bg: '#f1f5f9', color: '#475569' },
+
+              { label: '4', action: () => handleNumpadDigit('4') },
+              { label: '5', action: () => handleNumpadDigit('5') },
+              { label: '6', action: () => handleNumpadDigit('6') },
+              { label: 'C', action: handleNumpadClear, bg: '#fee2e2', color: '#b91c1c' },
+
+              { label: '1', action: () => handleNumpadDigit('1') },
+              { label: '2', action: () => handleNumpadDigit('2') },
+              { label: '3', action: () => handleNumpadDigit('3') },
+              { label: '+ যোগ', action: () => handleNumpadAddCurrent(), bg: '#eef2ff', color: '#4f46e5', bold: true },
+
+              { label: '00', action: () => handleNumpadDigit('00') },
+              { label: '0', action: () => handleNumpadDigit('0') },
+              { label: '.', action: () => handleNumpadDigit('.') },
+              { label: '↵ আইটেম', action: () => handleNumpadAddCurrent(), bg: '#ecfdf5', color: '#059669', bold: true },
+            ].map((btn, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => { btn.action(); triggerHaptic('light'); }}
+                style={{
+                  height: '52px',
+                  borderRadius: '12px',
+                  border: '1.5px solid var(--border-card)',
+                  background: btn.bg || 'var(--bg-card)',
+                  color: btn.color || 'var(--text-primary)',
+                  fontSize: btn.bold ? '13px' : '18px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'all 0.1s ease'
+                }}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Customer Selection for Due/Cash tracking */}
+          <div style={{
+            background: 'var(--bg-canvas)',
+            borderRadius: '14px',
+            padding: '10px 12px',
+            marginBottom: '14px',
+            border: '1px solid var(--border-card)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                👤 কাস্টমার নির্বাচন (বাকি বিক্রির জন্য):
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowNewCustFields(!showNewCustFields)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#4f46e5',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                {showNewCustFields ? '✕ বাতিল' : '+ নতুন কাস্টমার'}
+              </button>
+            </div>
+
+            {showNewCustFields ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="কাস্টমারের নাম"
+                  value={numpadNewCustName}
+                  onChange={(e) => setNewCustName(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border-card)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12px'
+                  }}
+                />
+                <input
+                  type="tel"
+                  placeholder="মোবাইল নম্বর"
+                  value={numpadNewCustPhone}
+                  onChange={(e) => setNewCustPhone(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border-card)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12px'
+                  }}
+                />
+              </div>
+            ) : (
+              <select
+                value={selectedCustomer}
+                onChange={(e) => setSelectedCustomer(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '1.5px solid var(--border-card)',
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  fontSize: '12.5px',
+                  fontWeight: '600'
+                }}
+              >
+                <option value="none">নগদ ক্রেতা (নামহীন)</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.phone ? `(${c.phone})` : ''} {Number(c.totalDue) > 0 ? `[বাকি: ৳${c.totalDue}]` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* 1-Tap Checkout Buttons (Cash & Due) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              type="button"
+              disabled={numpadTotal <= 0 || numpadSubmitting}
+              onClick={() => handleNumpadCheckout('cash')}
+              style={{
+                height: '52px',
+                borderRadius: '14px',
+                border: 'none',
+                background: numpadTotal <= 0 ? 'var(--bg-canvas)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: numpadTotal <= 0 ? 'var(--text-muted)' : '#ffffff',
+                fontWeight: '900',
+                fontSize: '14px',
+                cursor: numpadTotal <= 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: numpadTotal <= 0 ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.4)'
+              }}
+            >
+              <span>⚡ নগদ বিক্রি</span>
+              <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={numpadTotal <= 0 || numpadSubmitting}
+              onClick={() => handleNumpadCheckout('due')}
+              style={{
+                height: '52px',
+                borderRadius: '14px',
+                border: 'none',
+                background: numpadTotal <= 0 ? 'var(--bg-canvas)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                color: numpadTotal <= 0 ? 'var(--text-muted)' : '#ffffff',
+                fontWeight: '900',
+                fontSize: '14px',
+                cursor: numpadTotal <= 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: numpadTotal <= 0 ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.4)'
+              }}
+            >
+              <span>🔴 বাকি খাতা</span>
+              <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {posMode === 'catalog' && (
+        <>
+          {/* ⚡ SMART NATURAL VOICE & EXPRESS ITEM ENTRY BAR */}
+          <div style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
         borderRadius: '20px',
         padding: '16px',
@@ -3447,6 +3851,8 @@ export default function PosPage() {
           themeColor={getIndustryTheme(tenant?.industryId).primaryColor}
         />
       )}
+      </>
+    )}
 
       {/* Cart Drawer Modal */}
       {showCartDrawer && (

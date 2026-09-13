@@ -15,11 +15,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# SQLite WAL and temp files (keep primary database if needed)
+# SQLite WAL and database files
+*.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
 *.log
 local_business.db
+local-business-os.db
 apps/api/*.db
 
 # OS files
