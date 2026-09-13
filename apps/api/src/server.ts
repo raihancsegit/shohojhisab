@@ -636,17 +636,23 @@ function getPlanFeaturesJson(planId: string): string {
   });
 }
 
-// Starter Pack Templates
+// Comprehensive Starter Pack Templates for all 12 Shop Categories
 const STARTER_PACKS: { [catId: string]: any[] } = {
   'cat-grocery': [
     { barcode: '89411001', name: 'Teer Soybean Oil 1L', banglaName: 'তীর সয়াবিন তেল ১ লিটার', purchasePrice: 165, sellingPrice: 180, stock: 40, unit: 'লিটার', icon: '🛢️', brand: 'Teer' },
     { barcode: '89411002', name: 'Rupchanda Oil 2L', banglaName: 'রূপচাঁদা সয়াবিন তেল ২ লিটার', purchasePrice: 330, sellingPrice: 360, stock: 24, unit: 'লিটার', icon: '🛢️', brand: 'Rupchanda' },
     { barcode: '89411003', name: 'Miniket Rice 50kg', banglaName: 'মিনিকেট চাল ৫০ কেজি বস্তা', purchasePrice: 3250, sellingPrice: 3500, stock: 15, unit: 'বস্তা', icon: '🍚', brand: 'Rashid' },
+    { barcode: '89411004', name: 'Nazirshail Rice 25kg', banglaName: 'নাজিরশাইল চাল ২৫ কেজি বস্তা', purchasePrice: 1850, sellingPrice: 2050, stock: 20, unit: 'বস্তা', icon: '🍚', brand: 'Pran' },
     { barcode: '89411005', name: 'Fresh White Sugar 1kg', banglaName: 'ফ্রেশ চিনি ১ কেজি', purchasePrice: 130, sellingPrice: 140, stock: 75, unit: 'কেজি', icon: '🧂', brand: 'Fresh' },
     { barcode: '89411006', name: 'Farm Red Egg (Hali)', banglaName: 'ফার্মের লাল ডিম ১ হালি', purchasePrice: 42, sellingPrice: 48, stock: 100, unit: 'হালি', icon: '🥚' },
     { barcode: '89411007', name: 'Lux Soap 100g', banglaName: 'লাক্স সাবান ১০০ গ্রাম', purchasePrice: 50, sellingPrice: 60, stock: 50, unit: 'পিস', icon: '🧼', brand: 'Unilever' },
+    { barcode: '89411008', name: 'Wheel Washing Powder 500g', banglaName: 'হুইল ওয়াশিং পাউডার ৫০০ গ্রাম', purchasePrice: 55, sellingPrice: 65, stock: 40, unit: 'প্যাকেট', icon: '🧺', brand: 'Unilever' },
     { barcode: '89411009', name: 'Maggi Noodles 4-Pack', banglaName: 'ম্যাগি নুডুলস ৪ প্যাক', purchasePrice: 75, sellingPrice: 90, stock: 40, unit: 'প্যাক', icon: '🍜', brand: 'Nestle' },
+    { barcode: '89411010', name: 'ACI Pure Salt 1kg', banglaName: 'এসিআই পিওর লবণ ১ কেজি', purchasePrice: 38, sellingPrice: 45, stock: 80, unit: 'কেজি', icon: '🧂', brand: 'ACI' },
     { barcode: '89411011', name: 'Deshi Mosur Dal 1kg', banglaName: 'দেশি মসুর ডাল ১ কেজি', purchasePrice: 125, sellingPrice: 140, stock: 60, unit: 'কেজি', icon: '🥣' },
+    { barcode: '89411012', name: 'Deshi Red Onion 1kg', banglaName: 'দেশি লাল পেঁয়াজ ১ কেজি', purchasePrice: 70, sellingPrice: 85, stock: 50, unit: 'কেজি', icon: '🧅' },
+    { barcode: '89411013', name: 'Ispahani Mirzapore Tea 200g', banglaName: 'ইস্পাহানি মির্জাপুর চা ২০০ গ্রাম', purchasePrice: 105, sellingPrice: 120, stock: 30, unit: 'প্যাকেট', icon: '☕', brand: 'Ispahani' },
+    { barcode: '89411014', name: 'Dano Milk Powder 500g', banglaName: 'ডানো গুঁড়ো দুধ ৫০০ গ্রাম', purchasePrice: 420, sellingPrice: 460, stock: 25, unit: 'প্যাকেট', icon: '🥛', brand: 'Arla' }
   ],
   'cat-pharmacy': [
     { barcode: '89422001', name: 'Napa Extra Tablet', banglaName: 'নাপা এক্সট্রা ট্যাবলেট (পাতা)', purchasePrice: 24, sellingPrice: 30, stock: 150, unit: 'পাতা', icon: '💊', genericName: 'Paracetamol + Caffeine', expiryDate: '2027-06-30', brand: 'Beximco' },
@@ -660,21 +666,96 @@ const STARTER_PACKS: { [catId: string]: any[] } = {
     { barcode: '89422009', name: 'Savlon Antiseptic 100ml', banglaName: 'স্যাভলন অ্যান্টিসেপটিক ১০০মিলি', purchasePrice: 48, sellingPrice: 55, stock: 35, unit: 'বোতল', icon: '🧴', genericName: 'Chlorhexidine + Cetrimide', expiryDate: '2027-05-30', brand: 'ACI' },
     { barcode: '89422010', name: 'Ceevit 250mg Chewable', banglaName: 'সিভিত ২৫০ মি.গ্রা. (পাতা)', purchasePrice: 20, sellingPrice: 25, stock: 120, unit: 'পাতা', icon: '💊', genericName: 'Ascorbic Acid (Vit-C)', expiryDate: '2027-09-15', brand: 'Square' },
     { barcode: '89422011', name: 'Azithrocin 500mg', banglaName: 'অ্যাজিথ্রোসিন ৫০০ মি.গ্রা. (পাতা)', purchasePrice: 105, sellingPrice: 135, stock: 50, unit: 'পাতা', icon: '💊', genericName: 'Azithromycin', expiryDate: '2026-12-10', brand: 'Beximco' },
-    { barcode: '89422012', name: 'First Aid Bandage', banglaName: 'ফার্স্ট এইড ওয়াটারপ্রুফ ব্যান্ডেজ', purchasePrice: 2, sellingPrice: 5, stock: 150, unit: 'পিস', icon: '🩹', genericName: 'Medical Dressing', expiryDate: '2028-01-01', brand: 'MediBand' },
+    { barcode: '89422012', name: 'Pantonix 20mg Tablet', banglaName: 'প্যানটোনিক্স ২০ মি.গ্রা. (পাতা)', purchasePrice: 64, sellingPrice: 80, stock: 80, unit: 'পাতা', icon: '💊', genericName: 'Pantoprazole 20mg', expiryDate: '2027-04-10', brand: 'Incepta' },
+    { barcode: '89422013', name: 'First Aid Waterproof Bandage', banglaName: 'ফার্স্ট এইড ওয়াটারপ্রুফ ব্যান্ডেজ', purchasePrice: 2, sellingPrice: 5, stock: 150, unit: 'পিস', icon: '🩹', genericName: 'Medical Dressing', expiryDate: '2028-01-01', brand: 'MediBand' },
+    { barcode: '89422014', name: 'Histacin 10mg Tablet', banglaName: 'হিস্টাসিন ট্যাবলেট (পাতা)', purchasePrice: 12, sellingPrice: 18, stock: 100, unit: 'পাতা', icon: '💊', genericName: 'Chlorpheniramine', expiryDate: '2027-11-20', brand: 'Square' }
+  ],
+  'cat-restaurant': [
+    { barcode: '89455001', name: 'Special Beef Kacchi Biryani', banglaName: 'স্পেশাল বিফ কাচ্চি বিরিয়ানি', purchasePrice: 160, sellingPrice: 240, stock: 40, unit: 'প্লেট', icon: '🍛' },
+    { barcode: '89455002', name: 'Chicken Roast with Polao', banglaName: 'চিকেন রোস্ট ও প্লেন পোলাও', purchasePrice: 130, sellingPrice: 200, stock: 50, unit: 'প্লেট', icon: '🍗' },
+    { barcode: '89455003', name: 'Plain Parata', banglaName: 'স্পেশাল প্লেন পরোটা', purchasePrice: 6, sellingPrice: 12, stock: 120, unit: 'পিস', icon: '🫓' },
+    { barcode: '89455004', name: 'Special Dudh Cha', banglaName: 'স্পেশাল মালাই দুধ চা', purchasePrice: 8, sellingPrice: 20, stock: 150, unit: 'কাপ', icon: '☕' },
+    { barcode: '89455005', name: 'Egg Omelette', banglaName: 'ডিম ভাজি (অমলেট)', purchasePrice: 18, sellingPrice: 30, stock: 60, unit: 'পিস', icon: '🍳' },
+    { barcode: '89455006', name: 'Mug Dal Bhaji', banglaName: 'মুগ ডাল ভুনা', purchasePrice: 15, sellingPrice: 30, stock: 50, unit: 'বাটি', icon: '🥣' },
+    { barcode: '89455007', name: 'Beef Bhuna', banglaName: 'গরুর মাংস ভুনা', purchasePrice: 120, sellingPrice: 180, stock: 35, unit: 'বাটি', icon: '🥩' },
+    { barcode: '89455008', name: 'Cold Borhani 250ml', banglaName: 'ঠাণ্ডা বোরহানি ২৫০ মিলি', purchasePrice: 30, sellingPrice: 50, stock: 40, unit: 'গ্লাস', icon: '🥛' },
+    { barcode: '89455009', name: 'Coca-Cola Can 250ml', banglaName: 'কোকা-কোলা ক্যান ২৫০ মিলি', purchasePrice: 40, sellingPrice: 45, stock: 60, unit: 'ক্যান', icon: '🥤' },
+    { barcode: '89455010', name: 'Mineral Water 500ml', banglaName: 'মিনারেল ওয়াটার ৫০০ মিলি', purchasePrice: 14, sellingPrice: 20, stock: 80, unit: 'বোতল', icon: '💧' }
   ],
   'cat-clothing': [
     { barcode: '89433001', name: 'Premium Cotton Panjabi (L)', banglaName: 'প্রিমিয়াম সুতি পাঞ্জাবি (L)', purchasePrice: 650, sellingPrice: 950, stock: 20, unit: 'পিস', icon: '🥻', brand: 'Lubnan', size: 'L', color: 'সাদা' },
     { barcode: '89433002', name: 'Semi-Formal Cotton Shirt (XL)', banglaName: 'সেমি-ফরমাল সুতি শার্ট (XL)', purchasePrice: 520, sellingPrice: 750, stock: 25, unit: 'পিস', icon: '👔', brand: 'Ecstasy', size: 'XL', color: 'আকাশি' },
     { barcode: '89433003', name: 'Stretch Denim Jeans (32)', banglaName: 'স্ট্রেচ ডেনিম জিন্স প্যান্ট (32)', purchasePrice: 700, sellingPrice: 1100, stock: 18, unit: 'পিস', icon: '👖', brand: 'Richman', size: '32', color: 'গাঢ় নীল' },
+    { barcode: '89433004', name: '100% Cotton Polo T-Shirt', banglaName: '১০০% সুতি পোলো টি-শার্ট', purchasePrice: 320, sellingPrice: 480, stock: 35, unit: 'পিস', icon: '👕', brand: 'Gentle Park' },
+    { barcode: '89433005', name: 'Tangail Soft Cotton Saree', banglaName: 'টাঙ্গাইল সফট সুতি শাড়ি', purchasePrice: 680, sellingPrice: 1050, stock: 15, unit: 'পিস', icon: '🥻' },
+    { barcode: '89433006', name: 'Amanat Shah Lungi 6 Haat', banglaName: 'আমানত শাহ লুঙ্গি ৬ হাত', purchasePrice: 380, sellingPrice: 480, stock: 30, unit: 'পিস', icon: '👘', brand: 'Amanat Shah' },
+    { barcode: '89433007', name: 'Women Cotton Three Piece', banglaName: 'মহিলা সুতি থ্রি-পিস', purchasePrice: 750, sellingPrice: 1200, stock: 20, unit: 'সেট', icon: '👗' }
+  ],
+  'cat-shoes': [
+    { barcode: '89477001', name: 'Men Leather Formal Shoes', banglaName: 'পুরুষ লেদার ফরমাল জুতা (৪০-৪৩)', purchasePrice: 1100, sellingPrice: 1650, stock: 15, unit: 'জোড়া', icon: '👞', brand: 'Apex' },
+    { barcode: '89477002', name: 'Casual Loafers', banglaName: 'ক্যাজুয়াল লোফার জুতা', purchasePrice: 650, sellingPrice: 950, stock: 20, unit: 'জোড়া', icon: '👞', brand: 'Bata' },
+    { barcode: '89477003', name: 'Men Leather Sandals', banglaName: 'পুরুষ চামড়ার আরামদায়ক স্যান্ডেল', purchasePrice: 550, sellingPrice: 850, stock: 25, unit: 'জোড়া', icon: '🩴' },
+    { barcode: '89477004', name: 'Women Flat Party Slippers', banglaName: 'মহিলা ফ্ল্যাট পার্টি স্লিপার', purchasePrice: 380, sellingPrice: 580, stock: 30, unit: 'জোড়া', icon: '👡' },
+    { barcode: '89477005', name: 'Kids Sports Running Shoes', banglaName: 'বাচ্চাদের স্পোর্টস রানিং শু', purchasePrice: 420, sellingPrice: 650, stock: 25, unit: 'জোড়া', icon: '👟' },
+    { barcode: '89477006', name: 'Rubber Home Bathroom Slippers', banglaName: 'রাবার বাথরুম ক্যাজুয়াল স্যান্ডেল', purchasePrice: 80, sellingPrice: 130, stock: 50, unit: 'জোড়া', icon: '🩴', brand: 'Pegasus' }
+  ],
+  'cat-hardware': [
+    { barcode: '89444001', name: 'PPR Pipe 1 Inch (Feet)', banglaName: 'পিপিআর পাইপ ১ ইঞ্চি (ফুট)', purchasePrice: 35, sellingPrice: 45, stock: 300, unit: 'ফুট', icon: '🔧', brand: 'RFL' },
+    { barcode: '89444002', name: 'Brass Water Tap 0.5 Inch', banglaName: 'পিতলের পানির কল আধা ইঞ্চি', purchasePrice: 220, sellingPrice: 320, stock: 25, unit: 'পিস', icon: '🚰', brand: 'Sharif' },
+    { barcode: '89444003', name: 'Asian Paints Primer 1L', banglaName: 'এশিয়ান পেইন্টস ওয়াল প্রাইমার ১ লিটার', purchasePrice: 280, sellingPrice: 350, stock: 20, unit: 'লিটার', icon: '🎨', brand: 'Asian Paints' },
+    { barcode: '89444004', name: 'Super Glue Tube', banglaName: 'সুপার গ্লু ৩ গ্রাম টিউব', purchasePrice: 15, sellingPrice: 25, stock: 80, unit: 'পিস', icon: '🧪' },
+    { barcode: '89444005', name: 'GI Wire Binding 1kg', banglaName: 'জিআই বাইন্ডিং তার ১ কেজি', purchasePrice: 110, sellingPrice: 135, stock: 40, unit: 'কেজি', icon: '🔩' },
+    { barcode: '89444006', name: 'Steel Star Screw 1 Inch (100pc)', banglaName: 'স্টিল স্টার স্ক্রু ১ ইঞ্চি (১০০ পিস)', purchasePrice: 60, sellingPrice: 90, stock: 35, unit: 'প্যাকেট', icon: '🔩' },
+    { barcode: '89444007', name: 'LED Bulb 15W Energy Saver', banglaName: 'এলইডি বাল্ব ১৫ ওয়াট', purchasePrice: 120, sellingPrice: 165, stock: 40, unit: 'পিস', icon: '💡', brand: 'Transtec' },
+    { barcode: '89444008', name: 'Extension Socket 3-Pin Cord', banglaName: 'মাল্টিপ্লাগ এক্সটেনশন সকেট ৫ গজ', purchasePrice: 240, sellingPrice: 340, stock: 20, unit: 'পিস', icon: '🔌' }
+  ],
+  'cat-mobile': [
+    { barcode: '89488001', name: 'Fast Charger 20W Type-C', banglaName: 'ফাস্ট চার্জার ২০ ওয়াট টাইপ-সি', purchasePrice: 280, sellingPrice: 450, stock: 30, unit: 'পিস', icon: '🔌', brand: 'Remax' },
+    { barcode: '89488002', name: 'Braided Type-C Fast Cable', banglaName: 'ব্রেইডেড টাইপ-সি ফাস্ট ক্যাবল ১মি.', purchasePrice: 80, sellingPrice: 150, stock: 50, unit: 'পিস', icon: '🔌' },
+    { barcode: '89488003', name: 'TWS Bluetooth Earbuds', banglaName: 'টিডব্লিউএস ব্লুটুথ ইয়ারবাডস', purchasePrice: 550, sellingPrice: 890, stock: 20, unit: 'পিস', icon: '🎧', brand: 'Lenovo' },
+    { barcode: '89488004', name: '9D Tempered Glass Protector', banglaName: '৯ডি টেম্পার্ড গ্লাস প্রটেক্টর', purchasePrice: 35, sellingPrice: 100, stock: 80, unit: 'পিস', icon: '📱' },
+    { barcode: '89488005', name: 'Power Bank 10000mAh', banglaName: 'পাওয়ার ব্যাংক ১০০০০ এমএএইচ', purchasePrice: 850, sellingPrice: 1250, stock: 15, unit: 'পিস', icon: '🔋', brand: 'Joyroom' },
+    { barcode: '89488006', name: 'iPhone Lightning Fast Cable', banglaName: 'আইফোন লাইটনিং ফাস্ট ক্যাবল', purchasePrice: 90, sellingPrice: 180, stock: 35, unit: 'পিস', icon: '🔌' }
   ],
   'cat-cosmetics': [
     { barcode: '89466001', name: 'Nivea Body Lotion 200ml', banglaName: 'নিভিয়া বডি লোশন ২০০ মিলি', purchasePrice: 280, sellingPrice: 350, stock: 30, unit: 'বোতল', icon: '🧴', brand: 'Nivea' },
     { barcode: '89466002', name: 'Himalaya Neem Face Wash 100ml', banglaName: 'হিমালয়া নিম ফেস ওয়াশ', purchasePrice: 150, sellingPrice: 190, stock: 45, unit: 'টিউব', icon: '🧼', brand: 'Himalaya' },
     { barcode: '89466003', name: 'Matte Liquid Lipstick', banglaName: 'ম্যাট লিকুইড লিপস্টিক (রেড)', purchasePrice: 180, sellingPrice: 260, stock: 25, unit: 'পিস', icon: '💄', brand: 'Maybelline' },
+    { barcode: '89466004', name: 'Parachute Coconut Oil 200ml', banglaName: 'প্যারাস্যুট নারিকেল তেল ২০০ মিলি', purchasePrice: 135, sellingPrice: 155, stock: 35, unit: 'বোতল', icon: '🧴', brand: 'Marico' },
+    { barcode: '89466005', name: 'Sunsilk Black Shine Shampoo 180ml', banglaName: 'সানসিল্ক ব্ল্যাক শ্যাম্পু ১৮০ মিলি', purchasePrice: 160, sellingPrice: 185, stock: 40, unit: 'বোতল', icon: '🧴', brand: 'Unilever' },
+    { barcode: '89466006', name: 'Vaseline Lip Therapy Rose', banglaName: 'ভেসলিন লিপ থেরাপি রোজ', purchasePrice: 95, sellingPrice: 130, stock: 50, unit: 'পিস', icon: '💄', brand: 'Vaseline' }
   ],
-  'cat-hardware': [
-    { barcode: '89444001', name: 'PPR Pipe 1 Inch (Feet)', banglaName: 'পিপিআর পাইপ ১ ইঞ্চি (ফুট)', purchasePrice: 35, sellingPrice: 45, stock: 300, unit: 'ফুট', icon: '🔧', brand: 'RFL' },
-    { barcode: '89444002', name: 'Brass Water Tap 0.5 Inch', banglaName: 'পিতলের পানির কল আধা ইঞ্চি', purchasePrice: 220, sellingPrice: 320, stock: 25, unit: 'পিস', icon: '🚰', brand: 'Sharif' },
+  'cat-meat-fish': [
+    { barcode: '89499001', name: 'Broiler Chicken 1kg', banglaName: 'ব্রয়লার মুরগি ১ কেজি (কাটা ও পরিষ্কার)', purchasePrice: 175, sellingPrice: 195, stock: 50, unit: 'কেজি', icon: '🍗' },
+    { barcode: '89499002', name: 'Sonali Chicken 1kg', banglaName: 'সোনালি মুরগি ১ কেজি', purchasePrice: 280, sellingPrice: 310, stock: 40, unit: 'কেজি', icon: '🍗' },
+    { barcode: '89499003', name: 'Deshi Fresh Beef 1kg', banglaName: 'দেশি টাটকা গরুর মাংস ১ কেজি', purchasePrice: 680, sellingPrice: 750, stock: 35, unit: 'কেজি', icon: '🥩' },
+    { barcode: '89499004', name: 'Fresh Rui Fish (Medium) 1kg', banglaName: 'টাটকা রুই মাছ (মাঝারি) ১ কেজি', purchasePrice: 270, sellingPrice: 330, stock: 30, unit: 'কেজি', icon: '🐟' },
+    { barcode: '89499005', name: 'Padma Hilsha Fish (800g)', banglaName: 'পদ্মার তাজা ইলিশ মাছ (৮০০ গ্রাম)', purchasePrice: 1100, sellingPrice: 1350, stock: 15, unit: 'পিস', icon: '🐟' },
+    { barcode: '89499006', name: 'Golda Chingri Prawn 500g', banglaName: 'গলদা চিংড়ি ৫০০ গ্রাম', purchasePrice: 420, sellingPrice: 520, stock: 20, unit: 'প্যাকেট', icon: '🦐' }
+  ],
+  'cat-bakery': [
+    { barcode: '89498001', name: 'Plain Butter Cake 300g', banglaName: 'প্লেন বাটার কেক ৩০০ গ্রাম', purchasePrice: 95, sellingPrice: 130, stock: 25, unit: 'পিস', icon: '🎂' },
+    { barcode: '89498002', name: 'Chicken Patties', banglaName: 'চিকেন প্যাটিস', purchasePrice: 25, sellingPrice: 40, stock: 40, unit: 'পিস', icon: '🥐' },
+    { barcode: '89498003', name: 'Sweet Milk Bread 400g', banglaName: 'সুইট মিল্ক পাউরুটি ৪০০ গ্রাম', purchasePrice: 45, sellingPrice: 60, stock: 35, unit: 'পিস', icon: '🍞' },
+    { barcode: '89498004', name: 'Butter Toast Biscuit 250g', banglaName: 'স্পেশাল বাটার টোস্ট বিস্কুট', purchasePrice: 50, sellingPrice: 70, stock: 30, unit: 'প্যাকেট', icon: '🍪' },
+    { barcode: '89498005', name: 'Traditional Gulab Jamun 1kg', banglaName: 'ঐতিহ্যবাহী গোলাপ জামুন মিষ্টি ১ কেজি', purchasePrice: 240, sellingPrice: 340, stock: 20, unit: 'কেজি', icon: '🍬' },
+    { barcode: '89498006', name: 'Roshogolla 1kg', banglaName: 'স্পঞ্জের সাদা রসগোল্লা ১ কেজি', purchasePrice: 230, sellingPrice: 320, stock: 20, unit: 'কেজি', icon: '🍬' }
+  ],
+  'cat-stationery': [
+    { barcode: '89497001', name: 'Student Khata 120 Pages', banglaName: 'বাংলা/ইংরেজি খাতা ১২০ পৃষ্ঠা', purchasePrice: 28, sellingPrice: 40, stock: 80, unit: 'পিস', icon: '📒' },
+    { barcode: '89497002', name: 'Matador Hi-School Ballpen Box', banglaName: 'ম্যাটাডোর হাই-স্কুল বলপেন বক্স (২০টি)', purchasePrice: 85, sellingPrice: 100, stock: 30, unit: 'বক্স', icon: '🖊️', brand: 'Matador' },
+    { barcode: '89497003', name: 'A4 Size Paper Ream 80GSM', banglaName: 'এ৪ সাইজ ফটো পেপার রিম (৫০০ পাতা)', purchasePrice: 380, sellingPrice: 460, stock: 25, unit: 'রিম', icon: '📄', brand: 'Double A' },
+    { barcode: '89497004', name: 'Student Geometry Box', banglaName: 'স্টুডেন্ট জ্যামিতি বক্স', purchasePrice: 85, sellingPrice: 130, stock: 30, unit: 'পিস', icon: '📐' },
+    { barcode: '89497005', name: 'Faber-Castell Pencil 12pc', banglaName: 'ফেবার-কাস্টেল ২বি পেন্সিল প্যাকেট', purchasePrice: 70, sellingPrice: 95, stock: 40, unit: 'প্যাকেট', icon: '✏️', brand: 'Faber-Castell' },
+    { barcode: '89497006', name: 'Office Clear File Folder', banglaName: 'অফিস ক্লিয়ার ডিসপ্লে ফাইল ফোল্ডার', purchasePrice: 25, sellingPrice: 45, stock: 50, unit: 'পিস', icon: '📁' }
+  ],
+  'cat-tea': [
+    { barcode: '89496001', name: 'Special Dudh Cha', banglaName: 'স্পেশাল মালাই দুধ চা', purchasePrice: 7, sellingPrice: 15, stock: 200, unit: 'কাপ', icon: '☕' },
+    { barcode: '89496002', name: 'Ginger Lemon Rong Cha', banglaName: 'আদা লেবু লাল চা (রং চা)', purchasePrice: 4, sellingPrice: 10, stock: 200, unit: 'কাপ', icon: '🍵' },
+    { barcode: '89496003', name: 'Butter Sweet Bun', banglaName: 'বাটার মিষ্টি বনরুটি', purchasePrice: 10, sellingPrice: 15, stock: 60, unit: 'পিস', icon: '🍞' },
+    { barcode: '89496004', name: 'Crispy Singara', banglaName: 'গরম মচমচে সিঙ্গারা', purchasePrice: 4, sellingPrice: 8, stock: 120, unit: 'পিস', icon: '🥟' },
+    { barcode: '89496005', name: 'Beef Samucha', banglaName: 'বিফ সমুচা', purchasePrice: 6, sellingPrice: 12, stock: 80, unit: 'পিস', icon: '🥟' },
+    { barcode: '89496006', name: 'Chicken Spring Roll', banglaName: 'চিকেন রোল', purchasePrice: 15, sellingPrice: 25, stock: 40, unit: 'পিস', icon: '🌯' }
   ]
 };
 
@@ -684,9 +765,15 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
     INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
+  const insertLog = db.prepare(`
+    INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+    VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'কমন পণ্য প্রারম্ভিক স্টক', 'ক্যাটাগরি ভিত্তিক প্রারম্ভিক স্টক এন্ট্রি', ?)
+  `);
   const now = new Date().toISOString();
   for (const item of pack) {
     const prodId = 'prod-' + uuidv4().slice(0, 8);
+    const stockQty = item.stock || 10;
+    const pPrice = item.purchasePrice || 0;
     insertP.run(
       prodId,
       tenantId,
@@ -694,9 +781,9 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
       item.name,
       item.banglaName,
       categoryId,
-      item.purchasePrice || 0,
+      pPrice,
       item.sellingPrice || 0,
-      item.stock || 10,
+      stockQty,
       item.unit || 'পিস',
       5,
       item.genericName || null,
@@ -705,6 +792,20 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
       item.size || null,
       item.color || null,
       item.icon || '📦',
+      now
+    );
+
+    // Initial stock transaction record
+    const logId = 'stklog-' + uuidv4().slice(0, 8);
+    insertLog.run(
+      logId,
+      tenantId,
+      prodId,
+      item.banglaName || item.name,
+      stockQty,
+      item.unit || 'পিস',
+      stockQty,
+      pPrice,
       now
     );
   }
@@ -2844,6 +2945,80 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     return checkAndNavigate('/khata', `বাকির খাতায় এসেছি। বর্তমানে মোট ${count} জন কাস্টমারের কাছে মোট ৳${dueAmt.toLocaleString('en-US')} টাকা বাকি রয়েছে।`, `📖 **বাকির খাতা:**\n• দেনাদার কাস্টমার: **${count} জন**\n• মোট মার্কেট বাকি: **৳${dueAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'বাকির খাতা দেখুন →');
   }
 
+  // 1.4. Low Stock or Stock Out Inquiry ("কোন কোন মালের স্টক শেষ?", "কোন পণ্য কম আছে?", "স্টক শেষ কোনগুলোর?")
+  if (/কোন\s*(কোন|কোনো)?\s*(মাল|পণ্য|আইটেম|ওষুধ|জিনিস)\s*(কম|শেষ|নাই|ঘাটতি)|স্টক\s*শেষ|কম\s*স্টক\s*(কোন|কি)|মালের\s*ঘাটতি/.test(rawText)) {
+    const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit, low_stock_threshold FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold ORDER BY stock ASC LIMIT 8').all(tenantId) as any[];
+    if (lowStockRows.length === 0) {
+      return {
+        success: true,
+        speech: 'মাশাল্লাহ, আপনার দোকানের কোনো পণ্যের স্টক কম নেই। সব পণ্যের পর্যাপ্ত মজুদ রয়েছে।',
+        reply: '✅ **সব মালের স্টক পর্যাপ্ত রয়েছে!**\nবর্তমানে কোনো পণ্যের ঘাটতি নেই।',
+        actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
+      };
+    }
+    const itemsList = lowStockRows.map((p, idx) => `${idx + 1}. **${p.bangla_name || p.name}**: ${p.stock} ${p.unit} (কম স্টক সতর্কতা)`).join('\n');
+    const spokenList = lowStockRows.slice(0, 4).map(p => `${p.bangla_name || p.name} ${p.stock} ${p.unit}`).join(', ');
+    return {
+      success: true,
+      action: 'low_stock_inquiry',
+      navigateTo: '/stock',
+      speech: `আপনার দোকানে ${lowStockRows.length}টি পণ্যের স্টক কম বা শেষ। যেমন: ${spokenList}। দ্রুত রিস্টক করুন।`,
+      reply: `⚠️ **কম বা শেষ স্টকের পণ্য তালিকা (${lowStockRows.length}টি):**\n\n${itemsList}\n\n*সরাসরি মহাজনকে অর্ডার দিতে বা রিস্টক করতে স্টক পেজে যান।*`,
+      actionLink: { text: 'স্টক খাতা ও রিস্টক →', href: '/stock' }
+    };
+  }
+
+  // 1.5. Specific Product Stock Inquiry ("নাপা কত পাতা আছে?", "নাপার স্টক কত?", "দোকানে চিনি কত কেজি আছে?", "সেকলো আছে কিনা?", "নাপা শেষ কবে আসছে?")
+  const isProdStockQuery = /(কত\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|টুকু)?\s*আছে|স্টক\s*কত|স্টক\s*কেমন|আছে\s*কিনা|মজুদ\s*কত|কবে\s*(আসছে|ঢুকছে)|চালান\s*কবে)/.test(rawText) &&
+    !/বিক্রি|বেচা|খরচ|বাকি|যোগ\s*করো|বাড়াও/.test(rawText);
+
+  if (isProdStockQuery) {
+    const cleanedQuery = rawText
+      .replace(/(দোকানে|আমার|স্টক|ইনভেন্টরি|মজুদ|কত|কতটুকু|কতগুলো|আছে|কিনা|কেমন|পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|ভাই|বলুন|দয়া\s*করে|কবে|আসছে|ঢুকছে|চালান|রিস্টক|হিসাব)/gi, '')
+      .trim();
+
+    if (cleanedQuery.length >= 2) {
+      let matchedProd = db.prepare(`
+        SELECT * FROM products WHERE tenant_id = ? AND (
+          bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
+        ) LIMIT 1
+      `).get(tenantId, `%${cleanedQuery}%`, `%${cleanedQuery}%`, `%${cleanedQuery}%`, `%${cleanedQuery}%`, cleanedQuery) as any;
+
+      if (matchedProd) {
+        const pStock = Number(matchedProd.stock) || 0;
+        const pUnit = matchedProd.unit || 'পিস';
+        const pSelling = Number(matchedProd.selling_price) || 0;
+        const pPurchase = Number(matchedProd.purchase_price) || 0;
+        const isLow = pStock <= (Number(matchedProd.low_stock_threshold) || 5);
+
+        const lastStockIn = db.prepare(`
+          SELECT * FROM stock_logs WHERE tenant_id = ? AND product_id = ? AND type = 'stock_in' ORDER BY created_at DESC LIMIT 1
+        `).get(tenantId, matchedProd.id) as any;
+
+        let lastRestockText = '';
+        let spokenRestock = '';
+        if (lastStockIn) {
+          const inDate = new Date(lastStockIn.created_at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+          lastRestockText = `\n• **সর্বশেষ রিস্টক:** ${inDate}-এ +${lastStockIn.quantity} ${lastStockIn.unit} (${lastStockIn.source_ref || 'নতুন চালান'})`;
+          spokenRestock = `। সর্বশেষ ${inDate} তারিখে ${lastStockIn.quantity} ${lastStockIn.unit} রিস্টক হয়েছিল`;
+        }
+
+        const statusBadge = pStock === 0 ? '❌ স্টক আউট (০)' : (isLow ? '⚠️ স্টক কম' : '✅ পর্যাপ্ত স্টক');
+        const speech = `${matchedProd.bangla_name || matchedProd.name} বর্তমানে ${pStock} ${pUnit} মজুদ আছে${spokenRestock}। বিক্রয়মূল্য ৳${pSelling} টাকা।${isLow ? ' সতর্কতা: স্টক কমে এসেছে।' : ''}`;
+        const reply = `📦 **${matchedProd.bangla_name || matchedProd.name} এর স্টক হিসাব:**\n• **বর্তমান স্টক:** **${pStock} ${pUnit}** (${statusBadge})\n• **বিক্রয়মূল্য:** ৳${pSelling} | **কেনা দর:** ৳${pPurchase}${lastRestockText}`;
+
+        return {
+          success: true,
+          action: 'product_stock_inquiry',
+          navigateTo: '/stock',
+          speech,
+          reply,
+          actionLink: { text: `"${matchedProd.bangla_name || matchedProd.name}" রিস্টক করুন →`, href: `/stock?search=${encodeURIComponent(matchedProd.bangla_name || matchedProd.name)}` }
+        };
+      }
+    }
+  }
+
   // Navigation: Stock & Inventory
   if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি|মজুদ\s*মাল|গুদামের\s*খবর|গুদাম/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে|বিক্রি/.test(rawText)) {
     const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
@@ -2914,8 +3089,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   }
 
-  // 2. Stock Restock & Multi-Item Addition ("নাপা ৫০ পাতা, চিনি ২০ কেজি স্টক যোগ করো", "প্যারাসিটামল ১০০ পিস স্টক বাড়াও")
-  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*ঢুকলো|মাল\s*এসেছে|স্টকে\s*যোগ|স্টকে\s*এড|স্টক\s*এড/.test(rawText) && /\d+/.test(normalized)) {
+  // 2. Stock Restock & Multi-Item Addition ("নাপা ৫০ পাতা আসছে কেনা দাম ২৫ টাকা", "চিনি ২ বস্তা ঢুকলো", "প্যারাসিটামল ১০০ পিস স্টক বাড়াও")
+  if (/স্টক\s*যোগ|স্টক\s*বাড়াও|স্টক\s*বাড়া|মাল\s*(ঢুকলো|এসেছে|আসছে|কিনলাম|নিলাম|নামলো)|স্টকে\s*(যোগ|এড|তোলো|তুললাম)|মাল\s*তোলো|রিস্টক/.test(rawText) && /\d+/.test(normalized)) {
     const numbersMatch = normalized.match(/(\d+(\.\d+)?)/g);
     const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
     const updatedProducts: any[] = [];
@@ -2925,9 +3100,23 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
       const numM = segNorm.match(/(\d+(\.\d+)?)/);
       const addQty = numM ? parseFloat(numM[1]) : (numbersMatch ? parseFloat(numbersMatch[0]) : 10);
 
+      // Extract purchase rate if mentioned: "কেনা দাম ২৫ টাকা", "রেট ২৫", "দর ২৫"
+      let parsedRate: number | null = null;
+      const rateM = segNorm.match(/(?:কেনা\s*দাম|কেনা\s*দর|কেনা|রেট|দর|রেট\s*হিসেবে)\s*(\d+(\.\d+)?)/);
+      if (rateM) {
+        parsedRate = parseFloat(rateM[1]);
+      }
+
+      // Extract supplier / source if mentioned: "স্কয়ার থেকে", "বেক্সিমকো থেকে"
+      let parsedSource = 'ভয়েস রিস্টক';
+      const sourceM = seg.match(/(?:থেকে|মহাজন|ডিলার|সাপ্লায়ার)\s*([^\s,]+)/);
+      if (sourceM) {
+        parsedSource = `সাপ্লায়ার: ${sourceM[1]}`;
+      }
+
       let cleanProd = seg
         .replace(/(\d+|[০-৯]+)/g, '')
-        .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*ঢুকলো|মাল\s*এসেছে|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ|এড\s*করো|এড)/gi, '')
+        .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*(ঢুকলো|এসেছে|আসছে|কিনলাম|নিলাম|নামলো)|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ|এড\s*করো|এড|কেনা\s*দাম|কেনা\s*দর|কেনা|রেট|দর|টাকা|হিসেবে)/gi, '')
         .trim();
 
       if (cleanProd && cleanProd.length >= 2) {
@@ -2939,36 +3128,70 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 
         if (product) {
           const newStock = (Number(product.stock) || 0) + addQty;
-          db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
-          updatedProducts.push({ name: product.bangla_name || product.name, added: addQty, unit: product.unit || 'পিস', total: newStock });
+          const finalPurchase = parsedRate !== null ? parsedRate : Number(product.purchase_price) || 0;
+          if (parsedRate !== null) {
+            db.prepare('UPDATE products SET stock = ?, purchase_price = ? WHERE id = ?').run(newStock, parsedRate, product.id);
+          } else {
+            db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, product.id);
+          }
+
+          updatedProducts.push({ 
+            name: product.bangla_name || product.name, 
+            added: addQty, 
+            unit: product.unit || 'পিস', 
+            total: newStock,
+            purchasePrice: parsedRate
+          });
 
           const logId = 'stklog-' + uuidv4().slice(0, 8);
           db.prepare(`
             INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
-            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'ভয়েস রিস্টক', 'ভয়েস কমান্ডে স্টক যোগ', ?)
-          `).run(logId, tenantId, product.id, product.bangla_name || product.name, addQty, product.unit || 'পিস', addQty, Number(product.purchase_price) || 0, now);
+            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            logId, 
+            tenantId, 
+            product.id, 
+            product.bangla_name || product.name, 
+            addQty, 
+            product.unit || 'পিস', 
+            addQty, 
+            finalPurchase, 
+            parsedSource, 
+            parsedRate !== null ? `ভয়েস কমান্ডে রিস্টক (কেনা দর: ৳${parsedRate})` : 'ভয়েস কমান্ডে স্টক যোগ', 
+            now
+          );
         } else {
           const newProdId = 'prod-' + uuidv4().slice(0, 8);
           const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/)?.[0] || 'পিস') : 'পিস';
+          const initPurchase = parsedRate !== null ? parsedRate : 10;
+          const initSelling = Math.round(initPurchase * 1.25);
+          
           db.prepare(`
             INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, icon, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, 'cat-grocery', 10, 15, addQty, autoUnit, 5, '📦', now);
-          updatedProducts.push({ name: cleanProd, added: addQty, unit: autoUnit, total: addQty });
+          `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, 'cat-grocery', initPurchase, initSelling, addQty, autoUnit, 5, '📦', now);
+          
+          updatedProducts.push({ 
+            name: cleanProd, 
+            added: addQty, 
+            unit: autoUnit, 
+            total: addQty,
+            purchasePrice: parsedRate 
+          });
 
           const logId = 'stklog-' + uuidv4().slice(0, 8);
           db.prepare(`
             INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
-            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'ভয়েস নতুন পণ্য', 'ভয়েস কমান্ডে নতুন পণ্য ও স্টক', ?)
-          `).run(logId, tenantId, newProdId, cleanProd, addQty, autoUnit, addQty, 10, now);
+            VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, 'ভয়েস কমান্ডে নতুন পণ্য ও স্টক', ?)
+          `).run(logId, tenantId, newProdId, cleanProd, addQty, autoUnit, addQty, initPurchase, parsedSource, now);
         }
       }
     }
 
     if (updatedProducts.length > 0) {
-      const summaryItems = updatedProducts.map(p => `${p.name} (+${p.added} ${p.unit})`).join(', ');
+      const summaryItems = updatedProducts.map(p => `${p.name} (+${p.added} ${p.unit}${p.purchasePrice ? ` @ ৳${p.purchasePrice}` : ''})`).join(', ');
       const speech = `✓ ${summaryItems} সফলভাবে স্টক যোগ করা হয়েছে।`;
-      const replyList = updatedProducts.map(p => `• **${p.name}**: +${p.added} ${p.unit} (মোট মজুদ: **${p.total} ${p.unit}**)`).join('\n');
+      const replyList = updatedProducts.map(p => `• **${p.name}**: +${p.added} ${p.unit} (মোট মজুদ: **${p.total} ${p.unit}**${p.purchasePrice ? ` | কেনা দর: ৳${p.purchasePrice}` : ''})`).join('\n');
 
       return {
         success: true,
@@ -3835,6 +4058,90 @@ fastify.put('/api/products/:id', handleUpdateProduct);
 fastify.post('/api/products/:id/update', handleUpdateProduct);
 fastify.post('/api/products/:id', handleUpdateProduct);
 
+// 1-Click Category Staple Products Seeder
+fastify.post('/api/products/seed-category-defaults', async (request, reply) => {
+  const { tenantId, categoryId, replaceExisting } = (request.body as any) || {};
+  if (!tenantId) return reply.status(400).send({ error: 'Tenant ID আবশ্যক' });
+
+  const tenantRow = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId) as any;
+  const targetCat = categoryId || tenantRow?.industry_category_id || 'cat-grocery';
+  const pack = STARTER_PACKS[targetCat] || STARTER_PACKS['cat-grocery'];
+
+  const existingProds = db.prepare('SELECT name, bangla_name, barcode FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+  const existingNames = new Set(existingProds.map(p => (p.bangla_name || p.name || '').trim().toLowerCase()));
+
+  const now = new Date().toISOString();
+  let addedCount = 0;
+  let skippedCount = 0;
+
+  const insertP = db.prepare(`
+    INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertLog = db.prepare(`
+    INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+    VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'কমন পণ্য লোডার', 'ক্যাটাগরি ভিত্তিক প্রারম্ভিক স্টক এন্ট্রি', ?)
+  `);
+
+  for (const item of pack) {
+    const itemNameKey = (item.banglaName || item.name || '').trim().toLowerCase();
+    if (existingNames.has(itemNameKey) && !replaceExisting) {
+      skippedCount++;
+      continue;
+    }
+
+    const prodId = 'prod-' + uuidv4().slice(0, 8);
+    const barcode = item.barcode || ('894' + Math.floor(10000000 + Math.random() * 90000000));
+    const stockQty = Number(item.stock) || 10;
+    const pPrice = Number(item.purchasePrice) || 0;
+
+    insertP.run(
+      prodId,
+      tenantId,
+      barcode,
+      item.name,
+      item.banglaName,
+      targetCat,
+      pPrice,
+      Number(item.sellingPrice) || 0,
+      stockQty,
+      item.unit || 'পিস',
+      5,
+      item.genericName || null,
+      item.expiryDate || null,
+      item.brand || null,
+      item.size || null,
+      item.color || null,
+      item.icon || '📦',
+      now
+    );
+
+    const logId = 'stklog-' + uuidv4().slice(0, 8);
+    insertLog.run(
+      logId,
+      tenantId,
+      prodId,
+      item.banglaName || item.name,
+      stockQty,
+      item.unit || 'পিস',
+      stockQty,
+      pPrice,
+      now
+    );
+
+    existingNames.add(itemNameKey);
+    addedCount++;
+  }
+
+  return {
+    success: true,
+    addedCount,
+    skippedCount,
+    totalPack: pack.length,
+    message: `✓ আপনার ক্যাটাগরির ${addedCount}টি কমন পণ্য সফলভাবে যুক্ত হয়েছে! (ইতিমধ্যে ছিল: ${skippedCount}টি)`
+  };
+});
+
 // Product Stock Logs & History
 fastify.get('/api/products/:id/stock-logs', async (request, reply) => {
   const { id } = request.params as { id: string };
@@ -3842,12 +4149,74 @@ fastify.get('/api/products/:id/stock-logs', async (request, reply) => {
   return rows;
 });
 
-// Tenant Stock Logs (All inventory transactions)
+// Tenant Stock Logs (All inventory transactions with filters and summary)
 fastify.get('/api/stock-logs', async (request, reply) => {
-  const { tenantId } = request.query as any;
-  if (!tenantId) return [];
-  const rows = db.prepare('SELECT * FROM stock_logs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200').all(tenantId);
-  return rows;
+  const { tenantId, productId, type, dateFilter, startDate, endDate, search, limit = 500 } = request.query as any;
+  if (!tenantId) return { logs: [], summary: { totalLogs: 0, totalInQty: 0, totalInValue: 0, totalOutQty: 0, totalOutValue: 0 } };
+
+  let query = 'SELECT * FROM stock_logs WHERE tenant_id = ?';
+  const params: any[] = [tenantId];
+
+  if (productId) {
+    query += ' AND product_id = ?';
+    params.push(productId);
+  }
+
+  if (type && type !== 'all') {
+    query += ' AND type = ?';
+    params.push(type);
+  }
+
+  if (dateFilter === 'today') {
+    query += ' AND date(created_at) = date("now", "+6 hours")';
+  } else if (dateFilter === 'last7') {
+    query += ' AND date(created_at) >= date("now", "+6 hours", "-7 days")';
+  } else if (dateFilter === 'month') {
+    query += ' AND strftime("%Y-%m", created_at) = strftime("%Y-%m", "now", "+6 hours")';
+  } else if (startDate && endDate) {
+    query += ' AND date(created_at) BETWEEN ? AND ?';
+    params.push(startDate, endDate);
+  }
+
+  if (search && search.trim()) {
+    query += ' AND (product_name LIKE ? OR source_ref LIKE ? OR note LIKE ?)';
+    const sTerm = `%${search.trim()}%`;
+    params.push(sTerm, sTerm, sTerm);
+  }
+
+  query += ' ORDER BY created_at DESC LIMIT ?';
+  params.push(Number(limit) || 500);
+
+  const rows = db.prepare(query).all(...params) as any[];
+
+  // Also calculate aggregates
+  let inQty = 0;
+  let inValue = 0;
+  let outQty = 0;
+  let outValue = 0;
+
+  for (const r of rows) {
+    const q = Number(r.quantity) || 0;
+    const p = Number(r.unit_price) || 0;
+    if (r.type === 'stock_in') {
+      inQty += q;
+      inValue += q * p;
+    } else if (r.type === 'sale') {
+      outQty += q;
+      outValue += q * p;
+    }
+  }
+
+  return {
+    logs: rows,
+    summary: {
+      totalLogs: rows.length,
+      totalInQty: inQty,
+      totalInValue: Math.round(inValue),
+      totalOutQty: outQty,
+      totalOutValue: Math.round(outValue)
+    }
+  };
 });
 
 // Manual Restock / Stock-In API

@@ -36,6 +36,24 @@ export default function StockPage() {
   const [historyLogs, setHistoryLogs] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Category Staple Seeder state
+  const [seedingDefaults, setSeedingDefaults] = useState(false);
+
+  // Shop-wide Stock Movement Ledger & Audit Report Modal state
+  const [showAllLedgerModal, setShowAllLedgerModal] = useState(false);
+  const [ledgerLogs, setLedgerLogs] = useState<any[]>([]);
+  const [ledgerSummary, setLedgerSummary] = useState({
+    totalLogs: 0,
+    totalInQty: 0,
+    totalInValue: 0,
+    totalOutQty: 0,
+    totalOutValue: 0
+  });
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'stock_in' | 'sale'>('all');
+  const [ledgerDateFilter, setLedgerDateFilter] = useState<'all' | 'today' | 'last7' | 'month'>('all');
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [loadingLedger, setLoadingLedger] = useState(false);
+
   // Restock (মাল তুলুন) Modal State
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [restockProduct, setRestockProduct] = useState<any | null>(null);
@@ -358,6 +376,100 @@ export default function StockPage() {
       window.removeEventListener('voice-trigger-add-stock', handleVoiceTriggerAdd);
     };
   }, [currentTenantId]);
+
+  // 1-Click Category Staple Products Seeder
+  const handleSeedCategoryDefaults = async () => {
+    if (!currentTenantId) return;
+    const confirmSeed = confirm(`আপনি কি আপনার দোকানের ক্যাটাগরির (${tenant?.industryId || 'দোকান'}) কমন ও নিয়মিত বিক্রিত পণ্যগুলো তালিকায় যুক্ত করতে চান?`);
+    if (!confirmSeed) return;
+
+    setSeedingDefaults(true);
+    triggerHaptic('medium');
+    try {
+      const res = await fetch('/api/products/seed-category-defaults', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: currentTenantId,
+          categoryId: tenant?.industryId || 'cat-grocery'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNotice(data.message || '✓ আপনার ক্যাটাগরির কমন পণ্য সফলভাবে লোড হয়েছে!');
+        speakAnnouncement(`${data.addedCount}টি কমন পণ্য সফলভাবে যুক্ত হয়েছে`);
+        triggerHaptic('success');
+        await loadStock();
+        setTimeout(() => setNotice(''), 4500);
+      } else {
+        alert(data.error || 'কমন পণ্য লোড করতে সমস্যা হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
+    } finally {
+      setSeedingDefaults(false);
+    }
+  };
+
+  // Fetch & Open All Stock Ledger Modal
+  const loadAllStockLedger = async (type = ledgerFilter, dateF = ledgerDateFilter, searchQ = ledgerSearch) => {
+    if (!currentTenantId) return;
+    setLoadingLedger(true);
+    try {
+      const q = new URLSearchParams({
+        tenantId: currentTenantId,
+        type,
+        dateFilter: dateF,
+        search: searchQ,
+        limit: '500'
+      });
+      const res = await fetch(`/api/stock-logs?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const logs = Array.isArray(data) ? data : (data.logs || []);
+        const summary = data.summary || {
+          totalLogs: logs.length,
+          totalInQty: logs.filter((l: any) => l.type === 'stock_in').reduce((acc: number, l: any) => acc + (Number(l.quantity) || 0), 0),
+          totalInValue: logs.filter((l: any) => l.type === 'stock_in').reduce((acc: number, l: any) => acc + ((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)), 0),
+          totalOutQty: logs.filter((l: any) => l.type === 'sale').reduce((acc: number, l: any) => acc + (Number(l.quantity) || 0), 0),
+          totalOutValue: logs.filter((l: any) => l.type === 'sale').reduce((acc: number, l: any) => acc + ((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)), 0),
+        };
+        setLedgerLogs(logs);
+        setLedgerSummary(summary);
+      }
+    } catch (e) {
+      console.error('Failed to fetch stock logs:', e);
+    } finally {
+      setLoadingLedger(false);
+    }
+  };
+
+  const openAllStockLedgerModal = () => {
+    setShowAllLedgerModal(true);
+    triggerHaptic('light');
+    loadAllStockLedger(ledgerFilter, ledgerDateFilter, ledgerSearch);
+  };
+
+  const handleExportLedgerCSV = () => {
+    if (!ledgerLogs || ledgerLogs.length === 0) {
+      alert('এক্সপোর্ট করার মতো কোনো লেনদেন পাওয়া যায়নি');
+      return;
+    }
+    triggerHaptic('success');
+    const headers = ['তারিখ ও সময়', 'পণ্যের নাম', 'লেনদেনের ধরন', 'পরিমাণ', 'একক', 'একক দর (টাকা)', 'মোট মূল্য (টাকা)', 'উৎস / চালান', 'নোট'];
+    const rows = ledgerLogs.map(l => [
+      new Date(l.created_at).toLocaleString('bn-BD'),
+      l.product_name,
+      l.type === 'stock_in' ? 'স্টক ইন (নতুন মাল)' : l.type === 'sale' ? 'বিক্রয় (স্টক আউট)' : l.type === 'return' ? 'ফেরত' : 'সমন্বয়',
+      l.quantity,
+      l.unit || 'পিস',
+      l.unit_price || 0,
+      Math.round((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)),
+      l.source_ref || '',
+      l.note || ''
+    ]);
+    exportToCSV(`Stock_Audit_Ledger_${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  };
 
   const lowStockItems = products.filter(p => p.stock > 0 && p.stock <= (p.lowStockThreshold || 5));
   const outOfStockItems = products.filter(p => p.stock === 0);
@@ -751,6 +863,50 @@ export default function StockPage() {
             <span>🎙️</span> ভয়েস স্টক
           </button>
 
+          <button
+            onClick={handleSeedCategoryDefaults}
+            disabled={seedingDefaults}
+            style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '7px 11px',
+              borderRadius: '10px',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: seedingDefaults ? 'wait' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.25)',
+              opacity: seedingDefaults ? 0.7 : 1
+            }}
+            title="আপনার দোকানের ক্যাটাগরির কমন পণ্যসমূহ এক ক্লিকে যুক্ত করুন"
+          >
+            <span>⚡</span> {seedingDefaults ? 'লোড হচ্ছে...' : 'কমন পণ্য লোড'}
+          </button>
+
+          <button
+            onClick={openAllStockLedgerModal}
+            style={{
+              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '7px 11px',
+              borderRadius: '10px',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.25)'
+            }}
+            title="দোকানের সকল পণ্যের স্টক ইন ও বিক্রয় খতিয়ান অডিট রিপোর্ট"
+          >
+            <span>📋</span> স্টক খতিয়ান
+          </button>
+
           {/* Secondary Tools: CSV, Import, View Mode Switcher */}
           <div style={{ display: 'flex', gap: '3px', alignItems: 'center', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
             <button
@@ -1084,6 +1240,27 @@ export default function StockPage() {
               }}
             >
               ➕ নতুন পণ্য যোগ করুন
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedCategoryDefaults}
+              disabled={seedingDefaults}
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: seedingDefaults ? 'wait' : 'pointer',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <span>⚡</span> {seedingDefaults ? 'লোড হচ্ছে...' : 'ক্যাটাগরির কমন পণ্য লোড করুন'}
             </button>
           </div>
         </div>
@@ -2815,6 +2992,361 @@ export default function StockPage() {
                 type="button"
                 onClick={() => setShowHistoryModal(false)}
                 style={{ padding: '8px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', fontWeight: '800', cursor: 'pointer' }}
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📋 দোকানের সার্বিক স্টক খতিয়ান ও ইন-আউট অডিট রিপোর্ট (Shop-wide Stock Movement Ledger & Audit Report Modal) */}
+      {showAllLedgerModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '920px',
+            maxHeight: '92vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexShrink: 0 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📋</span> <span>দোকানের সার্বিক স্টক লেনদেন খাতা ও অডিট রিপোর্ট</span>
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  {tenant?.shopName} • নতুন মাল আসা (Stock In) ও বিক্রির মাধ্যমে স্টক আউট (Sales) এর সম্পূর্ণ হিসাব
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllLedgerModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', fontSize: '16px', color: '#475569' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* KPI Summary Cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '10px',
+              marginBottom: '16px',
+              flexShrink: 0
+            }}>
+              {/* Card 1: Stock In */}
+              <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '14px', padding: '12px 14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📥</span> মোট নতুন স্টক (ইন)
+                </span>
+                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#15803d', marginTop: '3px' }}>
+                  +{ledgerSummary.totalInQty} একক
+                </div>
+                <span style={{ fontSize: '11px', color: '#166534', marginTop: '2px', display: 'block' }}>
+                  মোট ক্রয়মূল্য: <strong>৳{ledgerSummary.totalInValue.toLocaleString('en-US')}</strong>
+                </span>
+              </div>
+
+              {/* Card 2: Sales Out */}
+              <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '14px', padding: '12px 14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📤</span> মোট বিক্রি হয়ে স্টক আউট
+                </span>
+                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#c2410c', marginTop: '3px' }}>
+                  -{ledgerSummary.totalOutQty} একক
+                </div>
+                <span style={{ fontSize: '11px', color: '#9a3412', marginTop: '2px', display: 'block' }}>
+                  মোট বিক্রয়মূল্য: <strong>৳{ledgerSummary.totalOutValue.toLocaleString('en-US')}</strong>
+                </span>
+              </div>
+
+              {/* Card 3: Total Logs */}
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '12px 14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📊</span> মোট রেকর্ড সংখ্যা
+                </span>
+                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '3px' }}>
+                  {ledgerSummary.totalLogs}টি এন্ট্রি
+                </div>
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  তারিখ ও সময় অনুযায়ী সাজানো
+                </span>
+              </div>
+            </div>
+
+            {/* Filter Controls Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+              marginBottom: '12px',
+              flexShrink: 0
+            }}>
+              {/* Date Filter Tabs */}
+              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
+                {[
+                  { id: 'all', label: 'সব সময়' },
+                  { id: 'today', label: 'আজ' },
+                  { id: 'last7', label: 'বিগত ৭ দিন' },
+                  { id: 'month', label: 'এই মাস' }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      const newDateF = t.id as any;
+                      setLedgerDateFilter(newDateF);
+                      loadAllStockLedger(ledgerFilter, newDateF, ledgerSearch);
+                    }}
+                    style={{
+                      background: ledgerDateFilter === t.id ? '#ffffff' : 'transparent',
+                      color: ledgerDateFilter === t.id ? '#0f172a' : '#64748b',
+                      border: 'none',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: ledgerDateFilter === t.id ? '800' : '600',
+                      cursor: 'pointer',
+                      boxShadow: ledgerDateFilter === t.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Type Filter Tabs */}
+              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
+                {[
+                  { id: 'all', label: 'সব লেনদেন' },
+                  { id: 'stock_in', label: '📥 শুধু স্টক ইন' },
+                  { id: 'sale', label: '📤 শুধু বিক্রি' }
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      const newType = t.id as any;
+                      setLedgerFilter(newType);
+                      loadAllStockLedger(newType, ledgerDateFilter, ledgerSearch);
+                    }}
+                    style={{
+                      background: ledgerFilter === t.id ? '#ffffff' : 'transparent',
+                      color: ledgerFilter === t.id ? '#0f172a' : '#64748b',
+                      border: 'none',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      fontSize: '11.5px',
+                      fontWeight: ledgerFilter === t.id ? '800' : '600',
+                      cursor: 'pointer',
+                      boxShadow: ledgerFilter === t.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Box */}
+              <div style={{ position: 'relative', minWidth: '180px', flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="🔍 পণ্য, মহাজন বা মেমো দিয়ে খুঁজুন..."
+                  value={ledgerSearch}
+                  onChange={(e) => {
+                    setLedgerSearch(e.target.value);
+                    loadAllStockLedger(ledgerFilter, ledgerDateFilter, e.target.value);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '12px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Scrollable Audit Table */}
+            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid #e2e8f0', borderRadius: '14px' }}>
+              {loadingLedger ? (
+                <div style={{ padding: '30px', textAlign: 'center' }}>
+                  <DataLoader text="সার্বিক স্টক ও বিক্রয় খতিয়ান লোড হচ্ছে..." />
+                </div>
+              ) : ledgerLogs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>📦</span>
+                  এই ফিল্টারে কোনো স্টক ইন বা বিক্রির রেকর্ড পাওয়া যায়নি।
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+                    <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800' }}>
+                      <th style={{ padding: '9px 12px' }}>📅 তারিখ ও সময়</th>
+                      <th style={{ padding: '9px 12px' }}>📦 পণ্যের নাম</th>
+                      <th style={{ padding: '9px 10px' }}>ধরন</th>
+                      <th style={{ padding: '9px 10px' }}>পরিমাণ</th>
+                      <th style={{ padding: '9px 10px' }}>একক দর</th>
+                      <th style={{ padding: '9px 10px' }}>মোট টাকা</th>
+                      <th style={{ padding: '9px 12px' }}>উৎস / রেফারেন্স</th>
+                      <th style={{ padding: '9px 12px' }}>নোট</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ledgerLogs.map((log: any, idx: number) => {
+                      const isInflow = log.type === 'stock_in';
+                      const isSale = log.type === 'sale';
+                      const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
+                        year: 'numeric', month: 'short', day: 'numeric'
+                      }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                      const totalAmt = Math.round((Number(log.quantity) || 0) * (Number(log.unit_price) || 0));
+
+                      return (
+                        <tr
+                          key={log.id || idx}
+                          style={{
+                            borderBottom: '1px solid #f1f5f9',
+                            background: isInflow ? '#f0fdf4' : isSale ? '#ffffff' : '#fafafa'
+                          }}
+                        >
+                          <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                            {formattedDate}
+                          </td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <strong style={{ color: '#0f172a', fontSize: '12.5px' }}>
+                              {log.product_name}
+                            </strong>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '900',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              background: isInflow ? '#dcfce7' : isSale ? '#ffedd5' : '#f1f5f9',
+                              color: isInflow ? '#15803d' : isSale ? '#c2410c' : '#475569',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {isInflow ? '📥 নতুন স্টক ইন' : isSale ? '🛒 বিক্রি (আউট)' : log.type === 'return' ? '↩️ ফেরত' : '⚖️ সমন্বয়'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span
+                              className="num-font"
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: '900',
+                                color: isInflow ? '#15803d' : '#c2410c'
+                              }}
+                            >
+                              {isInflow ? `+${log.quantity}` : `-${log.quantity}`} {log.unit}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span className="num-font" style={{ color: '#475569', fontWeight: '700' }}>
+                              ৳{log.unit_price || 0}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span className="num-font" style={{ fontWeight: '900', color: isInflow ? '#15803d' : '#0f172a' }}>
+                              ৳{totalAmt.toLocaleString('en-US')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#475569', fontSize: '11.5px' }}>
+                            {log.source_ref || (isInflow ? 'চালান' : 'মেমো')}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', maxWidth: '180px' }}>
+                            {log.note || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div style={{
+              marginTop: '14px',
+              paddingTop: '12px',
+              borderTop: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleExportLedgerCSV}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #a7f3d0',
+                    background: '#ecfdf5',
+                    color: '#065f46',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>📥</span> CSV ডাউনলোড
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    color: '#334155',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>🖨️</span> প্রিন্ট রিপোর্ট
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAllLedgerModal(false)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '12.5px',
+                  cursor: 'pointer'
+                }}
               >
                 বন্ধ করুন
               </button>
