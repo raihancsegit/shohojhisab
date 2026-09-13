@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme, getIndustryVoiceConfig } from '../../lib/industryConfig';
@@ -211,7 +211,16 @@ export default function PosPage() {
   // 🔢 Amar Dokan Style Fast Numpad POS Mode
   const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
   const [numpadInput, setNumpadInput] = useState('');
-  const [numpadItems, setNumpadItems] = useState<Array<{ id: string; amount: number; note: string; productId?: string | null; unit?: string }>>([]);
+  const [numpadItems, setNumpadItems] = useState<Array<{
+    id: string;
+    amount: number;
+    note: string;
+    productId?: string | null;
+    unit?: string;
+    quantity?: number;
+    unitPrice?: number;
+    purchasePrice?: number;
+  }>>([]);
   const [numpadNote, setNumpadNote] = useState('');
   const [numpadSelectedProduct, setNumpadSelectedProduct] = useState<any | null>(null);
   const [showNumpadProductDropdown, setShowNumpadProductDropdown] = useState(false);
@@ -297,6 +306,23 @@ export default function PosPage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Remember shopkeeper's preferred POS mode in localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sh_pos_mode');
+      if (saved === 'numpad' || saved === 'catalog') {
+        setPosMode(saved as 'catalog' | 'numpad');
+      }
+    }
+  }, []);
+
+  const changePosMode = (mode: 'catalog' | 'numpad') => {
+    setPosMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sh_pos_mode', mode);
+    }
+  };
 
   const loadRunningTabs = async () => {
     if (!currentTenantId) return;
@@ -434,12 +460,60 @@ export default function PosPage() {
     } catch (e) {}
   };
 
+  // 🔢 Expression Parser (supports "4×12" or "140")
+  const parseNumpadExpression = (input: string) => {
+    const clean = input.replace(/×/g, '*').trim();
+    if (clean.includes('*')) {
+      const parts = clean.split('*');
+      const q = parseFloat(parts[0]);
+      const p = parseFloat(parts[1]);
+      if (!isNaN(q) && !isNaN(p) && q > 0 && p > 0) {
+        return { quantity: q, unitPrice: p, total: Math.round(q * p * 100) / 100, isMultiplier: true };
+      }
+      if (!isNaN(q) && q > 0) {
+        return { quantity: q, unitPrice: 0, total: 0, isMultiplier: true };
+      }
+    }
+    const val = parseFloat(clean);
+    if (!isNaN(val) && val > 0) {
+      return { quantity: 1, unitPrice: val, total: val, isMultiplier: false };
+    }
+    return { quantity: 1, unitPrice: 0, total: 0, isMultiplier: false };
+  };
+
+  const parsedPending = parseNumpadExpression(numpadInput);
+  const numpadPendingVal = parsedPending.total;
+  const numpadTotal = numpadItems.reduce((sum, i) => sum + i.amount, 0) + numpadPendingVal;
+
+  // 🔮 Real-time Instant Price Prediction Pills
+  const predictedProducts = useMemo(() => {
+    const targetPrice = parsedPending.unitPrice || parsedPending.total;
+    if (!targetPrice || targetPrice <= 0) return [];
+    return products.filter(p => Number(p.sellingPrice) === targetPrice).slice(0, 6);
+  }, [products, parsedPending.unitPrice, parsedPending.total]);
+
   // 🔢 Quick Numpad Helper Handlers
   const handleNumpadDigit = (digit: string) => {
     playBeep(850);
     triggerHaptic('light');
     if (digit === '.' && numpadInput.includes('.')) return;
+    if (digit === '×') {
+      if (numpadInput.includes('×') || numpadInput === '') return;
+    }
     setNumpadInput(prev => prev + digit);
+  };
+
+  const handleNumpadMultiplier = (mult: number) => {
+    playBeep(900);
+    triggerHaptic('light');
+    if (!numpadInput) {
+      setNumpadInput(`${mult}×`);
+    } else if (numpadInput.includes('×')) {
+      const parts = numpadInput.split('×');
+      setNumpadInput(`${mult}×${parts[1] || ''}`);
+    } else {
+      setNumpadInput(`${mult}×${numpadInput}`);
+    }
   };
 
   const handleNumpadClear = () => {
@@ -461,22 +535,76 @@ export default function PosPage() {
     setNumpadInput(prev => prev.slice(0, -1));
   };
 
-  const handleNumpadAddCurrent = () => {
-    const amt = parseFloat(numpadInput);
-    if (!amt || isNaN(amt) || amt <= 0) return;
+  const handleQuickProductTap = (p: any) => {
     playBeep(1100);
     triggerHaptic('medium');
-    const itemNote = numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${numpadItems.length + 1}`);
+
+    const expr = parseNumpadExpression(numpadInput);
+    let qty = 1;
+    if (expr.quantity > 1) {
+      qty = expr.quantity;
+    } else if (numpadInput && !numpadInput.includes('.') && parseFloat(numpadInput) > 0 && parseFloat(numpadInput) <= 100) {
+      qty = parseFloat(numpadInput);
+    }
+
+    const uPrice = Number(p.sellingPrice) || 0;
+    const totAmt = Math.round(qty * uPrice * 100) / 100;
+
+    setNumpadItems(prev => [
+      ...prev,
+      {
+        id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+        amount: totAmt,
+        note: `${p.banglaName || p.name}${qty > 1 ? ` (${qty} ${p.unit || 'পিস'})` : ''}`,
+        productId: p.id,
+        unit: p.unit || 'পিস',
+        quantity: qty,
+        unitPrice: uPrice,
+        purchasePrice: Number(p.purchasePrice) || Math.round(uPrice * 0.85)
+      }
+    ]);
+
+    setNumpadInput('');
+    setNumpadNote('');
+    setNumpadSelectedProduct(null);
+    setShowNumpadProductDropdown(false);
+  };
+
+  const handleNumpadAddCurrent = (overrideProduct?: any) => {
+    const targetProd = overrideProduct || numpadSelectedProduct;
+    const expr = parseNumpadExpression(numpadInput);
+
+    let amt = expr.total;
+    let qty = expr.quantity || 1;
+    let uPrice = expr.unitPrice || amt;
+
+    if ((!amt || amt <= 0) && targetProd) {
+      uPrice = Number(targetProd.sellingPrice) || 0;
+      amt = Math.round(qty * uPrice * 100) / 100;
+    }
+
+    if (!amt || isNaN(amt) || amt <= 0) return;
+
+    playBeep(1100);
+    triggerHaptic('medium');
+
+    const baseNote = numpadNote.trim() || (targetProd ? (targetProd.banglaName || targetProd.name) : `আইটেম ${numpadItems.length + 1}`);
+    const itemNote = `${baseNote}${qty > 1 && !baseNote.includes(`(${qty}`) ? ` (${qty} ${targetProd?.unit || 'পিস'})` : ''}`;
+
     setNumpadItems(prev => [
       ...prev,
       {
         id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
         amount: amt,
         note: itemNote,
-        productId: numpadSelectedProduct?.id || null,
-        unit: numpadSelectedProduct?.unit || 'পিস'
+        productId: targetProd?.id || null,
+        unit: targetProd?.unit || 'পিস',
+        quantity: qty,
+        unitPrice: uPrice,
+        purchasePrice: Number(targetProd?.purchasePrice) || Math.round(uPrice * 0.85)
       }
     ]);
+
     setNumpadInput('');
     setNumpadNote('');
     setNumpadSelectedProduct(null);
@@ -488,7 +616,14 @@ export default function PosPage() {
     triggerHaptic('medium');
     setNumpadItems(prev => [
       ...prev,
-      { id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6), amount: amt, note: numpadNote.trim() || `আইটেম ${prev.length + 1}` }
+      {
+        id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+        amount: amt,
+        note: numpadNote.trim() || `আইটেম ${prev.length + 1}`,
+        quantity: 1,
+        unitPrice: amt,
+        unit: 'পিস'
+      }
     ]);
     setNumpadNote('');
   };
@@ -499,20 +634,25 @@ export default function PosPage() {
     setNumpadItems(prev => prev.filter(i => i.id !== id));
   };
 
-  const numpadPendingVal = parseFloat(numpadInput) || 0;
-  const numpadTotal = numpadItems.reduce((sum, i) => sum + i.amount, 0) + numpadPendingVal;
-
   const handleNumpadCheckout = async (method: 'cash' | 'due') => {
     if (!currentTenantId) return;
 
     let finalItems = [...numpadItems];
     if (numpadPendingVal > 0) {
+      const pMatch = numpadSelectedProduct;
+      const expr = parseNumpadExpression(numpadInput);
+      const qty = expr.quantity || 1;
+      const uPrice = expr.unitPrice || numpadPendingVal;
+      const baseNote = numpadNote.trim() || (pMatch ? (pMatch.banglaName || pMatch.name) : `আইটেম ${finalItems.length + 1}`);
       finalItems.push({
         id: 'np-pending',
         amount: numpadPendingVal,
-        note: numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${finalItems.length + 1}`),
-        productId: numpadSelectedProduct?.id || null,
-        unit: numpadSelectedProduct?.unit || 'আইটেম'
+        note: `${baseNote}${qty > 1 && !baseNote.includes(`(${qty}`) ? ` (${qty} ${pMatch?.unit || 'পিস'})` : ''}`,
+        productId: pMatch?.id || null,
+        unit: pMatch?.unit || 'আইটেম',
+        quantity: qty,
+        unitPrice: uPrice,
+        purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
       });
     }
 
@@ -542,15 +682,21 @@ export default function PosPage() {
       customerId: numpadCustomer !== 'none' ? numpadCustomer : null,
       customerName: finalCustName || 'নগদ কাস্টমার',
       customerPhone: finalCustPhone || '',
-      items: finalItems.map(i => ({
-        productId: i.productId || null,
-        productName: i.note ? i.note : 'দ্রুত নগদ/বাকি বিক্রি',
-        quantity: 1,
-        selectedUnit: i.unit || 'আইটেম',
-        sellingPrice: i.amount,
-        purchasePrice: Math.round(i.amount * 0.85),
-        totalPrice: i.amount
-      })),
+      items: finalItems.map(i => {
+        const pMatch = i.productId ? products.find(p => p.id === i.productId) : null;
+        const qty = i.quantity || 1;
+        const uPrice = i.unitPrice || (i.amount / qty);
+        const pPrice = i.purchasePrice || (pMatch?.purchasePrice ? Number(pMatch.purchasePrice) : Math.round(uPrice * 0.85));
+        return {
+          productId: i.productId || null,
+          productName: i.note ? i.note : 'দ্রুত নগদ/বাকি বিক্রি',
+          quantity: qty,
+          selectedUnit: i.unit || pMatch?.unit || 'আইটেম',
+          sellingPrice: uPrice,
+          purchasePrice: pPrice,
+          totalPrice: i.amount
+        };
+      }),
       discount: 0,
       totalAmount: totalAmt,
       paidAmount: paid,
@@ -583,12 +729,20 @@ export default function PosPage() {
           invoiceNo: data.order?.invoiceNo || 'INV-' + Date.now().toString().slice(-6),
           date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
           cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
-          items: finalItems.map(i => ({
-            product: { banglaName: i.note || 'ক্যালকুলেটর বিক্রি', unit: 'আইটেম', sellingPrice: i.amount },
-            quantity: 1,
-            unitPrice: i.amount,
-            totalPrice: i.amount
-          })),
+          items: finalItems.map(i => {
+            const qty = i.quantity || 1;
+            const uPrice = i.unitPrice || (i.amount / qty);
+            return {
+              product: {
+                banglaName: i.note || 'ক্যালকুলেটর বিক্রি',
+                unit: i.unit || 'আইটেম',
+                sellingPrice: uPrice
+              },
+              quantity: qty,
+              unitPrice: uPrice,
+              totalPrice: i.amount
+            };
+          }),
           subtotal: totalAmt,
           discount: 0,
           totalAmount: totalAmt,
@@ -622,12 +776,20 @@ export default function PosPage() {
   const handleNumpadPushToCart = () => {
     let finalItems = [...numpadItems];
     if (numpadPendingVal > 0) {
+      const pMatch = numpadSelectedProduct;
+      const expr = parseNumpadExpression(numpadInput);
+      const qty = expr.quantity || 1;
+      const uPrice = expr.unitPrice || numpadPendingVal;
+      const baseNote = numpadNote.trim() || (pMatch ? (pMatch.banglaName || pMatch.name) : `আইটেম ${finalItems.length + 1}`);
       finalItems.push({
         id: 'np-pending',
         amount: numpadPendingVal,
-        note: numpadNote.trim() || (numpadSelectedProduct ? (numpadSelectedProduct.banglaName || numpadSelectedProduct.name) : `আইটেম ${finalItems.length + 1}`),
-        productId: numpadSelectedProduct?.id || null,
-        unit: numpadSelectedProduct?.unit || 'আইটেম'
+        note: `${baseNote}${qty > 1 && !baseNote.includes(`(${qty}`) ? ` (${qty} ${pMatch?.unit || 'পিস'})` : ''}`,
+        productId: pMatch?.id || null,
+        unit: pMatch?.unit || 'আইটেম',
+        quantity: qty,
+        unitPrice: uPrice,
+        purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
       });
     }
     if (finalItems.length === 0) return;
@@ -636,16 +798,18 @@ export default function PosPage() {
 
     finalItems.forEach(it => {
       const pMatch = products.find(p => p.id === it.productId);
+      const qty = it.quantity || 1;
+      const uPrice = it.unitPrice || (it.amount / qty);
       const customProd = pMatch || {
         id: 'custom-np-' + Math.random().toString(36).slice(2, 8),
         name: it.note || 'ক্যালকুলেটর আইটেম',
         banglaName: it.note || 'ক্যালকুলেটর আইটেম',
-        sellingPrice: it.amount,
-        purchasePrice: Math.round(it.amount * 0.85),
+        sellingPrice: uPrice,
+        purchasePrice: it.purchasePrice || Math.round(uPrice * 0.85),
         unit: it.unit || 'আইটেম',
         stock: 999
       };
-      addToCart(customProd, 1);
+      addToCart(customProd, qty);
     });
 
     setNumpadItems([]);
@@ -653,8 +817,48 @@ export default function PosPage() {
     setNumpadNote('');
     setNumpadSelectedProduct(null);
     setShowNumpadProductDropdown(false);
-    setPosMode('catalog');
+    changePosMode('catalog');
   };
+
+  // ⌨️ Physical Keyboard Numpad shortcuts when posMode === 'numpad'
+  useEffect(() => {
+    const handleKeypadKey = (e: KeyboardEvent) => {
+      if (posMode !== 'numpad') return;
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+      if (isInput) return;
+
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        handleNumpadDigit(e.key);
+      } else if (e.key === '.') {
+        e.preventDefault();
+        handleNumpadDigit('.');
+      } else if (e.key === '*' || e.key === 'x' || e.key === 'X') {
+        e.preventDefault();
+        handleNumpadDigit('×');
+      } else if (e.key === '+') {
+        e.preventDefault();
+        handleNumpadAddCurrent();
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleNumpadBackspace();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleNumpadClear();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (numpadPendingVal > 0) {
+          handleNumpadAddCurrent();
+        } else if (numpadTotal > 0) {
+          handleNumpadCheckout('cash');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeypadKey);
+    return () => window.removeEventListener('keydown', handleKeypadKey);
+  }, [posMode, numpadInput, numpadItems, numpadPendingVal, numpadTotal, numpadSelectedProduct, numpadNote, currentTenantId, numpadCustomer, numpadNewCustName, numpadNewCustPhone]);
 
   const addToCart = (product: any, qty: number = 1, unit?: string) => {
     playBeep(880);
@@ -1607,7 +1811,7 @@ export default function PosPage() {
       }}>
         <button
           type="button"
-          onClick={() => { setPosMode('catalog'); triggerHaptic('light'); }}
+          onClick={() => { changePosMode('catalog'); triggerHaptic('light'); }}
           style={{
             flex: 1,
             padding: '10px 14px',
@@ -1630,7 +1834,7 @@ export default function PosPage() {
         </button>
         <button
           type="button"
-          onClick={() => { setPosMode('numpad'); triggerHaptic('light'); }}
+          onClick={() => { changePosMode('numpad'); triggerHaptic('light'); }}
           style={{
             flex: 1,
             padding: '10px 14px',
@@ -1651,7 +1855,7 @@ export default function PosPage() {
         >
           <span>🔢 ক্যালকুলেটর নামপ্যাড বিক্রি</span>
           <span style={{ fontSize: '10px', background: posMode === 'numpad' ? 'rgba(255,255,255,0.25)' : '#10b981', color: '#fff', padding: '1px 6px', borderRadius: '99px', fontWeight: '900' }}>
-            দ্রুত
+            সুপারফাস্ট
           </span>
         </button>
       </div>
@@ -1671,13 +1875,13 @@ export default function PosPage() {
           {/* Header Title */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '22px' }}>🔢</span>
+              <span style={{ fontSize: '24px' }}>🔢</span>
               <div>
                 <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                  ক্যালকুলেটর কুইক সেল
+                  দোকানদার সুপার কুইক নামপ্যাড
                 </h2>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                  পণ্য সিলেক্ট ছাড়া সরাসরি টাকার অংকে দ্রুত বিক্রি
+                  ক্যালকুলেটরের চেয়ে দ্রুত • ১-ট্যাপ মেমো • স্টক ও বাকি হিসাব স্বয়ংক্রিয়
                 </span>
               </div>
             </div>
@@ -1701,39 +1905,183 @@ export default function PosPage() {
             )}
           </div>
 
+          {/* 🔥 1. শীর্ষ ১২টি বেশি বিক্রিত পণ্য (১-ট্যাপে মেমো) */}
+          {products.length > 0 && (
+            <div style={{
+              marginBottom: '14px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%)',
+              border: '1.5px solid rgba(16, 185, 129, 0.25)',
+              borderRadius: '16px',
+              padding: '12px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span>🔥</span>
+                  <span>বেশি বিক্রিত হট পণ্য (১-ট্যাপে যোগ):</span>
+                </span>
+                <span style={{ fontSize: '10px', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '6px', fontWeight: '800' }}>
+                  ⚡ সরাসরি স্টক লিঙ্ক
+                </span>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '6px'
+              }}>
+                {products.slice(0, 12).map((p) => {
+                  const inStock = Number(p.stock || 0) > 0;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleQuickProductTap(p)}
+                      style={{
+                        background: 'var(--bg-canvas)',
+                        border: '1.5px solid var(--border-card)',
+                        borderRadius: '12px',
+                        padding: '7px 4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '2px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                        transition: 'transform 0.1s ease, border-color 0.15s ease'
+                      }}
+                      className="clickable-card"
+                      title={`${p.banglaName || p.name} (মজুদ: ${p.stock} ${p.unit})`}
+                    >
+                      <span style={{ fontSize: '18px' }}>{p.icon || '📦'}</span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        color: 'var(--text-primary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                        textAlign: 'center'
+                      }}>
+                        {p.banglaName || p.name}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: '900',
+                          color: '#059669'
+                        }} className="num-font">
+                          ৳{p.sellingPrice}
+                        </span>
+                        <span style={{
+                          fontSize: '9px',
+                          color: inStock ? '#16a34a' : '#dc2626',
+                          background: inStock ? '#dcfce7' : '#fee2e2',
+                          padding: '1px 3px',
+                          borderRadius: '4px',
+                          fontWeight: '800'
+                        }}>
+                          {inStock ? `${p.stock}` : '০'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* LED Display Screen */}
           <div style={{
             background: 'linear-gradient(135deg, #090d16 0%, #131b2e 100%)',
             borderRadius: '18px',
             padding: '16px 20px',
             color: '#ffffff',
-            marginBottom: '16px',
+            marginBottom: '14px',
             border: '1.5px solid #1e293b',
             boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)'
           }}>
             {/* Expression Equation */}
-            <div style={{ fontSize: '13px', color: '#94a3b8', minHeight: '20px', overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: '4px' }} className="num-font">
+            <div style={{ fontSize: '13px', color: '#94a3b8', minHeight: '22px', overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: '6px' }} className="num-font">
               {numpadItems.length > 0
                 ? numpadItems.map((it, idx) => (
                     <span key={it.id}>
                       {idx > 0 ? ' + ' : ''}৳{it.amount} {it.note ? `(${it.note})` : ''}
                     </span>
                   ))
-                : 'টাকার অংক চাপুন...'}
+                : 'টাকার অংক বা হট প্রোডাক্ট চাপুন...'}
               {numpadInput && (
-                <span style={{ color: '#38bdf8' }}> {numpadItems.length > 0 ? '+' : ''} ৳{numpadInput}</span>
+                <span style={{ color: '#38bdf8' }}>
+                  {numpadItems.length > 0 ? ' + ' : ''}
+                  {parsedPending.isMultiplier
+                    ? `${parsedPending.quantity} × ৳${parsedPending.unitPrice || '...'} = ৳${parsedPending.total}`
+                    : `৳${numpadInput}`}
+                </span>
               )}
             </div>
 
             {/* Big LED Total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '800' }}>
-                মোট প্রদেয়:
-              </span>
+              <div>
+                <span style={{ fontSize: '11.5px', color: '#10b981', fontWeight: '800', display: 'block' }}>
+                  মোট প্রদেয় বিল:
+                </span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  {numpadItems.length + (numpadPendingVal > 0 ? 1 : 0)} টি আইটেম
+                </span>
+              </div>
               <div style={{ fontSize: '36px', fontWeight: '900', color: '#10b981', lineHeight: 1 }} className="num-font">
                 ৳ {numpadTotal.toLocaleString('en-US')}
               </div>
             </div>
+
+            {/* 🔮 Instant Price Prediction Pills */}
+            {predictedProducts.length > 0 && (
+              <div style={{
+                marginTop: '12px',
+                paddingTop: '10px',
+                borderTop: '1px solid #1e293b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none'
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#38bdf8', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  ⚡ ৳{parsedPending.unitPrice || parsedPending.total} মূল্যের স্টক পণ্য:
+                </span>
+                {predictedProducts.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleNumpadAddCurrent(p)}
+                    style={{
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid #38bdf8',
+                      color: '#e0f2fe',
+                      borderRadius: '99px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease'
+                    }}
+                    className="hover-scale"
+                  >
+                    <span>{p.icon || '📦'}</span>
+                    <span>{p.banglaName || p.name}</span>
+                    <span style={{ fontSize: '9px', background: '#0284c7', color: '#ffffff', padding: '1px 5px', borderRadius: '4px' }}>
+                      মজুদ {p.stock} {p.unit}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Items Pills (if multiple amounts entered) */}
@@ -1992,56 +2340,41 @@ export default function PosPage() {
                 })()}
               </div>
             )}
+          </div>
 
-            {/* Quick frequent stock items chips */}
-            {!numpadSelectedProduct && products.length > 0 && (
-              <div style={{
-                display: 'flex',
-                gap: '5px',
-                overflowX: 'auto',
-                paddingTop: '6px',
-                paddingBottom: '2px',
-                scrollbarWidth: 'none'
-              }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', alignSelf: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  ⚡ স্টক পণ্য:
-                </span>
-                {products.slice(0, 8).map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setNumpadSelectedProduct(p);
-                      setNumpadNote(p.banglaName || p.name);
-                      if (!numpadInput || Number(numpadInput) === 0) {
-                        setNumpadInput(String(p.sellingPrice));
-                      }
-                      playBeep(950);
-                      triggerHaptic('light');
-                    }}
-                    style={{
-                      background: 'var(--bg-canvas)',
-                      border: '1px solid var(--border-card)',
-                      borderRadius: '8px',
-                      padding: '3px 8px',
-                      fontSize: '11px',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title={`${p.banglaName || p.name} (৳${p.sellingPrice})`}
-                  >
-                    <span>{p.icon || '📦'}</span>
-                    <span>{p.banglaName || p.name}</span>
-                    <strong style={{ color: '#059669' }}>৳{p.sellingPrice}</strong>
-                  </button>
-                ))}
-              </div>
-            )}
+          {/* ✖ Quick Multiplier Strip */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '8px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              ✖ গুণ / পরিমাণ:
+            </span>
+            {[1, 2, 3, 4, 5, 10].map(mult => (
+              <button
+                key={mult}
+                type="button"
+                onClick={() => handleNumpadMultiplier(mult)}
+                style={{
+                  background: 'var(--bg-canvas)',
+                  border: '1.5px solid var(--border-card)',
+                  borderRadius: '8px',
+                  padding: '5px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: '900',
+                  color: '#4f46e5',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                ×{mult}
+              </button>
+            ))}
           </div>
 
           {/* Quick Amount Pills */}
@@ -2089,17 +2422,17 @@ export default function PosPage() {
               { label: '4', action: () => handleNumpadDigit('4') },
               { label: '5', action: () => handleNumpadDigit('5') },
               { label: '6', action: () => handleNumpadDigit('6') },
-              { label: 'C', action: handleNumpadClear, bg: '#fee2e2', color: '#b91c1c' },
+              { label: '× গুণ', action: () => handleNumpadDigit('×'), bg: '#eff6ff', color: '#2563eb', bold: true },
 
               { label: '1', action: () => handleNumpadDigit('1') },
               { label: '2', action: () => handleNumpadDigit('2') },
               { label: '3', action: () => handleNumpadDigit('3') },
-              { label: '+ যোগ', action: handleNumpadAddCurrent, bg: '#eef2ff', color: '#4f46e5', bold: true },
+              { label: '+ যোগ', action: () => handleNumpadAddCurrent(), bg: '#eef2ff', color: '#4f46e5', bold: true },
 
-              { label: '00', action: () => handleNumpadDigit('00') },
+              { label: 'C', action: handleNumpadClear, bg: '#fee2e2', color: '#b91c1c' },
               { label: '0', action: () => handleNumpadDigit('0') },
               { label: '.', action: () => handleNumpadDigit('.') },
-              { label: '↵ আইটেম', action: handleNumpadAddCurrent, bg: '#ecfdf5', color: '#059669', bold: true },
+              { label: '↵ এন্টার', action: () => handleNumpadAddCurrent(), bg: '#ecfdf5', color: '#059669', bold: true },
             ].map((btn, idx) => (
               <button
                 key={idx}
@@ -2126,7 +2459,7 @@ export default function PosPage() {
             ))}
           </div>
 
-          {/* Customer Selection for Due/Cash tracking */}
+          {/* Customer Selection & Recent Debtors for Rapid Due Sale */}
           <div style={{
             background: 'var(--bg-canvas)',
             borderRadius: '14px',
@@ -2136,7 +2469,7 @@ export default function PosPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>
-                👤 কাস্টমার নির্বাচন (বাকি বিক্রির জন্য আবশ্যক):
+                👤 কাস্টমার নির্বাচন (বাকি বিক্রির জন্য):
               </label>
               <button
                 type="button"
@@ -2153,6 +2486,52 @@ export default function PosPage() {
                 {numpadCustomer === 'new' ? 'তালিকা থেকে বাছুন' : '+ নতুন কাস্টমার'}
               </button>
             </div>
+
+            {/* 1-Tap Recent Debtors */}
+            {customers.filter(c => Number(c.totalDue) > 0).length > 0 && numpadCustomer !== 'new' && (
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: '3px' }}>
+                  <span style={{ fontSize: '10px', color: '#dc2626', alignSelf: 'center', whiteSpace: 'nowrap', fontWeight: '800', flexShrink: 0 }}>
+                    ⚡ বাকি খাতা:
+                  </span>
+                  {customers
+                    .filter(c => Number(c.totalDue) > 0)
+                    .slice(0, 5)
+                    .map(c => {
+                      const isSel = numpadCustomer === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setNumpadCustomer(isSel ? 'none' : c.id);
+                            playBeep(950);
+                            triggerHaptic('light');
+                          }}
+                          style={{
+                            background: isSel ? '#fee2e2' : 'var(--bg-card)',
+                            border: isSel ? '1.5px solid #ef4444' : '1px solid var(--border-card)',
+                            borderRadius: '8px',
+                            padding: '3px 8px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            color: isSel ? '#b91c1c' : 'var(--text-primary)',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>👤 {c.name}</span>
+                          <span style={{ fontSize: '10px', color: '#dc2626' }}>৳{c.totalDue}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
 
             {numpadCustomer === 'new' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -2260,7 +2639,7 @@ export default function PosPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>⚡ নগদ বিক্রি</span>
+              <span>⚡ নগদ বিক্রি (Enter)</span>
               <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
             </button>
 
@@ -2285,7 +2664,7 @@ export default function PosPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              <span>🔴 বাকি বিক্রি</span>
+              <span>🔴 বাকি খাতা</span>
               <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
             </button>
           </div>
