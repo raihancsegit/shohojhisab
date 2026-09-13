@@ -582,8 +582,8 @@ function parseSingleVoiceItem(
       }
     }
 
-    // STRICT: If not found in shop's existing products, reject! (No foreign items allowed)
-    if (!matchedProd) {
+    // If not found in shop's existing products and no explicit price provided, reject
+    if (!matchedProd && (!extractedPrice || extractedPrice <= 0)) {
       return null;
     }
   }
@@ -612,8 +612,23 @@ function parseSingleVoiceItem(
     finalUnitPrice = catalogRate;
     finalTotalPrice = extractedPrice;
   } else if (extractedPrice !== null && extractedPrice > 0) {
-    finalUnitPrice = extractedPrice;
-    finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    const catalogRate = matchedProd ? (Number(matchedProd.sellingPrice) || 0) : 0;
+    if (isExplicitRate || quantity <= 1) {
+      finalUnitPrice = extractedPrice;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    } else {
+      // Quantity > 1 (e.g. "চাল ৪ কেজি ৩০০ টাকা" or "নাপা ৫ টা ২৫ টাকা")
+      // In Bengali commerce, the spoken amount is usually the TOTAL price for that line item!
+      if (catalogRate > 0 && Math.abs(extractedPrice - catalogRate) < Math.abs(extractedPrice - (catalogRate * quantity))) {
+        // Closer to single unit rate
+        finalUnitPrice = extractedPrice;
+        finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+      } else {
+        // Spoken price is total price for the given quantity (e.g. 300 tk for 4 kg -> unit price = 75)
+        finalTotalPrice = extractedPrice;
+        finalUnitPrice = Math.round((extractedPrice / quantity) * 100) / 100;
+      }
+    }
   } else if (matchedProd) {
     finalUnitPrice = Number(matchedProd.sellingPrice) || 0;
     finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
