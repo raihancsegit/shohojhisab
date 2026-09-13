@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
+import SmartVoiceConfirmationCard, { SmartVoiceActionData } from './SmartVoiceConfirmationCard';
 
 interface VoiceKhataModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export default function VoiceKhataModal({
   const [lastActionMessage, setLastActionMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [manualText, setManualText] = useState('');
+  const [confirmationCardData, setConfirmationCardData] = useState<SmartVoiceActionData | null>(null);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
@@ -158,18 +160,21 @@ export default function VoiceKhataModal({
           playSuccessChime();
           if (triggerHaptic) triggerHaptic('success');
           setLastActionMessage(`✓ ${result.speech}`);
+          if (result.data) {
+            setConfirmationCardData(result.data);
+          }
           onActionCompleted();
           setLiveTranscript('');
           latestTranscriptRef.current = '';
           
-          // Speak announcement and restart listening only after TTS ends
+          // Speak announcement and restart listening only after TTS ends with safety pause
           if (speakAnnouncement) {
             speakAnnouncement(result.speech, () => {
               setTimeout(() => {
                 if (isMountedRef.current) {
                   startListening();
                 }
-              }, 800);
+              }, 1200);
             });
           }
           return;
@@ -509,6 +514,21 @@ export default function VoiceKhataModal({
         </div>
 
       </div>
+
+      {/* 🟢 1-Tap Undo & Visual Confirmation Smart Card */}
+      {confirmationCardData && (
+        <SmartVoiceConfirmationCard
+          data={confirmationCardData}
+          currentTenantId={currentTenantId}
+          triggerHaptic={triggerHaptic}
+          onDismiss={() => setConfirmationCardData(null)}
+          onActionUndone={() => {
+            onActionCompleted();
+            setConfirmationCardData(null);
+            setLastActionMessage('✓ এন্ট্রি বাতিল ও স্টক রিস্টোর হয়েছে');
+          }}
+        />
+      )}
     </div>
   );
 }

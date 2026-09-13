@@ -392,69 +392,97 @@ export default function ShopkeeperDashboard() {
 
         return (
           <>
-            {/* 👑 Royal Violet Hero Cockpit Card */}
+            {/* 👑 Royal Indigo Hero Cockpit Card */}
             <div style={{
-              background: 'linear-gradient(135deg, #5b50e6 0%, #4338ca 100%)',
+              background: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
               color: '#ffffff',
               borderRadius: '24px',
               padding: '22px 20px',
-              marginBottom: '24px',
-              boxShadow: '0 12px 30px -5px rgba(91, 80, 230, 0.35)',
+              marginBottom: '20px',
+              boxShadow: '0 12px 30px -5px rgba(49, 46, 129, 0.4)',
               position: 'relative',
               overflow: 'hidden'
             }}>
-              {/* Top Privacy Eye Button */}
-              <button
-                type="button"
-                onClick={togglePrivacyMode}
-                style={{
-                  position: 'absolute',
-                  top: '18px',
-                  right: '18px',
-                  background: 'rgba(255, 255, 255, 0.18)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  color: '#ffffff',
-                  fontSize: '17px',
-                  cursor: 'pointer',
-                  display: 'grid',
-                  placeItems: 'center',
-                  transition: 'background 0.2s ease'
-                }}
-                title={privacyMode ? 'ব্যালেন্স দেখতে চাপুন' : 'ব্যালেন্স গোপন রাখতে চাপুন'}
-              >
-                {privacyMode ? '🙈' : '👁️'}
-              </button>
-
-              {/* Dual-Column Main Balance */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', alignItems: 'center', marginBottom: '18px' }}>
-                {/* Left Column: হাতে আছে (Cash in Hand) */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: '#c7d2fe', fontWeight: '800', marginBottom: '4px' }}>
-                    <span>হাতে আছে</span>
-                  </div>
-                  <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '0.3px', color: '#ffffff' }} className="num-font">
-                    {privacyMode ? '••••••' : `৳ ${Math.max(0, liveCashInHand).toLocaleString('en-US')}`}
-                  </div>
+              {/* Top Row: Subtitle + Memo Count + Privacy Eye Button */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.16)', color: '#e0e7ff', padding: '3px 10px', borderRadius: '8px' }}>
+                    📊 আজকের দোকান হিসাব
+                  </span>
+                  <span style={{ fontSize: '11.5px', background: '#ecfdf5', color: '#065f46', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
+                    {((metrics as any)?.todayOrderCount !== undefined ? (metrics as any).todayOrderCount : metrics.orderCount || 0)}টি মেমো বিক্রি
+                  </span>
                 </div>
 
-                {/* Divider */}
-                <div style={{ width: '1px', height: '42px', background: 'rgba(255, 255, 255, 0.25)', margin: '0 10px' }} />
+                <button
+                  type="button"
+                  onClick={togglePrivacyMode}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.18)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '36px',
+                    height: '36px',
+                    color: '#ffffff',
+                    fontSize: '17px',
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center',
+                    transition: 'background 0.2s ease'
+                  }}
+                  title={privacyMode ? 'ব্যালেন্স দেখতে চাপুন' : 'ব্যালেন্স গোপন রাখতে চাপুন'}
+                >
+                  {privacyMode ? '🙈' : '👁️'}
+                </button>
+              </div>
 
-                {/* Right Column: ব্যাংকে আছে (Bank / Digital) */}
-                <div style={{ paddingLeft: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: '#c7d2fe', fontWeight: '800', marginBottom: '4px' }}>
-                    <span>ব্যাংকে আছে</span>
-                  </div>
-                  <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '0.3px', color: '#ffffff' }} className="num-font">
-                    {privacyMode ? '••••••' : `৳ ${liveBankBalance.toLocaleString('en-US')}`}
-                  </div>
+              {/* Centerpiece: আজকের মোট বিক্রি (Today's Total Sales) */}
+              <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+                <div style={{ fontSize: '13px', color: '#c7d2fe', fontWeight: '800', marginBottom: '2px' }}>
+                  আজকের মোট বিক্রি
+                </div>
+                <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }} className="num-font">
+                  {privacyMode ? '৳ ••••••' : `৳ ${((metrics as any)?.todaySales !== undefined ? (metrics as any).todaySales : metrics.totalSales || 0).toLocaleString('en-US')}`}
                 </div>
               </div>
 
-              {/* White Sub-Pill: নগদ প্রাপ্তি (Cash in) vs নগদ প্রদান (Cash out) */}
+              {/* 4 Financial Sub-Pills (Cash Sales, Due Sales, Net Profit, Expense) */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#a7f3d0', fontWeight: '800', display: 'block' }}>💵 নগদ বিক্রি</span>
+                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                    {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayCashSales !== undefined ? (metrics as any).todayCashSales : metrics.cashSales || 0).toLocaleString('en-US')}`}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#fecdd3', fontWeight: '800', display: 'block' }}>🔴 বাকি বিক্রি</span>
+                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                    {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayDueSales !== undefined ? (metrics as any).todayDueSales : 0).toLocaleString('en-US')}`}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#fed7aa', fontWeight: '800', display: 'block' }}>💹 আজকের নিট লাভ</span>
+                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                    {activeRoleMode === 'owner' ? (privacyMode ? '••••' : `৳ ${((metrics as any)?.todayNetProfit !== undefined ? (metrics as any).todayNetProfit : metrics.netProfit || 0).toLocaleString('en-US')}`) : '🔒 মোড'}
+                  </strong>
+                </div>
+
+                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#fbcfe8', fontWeight: '800', display: 'block' }}>💸 আজকের দোকান খরচ</span>
+                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                    {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayExpenses !== undefined ? (metrics as any).todayExpenses : metrics.expenses || 0).toLocaleString('en-US')}`}
+                  </strong>
+                </div>
+              </div>
+
+              {/* White Bottom Sub-Pill: হাতে আছে (Cash in hand) vs ব্যাংকে আছে (Bank) */}
               <div style={{
                 background: '#ffffff',
                 borderRadius: '16px',
@@ -464,55 +492,127 @@ export default function ShopkeeperDashboard() {
                 alignItems: 'center',
                 boxShadow: '0 4px 14px rgba(0,0,0,0.06)'
               }}>
-                {/* নগদ প্রাপ্তি ↓ */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '50%',
-                    background: '#ecfdf5',
-                    color: '#10b981',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '15px',
-                    fontWeight: '900'
-                  }}>
-                    ↓
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
+                    💵
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>নগদ প্রাপ্তি</span>
-                    <strong style={{ fontSize: '15px', color: '#10b981', fontWeight: '900' }} className="num-font">
-                      {privacyMode ? '••••' : `৳ ${todayCashIn.toLocaleString('en-US')}`}
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>হাতে নগদ ক্যাশ</span>
+                    <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: '900' }} className="num-font">
+                      {privacyMode ? '••••••' : `৳ ${Math.max(0, liveCashInHand).toLocaleString('en-US')}`}
                     </strong>
                   </div>
                 </div>
 
-                {/* Vertical Divider */}
                 <div style={{ width: '1px', height: '28px', background: '#f1f5f9' }} />
 
-                {/* নগদ প্রদান ↑ */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '10px' }}>
-                  <div style={{
-                    width: '30px',
-                    height: '30px',
-                    borderRadius: '50%',
-                    background: '#fef2f2',
-                    color: '#ef4444',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '15px',
-                    fontWeight: '900'
-                  }}>
-                    ↑
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
+                    🏦
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>নগদ প্রদান</span>
-                    <strong style={{ fontSize: '15px', color: '#ef4444', fontWeight: '900' }} className="num-font">
-                      {privacyMode ? '••••' : `৳ ${todayCashOut.toLocaleString('en-US')}`}
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>ব্যাংকে ব্যালেন্স</span>
+                    <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: '900' }} className="num-font">
+                      {privacyMode ? '••••••' : `৳ ${liveBankBalance.toLocaleString('en-US')}`}
                     </strong>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* ⚡ 1-TAP RAPID ACTION LAUNCHPAD */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '8px',
+              marginBottom: '20px'
+            }}>
+              <Link
+                href="/pos"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  padding: '12px 6px',
+                  borderRadius: '16px',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                className="clickable-card"
+              >
+                <span style={{ fontSize: '20px' }}>⚡</span>
+                <span style={{ fontSize: '11.5px', fontWeight: '900' }}>নতুন মেমো</span>
+              </Link>
+
+              <Link
+                href="/khata"
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #fed7aa',
+                  color: '#ea580c',
+                  padding: '12px 6px',
+                  borderRadius: '16px',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                className="clickable-card"
+              >
+                <span style={{ fontSize: '20px' }}>🎙️</span>
+                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির খাতা</span>
+              </Link>
+
+              <Link
+                href="/stock"
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #99f6e4',
+                  color: '#0d9488',
+                  padding: '12px 6px',
+                  borderRadius: '16px',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(13, 148, 136, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                className="clickable-card"
+              >
+                <span style={{ fontSize: '20px' }}>📦</span>
+                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>নতুন মাল/স্টক</span>
+              </Link>
+
+              <Link
+                href="/expenses"
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #fecdd3',
+                  color: '#e11d48',
+                  padding: '12px 6px',
+                  borderRadius: '16px',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(225, 29, 72, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                className="clickable-card"
+              >
+                <span style={{ fontSize: '20px' }}>💸</span>
+                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>খরচ লিখুন</span>
+              </Link>
             </div>
 
             {/* 📊 2x2 FLOATING-BADGE KPI METRIC CARDS (Industry Tailored) */}
@@ -809,61 +909,7 @@ export default function ShopkeeperDashboard() {
         );
       })()}
 
-      {/* 📊 ৩-বক্সের পরিষ্কার দৈনিক হিসাব (Daily Cash, Due & Profit 3-Box Cockpit) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '14px',
-        marginBottom: '24px'
-      }}>
-        {/* Box 1: Today's Cash In Hand */}
-        <div className="ui-card" style={{ padding: '20px', borderRadius: '18px', border: '1.5px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#64748b', fontWeight: '800' }}>আজকের নগদ ক্যাশ</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '16px' }}>
-              💵
-            </div>
-          </div>
-          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
-            ৳{metrics.cashSales.toLocaleString('en-US')}
-          </div>
-          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>
-            ক্যাশ ড্রয়ারে জমা টাকা
-          </span>
-        </div>
 
-        {/* Box 2: Total Market Due */}
-        <div className="ui-card" style={{ padding: '20px', borderRadius: '18px', border: '1.5px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#64748b', fontWeight: '800' }}>কাস্টমার মোট বাকি</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'grid', placeItems: 'center', fontSize: '16px' }}>
-              📒
-            </div>
-          </div>
-          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
-            ৳{metrics.totalMarketDue.toLocaleString('en-US')}
-          </div>
-          <Link href="/khata" style={{ fontSize: '11.5px', color: '#4f46e5', fontWeight: '800', textDecoration: 'none' }}>
-            বাকি খাতা ও WhatsApp তাগাদা ➔
-          </Link>
-        </div>
-
-        {/* Box 3: Net Profit */}
-        <div className="ui-card" style={{ padding: '20px', borderRadius: '18px', border: '1.5px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13.5px', color: '#64748b', fontWeight: '800' }}>আজকের খাঁটি নিট লাভ</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#eef2ff', color: '#4f46e5', display: 'grid', placeItems: 'center', fontSize: '16px' }}>
-              💹
-            </div>
-          </div>
-          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
-            {activeRoleMode === 'owner' ? `৳${metrics.netProfit.toLocaleString('en-US')}` : '৳••••••'}
-          </div>
-          <span style={{ fontSize: '11.5px', color: activeRoleMode === 'owner' ? '#64748b' : '#94a3b8', fontWeight: '600' }}>
-            {activeRoleMode === 'owner' ? 'সব খরচ বাদে আসল মুনাফা' : '🔒 কর্মচারী মোডে লাভ গোপন'}
-          </span>
-        </div>
-      </div>
 
       {/* Quick Action Navigation Tiles */}
       <div style={{ marginBottom: '30px' }}>

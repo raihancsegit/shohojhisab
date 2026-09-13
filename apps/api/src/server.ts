@@ -5,6 +5,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 import fs from 'fs';
+import { runGeminiShopAgent, undoLastAction, getUndoAction } from './ai-agent/aiAgent';
 
 const fastify = Fastify({ logger: true });
 
@@ -13,7 +14,7 @@ const candidate1 = path.resolve(__dirname, '../../../local-business-os.db');
 const candidate2 = path.resolve(process.cwd(), 'local-business-os.db');
 const dbPath = process.env.DB_PATH || (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1)) ? candidate1 : candidate2);
 console.log(`[DB] Using SQLite Database at: ${dbPath}`);
-const db = new Database(dbPath);
+export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
 fastify.register(cors, {
@@ -2630,7 +2631,14 @@ function cleanCandidateWords(raw: string): string {
     'করো', 'করুন', 'করলাম', 'করব', 'দোকান', 'দোকানের', 'ভাই', 'ভাইয়ের', 'ভাইকে',
     'চাচা', 'চাচার', 'চাচাকে', 'মামা', 'মামার', 'মামাকে', 'কাকা', 'কাকার', 'কাকাকে',
     'দাদা', 'দাদার', 'দাদাকে', 'আপা', 'আপার', 'আপাকে', 'সাহেব', 'বেগম', 'হাজী',
-    'এর', 'এ', 'ও', 'এবং', 'আর', 'কত', 'পাবে', 'পাওনা', 'দেওয়া', 'দেয়া', 'বিক্রি'
+    'এর', 'এ', 'ও', 'এবং', 'আর', 'কত', 'পাবে', 'পাওনা', 'দেওয়া', 'দেয়া', 'বিক্রি',
+    // Units and item noise
+    'কেজি', 'কেজির', 'গ্রাম', 'গ্রামের', 'প্যাকেট', 'প্যাকেটের', 'প্যাক', 'পাতা', 'পাতার', 'বক্স', 'বাক্স',
+    'পিস', 'পিসের', 'টি', 'টা', 'বস্তা', 'বস্তার', 'লিটার', 'লিটারের', 'মিলি', 'বোতল', 'বোতলের',
+    'ফুট', 'মিটার', 'হালি', 'হালির', 'ডজন', 'ডজনের', 'কুড়ি',
+    // Common Grocery/item names to prevent name pollution
+    'চিনি', 'চাল', 'ডাল', 'তেল', 'আলু', 'সাবান', 'লবণ', 'লবন', 'বিস্কুট', 'নুডুলস', 'আটা', 'ময়দা',
+    'মরিচ', 'হলুদ', 'পিঁয়াজ', 'পেঁয়াজ', 'রসুন', 'ডিম', 'দুধ'
   ]);
 
   const words = s.split(/[\s,।!?]+/).filter(Boolean);
@@ -3209,22 +3217,35 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     }
   }
 
-  // 3. Stock-Based Product Selling with Dynamic Multi-Unit Conversion (পাতা, পিস, কেজি, প্যাকেট, বস্তা, ইত্যাদি)
-  const isSaleCommand = /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|নগদ\s*বিক্রি/.test(rawText) && 
-    !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট/.test(rawText);
+  // 3. Stock-Based Product Selling with Dynamic Multi-Unit Conversion (পাতা, পিস, কেজি, প্যাকেট, বস্তা, ইত্যাদি) & Voice Khata Due
+  const allProducts = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+
+  const hasItemUnitsOrNames = /(কেজি|গ্রাম|প্যাকেট|প্যাক|পাতা|বক্স|বাক্স|পিস|টি|টা|বস্তা|লিটার|মিলি|বোতল|ফুট|মিটার|হালি|ডজন|কুড়ি)/.test(rawText) ||
+    allProducts.some(p => {
+      const bn = (p.bangla_name || '').toLowerCase();
+      const nm = (p.name || '').toLowerCase();
+      return (bn.length >= 3 && rawText.toLowerCase().includes(bn)) || (nm.length >= 3 && rawText.toLowerCase().includes(nm));
+    });
+
+  const isSaleCommand = (
+    /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|নগদ\s*বিক্রি/.test(rawText) ||
+    ((/বাকি|বাকিতে/.test(rawText)) && hasItemUnitsOrNames)
+  ) && !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট|খাতায়\s*যান|খাতায়\s*যাও|বাকি\s*পেজ|বাকি\s*কত|পাওনা\s*কত/.test(rawText);
 
   if (isSaleCommand && /\d+/.test(normalized)) {
     // Check customer if credit / বাকি
-    let customer = findCustomerInUtterance(rawText);
-    const isDue = /বাকি|বাকিতে|বাকি\s*নিল/.test(rawText);
+    const isDue = /বাকি|বাকিতে|বাকি\s*নিল|বাকি\s*দাও|বাকি\s*হবে|বাকি\s*যোগ|বাকি\s*এড/.test(rawText);
+    let customer = isDue ? findCustomerInUtterance(rawText) : null;
+
+    // Check if explicit amount was spoken (e.g. "৫০ টাকা বাকি ২ কেজি চিনি")
+    const explicitAmountMatch = normalized.match(/(\d+(\.\d+)?)\s*(টাকা|টাকার|tk|taka)?/i);
+    const explicitAmount = explicitAmountMatch ? parseFloat(explicitAmountMatch[1]) : 0;
 
     // Split multiple items in single utterance: "নাপা ২ পাতা এবং চিনি ১ কেজি"
     const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
     const processedItems: any[] = [];
     let totalSaleAmount = 0;
     let totalProfitAmount = 0;
-
-    const allProducts = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
 
     for (const seg of segments) {
       const segNorm = toEnDigits(parseSpokenBengaliNumbers(seg.toLowerCase()));
@@ -3241,7 +3262,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
       const cleanProdCandidate = segNorm
         .replace(/(\d+(\.\d+)?)/g, '')
         .replace(/(পাতা|বক্স|বাক্স|প্যাকেট|প্যাক|শলা|কাঠি|কেজি|গ্রাম|পিস|টি|টা|বস্তা|লিটার|মিলি|ফুট|মিটার|জোড়া|হালি|ডজন|কুড়ি)/gi, '')
-        .replace(/(বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|বাকি|নগদ|টাকা|টাকার|tk|ভাই|কাকা|চাচা|আপা|কে|রে|দাও|নিল|করো)/gi, '')
+        .replace(/(বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|বাকি\s*দাও|বাকি\s*যোগ|বাকি\s*হবে|বাকি|নগদ|টাকা|টাকার|tk|ভাই|কাকা|চাচা|আপা|কে|রে|দাও|নিল|করো)/gi, '')
         .replace(/[^\u0980-\u09FFa-zA-Z\s]/g, ' ')
         .trim();
 
@@ -3336,12 +3357,36 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 
     if (processedItems.length > 0) {
       const saleId = 'sale-' + uuidv4().slice(0, 8);
-      const invoiceNo = 'MEMO-' + Date.now().toString().slice(-4);
+      const invoiceNo = (isDue ? 'BK-' : 'MEMO-') + Date.now().toString().slice(-5);
+      const finalAmount = (isDue && explicitAmount > 0) ? explicitAmount : totalSaleAmount;
 
-      if (isDue && customer) {
-        const newDue = (Number(customer.total_due) || 0) + totalSaleAmount;
-        db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+      if (isDue) {
+        if (!customer) {
+          const candidate = cleanCandidateWords(rawText);
+          if (candidate) {
+            customer = allCustomers.find((c: any) => isNameMatch(c.name, candidate));
+          }
+          if (!customer && candidate && candidate.length >= 2) {
+            const custDisplayName = candidate.includes('ভাই') || candidate.includes('চাচা') ? candidate : `${candidate} ভাই`;
+            const custId = 'cust-' + uuidv4().slice(0, 8);
+            db.prepare(`
+              INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', 0, 5000, now);
+            customer = { id: custId, name: custDisplayName, total_due: 0 };
+          } else if (!customer) {
+            customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
+          }
+        }
+
+        if (customer) {
+          const newDue = (Number(customer.total_due) || 0) + finalAmount;
+          db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
+          customer.total_due = newDue;
+        }
       }
+
+      const summaryList = processedItems.map(i => `${i.product.bangla_name || i.product.name} (${i.qty} ${i.displayUnit})`).join(', ');
 
       // Record sale in DB
       db.prepare(`
@@ -3351,16 +3396,16 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         saleId,
         tenantId,
         invoiceNo,
-        totalSaleAmount,
+        finalAmount,
         0,
-        totalSaleAmount,
-        isDue ? 0 : totalSaleAmount,
-        isDue ? totalSaleAmount : 0,
+        finalAmount,
+        isDue ? 0 : finalAmount,
+        isDue ? finalAmount : 0,
         totalProfitAmount,
         isDue ? 'due' : 'cash',
         customer?.id || null,
         customer?.name || (isDue ? 'বাকি কাস্টমার' : 'নগদ কাস্টমার'),
-        'ভয়েস স্মার্ট মেমো',
+        summaryList || (isDue ? 'ভয়েস বাকি মেমো' : 'ভয়েস স্মার্ট মেমো'),
         'ভয়েস এআই',
         now
       );
@@ -3385,7 +3430,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         const logId = 'stklog-' + uuidv4().slice(0, 8);
         db.prepare(`
           INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
-          VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'ভয়েস মেমো বিক্রি', ?)
+          VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, ?, ?)
         `).run(
           logId,
           tenantId,
@@ -3396,13 +3441,15 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           item.stockDeduction,
           item.lineTotal,
           invoiceNo,
+          isDue ? 'ভয়েস বাকি খাতা বিক্রি' : 'ভয়েস মেমো বিক্রি',
           now
         );
       }
 
-      const summaryList = processedItems.map(i => `${i.product.bangla_name || i.product.name} ${i.qty} ${i.displayUnit}`).join(', ');
       const paymentStatus = isDue ? (customer ? `${customer.name}-এর বাকি` : 'বাকিতে') : 'নগদ';
-      const speech = `✓ ${summaryList} মোট ৳${totalSaleAmount} টাকা ${paymentStatus} বিক্রি সফল হয়েছে। স্টক আপডেট করা হয়েছে।`;
+      const speech = isDue
+        ? `✓ ${customer ? customer.name : 'কাস্টমার'}-এর বাকি খাতায় ৳${finalAmount} টাকা (${summaryList}) যোগ হয়েছে এবং গুদাম স্টক আপডেট সম্পন্ন হয়েছে।`
+        : `✓ ${summaryList} মোট ৳${totalSaleAmount} টাকা নগদ বিক্রি সফল হয়েছে। স্টক আপডেট করা হয়েছে।`;
 
       const replyItemsMarkdown = processedItems.map(i => 
         `• **${i.product.bangla_name || i.product.name}**: ${i.qty} ${i.displayUnit} = **৳${i.lineTotal.toLocaleString('en-US')}** (অবশিষ্ট স্টক: ${i.newStock} ${i.product.unit || ''})`
@@ -3410,12 +3457,16 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 
       return {
         success: true,
-        action: 'sale_recorded',
-        navigateTo: '/pos',
+        action: isDue ? 'due_sale_recorded' : 'sale_recorded',
+        navigateTo: isDue ? '/khata' : '/pos',
         speech,
-        reply: `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!** (ইনভয়েস: #${invoiceNo})\n${replyItemsMarkdown}\n\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• মাধ্যম: **${paymentStatus}**`,
-        actionLink: { text: 'ক্যাশ কাউন্টারে মেমো দেখুন →', href: '/pos' },
-        data: { invoiceNo, totalAmount: totalSaleAmount, items: processedItems }
+        reply: isDue
+          ? `📖 **বাকি খাতা ও স্টক আপডেট সম্পন্ন!** (মেমো: #${invoiceNo})\n• কাস্টমার: **${customer?.name || 'বাকি গ্রাহক'}**\n${replyItemsMarkdown}\n\n• যোগ হওয়া বাকি: **৳${finalAmount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer?.total_due || finalAmount).toLocaleString('en-US')}**`
+          : `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!** (ইনভয়েস: #${invoiceNo})\n${replyItemsMarkdown}\n\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• মাধ্যম: **${paymentStatus}**`,
+        actionLink: isDue
+          ? { text: `${customer?.name || 'কাস্টমার'}-এর খাতা দেখুন →`, href: '/khata' }
+          : { text: 'ক্যাশ কাউন্টারে মেমো দেখুন →', href: '/pos' },
+        data: { invoiceNo, totalAmount: finalAmount, items: processedItems, customer }
       };
     }
   }
@@ -3650,9 +3701,9 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 
         const itemId = 'sitem-' + uuidv4().slice(0, 8);
         db.prepare(`
-          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(itemId, saleId, 'নগদ বাকি আদায় জমা', 1, amount, amount);
+          INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, 'prod-payment', 'নগদ বাকি আদায় জমা', 1, 0, amount, amount, 0);
 
         const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
         return {
@@ -3715,14 +3766,30 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
       if (customer) {
         const saleId = 'sale-' + uuidv4().slice(0, 8);
         const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
-        const note = 'ভয়েস বাকি এন্ট্রি';
+        let cleanItems = rawText
+          .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
+          .replace(/(দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|একশত|একশো|হাজার)/gi, '')
+          .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি\s*যোগ|বাকি\s*এড|বাকি|নিল|দিলাম|খাতায়|খাতা|যোগ\s*হবে|এড\s*হবে|এড|add)/gi, '')
+          .replace(new RegExp(customer.name, 'gi'), '')
+          .replace(/(ভাই|চাচা|মামা)/gi, '')
+          .trim();
+        const note = cleanItems || 'বাকি হিসাব এন্ট্রি';
 
         db.prepare(`
           INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
 
-        const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
+        const itemId = 'sitem-' + uuidv4().slice(0, 8);
+        const prodId = 'prod-custom-' + uuidv4().slice(0, 6);
+        const costPrice = Math.round(amount * 0.8);
+        const profit = amount - costPrice;
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, prodId, note, 1, costPrice, amount, amount, profit);
+
+        const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা${cleanItems ? ` (${cleanItems})` : ''} যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
         return {
           success: true,
           action: 'due_given',
@@ -4427,9 +4494,9 @@ fastify.post('/api/customers/due-payment', async (request, reply) => {
 
     const itemId = 'sitem-' + uuidv4().slice(0, 8);
     db.prepare(`
-      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(itemId, paymentId, 'নগদ বাকি আদায় জমা', 1, numAmount, numAmount);
+      INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(itemId, paymentId, 'prod-payment', 'নগদ বাকি আদায় জমা', 1, 0, numAmount, numAmount, 0);
   } catch (e) {
     console.error('Error recording payment ledger entry:', e);
   }
@@ -4496,27 +4563,35 @@ fastify.post('/api/customers/add-due', async (request, reply) => {
         const price = Number(it.price || it.sellingPrice || it.totalPrice) || 0;
         const total = Number(it.totalPrice) || (price * qty);
 
-        // Deduct inventory stock
-        if (it.productId) {
-          deductStock.run(qty, it.productId);
-        } else {
-          const matchedProd = findProductByName.get(customer.tenant_id, `%${name}%`, `%${name}%`, name) as any;
-          if (matchedProd) {
-            deductStock.run(qty, matchedProd.id);
-          }
+        // Deduct inventory stock and log
+        const matchedProd = it.productId ? null : findProductByName.get(customer.tenant_id, `%${name}%`, `%${name}%`, name) as any;
+        const targetProdId = it.productId || (matchedProd ? matchedProd.id : null);
+
+        if (targetProdId) {
+          deductStock.run(qty, targetProdId);
+          const logId = 'stklog-' + uuidv4().slice(0, 8);
+          db.prepare(`
+            INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+            VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, 'খাতায় বাকি পণ্য যোগ', ?)
+          `).run(logId, customer.tenant_id, targetProdId, name, qty, it.unit || 'পিস', qty, price, invoiceNo, now);
         }
 
+        const prodCost = Math.round(price * 0.8);
+        const prodProfit = total - (prodCost * qty);
+
         db.prepare(`
-          INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(itemId, saleId, name, qty, price, total);
+          INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(itemId, saleId, targetProdId || ('prod-due-' + uuidv4().slice(0, 6)), name, qty, prodCost, price, total, prodProfit);
       }
     } else {
       const itemId = 'sitem-' + uuidv4().slice(0, 8);
+      const prodCost = Math.round(numAmount * 0.8);
+      const prodProfit = numAmount - prodCost;
       db.prepare(`
-        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(itemId, saleId, finalSummary, 1, numAmount, numAmount);
+        INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, 'prod-due-' + uuidv4().slice(0, 6), finalSummary, 1, prodCost, numAmount, numAmount, prodProfit);
     }
   } catch (e) {
     console.error('Error recording due sale:', e);
@@ -4655,55 +4730,189 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
 
     const itemId = 'sitem-' + uuidv4().slice(0, 8);
     db.prepare(`
-      INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(itemId, paymentId, 'নগদ বাকি আদায় জমা', 1, amount, amount);
+      INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(itemId, paymentId, 'prod-payment', 'নগদ বাকি আদায় জমা', 1, 0, amount, amount, 0);
 
     const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
     return { success: true, action: 'due_paid', speech, data: { customerName: customer.name, amount, totalDue: newDue } };
   } else {
-    // Record due given with item parsing
-    const newDue = (Number(customer.total_due) || 0) + amount;
+    // Record due given with multi-item parsing & automated stock deduction
+    const segments = rawText.split(/(?:,|\s+এবং\s+|\s+আর\s+|\s+ও\s+)/);
+    const allProducts = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+    const processedItems: any[] = [];
+    let calculatedTotal = 0;
+
+    for (const seg of segments) {
+      const segNorm = toEnDigits(parseSpokenBengaliNumbers(seg.toLowerCase()));
+      const numMatch = segNorm.match(/(\d+(\.\d+)?)/);
+      if (!numMatch) continue;
+      const qty = parseFloat(numMatch[1]);
+      if (qty <= 0) continue;
+
+      const unitMatch = seg.match(/পাতা|বক্স|বাক্স|প্যাকেট|প্যাক|শলা|কাঠি|কেজি|গ্রাম|পিস|টি|টা|বস্তা|লিটার|মিলি|ফুট|মিটার|জোড়া|হালি|ডজন|কুড়ি/);
+      const spokenUnit = unitMatch ? unitMatch[0] : 'পিস';
+
+      const cleanProdCandidate = segNorm
+        .replace(/(\d+(\.\d+)?)/g, '')
+        .replace(/(পাতা|বক্স|বাক্স|প্যাকেট|প্যাক|শলা|কাঠি|কেজি|গ্রাম|পিস|টি|টা|বস্তা|লিটার|মিলি|ফুট|মিটার|জোড়া|হালি|ডজন|কুড়ি)/gi, '')
+        .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি\s*যোগ|বাকি|নিল|দিলাম|খাতায়|খাতা|টাকা|টাকার|tk|ভাই|কাকা|চাচা|আপা|কে|রে|দাও|করো)/gi, '')
+        .replace(new RegExp(customer.name, 'gi'), '')
+        .replace(/[^\u0980-\u09FFa-zA-Z\s]/g, ' ')
+        .trim();
+
+      let matchedProd: any = null;
+      const cleanCand = cleanProdCandidate.toLowerCase().trim();
+
+      if (cleanCand && cleanCand.length >= 2) {
+        for (const p of allProducts) {
+          const pBangla = (p.bangla_name || '').toLowerCase();
+          const pName = (p.name || '').toLowerCase();
+          const pGen = (p.generic_name || '').toLowerCase();
+          if (pBangla.includes(cleanCand) || pName.includes(cleanCand) || cleanCand.includes(pBangla) || (pGen && pGen.includes(cleanCand))) {
+            matchedProd = p;
+            break;
+          }
+        }
+      }
+
+      if (!matchedProd) {
+        const wordsInSeg = segNorm.split(/\s+/).map(w => w.replace(/[^\u0980-\u09FFa-zA-Z]/g, '').trim()).filter(w => w.length >= 3);
+        for (const p of allProducts) {
+          const pBangla = (p.bangla_name || '').toLowerCase();
+          const pName = (p.name || '').toLowerCase();
+          for (const w of wordsInSeg) {
+            if (['বিক্রি', 'বেচা', 'মেমো', 'নগদ', 'বাকি', 'টাকা', 'কেজি', 'পাতা', 'পিস', 'প্যাকেট'].includes(w)) continue;
+            if (pBangla.includes(w) || pName.includes(w)) {
+              matchedProd = p;
+              break;
+            }
+          }
+          if (matchedProd) break;
+        }
+      }
+
+      if (matchedProd) {
+        let baseSellingPrice = Number(matchedProd.selling_price) || 0;
+        let basePurchasePrice = Number(matchedProd.purchase_price) || 0;
+        const ratio = Number(matchedProd.conversion_ratio) || 1;
+        const baseUnit = (matchedProd.unit || '').trim().toLowerCase();
+        const subUnit = (matchedProd.sub_unit || '').trim().toLowerCase();
+
+        let effectivePricePerSpokenUnit = baseSellingPrice;
+        let effectivePurchasePerSpokenUnit = basePurchasePrice;
+        let stockDeduction = qty;
+        let displayUnit = spokenUnit;
+
+        if (subUnit && (spokenUnit.includes(subUnit) || subUnit.includes(spokenUnit))) {
+          effectivePricePerSpokenUnit = ratio > 0 ? (baseSellingPrice / ratio) : baseSellingPrice;
+          effectivePurchasePerSpokenUnit = ratio > 0 ? (basePurchasePrice / ratio) : basePurchasePrice;
+          stockDeduction = ratio > 0 ? (qty / ratio) : qty;
+          displayUnit = matchedProd.sub_unit || spokenUnit;
+        } else if (spokenUnit === 'গ্রাম' && (baseUnit.includes('কেজি') || subUnit.includes('কেজি'))) {
+          effectivePricePerSpokenUnit = baseSellingPrice / 1000;
+          effectivePurchasePerSpokenUnit = basePurchasePrice / 1000;
+          stockDeduction = qty / 1000;
+          displayUnit = 'গ্রাম';
+        } else {
+          displayUnit = matchedProd.unit || spokenUnit;
+          stockDeduction = qty;
+        }
+
+        const lineTotal = Math.round(qty * effectivePricePerSpokenUnit);
+        const currentStock = Number(matchedProd.stock) || 0;
+        const newStock = Math.max(0, parseFloat((currentStock - stockDeduction).toFixed(3)));
+
+        // Update product stock
+        db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProd.id);
+
+        calculatedTotal += lineTotal;
+        processedItems.push({
+          product: matchedProd,
+          qty,
+          displayUnit,
+          lineTotal,
+          stockDeduction,
+          newStock
+        });
+      }
+    }
+
+    const finalAmount = amount > 0 ? amount : (calculatedTotal > 0 ? calculatedTotal : 0);
+    if (finalAmount <= 0) {
+      return reply.status(400).send({ success: false, speech: 'টাকার পরিমাণ বা পণ্যের হিসাব বুঝতে পারিনি।' });
+    }
+
+    const newDue = (Number(customer.total_due) || 0) + finalAmount;
     db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
 
     let cleanItems = rawText
       .replace(/(\d+|[০-৯]+)\s*(টাকা|টাকার|tk|taka)?/gi, '')
       .replace(/(দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|একশত|একশো|হাজার)/gi, '')
-      .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি|নিল|দিলাম|খাতায়|খাতা)/gi, '')
+      .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি\s*যোগ|বাকি|নিল|দিলাম|খাতায়|খাতা)/gi, '')
       .replace(new RegExp(customer.name, 'gi'), '')
       .replace(/(ভাই|চাচা|মামা)/gi, '')
       .trim();
 
-    const note = cleanItems || 'বাকি পণ্য সামগ্রী';
+    const summaryList = processedItems.length > 0 
+      ? processedItems.map(i => `${i.product.bangla_name || i.product.name} (${i.qty} ${i.displayUnit})`).join(', ')
+      : (cleanItems || 'বাকি পণ্য সামগ্রী');
+
     const saleId = 'sale-' + uuidv4().slice(0, 8);
     const invoiceNo = 'BK-' + Date.now().toString().slice(-5);
 
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
+    `).run(saleId, tenantId, invoiceNo, finalAmount, 0, finalAmount, 0, finalAmount, Math.round(finalAmount * 0.15), 'due', customer.id, customer.name, summaryList, 'ভয়েস এআই', now);
 
-    // Match inventory product if named
-    const matchedProd = db.prepare(`
-      SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1
-    `).get(tenantId, `%${cleanItems}%`, `%${cleanItems}%`) as any;
+    if (processedItems.length > 0) {
+      for (const item of processedItems) {
+        db.prepare(`
+          INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          'sitem-' + uuidv4().slice(0, 8),
+          saleId,
+          item.product.id,
+          item.product.bangla_name || item.product.name,
+          item.qty,
+          Number(item.product.purchase_price) || 0,
+          Math.round(item.lineTotal / item.qty),
+          item.lineTotal,
+          0
+        );
 
-    const itemId = 'sitem-' + uuidv4().slice(0, 8);
-    if (matchedProd) {
-      db.prepare('UPDATE products SET stock = MAX(0, stock - 1) WHERE id = ?').run(matchedProd.id);
-      db.prepare(`
-        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(itemId, saleId, matchedProd.bangla_name || matchedProd.name, 1, amount, amount);
+        const logId = 'stklog-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+          VALUES (?, ?, ?, ?, 'sale', ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          logId,
+          tenantId,
+          item.product.id,
+          item.product.bangla_name || item.product.name,
+          item.stockDeduction,
+          item.product.unit || 'পিস',
+          item.stockDeduction,
+          item.lineTotal,
+          invoiceNo,
+          'গ্রাহক সরাসরি ভয়েস বাকি',
+          now
+        );
+      }
     } else {
+      const itemId = 'sitem-' + uuidv4().slice(0, 8);
+      const prodCost = Math.round(finalAmount * 0.8);
+      const prodProfit = finalAmount - prodCost;
       db.prepare(`
-        INSERT INTO sale_items (id, sale_id, product_name, quantity, selling_price, total_price)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(itemId, saleId, note, 1, amount, amount);
+        INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(itemId, saleId, 'prod-custom-' + uuidv4().slice(0, 6), summaryList, 1, prodCost, finalAmount, finalAmount, prodProfit);
     }
 
-    const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা (${note}) লেখা হয়েছে। বর্তমান মোট বকেয়া ৳${newDue} টাকা।`;
-    return { success: true, action: 'due_given', speech, data: { customerName: customer.name, amount, totalDue: newDue, note } };
+    const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${finalAmount} টাকা (${summaryList}) যোগ ও স্টক আপডেট হয়েছে। বর্তমান মোট বকেয়া ৳${newDue} টাকা।`;
+    return { success: true, action: 'due_given', speech, data: { customerName: customer.name, amount: finalAmount, totalDue: newDue, note: summaryList, items: processedItems } };
   }
 });
 
@@ -5317,28 +5526,79 @@ fastify.put('/api/tenants/:id/features', async (request, reply) => {
 
 // Reports Day-End
 fastify.get('/api/reports/day-end', async (request) => {
-  const { tenantId } = request.query as any;
+  const { tenantId, date } = request.query as any;
   if (!tenantId) return { totalSales: 0, cashSales: 0, grossProfit: 0, expenses: 0, netProfit: 0, cashInHand: 0, totalMarketDue: 0, orderCount: 0 };
 
   const sales = db.prepare('SELECT * FROM sales WHERE tenant_id = ?').all(tenantId) as any[];
   const expenses = db.prepare('SELECT * FROM expenses WHERE tenant_id = ?').all(tenantId) as any[];
   const customers = db.prepare('SELECT * FROM customers WHERE tenant_id = ?').all(tenantId) as any[];
+  const dealers = db.prepare('SELECT * FROM dealers WHERE tenant_id = ?').all(tenantId) as any[];
 
-  const totalSales = sales.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
-  const cashSales = sales.filter(o => o.payment_method === 'cash').reduce((acc, o) => acc + (Number(o.paid_amount) || 0), 0);
-  const grossProfit = sales.reduce((acc, o) => acc + (Number(o.profit_amount) || 0), 0);
-  const totalExpenses = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+  // Target date matching in Asia/Dhaka (+6 hrs)
+  const nowBD = new Date();
+  const bdOffset = 6 * 60; // minutes
+  const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
+  const todayStr = date || localTime.toISOString().slice(0, 10);
+
+  const isToday = (created_at: string) => {
+    if (!created_at) return false;
+    try {
+      const d = new Date(created_at);
+      const dLocal = new Date(d.getTime() + (bdOffset + d.getTimezoneOffset()) * 60000);
+      return dLocal.toISOString().slice(0, 10) === todayStr;
+    } catch {
+      return String(created_at).startsWith(todayStr);
+    }
+  };
+
+  // Today's Sales (exclude pure due_payment so payments aren't counted as new sales)
+  const todaySalesList = sales.filter(s => isToday(s.created_at) && s.payment_method !== 'due_payment');
+  const todaySales = todaySalesList.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
+  const todayCashSales = todaySalesList.filter(o => o.payment_method === 'cash').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
+  const todayDueSales = todaySalesList.reduce((acc, o) => acc + (Number(o.due_amount) || (o.payment_method === 'due' ? Number(o.total_amount) || 0 : 0)), 0);
+  const todayGrossProfit = todaySalesList.reduce((acc, o) => acc + (Number(o.profit_amount) || 0), 0);
+  const todayOrderCount = todaySalesList.length;
+
+  // Today's Due Collections
+  const todayDueCollected = sales.filter(s => isToday(s.created_at) && s.payment_method === 'due_payment').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
+
+  // Today's Expenses
+  const todayExpensesList = expenses.filter(e => isToday(e.created_at));
+  const todayExpenses = todayExpensesList.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+  const todayNetProfit = todayGrossProfit - todayExpenses;
+
+  // All-time aggregates
+  const allTimeSales = sales.filter(s => s.payment_method !== 'due_payment').reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
+  const allTimeExpenses = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
   const totalMarketDue = customers.reduce((acc, c) => acc + (Number(c.total_due) || 0), 0);
+  const totalDealerDue = dealers.reduce((acc, d) => acc + (Number(d.payable_due) || 0), 0);
+
+  // Cash In Hand (cumulative cash in minus all expenses)
+  const allCashIn = sales.filter(s => s.payment_method === 'cash' || s.payment_method === 'due_payment').reduce((acc, s) => acc + (Number(s.paid_amount || s.total_amount) || 0), 0);
+  const liveCashInHand = Math.max(0, allCashIn - allTimeExpenses);
 
   return {
-    totalSales,
-    cashSales,
-    grossProfit,
-    expenses: totalExpenses,
-    netProfit: grossProfit - totalExpenses,
-    cashInHand: cashSales - totalExpenses,
+    todaySales,
+    todayCashSales,
+    todayDueSales,
+    todayGrossProfit,
+    todayExpenses,
+    todayNetProfit,
+    todayOrderCount,
+    todayDueCollected,
+    // Aliases matching dashboard expectations for today's summary:
+    totalSales: todaySales,
+    cashSales: todayCashSales,
+    grossProfit: todayGrossProfit,
+    expenses: todayExpenses,
+    netProfit: todayNetProfit,
+    cashInHand: liveCashInHand,
     totalMarketDue,
-    orderCount: sales.length
+    totalDealerDue,
+    orderCount: todayOrderCount,
+    // All-time metadata
+    allTimeSales,
+    allTimeExpenses
   };
 });
 
@@ -5568,6 +5828,7 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
   `).all(id, customer.name, customer.tenant_id) as any[];
 
   const getItems = db.prepare('SELECT * FROM sale_items WHERE sale_id = ?');
+  const getProduct = db.prepare('SELECT unit, sub_unit FROM products WHERE id = ?');
 
   const ledgerEntries = sales.map(s => {
     const saleItems = getItems.all(s.id) as any[];
@@ -5584,12 +5845,16 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
       paymentMethod: s.payment_method,
       note: s.note || '',
       isPayment: s.payment_method === 'due_payment',
-      items: saleItems.map(it => ({
-        name: it.product_name,
-        quantity: Number(it.quantity) || 1,
-        price: Number(it.selling_price) || 0,
-        total: Number(it.total_price) || 0
-      }))
+      items: saleItems.map(it => {
+        const prod = it.product_id ? (getProduct.get(it.product_id) as any) : null;
+        return {
+          name: it.product_name,
+          quantity: Number(it.quantity) || 1,
+          price: Number(it.selling_price) || 0,
+          total: Number(it.total_price) || 0,
+          unit: prod?.unit || 'টি'
+        };
+      })
     };
   });
 
@@ -5838,8 +6103,41 @@ fastify.post('/api/voice-action', async (request, reply) => {
     return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
   }
 
+  // 1. Try Gemini Flash AI Agent first for intelligent stock-grounded multi-item parsing
+  try {
+    const agentResult = await runGeminiShopAgent(db, tenantId, text);
+    if (agentResult && agentResult.success) {
+      return agentResult;
+    }
+  } catch (err) {
+    console.warn('[AI Engine] Agent error, falling back to local engine:', err);
+  }
+
+  // 2. Fallback to high-speed local engine
   const result = executeAiShopCommand(tenantId, text, assistantName);
   return result;
+});
+
+// 1-Tap Undo Endpoint for Voice & AI Actions
+fastify.post('/api/ai/undo-last-action', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { tenantId } = body;
+  if (!tenantId) return reply.status(400).send({ success: false, message: 'Tenant ID প্রয়োজন' });
+
+  const result = undoLastAction(db, tenantId);
+  return result;
+});
+
+fastify.get('/api/ai/undo-status', async (request, reply) => {
+  const query = (request.query || {}) as any;
+  const { tenantId } = query;
+  if (!tenantId) return { undoAvailable: false };
+
+  const entry = getUndoAction(tenantId);
+  return {
+    undoAvailable: !!entry,
+    action: entry || null
+  };
 });
 
 // Root & Health Checks

@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
 import VoiceKhataModal from '../../components/VoiceKhataModal';
 import DataLoader from '../../components/DataLoader';
+import SmartVoiceConfirmationCard, { SmartVoiceActionData } from '../../components/SmartVoiceConfirmationCard';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playDeleteSound } from '../../lib/audioFeedbackUtils';
 
@@ -68,6 +69,7 @@ export default function KhataPage() {
 
   // Dedicated Voice Khata Modal State
   const [showVoiceKhataModal, setShowVoiceKhataModal] = useState(false);
+  const [smartCardData, setSmartCardData] = useState<SmartVoiceActionData | null>(null);
 
   // Promise to Pay Date Modal
   const [showPromiseModal, setShowPromiseModal] = useState<any | null>(null);
@@ -522,6 +524,9 @@ export default function KhataPage() {
         speakAnnouncement(msg);
         setNotice(`✓ ${cust.name}: ${msg}`);
         setVoiceCustomerStatus(`✓ ${msg}`);
+        if (result.data) {
+          setSmartCardData(result.data);
+        }
         await Promise.all([loadCustomers(), loadProducts()]);
         if (selectedLedger?.customer?.id === cust.id) {
           loadCustomerLedger(cust);
@@ -1238,6 +1243,22 @@ export default function KhataPage() {
                           ➕ বাকি
                         </button>
                         <button
+                          onClick={() => startCustomerVoice(c)}
+                          style={{
+                            background: '#fff1f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecdd3',
+                            padding: '5px 8px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="ভয়েস এন্ট্রি"
+                        >
+                          🎙️
+                        </button>
+                        <button
                           onClick={() => loadCustomerLedger(c)}
                           style={{
                             background: '#f1f5f9',
@@ -1252,6 +1273,40 @@ export default function KhataPage() {
                           title="ফুল খতিয়ান"
                         >
                           📜
+                        </button>
+                        <Link
+                          href={`/khata/passbook?id=${c.id}`}
+                          style={{
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            border: '1px solid #bfdbfe',
+                            padding: '5px 8px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center'
+                          }}
+                          title="ডিজিটাল পাসবুক"
+                        >
+                          📖
+                        </Link>
+                        <button
+                          onClick={() => setCustomerToDelete(c)}
+                          style={{
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            padding: '5px 8px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="খরিদ্দার মুছে ফেলুন"
+                        >
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -2962,6 +3017,27 @@ export default function KhataPage() {
           onActionCompleted={() => {
             loadCustomers();
             loadProducts();
+            if (selectedLedger?.customer) {
+              loadCustomerLedger(selectedLedger.customer);
+            }
+          }}
+        />
+      )}
+
+      {/* 🟢 1-Tap Undo & Visual Confirmation Smart Card */}
+      {smartCardData && (
+        <SmartVoiceConfirmationCard
+          data={smartCardData}
+          currentTenantId={currentTenantId || ''}
+          triggerHaptic={triggerHaptic}
+          onDismiss={() => setSmartCardData(null)}
+          onActionUndone={async () => {
+            await Promise.all([loadCustomers(), loadProducts()]);
+            if (selectedLedger?.customer) {
+              loadCustomerLedger(selectedLedger.customer);
+            }
+            setNotice('✓ এন্ট্রি বাতিল ও স্টক রিস্টোর হয়েছে');
+            setTimeout(() => setNotice(''), 3000);
           }}
         />
       )}
