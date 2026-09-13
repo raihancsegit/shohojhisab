@@ -7,6 +7,33 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { runGeminiShopAgent, undoLastAction, getUndoAction } from './ai-agent/aiAgent';
 
+// Auto-load .env safely for local development and background processes
+try {
+  const envCandidates = [
+    path.resolve(__dirname, '../.env'),
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), 'apps/api/.env')
+  ];
+  for (const p of envCandidates) {
+    if (fs.existsSync(p)) {
+      const content = fs.readFileSync(p, 'utf-8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx > 0) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim().replace(/^['"]|['"]$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+      break;
+    }
+  }
+} catch (e) {}
+
 const fastify = Fastify({ logger: true });
 
 // Resolve DB path safely for both local monorepo and standalone cloud deployments (Render/Railway/Docker)
@@ -2590,6 +2617,152 @@ function editDistance(a: string, b: string): number {
   return dp[m][n];
 }
 
+function calculateSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return Math.max(0, 1 - (editDistance(a, b) / maxLen));
+}
+
+function cleanBengaliRoot(word: string): string {
+  if (!word) return '';
+  return word
+    .toLowerCase()
+    .trim()
+    .replace(/(িতে|েতে|ের|য়ের|তায়|তে|য়ে|ায়|াই|রে|কে|রা|দের|দেরকে|গুলো|গুলি|খানা|খানি|টা|টি|ে|র|য়|ও)$/g, '')
+    .trim();
+}
+
+function matchNavigationIntent(rawText: string, normalized: string): string | null {
+  if (!rawText) return null;
+  const lower = rawText.toLowerCase().trim();
+
+  // Guard against real business transactions being mistaken for navigation
+  const isTransaction = (
+    (/\d+/.test(normalized) && /(টাকা|টাকার|কেজি|গ্রাম|পিস|পাতা|বস্তা|লিটার|বোতল|প্যাকেট|ডজন|হালি|বাকি|জমা|শোধ|খরচ|মাল|নামলো|আসছে|ঢুকলো|কিনলাম|বাড়াও|যোগ)/.test(rawText)) ||
+    /বিক্রি\s*(হলো|করলাম|হয়েছে|করছি)|বাকি\s*(নিল|দিল|জমা|শোধ|পরিশোধ|লেখো|লিখুন)|টাকা\s*(দিল|দিলো|জমা|পাইছি|পেয়েছি)|খরচ\s*(হলো|করলাম|হয়েছে|লেখো|লিখুন)|স্টক\s*(বাড়াও|বাড়া|তোলো)/.test(rawText)
+  );
+  if (isTransaction) return null;
+
+  // 1. POS / Cash Counter / Sales Memo
+  if (
+    /মেমো|মেমু|কাউন্টার|ক্যাশ|বিক্রি|বিল|পিওএস|\bpos\b|ক্যাশিয়ার|রশিদ|বিক্রিতে/.test(lower) &&
+    !/বাকি|জমা|খরচ/.test(lower)
+  ) {
+    return '/pos';
+  }
+
+  // 2. Customer Khata / Due Ledger
+  if (
+    /খাতা|খাতায়|খাতাই|খাতাতে|বাকির\s*খাতা|বাকি\s*পেজ|কাস্টমার\s*খাতা|দেনাদার|কার\s*কাছে\s*কত|বাকি\s*লিস্ট|খাতা\s*পেজ|বাকিদার|বাকি\s*দেখাও|বাকি\s*দেখব|বাকি\s*দেখতে\s*চাই|খতিয়ান|খতিয়ান|\bkhata\b|\bbaki\b/.test(lower) &&
+    !/নিল|দিল|টাকা|জমা|শোধ|খরচ/.test(lower)
+  ) {
+    return '/khata';
+  }
+
+  // 3. Stock / Inventory / Warehouse
+  if (
+    /স্টক|ইস্টক|ষ্টক|ইনভেন্টরি|গুদাম|মালপত্র|মালামাল|মজুদ|মালের\s*অবস্থা|মালের\s*তালিকা|গুদামের\s*খবর|\bstock\b|\binventory\b/.test(lower) &&
+    !/যোগ|বাড়াও|বাড়া|এসেছে|ঢুকলো|কিনলাম|বিক্রি/.test(lower)
+  ) {
+    return '/stock';
+  }
+
+  // 4. Expenses
+  if (
+    /খরচ|খরচে|খরচের\s*খাতা|খরচ\s*পেজ|ব্যয়|ব্যায়|খরচপাতি|খরচাপাতি|আজকের\s*খরচ|\bkhoroch\b|\bexpense\b/.test(lower) &&
+    !/লেখো|লিখুন|করলাম|হলো|\d+/.test(lower)
+  ) {
+    return '/expenses';
+  }
+
+  // 5. Reports & Profit/Loss
+  if (
+    /রিপোর্ট|রিপুর্ত|লাভ\s*লস|লাভের\s*হিসাব|আজকের\s*লাভ|বিক্রি\s*ও\s*লাভ|মাসিক\s*হিসাব|রিপোর্ট\s*দেখাও|হিসাব\s*নিকাশ|সামারি|লাভক্ষতি|লাভ\s*ক্ষতি|\breport\b|\bprofit\b/.test(lower)
+  ) {
+    return '/reports';
+  }
+
+  // 6. Dealers & Suppliers / Mohajon
+  if (
+    /মহাজন|মহজন|ডিলার|সাপ্লায়ার|সাপ্লায়ার|পাইকারি|মহাজনের\s*খাতা|ডিলারদের\s*খাতা|পাওনাদার|মহাজন\s*লিস্ট|\bdealer\b|\bsupplier\b|\bmohajon\b/.test(lower)
+  ) {
+    return '/dealers';
+  }
+
+  // 7. Expiry Tracker
+  if (
+    /মেয়াদ|মেয়াদে|মেয়াদোত্তীর্ণ|এক্সপায়ারি|এক্সপায়ার|ডেট\s*ফেল|মেয়াদ\s*শেষ|\bexpiry\b/.test(lower)
+  ) {
+    return '/expiry-tracker';
+  }
+
+  // 8. Day End / Cash Closing
+  if (
+    /দিন\s*শেষ|দিনশেষ|ক্যাশ\s*ক্লোজিং|ক্লোজিং\s*পেজ|আজকের\s*ক্লোজিং|হিসাব\s*বন্ধ|ক্লোজিং|\bclosing\b|\bdayend\b/.test(lower)
+  ) {
+    return '/day-end';
+  }
+
+  // 9. Installments / Kisti
+  if (
+    /কিস্তি|কেস্তী|কিস্তির\s*খাতা|কিস্তি\s*পেজ|কিস্তির\s*হিসাব|ইন্সটলমেন্ট|\binstallment\b|\bkisti\b/.test(lower)
+  ) {
+    return '/installments';
+  }
+
+  // 10. Products Catalog
+  if (
+    /পণ্য\s*তালিকা|পণ্যসমূহ|নতুন\s*পণ্য|প্রোডাক্ট|প্রডাক্ট|আইটেম\s*লিস্ট|\bproducts?\b/.test(lower) &&
+    !/যোগ|বাড়াও/.test(lower)
+  ) {
+    return '/products';
+  }
+
+  // 11. Settings & Shop Profile
+  if (
+    /সেটিংস|সেটিং|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল|কনফিগারেশন|\bsettings?\b|\bprofile\b/.test(lower)
+  ) {
+    return '/settings';
+  }
+
+  // 12. Home / Dashboard
+  if (
+    /হোম|হোমে|ড্যাশবোর্ড|ড্যাশবোর্ডে|ডাশবোর্ড|সামনে|প্রধান\s*পাতা|মেইন\s*পেজ|শুরুতে|প্রথম\s*পেজ|\bhome\b|\bdashboard\b/.test(lower)
+  ) {
+    return '/';
+  }
+
+  // Fuzzy Token Matcher across tokens for speech typos like "খাতাই", "মেমু", "ইস্টকে"
+  const tokens = lower.split(/\s+/).map(t => cleanBengaliRoot(t)).filter(t => t.length >= 2);
+  const routeFuzzyMap: Array<{ route: string; roots: string[] }> = [
+    { route: '/khata', roots: ['খাত', 'বাকি', 'দেনাদার', 'খতিয়ান', 'খতিয়ান', 'khata', 'baki'] },
+    { route: '/pos', roots: ['মেম', 'মেমু', 'কাউন্টার', 'ক্যাশ', 'পিওএস', 'বিল', 'pos', 'memo'] },
+    { route: '/stock', roots: ['স্টক', 'ইস্টক', 'ষ্টক', 'ইনভেন্টর', 'গুদাম', 'মাল', 'stock'] },
+    { route: '/expenses', roots: ['খরচ', 'খরচা', 'ব্যয়', 'ব্যায়', 'expense', 'khoroch'] },
+    { route: '/reports', roots: ['রিপোর্ট', 'রিপুর্ত', 'লাভ', 'report'] },
+    { route: '/dealers', roots: ['মহাজন', 'মহজন', 'ডিলার', 'dealer'] },
+    { route: '/expiry-tracker', roots: ['মেয়াদ', 'মেয়াত্তীর্ণ', 'expiry'] },
+    { route: '/day-end', roots: ['ক্লোজিং', 'দিনশেষ', 'closing'] },
+    { route: '/installments', roots: ['কিস্ত', 'কেস্ত', 'installment', 'kisti'] },
+    { route: '/products', roots: ['প্রোডাক্ট', 'প্রডাক্ট', 'আইটেম', 'product'] },
+    { route: '/settings', roots: ['সেটিং', 'settings'] },
+    { route: '/', roots: ['হোম', 'ড্যাশবোর্ড', 'ডাশবোর্ড', 'home', 'dashboard'] }
+  ];
+
+  for (const token of tokens) {
+    for (const item of routeFuzzyMap) {
+      for (const root of item.roots) {
+        if (token === root || calculateSimilarity(token, root) >= 0.75) {
+          return item.route;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function isNameMatch(dbName: string, candidate: string): boolean {
   if (!dbName || !candidate) return false;
   const rawDb = String(dbName).trim();
@@ -2944,17 +3117,61 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   };
 
-  // Navigation: POS / Cash Counter / Sales Memo
-  if (/মেমো\s*কাট|মেমো\s*কর|মেমো\s*বানাও|মেমো\s*পেজ|বিক্রি\s*পেজ|ক্যাশ\s*কাউন্টার|কাউন্টারে\s*যাও|কাউন্টারে\s*যান|ক্যাশ\s*পেজ|পিওএস|বিল\s*পেজ|বিল\s*কাট|নতুন\s*বিক্রি|বিক্রি\s*করতে\s*চাই/.test(rawText) && !/বিক্রি\s*হলো|বেচা\s*হলো|বাকি\s*নিল|টাকা|কেজি|পাতা|পিস|প্যাকেট/.test(rawText)) {
-    return checkAndNavigate('/pos', 'ক্যাশ কাউন্টারে এসেছি। নতুন বিক্রি ও মেমো কাটার জন্য প্রস্তুত।', '🧾 **ক্যাশ কাউন্টার / বিক্রি পেজ:**\nবিক্রির জন্য প্রস্তুত। সরাসরি মুখে বলুন অথবা পণ্য স্ক্যান করুন।', 'ক্যাশ কাউন্টারে যান →');
-  }
-
-  // Navigation: Customer Dues / Khata
-  if (/বাকির\s*খাতা|বাকি\s*পেজ|কাস্টমার\s*খাতা|দেনাদার|কার\s*কাছে\s*কত|বাকি\s*লিস্ট|খাতা\s*পেজ|বাকিদার|বাকি\s*দেখাও|বাকি\s*দেখব|বাকি\s*দেখতে\s*চাই/.test(rawText) && !/বাকি\s*(নিল|দিল|টাকা|জমা|লেখো)/.test(rawText)) {
-    const marketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as count FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
-    const dueAmt = Math.round(Number(marketDueRow?.totalDue) || 0);
-    const count = Number(marketDueRow?.count) || 0;
-    return checkAndNavigate('/khata', `বাকির খাতায় এসেছি। বর্তমানে মোট ${count} জন কাস্টমারের কাছে মোট ৳${dueAmt.toLocaleString('en-US')} টাকা বাকি রয়েছে।`, `📖 **বাকির খাতা:**\n• দেনাদার কাস্টমার: **${count} জন**\n• মোট মার্কেট বাকি: **৳${dueAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'বাকির খাতা দেখুন →');
+  // 1. Ultra-Tolerant Intelligent Route Navigation Matcher
+  const matchedNavRoute = matchNavigationIntent(rawText, normalized);
+  if (matchedNavRoute) {
+    if (matchedNavRoute === '/pos') {
+      return checkAndNavigate('/pos', 'ক্যাশ কাউন্টারে এসেছি। নতুন বিক্রি ও মেমো কাটার জন্য প্রস্তুত।', '🧾 **ক্যাশ কাউন্টার / বিক্রি পেজ:**\nবিক্রির জন্য প্রস্তুত। সরাসরি মুখে বলুন অথবা পণ্য স্ক্যান করুন।', 'ক্যাশ কাউন্টারে যান →');
+    }
+    if (matchedNavRoute === '/khata') {
+      const marketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as count FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
+      const dueAmt = Math.round(Number(marketDueRow?.totalDue) || 0);
+      const count = Number(marketDueRow?.count) || 0;
+      return checkAndNavigate('/khata', `বাকির খাতায় এসেছি। বর্তমানে মোট ${count} জন কাস্টমারের কাছে মোট ৳${dueAmt.toLocaleString('en-US')} টাকা বাকি রয়েছে।`, `📖 **বাকির খাতা:**\n• দেনাদার কাস্টমার: **${count} জন**\n• মোট মার্কেট বাকি: **৳${dueAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'বাকির খাতা দেখুন →');
+    }
+    if (matchedNavRoute === '/stock') {
+      const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
+      const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
+      const totalCount = Number(totalProdRow?.total) || 0;
+      const totalVal = Math.round(Number(totalProdRow?.totalValuation) || 0);
+      const lowCount = lowStockRows.length;
+      const speech = lowCount > 0 
+        ? `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`
+        : `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
+      return checkAndNavigate('/stock', speech, `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n• মোট ইনভেন্টরি মূল্য: **৳${totalVal.toLocaleString('en-US')}**`, 'স্টক খাতা দেখুন →');
+    }
+    if (matchedNavRoute === '/expenses') {
+      const todayExpRow = db.prepare('SELECT COALESCE(SUM(amount), 0) as totalExp FROM expenses WHERE tenant_id = ? AND date = ?').get(tenantId, todayDate) as any;
+      const expAmt = Math.round(Number(todayExpRow?.totalExp) || 0);
+      return checkAndNavigate('/expenses', `খরচের খাতায় এসেছি। আজকের মোট খরচ ৳${expAmt.toLocaleString('en-US')} টাকা।`, `💸 **দোকানের খরচের খাতা:**\n• আজকের মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'খরচ পেজে যান →');
+    }
+    if (matchedNavRoute === '/reports') {
+      const todaySalesRow = db.prepare('SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as totalProfit FROM sales WHERE tenant_id = ? AND date(created_at) = ?').get(tenantId, todayDate) as any;
+      const s = Math.round(Number(todaySalesRow?.totalSales) || 0);
+      const p = Math.round(Number(todaySalesRow?.totalProfit) || 0);
+      return checkAndNavigate('/reports', `রিপোর্ট পেজে এসেছি। আজকের মোট বিক্রি ৳${s.toLocaleString('en-US')} টাকা এবং নিট লাভ ৳${p.toLocaleString('en-US')} টাকা।`, `📊 **দৈনিক ব্যবসায়িক রিপোর্ট:**\n• আজকের বিক্রি: **৳${s.toLocaleString('en-US')}**\n• আজকের লাভ: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট তৈরি হচ্ছে...`, 'রিপোর্ট দেখুন →');
+    }
+    if (matchedNavRoute === '/dealers') {
+      return checkAndNavigate('/dealers', 'মহাজন ও ডিলারদের খাতায় এসেছি। আপনি নতুন চালান তুলতে বা মহাজনের পাওনা পরিশোধ করতে পারেন।', '🏢 **ডিলার ও মহাজন খাতা:**\nসাপ্লায়ারদের হিসাব পরিচালনা করুন।', 'মহাজন খাতা দেখুন →');
+    }
+    if (matchedNavRoute === '/expiry-tracker') {
+      return checkAndNavigate('/expiry-tracker', 'মেয়াদ পর্যবেক্ষণ পেজে এসেছি। এখানে যেসকল পণ্যের মেয়াদ দ্রুত শেষ হতে যাচ্ছে তা দেখতে পারেন।', '⏳ **মেয়াদ পর্যবেক্ষণ পেজ:**\nমেয়াদোত্তীর্ণ পণ্য ট্র্যাক করুন।', 'মেয়াদ পেজ দেখুন →');
+    }
+    if (matchedNavRoute === '/day-end') {
+      return checkAndNavigate('/day-end', 'আজকের দিন শেষ ও ক্যাশ ক্লোজিং পেজে এসেছি। সারাদিনের নগদ টাকা মিলিয়ে হিসাব ক্লোজ করুন।', '🌙 **দিন শেষ ও ক্লোজিং:**\nআজকের দিনের হিসাব বন্ধ করুন।', 'ক্লোজিং পেজ দেখুন →');
+    }
+    if (matchedNavRoute === '/installments') {
+      return checkAndNavigate('/installments', 'কিস্তির খাতায় এসেছি। সকল গ্রাহকের মাসিক কিস্তির খতিয়ান দেখতে পারেন।', '📱 **কিস্তির খাতা:**\nগ্রাহকদের কিস্তি আদায় ও কিস্তির খতিয়ান।', 'কিস্তি পেজ দেখুন →');
+    }
+    if (matchedNavRoute === '/products') {
+      return checkAndNavigate('/products', 'পণ্য তালিকা পেজে এসেছি। এখানে নতুন পণ্য যোগ বা পণ্যের মূল্য পরিবর্তন করতে পারেন।', '🏷️ **পণ্য ও মূল্য তালিকা:**\nসকল আইটেম ও বিক্রয়মূল্য পরিচালনা করুন।', 'পণ্য তালিকা দেখুন →');
+    }
+    if (matchedNavRoute === '/settings') {
+      return checkAndNavigate('/settings', 'দোকানের সেটিংস পেজে এসেছি।', '⚙️ **দোকানের সেটিংস পেজ:**\nদোকানের নাম, ঠিকানা ও কনফিগারেশন পরিবর্তন করুন।', 'সেটিংস পেজে যান →');
+    }
+    if (matchedNavRoute === '/') {
+      return checkAndNavigate('/', 'দোকানের মূল ড্যাশবোর্ডে এসেছি। সারসংক্ষেপ ও লাইভ স্ট্যাটাস দেখতে পারেন।', '🏪 **মূল ড্যাশবোর্ড:**\nদোকানের সার্বিক ওভারভিউ।', 'ড্যাশবোর্ডে যান →');
+    }
   }
 
   // 1.4. Low Stock or Stock Out Inquiry ("কোন কোন মালের স্টক শেষ?", "কোন পণ্য কম আছে?", "স্টক শেষ কোনগুলোর?")
@@ -3029,64 +3246,6 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         };
       }
     }
-  }
-
-  // Navigation: Stock & Inventory
-  if (/স্টক\s*ে\s*যান|স্টকে\s*যাও|স্টক\s*পেজ|স্টক\s*দেখাও|স্টক\s*খোলো|মালের\s*অবস্থা|কতগুলো\s*স্টক|কত\s*স্টক|আজকের\s*স্টক|মালের\s*তালিকা|ইনভেন্টরি|মজুদ\s*মাল|গুদামের\s*খবর|গুদাম/.test(rawText) && !/যোগ|বাড়াও|বাড়া|এসেছে|বিক্রি/.test(rawText)) {
-    const totalProdRow = db.prepare('SELECT COUNT(*) as total, COALESCE(SUM(stock * selling_price), 0) as totalValuation FROM products WHERE tenant_id = ?').get(tenantId) as any;
-    const lowStockRows = db.prepare('SELECT bangla_name, name, stock, unit FROM products WHERE tenant_id = ? AND stock <= low_stock_threshold').all(tenantId) as any[];
-    const totalCount = Number(totalProdRow?.total) || 0;
-    const totalVal = Math.round(Number(totalProdRow?.totalValuation) || 0);
-    const lowCount = lowStockRows.length;
-    const speech = lowCount > 0 
-      ? `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে, এর মধ্যে ${lowCount}টি পণ্যের স্টক কম। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`
-      : `স্টক পেজে এসেছি। আপনার দোকানে মোট ${totalCount}টি পণ্য আছে এবং সবগুলোর পর্যাপ্ত স্টক রয়েছে। মোট মজুদ মূল্য ৳${totalVal.toLocaleString('en-US')} টাকা।`;
-    return checkAndNavigate('/stock', speech, `📦 **স্টক ও ইনভেন্টরি পেজ:**\n• মোট পণ্য: **${totalCount}টি**\n• কম স্টক অ্যালার্ট: **${lowCount}টি**\n• মোট ইনভেন্টরি মূল্য: **৳${totalVal.toLocaleString('en-US')}**`, 'স্টক খাতা দেখুন →');
-  }
-
-  // Navigation: Expenses
-  if (/খরচের\s*খাতা|খরচ\s*পেজ|ব্যয়ের\s*খাতা|ব্যয়\s*পেজ|খরচ\s*দেখাও|খরচপাতি|আজকের\s*খরচ\s*কত/.test(rawText) && !/খরচ\s*(লেখো|করলাম|হলো|লিখুন|\d+)/.test(rawText)) {
-    const todayExpRow = db.prepare('SELECT COALESCE(SUM(amount), 0) as totalExp FROM expenses WHERE tenant_id = ? AND date = ?').get(tenantId, todayDate) as any;
-    const expAmt = Math.round(Number(todayExpRow?.totalExp) || 0);
-    return checkAndNavigate('/expenses', `খরচের খাতায় এসেছি। আজকের মোট খরচ ৳${expAmt.toLocaleString('en-US')} টাকা।`, `💸 **দোকানের খরচের খাতা:**\n• আজকের মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n\nপেজে নিয়ে যাওয়া হচ্ছে...`, 'খরচ পেজে যান →');
-  }
-
-  // Navigation: Reports & Profits
-  if (/রিপোর্ট\s*পেজ|লাভ\s*লস|লাভের\s*হিসাব|আজকের\s*লাভ|বিক্রি\s*ও\s*লাভ|মাসিক\s*হিসাব|রিপোর্ট\s*দেখাও|হিসাব\s*নিকাশ|সামারি/.test(rawText) && !/বিক্রি\s*হলো|বেচা\s*হলো/.test(rawText)) {
-    const todaySalesRow = db.prepare('SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as totalProfit FROM sales WHERE tenant_id = ? AND date(created_at) = ?').get(tenantId, todayDate) as any;
-    const s = Math.round(Number(todaySalesRow?.totalSales) || 0);
-    const p = Math.round(Number(todaySalesRow?.totalProfit) || 0);
-    return checkAndNavigate('/reports', `রিপোর্ট পেজে এসেছি। আজকের মোট বিক্রি ৳${s.toLocaleString('en-US')} টাকা এবং নিট লাভ ৳${p.toLocaleString('en-US')} টাকা।`, `📊 **দৈনিক ব্যবসায়িক রিপোর্ট:**\n• আজকের বিক্রি: **৳${s.toLocaleString('en-US')}**\n• আজকের লাভ: **৳${p.toLocaleString('en-US')}**\n\nরিপোর্ট তৈরি হচ্ছে...`, 'রিপোর্ট দেখুন →');
-  }
-
-  // Navigation: Dealers & Wholesalers
-  if (/মহাজন\s*পেজ|মহাজনের\s*খাতা|ডিলার\s*পেজ|ডিলারদের\s*খাতা|সাপ্লায়ার|পাইকারি\s*পার্টি|মহাজন\s*লিস্ট|পাওনাদার/.test(rawText)) {
-    return checkAndNavigate('/dealers', 'মহাজন ও ডিলারদের খাতায় এসেছি। আপনি নতুন চালান তুলতে বা মহাজনের পাওনা পরিশোধ করতে পারেন।', '🏢 **ডিলার ও মহাজন খাতা:**\nসাপ্লায়ারদের হিসাব পরিচালনা করুন।', 'মহাজন খাতা দেখুন →');
-  }
-
-  // Navigation: Expiry Tracker
-  if (/মেয়াদ\s*পেজ|মেয়াদোত্তীর্ণ|এক্সপায়ারি|ডেট\s*ফেল|মেয়াদ\s*শেষ/.test(rawText)) {
-    return checkAndNavigate('/expiry-tracker', 'মেয়াদ পর্যবেক্ষণ পেজে এসেছি। এখানে যেসকল পণ্যের মেয়াদ দ্রুত শেষ হতে যাচ্ছে তা দেখতে পারেন।', '⏳ **মেয়াদ পর্যবেক্ষণ পেজ:**\nমেয়াদোত্তীর্ণ পণ্য ট্র্যাক করুন।', 'মেয়াদ পেজ দেখুন →');
-  }
-
-  // Navigation: Day End / Closing
-  if (/দিন\s*শেষ|ক্যাশ\s*ক্লোজিং|ক্লোজিং\s*পেজ|আজকের\s*ক্লোজিং|হিসাব\s*বন্ধ/.test(rawText)) {
-    return checkAndNavigate('/day-end', 'আজকের দিন শেষ ও ক্যাশ ক্লোজিং পেজে এসেছি। সারাদিনের নগদ টাকা মিলিয়ে হিসাব ক্লোজ করুন।', '🌙 **দিন শেষ ও ক্লোজিং:**\nআজকের দিনের হিসাব বন্ধ করুন।', 'ক্লোজিং পেজ দেখুন →');
-  }
-
-  // Navigation: Installments
-  if (/কিস্তির\s*খাতা|কিস্তি\s*পেজ|কিস্তির\s*হিসাব|ইন্সটলমেন্ট/.test(rawText)) {
-    return checkAndNavigate('/installments', 'কিস্তির খাতায় এসেছি। সকল গ্রাহকের মাসিক কিস্তির খতিয়ান দেখতে পারেন।', '📱 **কিস্তির খাতা:**\nগ্রাহকদের কিস্তি আদায় ও কিস্তির খতিয়ান।', 'কিস্তি পেজ দেখুন →');
-  }
-
-  // Navigation: Products List
-  if (/পণ্য\s*তালিকা|নতুন\s*পণ্য|প্রোডাক্ট\s*পেজ|আইটেম\s*লিস্ট/.test(rawText) && !/স্টক\s*যোগ/.test(rawText)) {
-    return checkAndNavigate('/products', 'পণ্য তালিকা পেজে এসেছি। এখানে নতুন পণ্য যোগ বা পণ্যের মূল্য পরিবর্তন করতে পারেন।', '🏷️ **পণ্য ও মূল্য তালিকা:**\nসকল আইটেম ও বিক্রয়মূল্য পরিচালনা করুন।', 'পণ্য তালিকা দেখুন →');
-  }
-
-  // Navigation: Settings
-  if (/সেটিংস\s*পেজ|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল/.test(rawText)) {
-    return checkAndNavigate('/settings', 'দোকানের সেটিংস পেজে এসেছি।', '⚙️ **দোকানের সেটিংস পেজ:**\nদোকানের নাম, ঠিকানা ও কনফিগারেশন পরিবর্তন করুন।', 'সেটিংস পেজে যান →');
   }
 
   // Assistant Stock Helper ("আমার হয়ে স্টক যোগ করো", "আমার হয়ে স্টক এড করো")
@@ -3529,94 +3688,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   }
 
-  // 6. Navigation Commands to Pages
-  if (/পণ্য\s*পেজ|প্রোডাক্ট\s*পেজ|পণ্য\s*তালিকা|প্রোডাক্টে\s*যাও|নতুন\s*পণ্য\s*যোগ/.test(rawText) && !/\d+/.test(normalized)) {
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/products',
-      speech: 'পণ্য ও ক্যাটালগ পেজে এসেছি। নতুন পণ্য যোগ ও এডিট করতে পারবেন।',
-      reply: '📦 **পণ্য ও ক্যাটালগ তালিকা ওপেন করা হচ্ছে...**',
-      actionLink: { text: 'পণ্য তালিকা দেখুন →', href: '/products' }
-    };
-  }
 
-  if (/ডিলারে\s*যাও|ডিলার\s*খাতা|মহাজন\s*খাতা|মহাজন|সাপ্লায়ার|সরবরাহকারী/.test(rawText) && !/\d+/.test(normalized)) {
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/dealers',
-      speech: 'ডিলার ও সরবরাহকারী মহাজনদের খাতায় এসেছি।',
-      reply: '🚚 **ডিলার ও সরবরাহকারী খাতা ওপেন করা হচ্ছে...**',
-      actionLink: { text: 'ডিলার খাতা দেখুন →', href: '/dealers' }
-    };
-  }
-
-  if (/দিন\s*শেষ|দিন\s*শেষের\s*হিসাব|ক্যাশ\s*মেলাও|ক্যাশ\s*ড্রয়ার|ক্লোজিং\s*করো/.test(rawText) && !/\d+/.test(normalized)) {
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/day-end',
-      speech: 'দিন শেষের ক্যাশ ড্রয়ার ও ক্লোজিং পেজে এসেছি।',
-      reply: '🌙 **দিন শেষের ক্যাশ ড্রয়ার ওপেন করা হচ্ছে...**',
-      actionLink: { text: 'দিন সমাপ্ত করুন →', href: '/day-end' }
-    };
-  }
-
-  if (/হোমে\s*যাও|ড্যাশবোর্ডে\s*যাও|মূল\s*পাতায়|হোম\s*পেজ/.test(rawText)) {
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/',
-      speech: 'দোকানের প্রধান ড্যাশবোর্ডে ফিরে এসেছি।',
-      reply: '🏠 **প্রধান ড্যাশবোর্ড লোড করা হচ্ছে...**',
-      actionLink: { text: 'ড্যাশবোর্ড দেখুন →', href: '/' }
-    };
-  }
-
-  // Navigation to Khata / POS / Expenses
-  if (/বাকি\s*খাতায়\s*যান|বাকি\s*খাতায়\s*যাও|বাকি\s*খাতা\s*খোলো|বাকি\s*খাতা|খাতায়\s*যাও|কাস্টমার\s*খাতা/.test(rawText) && !/\d+/.test(normalized)) {
-    const dueStats = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
-    const debtorCount = Number(dueStats?.count) || 0;
-    const marketDue = Number(dueStats?.totalDue) || 0;
-    const speech = `ডিজিটাল বাকি খাতা খুলেছি। বর্তমানে ${debtorCount} জন কাস্টমারের কাছে মোট ৳${marketDue} টাকা বাকি পাওনা রয়েছে।`;
-
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/khata',
-      speech,
-      reply: `📖 **ডিজিটাল বাকি খাতা:**\n• মোট বাকিদার: **${debtorCount} জন**\n• মোট মার্কেট বাকি: **৳${marketDue.toLocaleString('en-US')}**\n\nবাকি খাতা ওপেন করা হচ্ছে...`,
-      actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' }
-    };
-  }
-
-  if (/কাউন্টার|মেমো\s*কাটার\s*পেজ|পিওএস|ক্যাশ\s*কাউন্টার|বিক্রি\s*কাউন্টার/.test(rawText) && !/\d+/.test(normalized)) {
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/pos',
-      speech: 'পিওএস ক্যাশ কাউন্টারে এসেছি। নতুন মেমো কাটার জন্য প্রস্তুত।',
-      reply: '⚡ **পিওএস ক্যাশ কাউন্টার প্রস্তুত!**\nনতুন মেমো কাটতে আইটেম যোগ করুন...',
-      actionLink: { text: 'ক্যাশ কাউন্টার ওপেন →', href: '/pos' }
-    };
-  }
-
-  if (/খরচের\s*খাতায়\s*যাও|খরচ\s*পেজে\s*যাও|খরচের\s*খাতা|খরচ\s*দেখাও|খরচ\s*পেজ/.test(rawText) && !/\d+/.test(normalized)) {
-    const expStats = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as totalExp FROM expenses WHERE tenant_id = ? AND created_at LIKE ?').get(tenantId, `${todayDate}%`) as any;
-    const expCount = Number(expStats?.count) || 0;
-    const totalExp = Number(expStats?.totalExp) || 0;
-    const speech = `দোকান খরচের তালিকায় এসেছি। আজকে ${expCount}টি খাতে মোট ৳${totalExp} টাকা খরচ হয়েছে।`;
-
-    return {
-      success: true,
-      action: 'navigate',
-      navigateTo: '/expenses',
-      speech,
-      reply: `💸 **দোকানের খরচের খাতা:**\n• আজকের মোট খরচ: **৳${totalExp.toLocaleString('en-US')}** (${expCount}টি খাত)\n\nখরচের পেজে নিয়ে যাওয়া হচ্ছে...`,
-      actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' }
-    };
-  }
 
   // 5. Expense Logging ("চা নাস্তা ৬০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা")
   if (/খরচ|নাস্তা|চা\s*নাস্তা|চা\s*বিস্কুট|ভাড়া|ভাড়া|বিল|বিদ্যুৎ|কারেন্ট|আপ্যায়ন|আপ্যায়ন|যাতায়াত|যাতায়াত|বেতন|মেরামত|পরিবহন|খাওয়া|খাবার|কুলি|মুট|ঝাড়ু|পানির\s*বিল|গ্যাস\s*বিল/.test(rawText) && !/কত|রিপোর্ট|লাভ|খোলো|যান|যাও/.test(rawText)) {
@@ -6103,7 +6175,16 @@ fastify.post('/api/voice-action', async (request, reply) => {
     return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
   }
 
-  // 1. Try Gemini Flash AI Agent first for intelligent stock-grounded multi-item parsing
+  // 1. Instant Navigation & Shortcut Check (< 1ms execution, 0 network wait)
+  const navRoute = matchNavigationIntent(text, text);
+  if (navRoute) {
+    const localNav = executeAiShopCommand(tenantId, text, assistantName);
+    if (localNav && localNav.navigateTo) {
+      return localNav;
+    }
+  }
+
+  // 2. Try Gemini Flash AI Agent for intelligent stock-grounded multi-item parsing
   try {
     const agentResult = await runGeminiShopAgent(db, tenantId, text);
     if (agentResult && agentResult.success) {
@@ -6113,7 +6194,7 @@ fastify.post('/api/voice-action', async (request, reply) => {
     console.warn('[AI Engine] Agent error, falling back to local engine:', err);
   }
 
-  // 2. Fallback to high-speed local engine
+  // 3. Fallback to high-speed local engine
   const result = executeAiShopCommand(tenantId, text, assistantName);
   return result;
 });

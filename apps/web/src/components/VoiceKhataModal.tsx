@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
@@ -28,6 +29,7 @@ export default function VoiceKhataModal({
   speakAnnouncement,
   triggerHaptic
 }: VoiceKhataModalProps) {
+  const router = useRouter();
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
   const [lastActionMessage, setLastActionMessage] = useState('');
@@ -160,6 +162,22 @@ export default function VoiceKhataModal({
           playSuccessChime();
           if (triggerHaptic) triggerHaptic('success');
           setLastActionMessage(`✓ ${result.speech}`);
+
+          // If navigation intent is returned (e.g. "মেমো পেজে যাও", "স্টকে যাব", "খরচে যাও")
+          if (result.navigateTo) {
+            if (typeof window !== 'undefined' && result.speech) {
+              sessionStorage.setItem('pending_page_announcement', result.speech);
+            }
+            if (speakAnnouncement) {
+              speakAnnouncement(result.speech);
+            }
+            setTimeout(() => {
+              onClose();
+              router.push(result.navigateTo);
+            }, 350);
+            return;
+          }
+
           if (result.data) {
             setConfirmationCardData(result.data);
           }

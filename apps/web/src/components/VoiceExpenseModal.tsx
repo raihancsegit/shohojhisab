@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 
@@ -16,6 +17,7 @@ export default function VoiceExpenseModal({
   currentTenantId,
   onExpenseCreated
 }: VoiceExpenseModalProps) {
+  const router = useRouter();
   const { triggerHaptic, speakAnnouncement } = useAuth();
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
@@ -122,6 +124,20 @@ export default function VoiceExpenseModal({
         if (result.success) {
           triggerHaptic('success');
           setFeedback(`✓ ${result.speech}`);
+
+          // If navigation intent is returned
+          if (result.navigateTo) {
+            if (typeof window !== 'undefined' && result.speech) {
+              sessionStorage.setItem('pending_page_announcement', result.speech);
+            }
+            speakAnnouncement(result.speech);
+            setTimeout(() => {
+              onClose();
+              router.push(result.navigateTo);
+            }, 350);
+            return;
+          }
+
           onExpenseCreated();
           setLiveTranscript('');
           latestTranscriptRef.current = '';
