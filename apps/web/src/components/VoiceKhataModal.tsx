@@ -82,9 +82,6 @@ export default function VoiceKhataModal({
     setIsListening(true);
     playMicStartSound();
     if (triggerHaptic) triggerHaptic('medium');
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('app-mic-started', { detail: { source: 'khata-modal' } }));
-    }
 
     try {
       if (recognitionRef.current) {

@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
-import { saveVaultSnapshot, autoRestoreIfWiped } from '../lib/dataVault';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
@@ -148,31 +147,26 @@ export default function ShopkeeperDashboard() {
       }
 
       // 2. Fetch products to count low stock
-      let fetchedProds: any[] = [];
       const prodRes = await fetch(`/api/products?tenantId=${tenant.id}`);
       if (prodRes.ok) {
-        fetchedProds = await prodRes.json();
-        const prodsArray = Array.isArray(fetchedProds) ? fetchedProds : [];
-        setProducts(prodsArray);
-        const low = prodsArray.filter((p: any) => p.stock <= (p.lowStockThreshold || 5)).length;
+        const prods = await prodRes.json();
+        setProducts(Array.isArray(prods) ? prods : []);
+        const low = (prods || []).filter((p: any) => p.stock <= (p.lowStockThreshold || 5)).length;
         setLowStockCount(low);
       }
 
       // 3. Fetch recent sales
-      let fetchedSales: any[] = [];
       const salesRes = await fetch(`/api/sales?tenantId=${tenant.id}`);
       if (salesRes.ok) {
-        fetchedSales = await salesRes.json();
-        const salesArray = Array.isArray(fetchedSales) ? fetchedSales : [];
-        setRecentSales(salesArray.slice(0, 5));
+        const sales = await salesRes.json();
+        setRecentSales(Array.isArray(sales) ? sales.slice(0, 5) : []);
       }
 
       // 4. Fetch customers
-      let fetchedCustomers: any[] = [];
       const custRes = await fetch(`/api/customers?tenantId=${tenant.id}`);
       if (custRes.ok) {
-        fetchedCustomers = await custRes.json();
-        setCustomers(Array.isArray(fetchedCustomers) ? fetchedCustomers : []);
+        const cList = await custRes.json();
+        setCustomers(Array.isArray(cList) ? cList : []);
       }
 
       // 5. Fetch dealers (for supplier payable metric)
@@ -181,34 +175,11 @@ export default function ShopkeeperDashboard() {
         const dList = await dealRes.json();
         setDealers(Array.isArray(dList) ? dList : []);
       }
-
-      // 🔒 Data Vault Auto Safeguard:
-      // If server has data, persist snapshot to local vault
-      if (fetchedProds.length > 0 || fetchedSales.length > 0) {
-        saveVaultSnapshot(tenant.id, {
-          products: fetchedProds,
-          sales: fetchedSales,
-          customers: fetchedCustomers
-        });
-      } else {
-        // If server data was wiped (0 products & 0 sales after container restart), auto-restore!
-        autoRestoreIfWiped(tenant.id, fetchedProds.length, fetchedSales.length, () => {
-          loadShopData();
-        });
-      }
     } catch (e) {
       console.error('Failed to load shop data', e);
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    const handleVaultRestored = () => {
-      loadShopData();
-    };
-    window.addEventListener('vault-restored', handleVaultRestored);
-    return () => window.removeEventListener('vault-restored', handleVaultRestored);
-  }, [tenant?.id]);
 
 
 

@@ -10,7 +10,6 @@ import DataLoader from '../../components/DataLoader';
 import SmartVoiceConfirmationCard, { SmartVoiceActionData } from '../../components/SmartVoiceConfirmationCard';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playDeleteSound } from '../../lib/audioFeedbackUtils';
-import { saveVaultSnapshot } from '../../lib/dataVault';
 
 export default function KhataPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -313,11 +312,7 @@ export default function KhataPage() {
       const res = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const list = await res.json();
-        const custList = Array.isArray(list) ? list : [];
-        setCustomers(custList);
-        if (custList.length > 0) {
-          saveVaultSnapshot(currentTenantId, { customers: custList });
-        }
+        setCustomers(Array.isArray(list) ? list : []);
       }
     } catch (e) {
       console.error('Failed to load customers', e);

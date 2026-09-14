@@ -35,17 +35,9 @@ export default function VoiceAssistant() {
     const handleTrigger = () => {
       startListening();
     };
-    const handleOtherMic = (e: any) => {
-      if (e?.detail?.source !== 'floating-assistant' && isListeningRef.current) {
-        stopListeningOnly();
-      }
-    };
-
     window.addEventListener('trigger-voice-assistant', handleTrigger);
-    window.addEventListener('app-mic-started', handleOtherMic);
     return () => {
       window.removeEventListener('trigger-voice-assistant', handleTrigger);
-      window.removeEventListener('app-mic-started', handleOtherMic);
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
     };
@@ -62,11 +54,6 @@ export default function VoiceAssistant() {
     // Stop any active speech
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-    }
-
-    // Broadcast to prevent other microphones from clashing
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('app-mic-started', { detail: { source: 'floating-assistant' } }));
     }
 
     triggerHaptic?.('medium');

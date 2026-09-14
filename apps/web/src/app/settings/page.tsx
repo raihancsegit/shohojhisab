@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { downloadBackupFile } from '../../lib/dataVault';
 
-type SettingsTab = 'main' | 'general' | 'items' | 'parties' | 'transactions' | 'printing';
+type SettingsTab = 'main' | 'general' | 'items' | 'parties' | 'transactions' | 'printing' | 'backup';
 
 export default function SettingsHubPage() {
   const router = useRouter();
@@ -12,6 +13,11 @@ export default function SettingsHubPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('main');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
+
+  // Cloud Sync state
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<any>(null);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   // 1. General & Security Settings (Matching Screenshot 3, 4, 5)
   const [generalSettings, setGeneralSettings] = useState({
@@ -180,6 +186,65 @@ export default function SettingsHubPage() {
     }
   };
 
+  const fetchCloudSyncStatus = async () => {
+    try {
+      const res = await fetch('/api/cloud-sync/status');
+      if (res.ok) {
+        const data = await res.json();
+        setCloudSyncStatus(data);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch cloud sync status', e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'backup') {
+      fetchCloudSyncStatus();
+    }
+  }, [activeTab]);
+
+  const handleTriggerBackup = async () => {
+    setSyncLoading(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/cloud-sync/backup', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage('✅ ক্লাউডে সফলভাবে সম্পূর্ণ ডেটাবেজ ব্যাকআপ সম্পন্ন হয়েছে!');
+        fetchCloudSyncStatus();
+      } else {
+        setSyncMessage(`❌ ব্যাকআপ ব্যর্থ: ${data.error || data.message || 'সমস্যা হয়েছে'}`);
+      }
+    } catch (err: any) {
+      setSyncMessage(`❌ নেটওয়ার্ক এরর: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleTriggerRestore = async () => {
+    if (!confirm('⚠️ সতর্কতা: ক্লাউড ব্যাকআপ থেকে রিস্টোর করলে বর্তমান ডেটাবেজ ক্লাউডের ডেটা দিয়ে প্রতিস্থাপিত হবে। আপনি কি নিশ্চিত?')) {
+      return;
+    }
+    setSyncLoading(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/cloud-sync/restore', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage('🎉 ক্লাউড ব্যাকআপ থেকে সম্পূর্ণ ডেটাবেজ সফলভাবে রিস্টোর হয়েছে!');
+        fetchCloudSyncStatus();
+      } else {
+        setSyncMessage(`❌ রিস্টোর ব্যর্থ: ${data.error || data.message || 'সমস্যা হয়েছে'}`);
+      }
+    } catch (err: any) {
+      setSyncMessage(`❌ নেটওয়ার্ক এরর: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -231,6 +296,7 @@ export default function SettingsHubPage() {
           {activeTab === 'parties' && 'পার্টি'}
           {activeTab === 'transactions' && 'লেনদেন'}
           {activeTab === 'printing' && 'ইনভয়েস প্রিন্ট'}
+          {activeTab === 'backup' && 'ক্লাউড অটো-ব্যাকআপ ও সুরক্ষা'}
         </h1>
       </div>
 
@@ -468,6 +534,48 @@ export default function SettingsHubPage() {
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
                     ৫৮/৮০মিমি থার্মাল প্রিন্টার ও লোগো
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '18px', color: '#94a3b8', fontWeight: '900' }}>›</div>
+            </div>
+
+            {/* 6. Cloud Backup & Sync (ক্লাউড অটো-ব্যাকআপ ও সুরক্ষা) */}
+            <div
+              onClick={() => { setActiveTab('backup'); triggerHaptic('light'); }}
+              role="button"
+              tabIndex={0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '18px 20px',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease',
+                borderTop: '1px solid #f1f5f9'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: '#ecfdf5',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '22px'
+                }}>
+                  ☁️
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    ক্লাউড অটো-ব্যাকআপ ও সুরক্ষা
+                    <span style={{ fontSize: '10px', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>১০০% ফ্রি</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    Render ডিপ্লয় বা রিস্টার্ট হলেও হিসাব সুরক্ষিত থাকবে
                   </div>
                 </div>
               </div>
@@ -1441,6 +1549,251 @@ export default function SettingsHubPage() {
             >
               সংরক্ষণ করুন
             </button>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW 6: CLOUD BACKUP & SYNC (PERSISTENCE) */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'backup' && (
+          <div style={{ display: 'grid', gap: '16px' }}>
+
+            {/* Notification message */}
+            {syncMessage && (
+              <div style={{
+                padding: '14px 16px',
+                borderRadius: '16px',
+                background: syncMessage.includes('❌') ? '#fef2f2' : '#ecfdf5',
+                border: `1.5px solid ${syncMessage.includes('❌') ? '#fecaca' : '#a7f3d0'}`,
+                color: syncMessage.includes('❌') ? '#991b1b' : '#065f46',
+                fontWeight: '800',
+                fontSize: '13.5px',
+                lineHeight: '1.5'
+              }}>
+                {syncMessage}
+              </div>
+            )}
+
+            {/* Status Card */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '22px 20px',
+              border: '1.5px solid #e2e8f0',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'grid',
+              gap: '16px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: cloudSyncStatus?.configured ? '#ecfdf5' : '#fffbeb',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '22px'
+                  }}>
+                    {cloudSyncStatus?.configured ? '☁️' : '⚠️'}
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15.5px', fontWeight: '900', color: '#0f172a' }}>
+                      ক্লাউড স্টোরেজ স্ট্যাটাস
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                      {cloudSyncStatus?.configured
+                        ? `প্রোভাইডার: Supabase Storage (${cloudSyncStatus.bucket})`
+                        : 'এখনো কোনো ক্লাউড স্টোরেজ কানেক্ট করা হয়নি'}
+                    </p>
+                  </div>
+                </div>
+
+                <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '99px',
+                  fontSize: '12px',
+                  fontWeight: '900',
+                  background: cloudSyncStatus?.configured ? '#dcfce7' : '#fef3c7',
+                  color: cloudSyncStatus?.configured ? '#15803d' : '#b45309',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: cloudSyncStatus?.configured ? '#16a34a' : '#d97706'
+                  }} />
+                  {cloudSyncStatus?.configured ? 'সংযুক্ত (Active)' : 'অপেক্ষমান (Pending)'}
+                </span>
+              </div>
+
+              {/* Sync details */}
+              <div style={{
+                background: '#f8fafc',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                display: 'grid',
+                gap: '8px',
+                fontSize: '12.5px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                  <span>সর্বশেষ ক্লাউড ব্যাকআপ:</span>
+                  <strong style={{ color: '#0f172a' }}>
+                    {cloudSyncStatus?.lastSyncTime
+                      ? new Date(cloudSyncStatus.lastSyncTime).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ', ' + new Date(cloudSyncStatus.lastSyncTime).toLocaleDateString('bn-BD')
+                      : 'এখনো হয়নি'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                  <span>ডেটাবেজের আকার:</span>
+                  <strong style={{ color: '#0f172a' }}>
+                    {cloudSyncStatus?.localDbSize ? `${(cloudSyncStatus.localDbSize / 1024).toFixed(1)} KB` : '০ KB'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                  <span>অটোমেটিক ব্যাকআপ:</span>
+                  <strong style={{ color: '#16a34a' }}>প্রতিটি বিক্রি ও লেনদেনের পর স্বয়ংক্রিয়</strong>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handleTriggerBackup}
+                  disabled={syncLoading || !cloudSyncStatus?.configured}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: cloudSyncStatus?.configured ? '#10b981' : '#cbd5e1',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: cloudSyncStatus?.configured ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {syncLoading ? '⏳ অপেক্ষা করুন...' : '☁️ ব্যাকআপ নিন'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerRestore}
+                  disabled={syncLoading || !cloudSyncStatus?.configured}
+                  style={{
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: '#ffffff',
+                    color: cloudSyncStatus?.configured ? '#4f46e5' : '#94a3b8',
+                    border: `1.5px solid ${cloudSyncStatus?.configured ? '#818cf8' : '#cbd5e1'}`,
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: cloudSyncStatus?.configured ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  🔄 রিস্টোর করুন
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => downloadBackupFile(tenant?.id || 'dokan', tenant?.shopName || 'dokan')}
+                style={{
+                  padding: '11px',
+                  borderRadius: '12px',
+                  background: '#f1f5f9',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  fontWeight: '800',
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                📥 অফলাইন ফাইল (JSON) ডাউনলোড করে রাখুন
+              </button>
+            </div>
+
+            {/* Setup Guide Card */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '22px 20px',
+              border: '1.5px solid #e2e8f0',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'grid',
+              gap: '14px'
+            }}>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📖 Render-এ ফ্রিতে আজীবন সুরক্ষার উপায়
+              </h4>
+
+              <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: '1.6', display: 'grid', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>১</span>
+                  <div>
+                    <strong>supabase.com</strong>-এ গিয়ে সম্পূর্ণ ফ্রিতে ১টি একাউন্ট খুলুন এবং <strong>New Project</strong> তৈরি করুন।
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>২</span>
+                  <div>
+                    প্রজেক্টের <strong>Project Settings → API</strong> থেকে <strong>Project URL</strong> এবং <strong>service_role (বা anon) key</strong> কপি করুন।
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>৩</span>
+                  <div>
+                    আপনার <strong>Render Dashboard</strong>-এ গিয়ে আপনার API সার্ভিসের <strong>Environment</strong> ট্যাবে নিচের ২টি ভ্যারিয়েবল যোগ করুন:
+                    <div style={{
+                      background: '#0f172a',
+                      color: '#38bdf8',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      fontFamily: 'monospace',
+                      fontSize: '11.5px',
+                      marginTop: '6px',
+                      userSelect: 'all'
+                    }}>
+                      SUPABASE_URL=https://your-project.supabase.co<br />
+                      SUPABASE_KEY=your-supabase-key
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  color: '#166534',
+                  fontSize: '12px',
+                  fontWeight: '700'
+                }}>
+                  🎉 এরপর Render যতবারই রিস্টার্ট বা ডিপ্লয় হোক না কেন — সার্ভার চালু হওয়ার সময় স্বয়ংক্রিয়ভাবে ক্লাউড থেকে হিসাব রিস্টোর হয়ে যাবে এবং প্রতিটি নতুন বিক্রির পর ক্লাউডে ব্যাকআপ সেভ থাকবে!
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
 

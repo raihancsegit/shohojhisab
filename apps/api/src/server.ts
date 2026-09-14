@@ -5,7 +5,9 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { runGeminiShopAgent, undoLastAction, getUndoAction } from './ai-agent/aiAgent';
+import { cloudSync } from './cloud-sync/cloudSync';
 
 // Auto-load .env safely for local development and background processes
 try {
@@ -34,20 +36,29 @@ try {
   }
 } catch (e) {}
 
+// Re-read cloud sync config after loading env
+cloudSync.reloadConfig();
+
 const fastify = Fastify({ logger: true });
 
 // Resolve DB path safely for both local monorepo and standalone cloud deployments (Render/Railway/Docker)
 const candidate1 = path.resolve(__dirname, '../../../local-business-os.db');
 const candidate2 = path.resolve(process.cwd(), 'local-business-os.db');
-let resolvedDefaultPath = candidate2;
-if (fs.existsSync('/var/data')) {
-  resolvedDefaultPath = '/var/data/local-business-os.db';
-} else if (fs.existsSync('/data')) {
-  resolvedDefaultPath = '/data/local-business-os.db';
-} else if (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1))) {
-  resolvedDefaultPath = candidate1;
+const dbPath = process.env.DB_PATH || (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1)) ? candidate1 : candidate2);
+
+// If local DB is missing or empty on cloud deploy, attempt prestart cloud restore
+if ((!fs.existsSync(dbPath) || fs.statSync(dbPath).size < 4096) && cloudSync.isConfigured()) {
+  try {
+    console.log('[CloudSync] Missing or empty local database on startup. Attempting cloud restore...');
+    const prestartScript = path.resolve(__dirname, 'cloud-sync/prestart.ts');
+    if (fs.existsSync(prestartScript)) {
+      execSync(`npx tsx "${prestartScript}"`, { stdio: 'inherit', env: process.env, timeout: 30000 });
+    }
+  } catch (e: any) {
+    console.warn('[CloudSync] Prestart restore check completed or skipped:', e.message);
+  }
 }
-const dbPath = process.env.DB_PATH || resolvedDefaultPath;
+
 console.log(`[DB] Using SQLite Database at: ${dbPath}`);
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
@@ -6483,6 +6494,77 @@ fastify.post('/api/tenant/vault-restore', async (request, reply) => {
   }
 });
 
+// --- CLOUD SYNC & RECOVERY SYSTEM (FOR RENDER/PERSISTENCE) ---
+// 1. Automatic backup hook on any data changes (Sales, Stock, Khata, Expenses, etc.)
+fastify.addHook('onResponse', (request, reply, done) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method) && reply.statusCode < 400) {
+    if (request.url.startsWith('/api/') && !request.url.startsWith('/api/cloud-sync')) {
+      cloudSync.scheduleBackup(dbPath, db, 8000); // Debounce 8s
+    }
+  }
+  done();
+});
+
+// 2. Cloud Sync Status endpoint
+fastify.get('/api/cloud-sync/status', async (request, reply) => {
+  return cloudSync.getStatus(dbPath);
+});
+
+// 3. Manual Immediate Cloud Backup
+fastify.post('/api/cloud-sync/backup', async (request, reply) => {
+  if (!cloudSync.isConfigured()) {
+    return reply.status(400).send({
+      success: false,
+      error: 'Cloud Sync is not configured. Please set SUPABASE_URL and SUPABASE_KEY in environment variables.'
+    });
+  }
+  const result = await cloudSync.uploadDatabase(dbPath, db);
+  if (!result.success) {
+    return reply.status(500).send(result);
+  }
+  return result;
+});
+
+// 4. Manual Immediate Cloud Restore
+fastify.post('/api/cloud-sync/restore', async (request, reply) => {
+  if (!cloudSync.isConfigured()) {
+    return reply.status(400).send({
+      success: false,
+      error: 'Cloud Sync is not configured. Please set SUPABASE_URL and SUPABASE_KEY in environment variables.'
+    });
+  }
+  const result = await cloudSync.downloadDatabase(dbPath);
+  if (!result.success) {
+    return reply.status(500).send(result);
+  }
+  return result;
+});
+
+// 5. Periodic background cloud backup (Every 15 minutes)
+if (cloudSync.isConfigured()) {
+  setInterval(() => {
+    cloudSync.uploadDatabase(dbPath, db).catch((err) => {
+      console.warn('[CloudSync:Periodic] ⚠️ Periodic backup skipped:', err.message);
+    });
+  }, 15 * 60 * 1000);
+}
+
+// 6. Graceful Shutdown (Render redeploys send SIGTERM - save latest DB before container dies)
+const handleGracefulShutdown = async (signal: string) => {
+  console.log(`[Server] 🛑 Received ${signal}. Saving final database snapshot to cloud before exit...`);
+  if (cloudSync.isConfigured()) {
+    try {
+      await cloudSync.uploadDatabase(dbPath, db);
+      console.log('[Server] ✅ Final cloud backup completed successfully.');
+    } catch (e: any) {
+      console.error('[Server] ❌ Final cloud backup failed:', e.message);
+    }
+  }
+  process.exit(0);
+};
+process.on('SIGTERM', () => handleGracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => handleGracefulShutdown('SIGINT'));
+
 // Root & Health Checks
 fastify.get('/', async () => ({ status: 'online', service: 'ShohojHisab API', message: 'ShohojHisab Dynamic API is running successfully!', timestamp: new Date().toISOString() }));
 fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -6502,6 +6584,13 @@ const start = async () => {
     const port = Number(process.env.PORT) || 4005;
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Full Clean Dynamic API running on port ${port}`);
+
+    // If configured and local DB is already present, schedule an initial cloud backup after boot
+    if (cloudSync.isConfigured()) {
+      setTimeout(() => {
+        cloudSync.uploadDatabase(dbPath, db).catch(() => {});
+      }, 5000);
+    }
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
@@ -6511,4 +6600,5 @@ const start = async () => {
 if (process.env.NODE_ENV !== 'test') {
   start();
 }
+
 

@@ -416,38 +416,30 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000); // 4s max latency constraint
+    const timeout = setTimeout(() => controller.abort(), 3500); // 3.5s max latency constraint
 
-    // Support modern Gemini 2.0 Flash with automatic fallback to Gemini 1.5 Flash
-    let response: any = null;
-    const modelCandidates = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-    for (const model of modelCandidates) {
-      try {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [
-              { role: 'user', parts: [{ text: spokenText }] }
-            ],
-            system_instruction: {
-              parts: [{ text: systemInstruction }]
-            },
-            generationConfig: {
-              temperature: 0.1,
-              response_mime_type: "application/json"
-            }
-          })
-        });
-        if (response.ok) break;
-      } catch (e) {}
-    }
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [
+          { role: 'user', parts: [{ text: spokenText }] }
+        ],
+        system_instruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        generationConfig: {
+          temperature: 0.1,
+          response_mime_type: "application/json"
+        }
+      })
+    });
 
     clearTimeout(timeout);
 
-    if (!response || !response.ok) {
-      console.warn('[AI Agent] Gemini API response not ok, status:', response?.status);
+    if (!response.ok) {
+      console.warn('[AI Agent] Gemini API response not ok:', response.status);
       return null;
     }
 
@@ -458,80 +450,15 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
     const parsed = JSON.parse(rawJson);
     if (!parsed || parsed.intent === 'unknown') return null;
 
-    // 1. Stock Sale or Due
     if (parsed.intent === 'stock_sale_or_due' && Array.isArray(parsed.items) && parsed.items.length > 0) {
-      const isDue = parsed.isDue === true || (parsed.isDue !== false && Boolean(parsed.customerName || parsed.customerId));
       return executeStockSaleOrDue(db, tenantId, {
         customerId: parsed.customerId,
         customerName: parsed.customerName,
-        isDue,
+        isDue: parsed.isDue !== false,
         items: parsed.items,
         explicitTotalAmount: parsed.explicitTotalAmount,
         note: parsed.note
       });
-    }
-
-    // 2. Query Intent (Sales today, customer due, stock status, profit)
-    if (parsed.intent === 'query') {
-      const todayDate = new Date().toISOString().slice(0, 10);
-      const cleanQ = spokenText.toLowerCase();
-
-      // Query: Today's sales or profit
-      if (/বিক্রি|লাভ|হিসাব|ইনকাম|আজকের|ক্যাশ/.test(cleanQ)) {
-        const salesRow = db.prepare('SELECT COALESCE(SUM(total_amount), 0) as total, COALESCE(SUM(profit_amount), 0) as profit, COUNT(*) as count FROM sales WHERE tenant_id = ? AND date(created_at) = ?').get(tenantId, todayDate) as any;
-        const total = Math.round(Number(salesRow?.total) || 0);
-        const profit = Math.round(Number(salesRow?.profit) || 0);
-        const count = Number(salesRow?.count) || 0;
-
-        return {
-          success: true,
-          action: 'sales_inquiry',
-          speech: `আজকে মোট ${count}টি অর্ডারে ৳${total.toLocaleString('en-US')} টাকা বিক্রি হয়েছে এবং লাভ হয়েছে ৳${profit.toLocaleString('en-US')} টাকা।`,
-          reply: `📊 **আজকের লাইভ বিক্রয় রিপোর্ট:**\n• আজকের মোট বিক্রি: **৳${total.toLocaleString('en-US')}**\n• মোট লাভ: **৳${profit.toLocaleString('en-US')}**\n• মোট মেমো সংখ্যা: **${count}টি**`,
-          navigateTo: '/reports',
-          actionLink: { text: 'পূর্ণাঙ্গ রিপোর্ট দেখুন →', href: '/reports' }
-        };
-      }
-
-      // Query: Specific customer due
-      if (parsed.customerName || parsed.customerId) {
-        let cust: any = null;
-        if (parsed.customerId) {
-          cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(parsed.customerId) as any;
-        } else {
-          cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`) as any;
-        }
-        if (cust) {
-          const due = Math.round(Number(cust.total_due) || 0);
-          return {
-            success: true,
-            action: 'customer_due_inquiry',
-            speech: `${cust.name} এর বাকি খাতায় বর্তমান বকেয়া ৳${due.toLocaleString('en-US')} টাকা।`,
-            reply: `📖 **গ্রাহকের বাকি তথ্য:**\n• খরিদ্দার: **${cust.name}**\n• বর্তমান মোট বাকি: **৳${due.toLocaleString('en-US')}**\n• ফোন: ${cust.phone || 'দেওয়া নেই'}`,
-            navigateTo: '/khata',
-            actionLink: { text: `${cust.name} এর খতিয়ান দেখুন →`, href: `/khata` }
-          };
-        }
-      }
-
-      // Query: Stock of specific product
-      if (Array.isArray(parsed.items) && parsed.items.length > 0 && parsed.items[0].productName) {
-        const pName = parsed.items[0].productName;
-        const prod = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1').get(tenantId, `%${pName}%`, `%${pName}%`) as any;
-        if (prod) {
-          const stock = Number(prod.stock) || 0;
-          const unit = prod.unit || 'টি';
-          const price = Number(prod.selling_price) || 0;
-          return {
-            success: true,
-            action: 'product_stock_inquiry',
-            speech: `${prod.bangla_name || prod.name} বর্তমানে ${stock} ${unit} স্টকে আছে। বিক্রয়মূল্য ৳${price} টাকা।`,
-            reply: `📦 **পণ্য স্টক তথ্য:**\n• পণ্য: **${prod.bangla_name || prod.name}**\n• বর্তমান স্টক: **${stock} ${unit}**\n• বিক্রয়মূল্য: **৳${price}**`,
-            navigateTo: '/stock',
-            actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
-          };
-        }
-      }
     }
 
     if (parsed.intent === 'due_payment') {
