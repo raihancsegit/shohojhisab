@@ -310,6 +310,171 @@ class CloudSyncService {
       await this.uploadDatabase(dbPath, dbInstance);
     }, delayMs);
   }
+
+  /**
+   * Save a daily / point-in-time snapshot of the database
+   */
+  public async saveDailySnapshot(dbPath: string, dbInstance?: Database.Database): Promise<void> {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const snapshotsDir = path.resolve(path.dirname(dbPath), 'snapshots');
+    if (!fs.existsSync(snapshotsDir)) {
+      fs.mkdirSync(snapshotsDir, { recursive: true });
+    }
+
+    const localSnapshotPath = path.resolve(snapshotsDir, `snapshot-${todayStr}.db`);
+
+    // Create local daily snapshot
+    if (dbInstance && typeof dbInstance.backup === 'function') {
+      try {
+        await dbInstance.backup(localSnapshotPath);
+        console.log(`[CloudSync] 💾 Local daily snapshot saved for ${todayStr}`);
+      } catch (e: any) {
+        console.warn(`[CloudSync] ⚠️ Local snapshot backup error:`, e.message);
+      }
+    } else if (fs.existsSync(dbPath)) {
+      try {
+        fs.copyFileSync(dbPath, localSnapshotPath);
+      } catch (e) {}
+    }
+
+    // Also upload snapshot to Supabase if configured
+    if (this.config && fs.existsSync(localSnapshotPath)) {
+      try {
+        const fileBuffer = fs.readFileSync(localSnapshotPath);
+        const snapshotCloudName = `snapshots/snapshot-${todayStr}.db`;
+        const uploadUrl = `${this.config.supabaseUrl}/storage/v1/object/${this.config.bucket}/${snapshotCloudName}`;
+        await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            apikey: this.config.supabaseKey,
+            Authorization: `Bearer ${this.config.supabaseKey}`,
+            'x-upsert': 'true',
+            'Content-Type': 'application/x-sqlite3',
+          },
+          body: fileBuffer,
+        });
+        console.log(`[CloudSync] ☁️ Cloud daily snapshot saved: ${snapshotCloudName}`);
+      } catch (cloudErr: any) {
+        console.warn(`[CloudSync] ⚠️ Cloud snapshot upload skipped: ${cloudErr.message}`);
+      }
+    }
+  }
+
+  /**
+   * List all available snapshots (Live, Today, 3 days, 7 days, 15 days, 30 days)
+   */
+  public async getAvailableSnapshots(dbPath: string): Promise<any[]> {
+    const list: any[] = [];
+    const now = new Date();
+
+    // 1. Always include Live / Current DB
+    if (fs.existsSync(dbPath)) {
+      const stats = fs.statSync(dbPath);
+      list.push({
+        id: 'live',
+        label: 'আজকের সর্বশেষ হিসাব (লাইভ)',
+        badge: 'বর্তমান লাইভ ডেটা',
+        date: now.toISOString().slice(0, 10),
+        time: now.toISOString(),
+        size: stats.size,
+        type: 'live',
+        isCurrent: true,
+      });
+    }
+
+    const snapshotsDir = path.resolve(path.dirname(dbPath), 'snapshots');
+    if (!fs.existsSync(snapshotsDir)) {
+      try { fs.mkdirSync(snapshotsDir, { recursive: true }); } catch (e) {}
+    }
+
+    const localFiles = fs.existsSync(snapshotsDir)
+      ? fs.readdirSync(snapshotsDir).filter(f => f.startsWith('snapshot-') && f.endsWith('.db'))
+      : [];
+
+    // Map files by date
+    const fileDates = localFiles.map(f => {
+      const match = f.match(/snapshot-(\d{4}-\d{2}-\d{2})\.db/);
+      return {
+        fileName: f,
+        filePath: path.resolve(snapshotsDir, f),
+        dateStr: match ? match[1] : '',
+      };
+    }).filter(f => f.dateStr).sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+
+    for (const item of fileDates) {
+      if (item.dateStr === now.toISOString().slice(0, 10)) {
+        continue; // Handled by live
+      }
+
+      const itemDate = new Date(item.dateStr);
+      const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      let badge = `${diffDays} দিন আগের`;
+      let label = `বিগত ${diffDays} দিন আগের হিসাব (${item.dateStr})`;
+
+      if (diffDays === 1) {
+        label = `গতকালকের হিসাব (${item.dateStr})`;
+        badge = 'গতকাল';
+      } else if (diffDays === 3) {
+        label = `৩ দিন আগের হিসাব (${item.dateStr})`;
+        badge = '৩ দিন আগের';
+      } else if (diffDays >= 6 && diffDays <= 8) {
+        label = `৭ দিন আগের হিসাব (${item.dateStr})`;
+        badge = '১ সপ্তাহ আগের';
+      } else if (diffDays >= 14 && diffDays <= 16) {
+        label = `১৫ দিন আগের হিসাব (${item.dateStr})`;
+        badge = 'অর্ধ-মাসিক';
+      } else if (diffDays >= 28 && diffDays <= 32) {
+        label = `১ মাস আগের হিসাব (${item.dateStr})`;
+        badge = 'মাসিক আর্কাইভ';
+      }
+
+      const stats = fs.statSync(item.filePath);
+      list.push({
+        id: item.fileName,
+        fileName: item.fileName,
+        label,
+        badge,
+        date: item.dateStr,
+        time: stats.mtime.toISOString(),
+        size: stats.size,
+        type: 'snapshot',
+        daysAgo: diffDays,
+        isCurrent: false,
+      });
+    }
+
+    return list;
+  }
+
+  /**
+   * Restore from a specific snapshot
+   */
+  public async restoreFromSnapshot(snapshotId: string, targetDbPath: string): Promise<{ success: boolean; message: string }> {
+    const snapshotsDir = path.resolve(path.dirname(targetDbPath), 'snapshots');
+    const sourceFile = path.resolve(snapshotsDir, snapshotId);
+
+    if (!fs.existsSync(sourceFile)) {
+      return { success: false, message: `স্ন্যাপশট ফাইল '${snapshotId}' খুঁজে পাওয়া যায়নি` };
+    }
+
+    try {
+      // Overwrite target db with snapshot
+      fs.copyFileSync(sourceFile, targetDbPath);
+
+      // Clean WAL and SHM
+      const wal = `${targetDbPath}-wal`;
+      const shm = `${targetDbPath}-shm`;
+      if (fs.existsSync(wal)) try { fs.unlinkSync(wal); } catch (e) {}
+      if (fs.existsSync(shm)) try { fs.unlinkSync(shm); } catch (e) {}
+
+      console.log(`[CloudSync] 🔄 Restored database from snapshot: ${snapshotId}`);
+      return { success: true, message: `সফলভাবে ${snapshotId} স্ন্যাপশট থেকে ডেটা রিস্টোর করা হয়েছে!` };
+    } catch (e: any) {
+      return { success: false, message: `রিস্টোর ব্যর্থ: ${e.message}` };
+    }
+  }
 }
 
 export const cloudSync = new CloudSyncService();

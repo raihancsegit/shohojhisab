@@ -18,6 +18,8 @@ export default function SettingsHubPage() {
   const [cloudSyncStatus, setCloudSyncStatus] = useState<any>(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
 
   // 1. General & Security Settings (Matching Screenshot 3, 4, 5)
   const [generalSettings, setGeneralSettings] = useState({
@@ -198,11 +200,54 @@ export default function SettingsHubPage() {
     }
   };
 
+  const fetchSnapshots = async () => {
+    setSnapshotsLoading(true);
+    try {
+      const res = await fetch('/api/cloud-sync/snapshots');
+      if (res.ok) {
+        const data = await res.json();
+        setSnapshots(data.snapshots || []);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch snapshots', e);
+    } finally {
+      setSnapshotsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'backup') {
       fetchCloudSyncStatus();
+      fetchSnapshots();
     }
   }, [activeTab]);
+
+  const handleRestoreSnapshot = async (snapshotId: string, label: string) => {
+    if (!confirm(`⚠️ সতর্কতা: আপনি কি নিশ্চিত যে '${label}' রিস্টোর করতে চান?\n\nএর ফলে বর্তমান হিসাব ওই নির্দিষ্ট দিনের অবস্থায় ফিরে যাবে।`)) {
+      return;
+    }
+    setSyncLoading(true);
+    setSyncMessage('');
+    try {
+      const res = await fetch('/api/cloud-sync/restore-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshotId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage(`🎉 ${label} সফলভাবে রিস্টোর করা হয়েছে!`);
+        fetchCloudSyncStatus();
+        fetchSnapshots();
+      } else {
+        setSyncMessage(`❌ রিস্টোর ব্যর্থ: ${data.error || data.message || 'ত্রুটি'}`);
+      }
+    } catch (err: any) {
+      setSyncMessage(`❌ এরর: ${err.message}`);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
 
   const handleTriggerBackup = async () => {
     setSyncLoading(true);
@@ -1729,6 +1774,141 @@ export default function SettingsHubPage() {
               >
                 📥 অফলাইন ফাইল (JSON) ডাউনলোড করে রাখুন
               </button>
+            </div>
+
+            {/* 📅 POINT-IN-TIME BACKUPS (TIMELINE: TODAY, 3 DAYS, 7 DAYS, 15 DAYS, MONTHLY) */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '22px 20px',
+              border: '1.5px solid #e2e8f0',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'grid',
+              gap: '14px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15.5px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📅 বিগত দিনের হিসাবের টাইমলাইন
+                  </h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    স্বয়ংক্রিয় স্ন্যাপশট—১ ক্লিকে যেকোনো দিনের হিসাবে ফিরে যান বা ডাউনলোড করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchSnapshots}
+                  disabled={snapshotsLoading}
+                  style={{
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {snapshotsLoading ? '...' : '🔄 রিফ্রেশ'}
+                </button>
+              </div>
+
+              {snapshots.length === 0 ? (
+                <div style={{
+                  padding: '20px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '14px',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontSize: '13px'
+                }}>
+                  <div style={{ fontSize: '24px', marginBottom: '6px' }}>📦</div>
+                  স্বয়ংক্রিয়ভাবে প্রতিদিনের হিসাব জমতে শুরু করবে (আজকের, ৩ দিন, ৭ দিন, ১৫ দিন ও মাসিক)।
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {snapshots.map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '14px',
+                        border: `1.5px solid ${s.isCurrent ? '#86efac' : '#e2e8f0'}`,
+                        background: s.isCurrent ? '#f0fdf4' : '#fafafa',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '20px' }}>{s.isCurrent ? '🟢' : '📅'}</span>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {s.label}
+                            <span style={{
+                              fontSize: '10.5px',
+                              fontWeight: '900',
+                              padding: '2px 8px',
+                              borderRadius: '99px',
+                              background: s.isCurrent ? '#dcfce7' : '#e0e7ff',
+                              color: s.isCurrent ? '#15803d' : '#4338ca'
+                            }}>
+                              {s.badge}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                            তারিখ: {s.date} • আকার: {(s.size / 1024).toFixed(1)} KB
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {!s.isCurrent && (
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreSnapshot(s.id, s.label)}
+                            disabled={syncLoading}
+                            style={{
+                              padding: '7px 12px',
+                              borderRadius: '8px',
+                              background: '#4f46e5',
+                              color: '#ffffff',
+                              border: 'none',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            রিস্টোর
+                          </button>
+                        )}
+                        <a
+                          href={`/api/cloud-sync/download-snapshot/${s.id}`}
+                          download
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '8px',
+                            background: '#ffffff',
+                            color: '#334155',
+                            border: '1px solid #cbd5e1',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          ⬇️ ডাউনলোড
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Setup Guide Card */}

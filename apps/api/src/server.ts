@@ -6540,7 +6540,48 @@ fastify.post('/api/cloud-sync/restore', async (request, reply) => {
   return result;
 });
 
-// 5. Periodic background cloud backup (Every 15 minutes)
+// 5. Available Point-in-time Snapshots (Live, 3-days, 7-days, 15-days, Monthly)
+fastify.get('/api/cloud-sync/snapshots', async (request, reply) => {
+  const snapshots = await cloudSync.getAvailableSnapshots(dbPath);
+  return { success: true, snapshots };
+});
+
+// 6. Restore from Specific Snapshot
+fastify.post('/api/cloud-sync/restore-snapshot', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { snapshotId } = body;
+  if (!snapshotId) {
+    return reply.status(400).send({ success: false, error: 'Snapshot ID is required' });
+  }
+
+  const res = await cloudSync.restoreFromSnapshot(snapshotId, dbPath);
+  if (!res.success) {
+    return reply.status(500).send(res);
+  }
+  return res;
+});
+
+// 7. Download Snapshot File (.db) to Device
+fastify.get('/api/cloud-sync/download-snapshot/:snapshotId', async (request, reply) => {
+  const { snapshotId } = request.params as any;
+  let targetFile = dbPath;
+
+  if (snapshotId !== 'live') {
+    const snapshotsDir = path.resolve(path.dirname(dbPath), 'snapshots');
+    targetFile = path.resolve(snapshotsDir, snapshotId);
+  }
+
+  if (!fs.existsSync(targetFile)) {
+    return reply.status(404).send({ error: 'ফাইল পাওয়া যায়নি' });
+  }
+
+  const stream = fs.createReadStream(targetFile);
+  reply.header('Content-Type', 'application/x-sqlite3');
+  reply.header('Content-Disposition', `attachment; filename="${snapshotId === 'live' ? 'dokan-live.db' : snapshotId}"`);
+  return reply.send(stream);
+});
+
+// 8. Periodic background cloud backup (Every 15 minutes) and daily snapshot (Every 24 hours)
 if (cloudSync.isConfigured()) {
   setInterval(() => {
     cloudSync.uploadDatabase(dbPath, db).catch((err) => {
@@ -6548,6 +6589,12 @@ if (cloudSync.isConfigured()) {
     });
   }, 15 * 60 * 1000);
 }
+
+setInterval(() => {
+  cloudSync.saveDailySnapshot(dbPath, db).catch((err) => {
+    console.warn('[CloudSync:DailySnapshot] ⚠️ Daily snapshot skipped:', err.message);
+  });
+}, 24 * 60 * 60 * 1000);
 
 // 6. Graceful Shutdown (Render redeploys send SIGTERM - save latest DB before container dies)
 const handleGracefulShutdown = async (signal: string) => {
@@ -6584,6 +6631,11 @@ const start = async () => {
     const port = Number(process.env.PORT) || 4005;
     await fastify.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Full Clean Dynamic API running on port ${port}`);
+
+    // Ensure today's daily snapshot is saved locally & cloud
+    setTimeout(() => {
+      cloudSync.saveDailySnapshot(dbPath, db).catch(() => {});
+    }, 3000);
 
     // If configured and local DB is already present, schedule an initial cloud backup after boot
     if (cloudSync.isConfigured()) {
