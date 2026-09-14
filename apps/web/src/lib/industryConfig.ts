@@ -260,6 +260,44 @@ export const INDUSTRY_THEMES: Record<string, IndustryTheme> = {
       '১. বিক্রিত পণ্য অক্ষত অবস্থায় ৭ দিনের মধ্যে মেমোসহ পরিবর্তনযোগ্য।',
       '২. কোনো প্রকার কাটা-ছেঁড়া চালান গ্রহণযোগ্য নয়।'
     ]
+  },
+  'cat-tea': {
+    id: 'cat-tea',
+    name: 'চা স্টল ও স্ন্যাক্স বার',
+    icon: '☕',
+    ...UNIFIED_PALETTE,
+    posLabel: 'চা ও স্ন্যাক্স বিলিং',
+    posIcon: '☕',
+    posDesc: 'চা, সিঙ্গাড়া ও সিগারেট মেমো',
+    khataLabel: 'নিয়মিত কাস্টমার বাকি',
+    stockLabel: 'চা পাতা ও মালামাল স্টক',
+    stockIcon: '🫖',
+    dealerLabel: 'ডিলার ও এজেন্সি খাতা',
+    reportsLabel: 'চা বিক্রয় রিপোর্ট',
+    receiptSubtitle: 'টাটকা চা, স্ন্যাক্স ও রিফ্রেশমেন্ট',
+    terms: [
+      '১. বকেয়া হিসাব প্রতি সপ্তাহে পরিশোধযোগ্য।',
+      '২. পার্সেল চা ও স্ন্যাক্স গরম থাকা অবস্থায় চেক করুন।'
+    ]
+  },
+  'cat-sweet': {
+    id: 'cat-sweet',
+    name: 'মিষ্টি ও মিষ্টান্ন ভাণ্ডার',
+    icon: '🧁',
+    ...UNIFIED_PALETTE,
+    posLabel: 'মিষ্টি ও দই বিলিং',
+    posIcon: '🧁',
+    posDesc: 'মিষ্টি কেজি ও পিস মেমো',
+    khataLabel: 'অর্ডার ও বাকি খাতা',
+    stockLabel: 'মিষ্টি ও ছানা কাঁচামাল স্টক',
+    stockIcon: '🍬',
+    dealerLabel: 'দুধ ও চিনি সাপ্লায়ার খাতা',
+    reportsLabel: 'মিষ্টি বিক্রয় রিপোর্ট',
+    receiptSubtitle: 'খাঁটি ছানা ও গাওয়া ঘিয়ে তৈরি ঐতিহ্যবাহী মিষ্টি',
+    terms: [
+      '১. ফ্রিজের মিষ্টি ক্রয়ের পর দ্রুত সংরক্ষণ করুন।',
+      '২. বিশেষ অনুষ্ঠানের অর্ডার ২৪ ঘণ্টা পূর্বে নিশ্চিত করুন।'
+    ]
   }
 };
 
@@ -931,6 +969,486 @@ export function getIndustrySearchPlaceholder(industryId?: string): string {
       return 'মুদি পণ্যের নাম বা বারকোড খুঁজুন...';
   }
 }
+
+export function getDefaultIndustryUnit(industryId?: string): string {
+  const currentKey = industryId || 'cat-grocery';
+  const units = INDUSTRY_UNITS[currentKey];
+  if (units && units.length > 0) {
+    return units[0].value;
+  }
+  return 'পিস';
+}
+
+export function getIndustryDealerPlaceholder(industryId?: string): string {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return 'যেমন: স্কয়ার ফার্মা / বেক্সিমকো ডিপো / ইনসেপ্টা';
+    case 'cat-clothing':
+      return 'যেমন: ইসলামপুর পাইকার / আড়ং ডিলার / তাঁত পল্লী';
+    case 'cat-shoes':
+      return 'যেমন: বাটা সেন্ট্রাল ডিপো / এপেক্স ডিস্ট্রিবিউটর';
+    case 'cat-hardware':
+      return 'যেমন: ন্যাশনাল হার্ডওয়্যার / আরএফএল পাইকারি';
+    case 'cat-mobile':
+      return 'যেমন: স্টারটেক / গ্যাজেট প্লাস ইমপোর্টার / স্মার্ট টেক';
+    case 'cat-restaurant':
+      return 'যেমন: কাওরানবাজার সবজি সাপ্লায়ার / ফ্রেশ মিট সাপ্লাই';
+    case 'cat-tea':
+      return 'যেমন: সুরমা চা বাগান এজেন্সি / আবুল অ্যান্ড ব্রাদার্স';
+    case 'cat-meat-fish':
+      return 'যেমন: খামারি বাবলু মিয়া / চাঁদপুর মাছের আড়ত';
+    case 'cat-sweet':
+    case 'cat-bakery':
+      return 'যেমন: ঘোষ ডেইরি ফার্ম / মিল্ক ভিটা ডিস্ট্রিবিউটর';
+    case 'cat-furniture':
+      return 'যেমন: সেগুন কাঠ মিল / চিটাগাং টিম্বার মার্চেন্ট';
+    case 'cat-stationery':
+      return 'যেমন: বাংলাবাজার পাইকারি প্রেস / ডাবল-এ পেপার এজেন্সি';
+    case 'cat-cosmetics':
+      return 'যেমন: চকবাজার কসমেটিকস ইমপোর্টার / নিভিয়া ডিস্ট্রিবিউটর';
+    case 'cat-grocery':
+    default:
+      return 'যেমন: হাজী ট্রেডার্স / মেসার্স কালাম ব্রাদার্স / মৌলভীবাজার';
+  }
+}
+
+export function getIndustryLotPlaceholder(industryId?: string): string {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return 'যেমন: ব্যাচ নং B-2026, চালান নং ১০১';
+    case 'cat-clothing':
+      return 'যেমন: সামার কালেকশন লট ৩, চালান নং ৪৫';
+    case 'cat-shoes':
+      return 'যেমন: ঈদ কালেকশন লট নং ১২';
+    case 'cat-hardware':
+      return 'যেমন: চালান নং ৫৪, মেমো ৪২০';
+    case 'cat-mobile':
+      return 'যেমন: ব্যাচ নং M-88, ইনভয়েস ৭২';
+    case 'cat-restaurant':
+      return 'যেমন: সকালের ফ্রেশ বাজার চালান';
+    case 'cat-tea':
+      return 'যেমন: বাগান চালান লট ০৫';
+    case 'cat-meat-fish':
+      return 'যেমন: সকালের আড়ত চালান নং ০৩';
+    case 'cat-sweet':
+    case 'cat-bakery':
+      return 'যেমন: আজকের মর্নিং বেকিং ব্যাচ';
+    case 'cat-furniture':
+      return 'যেমন: চিটাগাং কাঠ লট নং ৯';
+    case 'cat-stationery':
+      return 'যেমন: পেপার রিম কার্টন লট ২০';
+    case 'cat-cosmetics':
+      return 'যেমন: ইমপোর্ট ব্যাচ নং CS-44';
+    case 'cat-grocery':
+    default:
+      return 'যেমন: নতুন মিনিকেট বস্তা লট নং ১২';
+  }
+}
+
+export interface IndustryFieldConfig {
+  showGenericName: boolean;
+  genericNameLabel: string;
+  genericNamePlaceholder: string;
+  
+  showSize: boolean;
+  sizeLabel: string;
+  sizePlaceholder: string;
+  
+  showColor: boolean;
+  colorLabel: string;
+  colorPlaceholder: string;
+  
+  showBrand: boolean;
+  brandLabel: string;
+  brandPlaceholder: string;
+  
+  showWarranty: boolean;
+  warrantyLabel: string;
+  warrantyPlaceholder: string;
+  
+  showExpiryDate: boolean;
+  expiryDateLabel: string;
+
+  showBatchNumber: boolean;
+  batchNumberLabel: string;
+  batchNumberPlaceholder: string;
+
+  subUnitExampleText: string;
+  subUnitPlaceholder: string;
+  defaultRatio: string;
+  ratioPrompt: (unit: string, subUnit: string) => string;
+}
+
+export function getIndustryFieldVisibility(industryId?: string): IndustryFieldConfig {
+  switch (industryId) {
+    case 'cat-pharmacy':
+      return {
+        showGenericName: true,
+        genericNameLabel: 'জেনেরিক নাম / ফর্মুলা:',
+        genericNamePlaceholder: 'যেমন: Paracetamol 500mg + Caffeine 65mg',
+        showSize: false,
+        sizeLabel: '',
+        sizePlaceholder: '',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: true,
+        brandLabel: 'ফার্মা কোম্পানি:',
+        brandPlaceholder: 'যেমন: Square / Beximco / Incepta',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: true,
+        expiryDateLabel: 'মেয়াদোত্তীর্ণের তারিখ:',
+        showBatchNumber: true,
+        batchNumberLabel: 'ব্যাচ নং:',
+        batchNumberPlaceholder: 'যেমন: B-2026',
+        subUnitExampleText: 'যেমন: পাতা বনাম ট্যাবলেট',
+        subUnitPlaceholder: 'যেমন: ট্যাবলেট, ক্যাপসুল',
+        defaultRatio: '10',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'পাতায়'} কত ${subUnit || 'ট্যাবলেট'}?`
+      };
+
+    case 'cat-clothing':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'পোশাকের সাইজ:',
+        sizePlaceholder: 'যেমন: M, L, XL, 32, 34, 36',
+        showColor: true,
+        colorLabel: 'রং / কালার:',
+        colorPlaceholder: 'যেমন: কালো, সাদা, নেভি ব্লু, লাল',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড / ফেব্রিক:',
+        brandPlaceholder: 'যেমন: আড়ং / রিচম্যান / জারা / সুতি তাঁত',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: সেট বা থান বনাম পিস/গজ',
+        subUnitPlaceholder: 'যেমন: পিস, গজ',
+        defaultRatio: '3',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'সেটে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-shoes':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'জুতার সাইজ:',
+        sizePlaceholder: 'যেমন: 39, 40, 41, 42, 43, 44',
+        showColor: true,
+        colorLabel: 'রং / কালার:',
+        colorPlaceholder: 'যেমন: কালো, ব্রাউন, খয়েরি',
+        showBrand: true,
+        brandLabel: 'জুতার ব্র্যান্ড:',
+        brandPlaceholder: 'যেমন: বাটা / এপেক্স / লোটো / পেগাসাস',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: কার্টন বনাম জোড়া',
+        subUnitPlaceholder: 'যেমন: জোড়া, পিস',
+        defaultRatio: '12',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'কার্টনে'} কত ${subUnit || 'জোড়া'}?`
+      };
+
+    case 'cat-hardware':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'মাপ / স্পেসিফিকেশন:',
+        sizePlaceholder: 'যেমন: ১ ইঞ্চি, ২০W, ২.৫ আরএম, ৩/৪"',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড / কোম্পানি:',
+        brandPlaceholder: 'যেমন: সুপার স্টার / আরএফএল / গাজী / বিআরবি',
+        showWarranty: true,
+        warrantyLabel: 'ওয়ারেন্টি / গ্যারান্টি:',
+        warrantyPlaceholder: 'যেমন: ২ বছর রিপ্লেসমেন্ট',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: বান্ডিল বনাম ফুট / ব্যাগ বনাম কেজি',
+        subUnitPlaceholder: 'যেমন: ফুট, মিটার, কেজি',
+        defaultRatio: '100',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'বান্ডিলে'} কত ${subUnit || 'ফুট'}?`
+      };
+
+    case 'cat-mobile':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'মডেল / র‍্যাম-রম / স্পেক:',
+        sizePlaceholder: 'যেমন: 4/64GB, 20W PD, Type-C',
+        showColor: true,
+        colorLabel: 'কালার:',
+        colorPlaceholder: 'যেমন: মিডনাইট ব্ল্যাক, ডিপ পার্পল, সিলভার',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড:',
+        brandPlaceholder: 'যেমন: Samsung / Xiaomi / Baseus / Anker',
+        showWarranty: true,
+        warrantyLabel: 'ওয়ারেন্টি মেয়াদ:',
+        warrantyPlaceholder: 'যেমন: ১ বছর অফিসিয়াল ওয়ারেন্টি',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: বক্স বা কার্টন বনাম পিস',
+        subUnitPlaceholder: 'যেমন: পিস',
+        defaultRatio: '10',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'বক্সে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-restaurant':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'সার্ভিং পোর্শন / সাইজ:',
+        sizePlaceholder: 'যেমন: ১ জন, ফুল প্লেট, হাফ প্লেট, ১:৩ কম্বো',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: false,
+        brandLabel: '',
+        brandPlaceholder: '',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: বাটি বা সেট বনাম পিস',
+        subUnitPlaceholder: 'যেমন: পিস, প্লেট',
+        defaultRatio: '4',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'সেটে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-tea':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: false,
+        sizeLabel: '',
+        sizePlaceholder: '',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড (সিগারেট/বিস্কুট):',
+        brandPlaceholder: 'যেমন: বেনসন, ডার্বি, অলিম্পিক, নেসক্যাফে',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: প্যাকেট বনাম শলা / কাপ',
+        subUnitPlaceholder: 'যেমন: শলা, কাপ',
+        defaultRatio: '20',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'প্যাকেটে'} কত ${subUnit || 'শলা'}?`
+      };
+
+    case 'cat-meat-fish':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'মাছ/মাংস সাইজ ও গ্রেড:',
+        sizePlaceholder: 'যেমন: ২-৩ কেজি সাইজ, বড় গলদা, ছোট সাইজ',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: false,
+        brandLabel: '',
+        brandPlaceholder: '',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: পাল্লা বনাম কেজি',
+        subUnitPlaceholder: 'যেমন: কেজি, গ্রাম',
+        defaultRatio: '5',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'পাল্লায়'} কত ${subUnit || 'কেজি'}?`
+      };
+
+    case 'cat-sweet':
+    case 'cat-bakery':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'পাউন্ড / ওজন সাইজ:',
+        sizePlaceholder: 'যেমন: ১ পাউন্ড, ২ পাউন্ড, ৫০০ গ্রাম',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: true,
+        brandLabel: 'ফ্লেভার / প্রকার:',
+        brandPlaceholder: 'যেমন: ভ্যানিলা, চকলেট, খাঁটি ছানা, গাওয়া ঘি',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: true,
+        expiryDateLabel: 'খাওয়ার শেষ তারিখ / এক্সপায়ারি:',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: বক্স বনাম পিস বা প্যাকেট',
+        subUnitPlaceholder: 'যেমন: পিস, প্যাকেট',
+        defaultRatio: '12',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'বক্সে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-furniture':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'মাপ / ডাইমেনশন:',
+        sizePlaceholder: 'যেমন: ৬×৭ ফিট, ৫×৭ ফিট, ৪ পাল্লা',
+        showColor: true,
+        colorLabel: 'কালার / পলিশ:',
+        colorPlaceholder: 'যেমন: স্পেশাল বার্নিশ, অ্যান্টিক পলিশ, মেহগনি পলিশ',
+        showBrand: true,
+        brandLabel: 'কাঠ / উপাদান:',
+        brandPlaceholder: 'যেমন: চিটাগাং সেগুন, মেহগনি, প্রসেসড উড',
+        showWarranty: true,
+        warrantyLabel: 'ওয়ারেন্টি / গ্যারান্টি:',
+        warrantyPlaceholder: 'যেমন: ১০ বছরের ঘুণে না ধরার গ্যারান্টি',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: সেট বনাম পিস',
+        subUnitPlaceholder: 'যেমন: পিস',
+        defaultRatio: '4',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'সেটে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-stationery':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'সাইজ / পৃষ্ঠা সংখ্যা:',
+        sizePlaceholder: 'যেমন: A4 সাইজ, ২০০ পৃষ্ঠা, ১২০ পেজ',
+        showColor: true,
+        colorLabel: 'কালি / কালার:',
+        colorPlaceholder: 'যেমন: কালো, নীল, লাল, সবুজ',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড / প্রকাশনী:',
+        brandPlaceholder: 'যেমন: ম্যাটাডোর / ডাবল-এ / বাশার / অলিম্পিক',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: false,
+        expiryDateLabel: '',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: রিম বনাম দিস্তা বা ডজন বনাম পিস',
+        subUnitPlaceholder: 'যেমন: দিস্তা, পিস',
+        defaultRatio: '12',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'ডজনে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-cosmetics':
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: true,
+        sizeLabel: 'সাইজ / ভলিউম:',
+        sizePlaceholder: 'যেমন: ১০০ml, ৫০ গ্রাম, মিনি প্যাক',
+        showColor: true,
+        colorLabel: 'শেড / কালার:',
+        colorPlaceholder: 'যেমন: শেড-০২, রুবি রেড, পিঙ্ক',
+        showBrand: true,
+        brandLabel: 'কসমেটিকস ব্র্যান্ড:',
+        brandPlaceholder: 'যেমন: নিভিয়া / হিমালয়া / লাক্স / মেবিলিন',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: true,
+        expiryDateLabel: 'মেয়াদোত্তীর্ণের তারিখ:',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: কার্টন বা বক্স বনাম পিস',
+        subUnitPlaceholder: 'যেমন: পিস',
+        defaultRatio: '12',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'বক্সে'} কত ${subUnit || 'পিস'}?`
+      };
+
+    case 'cat-grocery':
+    default:
+      return {
+        showGenericName: false,
+        genericNameLabel: '',
+        genericNamePlaceholder: '',
+        showSize: false,
+        sizeLabel: '',
+        sizePlaceholder: '',
+        showColor: false,
+        colorLabel: '',
+        colorPlaceholder: '',
+        showBrand: true,
+        brandLabel: 'ব্র্যান্ড / কোম্পানি:',
+        brandPlaceholder: 'যেমন: তীর / রূপচাঁদা / ফ্রেশ / এসিআই / প্রাণ',
+        showWarranty: false,
+        warrantyLabel: '',
+        warrantyPlaceholder: '',
+        showExpiryDate: true,
+        expiryDateLabel: 'মেয়াদোত্তীর্ণ তারিখ (প্যাকেটজাত পণ্যে):',
+        showBatchNumber: false,
+        batchNumberLabel: '',
+        batchNumberPlaceholder: '',
+        subUnitExampleText: 'যেমন: বস্তা বনাম কেজি',
+        subUnitPlaceholder: 'যেমন: কেজি, গ্রাম',
+        defaultRatio: '50',
+        ratioPrompt: (unit, subUnit) => `১ ${unit || 'বস্তায়'} কত ${subUnit || 'কেজি'}?`
+      };
+  }
+}
+
 
 
 

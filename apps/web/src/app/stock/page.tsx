@@ -1,8 +1,18 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { getIndustryTheme, getIndustryProductPlaceholder, getIndustryBrandPlaceholder, getIndustryProductSuggestions, getIndustrySearchPlaceholder } from '../../lib/industryConfig';
+import {
+  getIndustryTheme,
+  getIndustryProductPlaceholder,
+  getIndustryBrandPlaceholder,
+  getIndustryProductSuggestions,
+  getIndustrySearchPlaceholder,
+  getIndustryFieldVisibility,
+  getDefaultIndustryUnit,
+  getIndustryDealerPlaceholder,
+  getIndustryLotPlaceholder
+} from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal';
 import { exportToCSV, parseCSV } from '../../lib/exportUtils';
@@ -14,8 +24,9 @@ import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
-  const theme = getIndustryTheme(tenant?.industryId);
   const indId = tenant?.industryId || 'cat-grocery';
+  const theme = getIndustryTheme(indId);
+  const fieldConfig = useMemo(() => getIndustryFieldVisibility(indId), [indId]);
 
   const [search, setSearch] = useState('');
   const [showCameraScanner, setShowCameraScanner] = useState(false);
@@ -92,7 +103,7 @@ export default function StockPage() {
     sellingPrice: '',
     purchasePrice: '',
     stock: '50',
-    unit: indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-grocery' ? 'কেজি' : 'পিস',
+    unit: getDefaultIndustryUnit(indId),
     subUnit: '',
     conversionRatio: '1',
     barcode: '',
@@ -107,7 +118,7 @@ export default function StockPage() {
 
   // Auto-sync default unit when tenant industry loads
   useEffect(() => {
-    const defaultUnit = indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-clothing' ? 'পিস' : indId === 'cat-grocery' ? 'কেজি' : 'পিস';
+    const defaultUnit = getDefaultIndustryUnit(indId);
     setAddForm(prev => ({
       ...prev,
       unit: prev.banglaName ? prev.unit : defaultUnit
@@ -115,7 +126,7 @@ export default function StockPage() {
   }, [indId]);
 
   const openAddModal = () => {
-    const defaultUnit = indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-clothing' ? 'পিস' : indId === 'cat-grocery' ? 'কেজি' : 'পিস';
+    const defaultUnit = getDefaultIndustryUnit(indId);
     setAddForm({
       banglaName: '',
       sellingPrice: '',
@@ -123,7 +134,7 @@ export default function StockPage() {
       stock: '50',
       unit: defaultUnit,
       subUnit: '',
-      conversionRatio: '1',
+      conversionRatio: fieldConfig.defaultRatio || '1',
       barcode: '',
       genericName: '',
       expiryDate: '',
@@ -1316,27 +1327,32 @@ export default function StockPage() {
                                   #{p.barcode}
                                 </span>
                               )}
-                              {p.genericName && (
+                              {p.genericName && fieldConfig.showGenericName && (
                                 <span style={{ fontSize: '10px', color: '#4f46e5', background: '#eef2ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #c7d2fe' }}>
                                   🧪 {p.genericName}
                                 </span>
                               )}
-                              {p.brand && (
+                              {p.brand && fieldConfig.showBrand && (
                                 <span style={{ fontSize: '10px', color: '#0369a1', background: '#f0f9ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #bae6fd' }}>
                                   🏢 {p.brand}
                                 </span>
                               )}
-                              {p.size && (
+                              {p.size && fieldConfig.showSize && (
                                 <span style={{ fontSize: '10px', color: '#6d28d9', background: '#f5f3ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #ddd6fe' }}>
                                   🏷️ {p.size}
                                 </span>
                               )}
-                              {p.color && (
+                              {p.color && fieldConfig.showColor && (
                                 <span style={{ fontSize: '10px', color: '#475569', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px' }}>
                                   🎨 {p.color}
                                 </span>
                               )}
-                              {p.expiryDate && (
+                              {p.warranty && fieldConfig.showWarranty && (
+                                <span style={{ fontSize: '10px', color: '#0284c7', background: '#f0f9ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                                  🛡️ {p.warranty}
+                                </span>
+                              )}
+                              {p.expiryDate && fieldConfig.showExpiryDate && (
                                 <span style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', fontWeight: '600', border: '1px solid #fde68a' }}>
                                   ⏳ {p.expiryDate}
                                 </span>
@@ -1690,14 +1706,19 @@ export default function StockPage() {
                   <span style={{ fontSize: '10.5px', color: '#94a3b8', display: 'block' }}>
                     #{p.barcode}
                   </span>
-                  {p.genericName && (
+                  {p.genericName && fieldConfig.showGenericName && (
                     <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       🧪 {p.genericName}
                     </span>
                   )}
-                  {p.size && (
+                  {p.size && fieldConfig.showSize && (
                     <span style={{ fontSize: '10px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
-                      🏷️ {p.size}
+                      🏷️ {p.size} {p.color && fieldConfig.showColor ? `• ${p.color}` : ''}
+                    </span>
+                  )}
+                  {p.brand && fieldConfig.showBrand && (
+                    <span style={{ fontSize: '10px', color: '#0369a1', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                      🏢 {p.brand}
                     </span>
                   )}
                 </div>
@@ -1960,28 +1981,30 @@ export default function StockPage() {
                   </div>
                 </div>
 
-                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন */}
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
-                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>{fieldConfig.subUnitExampleText}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        placeholder={fieldConfig.subUnitPlaceholder}
                         value={editForm.subUnit}
                         onChange={(e) => setEditForm({ ...editForm, subUnit: e.target.value })}
                         style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                       />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {editForm.unit || 'মূল এককে'} কত {editForm.subUnit || 'সাব-একক'}?</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                        {fieldConfig.ratioPrompt || `১ ${editForm.unit || 'মূল এককে'} কত ${editForm.subUnit || 'সাব-একক'}?`}
+                      </label>
                       <input
                         type="number"
-                        placeholder="যেমন: 50"
+                        placeholder={`যেমন: ${fieldConfig.defaultRatio || '10'}`}
                         value={editForm.conversionRatio}
                         onChange={(e) => setEditForm({ ...editForm, conversionRatio: e.target.value })}
                         className="num-font"
@@ -2006,101 +2029,106 @@ export default function StockPage() {
                   />
                 </div>
 
-                {/* 💊 PHARMACY SPECIAL FIELDS */}
-                {indId === 'cat-pharmacy' && (
-                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: Paracetamol 500mg"
-                        value={editForm.genericName}
-                        onChange={(e) => setEditForm({ ...editForm, genericName: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
-                        <input
-                          type="date"
-                          value={editForm.expiryDate}
-                          onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
-                        <input
-                          type="text"
-                          placeholder={getIndustryBrandPlaceholder(indId)}
-                          value={editForm.brand}
-                          onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
-                {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
-                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
-                      {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
+                {/* 🏷️ CATEGORY-SPECIFIC ATTRIBUTES - STRICT ISOLATION */}
+                {(fieldConfig.showGenericName || fieldConfig.showSize || fieldConfig.showColor || fieldConfig.showBrand || fieldConfig.showWarranty || fieldConfig.showExpiryDate) && (
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
+                      🏷️ {theme.name} বিশেষ বিবরণ:
                     </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                        <input
-                          type="text"
-                          placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
-                          value={editForm.size}
-                          onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                        <input
-                          type="text"
-                          placeholder="যেমন: কালো, নীল, সাদা"
-                          value={editForm.color}
-                          onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* 📱 MOBILE SPECIAL FIELDS */}
-                {indId === 'cat-mobile' && (
-                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                    {fieldConfig.showGenericName && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                          {fieldConfig.genericNameLabel || 'জেনেরিক নাম / ফর্মুলা'}:
+                        </label>
                         <input
                           type="text"
-                          placeholder="যেমন: Samsung / Xiaomi"
-                          value={editForm.brand}
-                          onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          placeholder={fieldConfig.genericNamePlaceholder || 'যেমন: Paracetamol 500mg'}
+                          value={editForm.genericName}
+                          onChange={(e) => setEditForm({ ...editForm, genericName: e.target.value })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                         />
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
-                        <input
-                          type="text"
-                          placeholder="যেমন: ১ বছর অফিসিয়াল"
-                          value={editForm.warranty}
-                          onChange={(e) => setEditForm({ ...editForm, warranty: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
+                    )}
+
+                    {(fieldConfig.showSize || fieldConfig.showColor) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: fieldConfig.showSize && fieldConfig.showColor ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                        {fieldConfig.showSize && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.sizeLabel || 'সাইজ'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={fieldConfig.sizePlaceholder || 'যেমন: M, L, XL'}
+                              value={editForm.size}
+                              onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showColor && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.colorLabel || 'রং / কালার'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: কালো, নীল, সাদা"
+                              value={editForm.color}
+                              onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
+
+                    {(fieldConfig.showBrand || fieldConfig.showWarranty || fieldConfig.showExpiryDate) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                        {fieldConfig.showBrand && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.brandLabel || 'কোম্পানি / ব্র্যান্ড'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={getIndustryBrandPlaceholder(indId)}
+                              value={editForm.brand}
+                              onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showWarranty && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.warrantyLabel || 'ওয়ারেন্টি মেয়াদ'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={fieldConfig.warrantyPlaceholder || 'যেমন: ১ বছর'}
+                              value={editForm.warranty}
+                              onChange={(e) => setEditForm({ ...editForm, warranty: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showExpiryDate && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.expiryDateLabel || 'মেয়াদোত্তীর্ণের তারিখ'}:
+                            </label>
+                            <input
+                              type="date"
+                              value={editForm.expiryDate}
+                              onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2336,28 +2364,30 @@ export default function StockPage() {
                   </div>
                 </div>
 
-                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক কনফিগারেশন */}
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
-                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>{fieldConfig.subUnitExampleText}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        placeholder={fieldConfig.subUnitPlaceholder}
                         value={addForm.subUnit}
                         onChange={(e) => setAddForm({ ...addForm, subUnit: e.target.value })}
                         style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                       />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {addForm.unit || 'মূল এককে'} কত {addForm.subUnit || 'সাব-একক'}?</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                        {fieldConfig.ratioPrompt || `১ ${addForm.unit || 'মূল এককে'} কত ${addForm.subUnit || 'সাব-একক'}?`}
+                      </label>
                       <input
                         type="number"
-                        placeholder="যেমন: 50"
+                        placeholder={`যেমন: ${fieldConfig.defaultRatio || '10'}`}
                         value={addForm.conversionRatio}
                         onChange={(e) => setAddForm({ ...addForm, conversionRatio: e.target.value })}
                         className="num-font"
@@ -2379,101 +2409,106 @@ export default function StockPage() {
                   onApplyUnitPrice={(unitPrice) => setAddForm(prev => ({ ...prev, sellingPrice: String(unitPrice) }))}
                 />
 
-                {/* 💊 PHARMACY SPECIAL FIELDS */}
-                {indId === 'cat-pharmacy' && (
-                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম / ফর্মুলা:</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: Paracetamol 500mg"
-                        value={addForm.genericName}
-                        onChange={(e) => setAddForm({ ...addForm, genericName: e.target.value })}
-                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
-                        <input
-                          type="date"
-                          value={addForm.expiryDate}
-                          onChange={(e) => setAddForm({ ...addForm, expiryDate: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
-                        <input
-                          type="text"
-                          placeholder={getIndustryBrandPlaceholder(indId)}
-                          value={addForm.brand}
-                          onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 👗 CLOTHING & SHOES SPECIAL FIELDS */}
-                {(indId === 'cat-clothing' || indId === 'cat-shoes') && (
-                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#6d28d9' }}>
-                      {indId === 'cat-shoes' ? '👞 জুতার সাইজ ও ব্র্যান্ড:' : '👗 পোশাকের সাইজ ও কালার:'}
+                {/* 🏷️ CATEGORY-SPECIFIC ATTRIBUTES - STRICT ISOLATION */}
+                {(fieldConfig.showGenericName || fieldConfig.showSize || fieldConfig.showColor || fieldConfig.showBrand || fieldConfig.showWarranty || fieldConfig.showExpiryDate) && (
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
+                      🏷️ {theme.name} বিশেষ বিবরণ:
                     </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                        <input
-                          type="text"
-                          placeholder={indId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
-                          value={addForm.size}
-                          onChange={(e) => setAddForm({ ...addForm, size: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                        <input
-                          type="text"
-                          placeholder="যেমন: কালো, নীল, সাদা"
-                          value={addForm.color}
-                          onChange={(e) => setAddForm({ ...addForm, color: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* 📱 MOBILE SPECIAL FIELDS */}
-                {indId === 'cat-mobile' && (
-                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '10px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 মোবাইল ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
+                    {fieldConfig.showGenericName && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                          {fieldConfig.genericNameLabel || 'জেনেরিক নাম / ফর্মুলা'}:
+                        </label>
                         <input
                           type="text"
-                          placeholder="যেমন: Samsung / Xiaomi"
-                          value={addForm.brand}
-                          onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          placeholder={fieldConfig.genericNamePlaceholder || 'যেমন: Paracetamol 500mg'}
+                          value={addForm.genericName}
+                          onChange={(e) => setAddForm({ ...addForm, genericName: e.target.value })}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                         />
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি মেয়াদ:</label>
-                        <input
-                          type="text"
-                          placeholder="যেমন: ১ বছর অফিসিয়াল"
-                          value={addForm.warranty}
-                          onChange={(e) => setAddForm({ ...addForm, warranty: e.target.value })}
-                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
+                    )}
+
+                    {(fieldConfig.showSize || fieldConfig.showColor) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: fieldConfig.showSize && fieldConfig.showColor ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                        {fieldConfig.showSize && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.sizeLabel || 'সাইজ'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={fieldConfig.sizePlaceholder || 'যেমন: M, L, XL'}
+                              value={addForm.size}
+                              onChange={(e) => setAddForm({ ...addForm, size: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showColor && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.colorLabel || 'রং / কালার'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="যেমন: কালো, নীল, সাদা"
+                              value={addForm.color}
+                              onChange={(e) => setAddForm({ ...addForm, color: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
+
+                    {(fieldConfig.showBrand || fieldConfig.showWarranty || fieldConfig.showExpiryDate) && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
+                        {fieldConfig.showBrand && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.brandLabel || 'কোম্পানি / ব্র্যান্ড'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={getIndustryBrandPlaceholder(indId)}
+                              value={addForm.brand}
+                              onChange={(e) => setAddForm({ ...addForm, brand: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showWarranty && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.warrantyLabel || 'ওয়ারেন্টি মেয়াদ'}:
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={fieldConfig.warrantyPlaceholder || 'যেমন: ১ বছর'}
+                              value={addForm.warranty}
+                              onChange={(e) => setAddForm({ ...addForm, warranty: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                        {fieldConfig.showExpiryDate && (
+                          <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
+                              {fieldConfig.expiryDateLabel || 'মেয়াদোত্তীর্ণের তারিখ'}:
+                            </label>
+                            <input
+                              type="date"
+                              value={addForm.expiryDate}
+                              onChange={(e) => setAddForm({ ...addForm, expiryDate: e.target.value })}
+                              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2825,7 +2860,7 @@ export default function StockPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="যেমন: হাজী ট্রেডার্স / মেসার্স কালাম ব্রাদার্স"
+                  placeholder={getIndustryDealerPlaceholder(indId)}
                   value={restockSupplier}
                   onChange={(e) => setRestockSupplier(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
@@ -2838,7 +2873,7 @@ export default function StockPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="যেমন: নতুন বস্তা লট নং ১২"
+                  placeholder={getIndustryLotPlaceholder(indId)}
                   value={restockNote}
                   onChange={(e) => setRestockNote(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}

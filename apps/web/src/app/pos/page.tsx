@@ -2,7 +2,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { getIndustryTheme, getIndustryVoiceConfig } from '../../lib/industryConfig';
+import {
+  getIndustryTheme,
+  getIndustryVoiceConfig,
+  getIndustryFieldVisibility,
+  getDefaultIndustryUnit,
+  getIndustryProductPlaceholder,
+  getIndustrySearchPlaceholder,
+  getIndustryBrandPlaceholder
+} from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
@@ -91,6 +99,45 @@ const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: s
     { name: 'লাক্স সাবান', price: 60, icon: '🧼', unit: 'পিস' },
     { name: 'ম্যাগি নুডুলস', price: 90, icon: '🍜', unit: 'প্যাক' },
   ],
+  'cat-meat-fish': [
+    { name: 'ব্রয়লার মুরগি (কাটা)', price: 190, icon: '🍗', unit: 'কেজি' },
+    { name: 'সোনালি মুরগি', price: 320, icon: '🍗', unit: 'কেজি' },
+    { name: 'গরুর ফ্রেশ মাংস', price: 750, icon: '🥩', unit: 'কেজি' },
+    { name: 'রুই মাছ (মাঝারি)', price: 320, icon: '🐟', unit: 'কেজি' },
+    { name: 'কাতলা মাছ', price: 350, icon: '🐟', unit: 'কেজি' },
+    { name: 'চিংড়ি মাছ', price: 650, icon: '🦐', unit: 'কেজি' },
+  ],
+  'cat-sweet': [
+    { name: 'স্পেশাল রসগোল্লা', price: 280, icon: '🧁', unit: 'কেজি' },
+    { name: 'বগুড়ার স্পেশাল মিষ্টি দই', price: 260, icon: '🥣', unit: 'কেজি' },
+    { name: 'ঘিয়ে ভাজা লালমোহন', price: 320, icon: '🥮', unit: 'কেজি' },
+    { name: 'ছানার স্পেশাল সন্দেশ', price: 450, icon: '🧁', unit: 'কেজি' },
+    { name: 'কাঁচাগোল্লা', price: 380, icon: '🧁', unit: 'কেজি' },
+    { name: 'রসমালাই', price: 480, icon: '🥛', unit: 'কেজি' },
+  ],
+  'cat-bakery': [
+    { name: 'স্পেশাল স্লাইস পাউরুটি', price: 50, icon: '🍞', unit: 'পিস' },
+    { name: 'বাটার বান', price: 20, icon: '🥯', unit: 'পিস' },
+    { name: 'চকলেট পেস্ট্রি কেক', price: 80, icon: '🍰', unit: 'পিস' },
+    { name: 'ভ্যানিলা পাউন্ড কেক', price: 140, icon: '🎂', unit: 'পিস' },
+    { name: 'চিকেন ফ্রেশ প্যাটিস', price: 40, icon: '🥟', unit: 'পিস' },
+    { name: 'ড্রাই কেক বিস্কুট', price: 160, icon: '🍪', unit: 'প্যাকেট' },
+  ],
+  'cat-furniture': [
+    { name: 'সলিড সেগুন কাঠের ডাইনিং চেয়ার', price: 2800, icon: '🪑', unit: 'পিস' },
+    { name: 'সেগুন কাঠের বক্স খাট (৫x৭)', price: 28000, icon: '🛏️', unit: 'পিস' },
+    { name: '৪ ড্রয়ার ওয়্যারড্রব', price: 16500, icon: '🗄️', unit: 'পিস' },
+    { name: 'আধুনিক ড্রেসিং টেবিল', price: 12000, icon: '🪞', unit: 'পিস' },
+    { name: 'প্লাস্টিক আরএফএল চেয়ার', price: 650, icon: '🪑', unit: 'পিস' },
+  ],
+  'cat-stationery': [
+    { name: 'এ৪ সাইজ দিস্তা খাতা', price: 80, icon: '📓', unit: 'পিস' },
+    { name: 'ম্যাটাডোর অল-টাইম বলপেন (১০টি)', price: 50, icon: '🖊️', unit: 'প্যাক' },
+    { name: 'স্টুডেন্ট জ্যামিতি বক্স', price: 120, icon: '📐', unit: 'সেট' },
+    { name: 'হাইলাইটার মার্কার পেন সেট', price: 150, icon: '🖍️', unit: 'সেট' },
+    { name: 'এ৪ সাইজ ফটোকপি পেপার রিম', price: 480, icon: '📄', unit: 'রিম' },
+    { name: 'স্ট্যাপলার মেশিন ও পিন', price: 110, icon: '📎', unit: 'সেট' },
+  ],
 };
 
 const INDUSTRY_SUBCATS: Record<string, Array<{ id: string; label: string; icon: string; keywords: string[] }>> = {
@@ -157,6 +204,12 @@ const INDUSTRY_SUBCATS: Record<string, Array<{ id: string; label: string; icon: 
     { id: 'meat', label: 'গরু ও খাসির মাংস', icon: '🥩', keywords: ['গরু', 'খাসি', 'মহিষ', 'কলিজা', 'মাংস'] },
     { id: 'poultry', label: 'মুরগি ও হাঁস', icon: '🍗', keywords: ['ব্রয়লার', 'সোনালি', 'লেয়ার', 'দেশি', 'মুরগি', 'হাঁস'] },
     { id: 'fish', label: 'মাছ ও চিংড়ি', icon: '🐟', keywords: ['রুই', 'কাতলা', 'তেলাপিয়া', 'চিংড়ি', 'ইলিশ', 'মাছ'] }
+  ],
+  'cat-sweet': [
+    { id: 'sweets', label: 'মিষ্টি ও রসগোল্লা', icon: '🧁', keywords: ['রসগোল্লা', 'সন্দেশ', 'চমচম', 'লালমোহন', 'মিষ্টি', 'কাঁচাগোল্লা'] },
+    { id: 'curd', label: 'দই ও মিষ্টি দই', icon: '🥣', keywords: ['দই', 'বগুড়ার দই', 'টক দই'] },
+    { id: 'halwa', label: 'হালুয়া ও বরফি', icon: '🥮', keywords: ['হালুয়া', 'বরফি', 'লাড্ডু'] },
+    { id: 'dairy-treats', label: 'রসমালাই ও ছানা', icon: '🥛', keywords: ['রসমালাই', 'ছানা', 'মালাই'] }
   ],
   'cat-bakery': [
     { id: 'cakes', label: 'কেক ও পেস্ট্রি', icon: '🎂', keywords: ['কেক', 'পেস্ট্রি', 'পাউন্ড', 'বার্থডে'] },
@@ -241,6 +294,8 @@ export default function PosPage() {
 
   // Industry-Tailored Workflows
   const industryId = tenant?.industryId || 'cat-grocery';
+  const fieldConfig = useMemo(() => getIndustryFieldVisibility(industryId), [industryId]);
+  const voiceConfig = useMemo(() => getIndustryVoiceConfig(industryId), [industryId]);
   const [orderType, setOrderType] = useState<'dine-in' | 'takeaway'>('dine-in');
   const [tableNumber, setTableNumber] = useState('১');
   const [imeiInput, setImeiInput] = useState('');
@@ -256,11 +311,11 @@ export default function PosPage() {
   const [quickAddPrice, setQuickAddPrice] = useState('');
   const [quickAddGeneric, setQuickAddGeneric] = useState('');
   const [quickAddExpiry, setQuickAddExpiry] = useState('');
-  const [quickAddSize, setQuickAddSize] = useState('L');
+  const [quickAddSize, setQuickAddSize] = useState('');
   const [quickAddColor, setQuickAddColor] = useState('');
   const [quickAddBrand, setQuickAddBrand] = useState('');
   const [quickAddWarranty, setQuickAddWarranty] = useState('');
-  const [quickAddUnit, setQuickAddUnit] = useState('পিস');
+  const [quickAddUnit, setQuickAddUnit] = useState(getDefaultIndustryUnit(industryId));
 
   // Running Tabs / চলতি আড্ডা খাতা state
   const [runningTabs, setRunningTabs] = useState<any[]>([]);
@@ -1231,7 +1286,7 @@ export default function PosPage() {
     const newProdId = 'prod-q-' + Date.now().toString().slice(-6);
     const autoBarcode = '894' + Math.floor(10000000 + Math.random() * 90000000);
 
-    const defaultUnit = industryId === 'cat-pharmacy' ? 'পাতা' : industryId === 'cat-hardware' ? 'ফুট' : industryId === 'cat-grocery' ? 'কেজি' : 'পিস';
+    const defaultUnit = getDefaultIndustryUnit(industryId);
     const defaultEmoji = industryId === 'cat-pharmacy' ? '💊' : industryId === 'cat-clothing' ? '🥻' : industryId === 'cat-hardware' ? '🔧' : '📦';
 
     const newProd = {
@@ -1244,12 +1299,12 @@ export default function PosPage() {
       stock: 50,
       unit: quickAddUnit || defaultUnit,
       categoryId: industryId,
-      genericName: industryId === 'cat-pharmacy' ? quickAddGeneric || null : null,
-      expiryDate: industryId === 'cat-pharmacy' ? quickAddExpiry || null : null,
-      size: (industryId === 'cat-clothing' || industryId === 'cat-shoes') ? quickAddSize || null : null,
-      color: (industryId === 'cat-clothing' || industryId === 'cat-shoes') ? quickAddColor || null : null,
-      brand: (industryId === 'cat-mobile' || industryId === 'cat-pharmacy') ? quickAddBrand || null : null,
-      warranty: industryId === 'cat-mobile' ? quickAddWarranty || null : null,
+      genericName: fieldConfig.showGenericName ? quickAddGeneric || null : null,
+      expiryDate: fieldConfig.showExpiryDate ? quickAddExpiry || null : null,
+      size: fieldConfig.showSize ? quickAddSize || null : null,
+      color: fieldConfig.showColor ? quickAddColor || null : null,
+      brand: fieldConfig.showBrand ? quickAddBrand || null : null,
+      warranty: fieldConfig.showWarranty ? quickAddWarranty || null : null,
       lowStockThreshold: 5,
       barcode: autoBarcode,
       imageEmoji: defaultEmoji
@@ -1892,7 +1947,9 @@ export default function PosPage() {
     if (selectedCategory === 'all') return true;
 
     if (selectedCategory === 'fast') {
-      const fastItems = (CATEGORY_FAST_ITEMS[industryId] || CATEGORY_FAST_ITEMS['cat-grocery']).map(f => f.name.toLowerCase());
+      const fastList = CATEGORY_FAST_ITEMS[industryId] || [];
+      const fastItems = fastList.map(f => f.name.toLowerCase());
+      if (fastItems.length === 0) return true;
       return fastItems.some(fn => (p.banglaName || '').toLowerCase().includes(fn) || (p.name || '').toLowerCase().includes(fn));
     }
 
@@ -2461,7 +2518,7 @@ export default function PosPage() {
               type="text"
               value={expressInput}
               onChange={(e) => setExpressInput(e.target.value)}
-              placeholder='মুখে বলুন বা লিখুন: "চাল ৪ কেজি ৩০০ টাকা" বা "নাপা ১ প্যাকেট" বা "চিনি ২ কেজি"...'
+              placeholder={voiceConfig.example ? `মুখে বলুন বা লিখুন: "${voiceConfig.example}"` : 'মুখে বলুন বা পণ্যের নাম লিখুন...'}
               style={{
                 width: '100%',
                 height: '46px',
@@ -2633,7 +2690,7 @@ export default function PosPage() {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="স্টকে থাকা পণ্য, বারকোড বা ব্র্যান্ড খুঁজুন..."
+            placeholder={getIndustrySearchPlaceholder(industryId)}
             value={search}
             onFocus={() => setShowSearchDropdown(true)}
             onChange={(e) => {
@@ -2833,9 +2890,18 @@ export default function PosPage() {
           )}
         </div>
 
-        {/* Quick Add Custom Product Button */}
         <button
-          onClick={() => { setShowQuickAddModal(true); triggerHaptic('light'); }}
+          onClick={() => {
+            setQuickAddUnit(getDefaultIndustryUnit(industryId));
+            setQuickAddSize('');
+            setQuickAddColor('');
+            setQuickAddBrand('');
+            setQuickAddGeneric('');
+            setQuickAddExpiry('');
+            setQuickAddWarranty('');
+            setShowQuickAddModal(true);
+            triggerHaptic('light');
+          }}
           style={{
             background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
             color: '#ffffff',
@@ -3910,7 +3976,7 @@ export default function PosPage() {
                                   background: '#eef2ff',
                                   cursor: 'pointer'
                                 }}
-                                title="একক পরিবর্তন করুন (যেমন: বস্তা বনাম কেজি বা কেজি বনাম গ্রাম)"
+                                title="একক পরিবর্তন করুন"
                               >
                                 {availUnits.map(u => (
                                   <option key={u} value={u}>{u}</option>
@@ -5146,7 +5212,7 @@ export default function PosPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder={industryId === 'cat-pharmacy' ? 'যেমন: নাপা এক্সট্রা ট্যাবলেট' : industryId === 'cat-clothing' ? 'যেমন: সুতি পাঞ্জাবি' : 'যেমন: তীর সয়াবিন তেল'}
+                  placeholder={getIndustryProductPlaceholder(industryId)}
                   value={quickAddName}
                   onChange={(e) => setQuickAddName(e.target.value)}
                   required
@@ -5154,93 +5220,102 @@ export default function PosPage() {
                 />
               </div>
 
-              {/* Pharmacy Specific: Generic Name & Expiry Date */}
-              {industryId === 'cat-pharmacy' && (
-                <>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      🧪 জেনেরিক নাম (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: Paracetamol + Caffeine"
-                      value={quickAddGeneric}
-                      onChange={(e) => setQuickAddGeneric(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      ⏳ মেয়াদোত্তীর্ণ তারিখ (Expiry Date)
-                    </label>
-                    <input
-                      type="date"
-                      value={quickAddExpiry}
-                      onChange={(e) => setQuickAddExpiry(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Clothing & Shoes Specific: Size & Color */}
-              {(industryId === 'cat-clothing' || industryId === 'cat-shoes') && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      🏷️ সাইজ
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={industryId === 'cat-shoes' ? 'যেমন: 40, 41, 42' : 'যেমন: M, L, XL, 32'}
-                      value={quickAddSize}
-                      onChange={(e) => setQuickAddSize(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      🎨 কালার
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: সাদা, কালো"
-                      value={quickAddColor}
-                      onChange={(e) => setQuickAddColor(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
+              {/* Pharmacy / Formula Specific: Generic Name */}
+              {fieldConfig.showGenericName && (
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    🧪 {fieldConfig.genericNameLabel || 'জেনেরিক নাম'} (ঐচ্ছিক)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={fieldConfig.genericNamePlaceholder || 'যেমন: Paracetamol + Caffeine'}
+                    value={quickAddGeneric}
+                    onChange={(e) => setQuickAddGeneric(e.target.value)}
+                    style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                  />
                 </div>
               )}
 
-              {/* Mobile Specific: Brand & Warranty */}
-              {industryId === 'cat-mobile' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      🏷️ ব্র্যান্ড
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: Samsung, Xiaomi"
-                      value={quickAddBrand}
-                      onChange={(e) => setQuickAddBrand(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
-                      🛡️ ওয়ারেন্টি
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: ১ বছর"
-                      value={quickAddWarranty}
-                      onChange={(e) => setQuickAddWarranty(e.target.value)}
-                      style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
-                    />
-                  </div>
+              {/* Expiry Date */}
+              {fieldConfig.showExpiryDate && (
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    ⏳ {fieldConfig.expiryDateLabel || 'মেয়াদোত্তীর্ণ তারিখ'}
+                  </label>
+                  <input
+                    type="date"
+                    value={quickAddExpiry}
+                    onChange={(e) => setQuickAddExpiry(e.target.value)}
+                    style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                  />
+                </div>
+              )}
+
+              {/* Size & Color */}
+              {(fieldConfig.showSize || fieldConfig.showColor) && (
+                <div style={{ display: 'grid', gridTemplateColumns: fieldConfig.showSize && fieldConfig.showColor ? '1fr 1fr' : '1fr', gap: '8px' }}>
+                  {fieldConfig.showSize && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        🏷️ {fieldConfig.sizeLabel || 'সাইজ'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={fieldConfig.sizePlaceholder || 'যেমন: M, L, XL'}
+                        value={quickAddSize}
+                        onChange={(e) => setQuickAddSize(e.target.value)}
+                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
+                  {fieldConfig.showColor && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        🎨 {fieldConfig.colorLabel || 'কালার'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: সাদা, কালো"
+                        value={quickAddColor}
+                        onChange={(e) => setQuickAddColor(e.target.value)}
+                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Brand & Warranty */}
+              {(fieldConfig.showBrand || fieldConfig.showWarranty) && (
+                <div style={{ display: 'grid', gridTemplateColumns: fieldConfig.showBrand && fieldConfig.showWarranty ? '1fr 1fr' : '1fr', gap: '8px' }}>
+                  {fieldConfig.showBrand && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        🏷️ {fieldConfig.brandLabel || 'ব্র্যান্ড / কোম্পানি'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={getIndustryBrandPlaceholder(industryId)}
+                        value={quickAddBrand}
+                        onChange={(e) => setQuickAddBrand(e.target.value)}
+                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
+                  {fieldConfig.showWarranty && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                        🛡️ {fieldConfig.warrantyLabel || 'ওয়ারেন্টি'}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={fieldConfig.warrantyPlaceholder || 'যেমন: ১ বছর'}
+                        value={quickAddWarranty}
+                        onChange={(e) => setQuickAddWarranty(e.target.value)}
+                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px' }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

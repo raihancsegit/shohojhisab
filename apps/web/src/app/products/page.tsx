@@ -1,8 +1,15 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { getIndustryProductPlaceholder, getIndustryBrandPlaceholder, getIndustryProductSuggestions, getIndustrySearchPlaceholder } from '../../lib/industryConfig';
+import {
+  getIndustryProductPlaceholder,
+  getIndustryBrandPlaceholder,
+  getIndustryProductSuggestions,
+  getIndustrySearchPlaceholder,
+  getIndustryFieldVisibility,
+  getDefaultIndustryUnit
+} from '../../lib/industryConfig';
 import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
@@ -10,6 +17,7 @@ import DataLoader from '../../components/DataLoader';
 export default function ProductsPage() {
   const { tenant, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id || 'tenant-1';
+  const fieldConfig = useMemo(() => getIndustryFieldVisibility(tenant?.industryId), [tenant?.industryId]);
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,9 +67,9 @@ export default function ProductsPage() {
     setPurchasePrice('');
     setSellingPrice('');
     setStock('15');
-    setUnit(tenant?.industryId === 'cat-pharmacy' ? 'পাতা' : (tenant?.industryId === 'cat-hardware' ? 'ফুট' : tenant?.industryId === 'cat-shoes' ? 'জোড়া' : tenant?.industryId === 'cat-grocery' ? 'কেজি' : 'পিস'));
+    setUnit(getDefaultIndustryUnit(tenant?.industryId));
     setSubUnit('');
-    setConversionRatio('1');
+    setConversionRatio(fieldConfig.defaultRatio || '1');
     setGenericName('');
     setExpiryDate('');
     setSize('');
@@ -345,29 +353,41 @@ export default function ProductsPage() {
                   <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>
                     {p.banglaName || p.name}
                   </h4>
-                  {p.genericName && (
+                  {p.genericName && fieldConfig.showGenericName && (
                     <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '1px' }}>
                       🧪 {p.genericName}
                     </span>
                   )}
-                  {p.size && (
+                  {p.size && fieldConfig.showSize && (
                     <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
-                      🏷️ সাইজ: {p.size} {p.color ? `• ${p.color}` : ''}
+                      🏷️ {fieldConfig.sizeLabel ? fieldConfig.sizeLabel.replace(':', '') : 'সাইজ'}: {p.size} {p.color && fieldConfig.showColor ? `• ${p.color}` : ''}
                     </span>
                   )}
-                  {isExpired ? (
-                    <span style={{ fontSize: '10px', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
-                      🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
+                  {p.brand && fieldConfig.showBrand && (
+                    <span style={{ fontSize: '10.5px', color: '#0369a1', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                      🏢 {p.brand}
                     </span>
-                  ) : isExpiringSoon ? (
-                    <span style={{ fontSize: '10px', background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
-                      ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
+                  )}
+                  {p.warranty && fieldConfig.showWarranty && (
+                    <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                      🛡️ {p.warranty}
                     </span>
-                  ) : p.expiryDate ? (
-                    <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
-                      ⏳ মেয়াদ: {p.expiryDate}
-                    </span>
-                  ) : null}
+                  )}
+                  {fieldConfig.showExpiryDate && (
+                    isExpired ? (
+                      <span style={{ fontSize: '10px', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                        🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
+                      </span>
+                    ) : isExpiringSoon ? (
+                      <span style={{ fontSize: '10px', background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                        ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
+                      </span>
+                    ) : p.expiryDate ? (
+                      <span style={{ fontSize: '10.5px', color: '#64748b', display: 'block' }}>
+                        ⏳ মেয়াদ: {p.expiryDate}
+                      </span>
+                    ) : null
+                  )}
 
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
                     <span>কেনা: ৳{p.purchasePrice} • </span>
@@ -564,28 +584,28 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক রূপান্তর (যেমন: ১ বস্তা = ৫০ কেজি, ১ কার্টন = ২৪ পিস) */}
+                {/* ⚖️ মাল্টি-ইউনিট / সাব-একক রূপান্তর */}
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px dashed #cbd5e1', display: 'grid', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>⚖️ খুচরা / সাব-একক রূপান্তর (ঐচ্ছিক):</span>
-                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>যেমন: বস্তা বনাম কেজি</span>
+                    <span style={{ fontSize: '10.5px', color: '#64748b' }}>{fieldConfig.subUnitExampleText}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>সাব-একক নাম:</label>
                       <input
                         type="text"
-                        placeholder="যেমন: কেজি, গ্রাম, পিস"
+                        placeholder={fieldConfig.subUnitPlaceholder}
                         value={subUnit}
                         onChange={(e) => setSubUnit(e.target.value)}
                         style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                       />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>১ {unit || 'মূল এককে'} কত {subUnit || 'সাব-একক'}?</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.ratioPrompt(unit, subUnit)}</label>
                       <input
                         type="number"
-                        placeholder="যেমন: 50"
+                        placeholder={`যেমন: ${fieldConfig.defaultRatio}`}
                         value={conversionRatio}
                         onChange={(e) => setConversionRatio(e.target.value)}
                         className="num-font"
@@ -600,100 +620,90 @@ export default function ProductsPage() {
                   )}
                 </div>
 
-                {/* 💊 PHARMACY SPECIFIC FIELDS */}
-                {tenant?.industryId === 'cat-pharmacy' && (
-                  <div style={{ background: '#ecfdf5', padding: '12px', borderRadius: '12px', border: '1px solid #a7f3d0', display: 'grid', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#065f46' }}>💊 ফার্মেসির বিশেষ তথ্য:</span>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>জেনেরিক নাম (উপাদান):</label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: Paracetamol + Caffeine"
-                        value={genericName}
-                        onChange={(e) => setGenericName(e.target.value)}
-                        style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>মেয়াদোত্তীর্ণের তারিখ:</label>
-                        <input
-                          type="date"
-                          value={expiryDate}
-                          onChange={(e) => setExpiryDate(e.target.value)}
-                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>ফার্মা কোম্পানি:</label>
+                {/* 🏷️ CATEGORY-SPECIFIC CONDITIONAL FIELDS (Strict Shop Isolation) */}
+                {(fieldConfig.showGenericName || fieldConfig.showExpiryDate || fieldConfig.showBrand || fieldConfig.showSize || fieldConfig.showColor || fieldConfig.showWarranty) && (
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #e2e8f0', display: 'grid', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>
+                      🏷️ {tenant?.industryName || 'দোকানের'} বিশেষ বিবরণ:
+                    </span>
+
+                    {fieldConfig.showGenericName && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#047857', marginBottom: '3px' }}>{fieldConfig.genericNameLabel}</label>
                         <input
                           type="text"
-                          placeholder={getIndustryBrandPlaceholder(tenant?.industryId)}
-                          value={brand}
-                          onChange={(e) => setBrand(e.target.value)}
+                          placeholder={fieldConfig.genericNamePlaceholder}
+                          value={genericName}
+                          onChange={(e) => setGenericName(e.target.value)}
                           style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                         />
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* 👗 CLOTHING & SHOES SPECIFIC FIELDS */}
-                {(tenant?.industryId === 'cat-clothing' || tenant?.industryId === 'cat-shoes') && (
-                  <div style={{ background: '#f5f3ff', padding: '12px', borderRadius: '12px', border: '1px solid #ddd6fe', display: 'grid', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#5b21b6' }}>
-                      {tenant?.industryId === 'cat-shoes' ? '👞 জুতার সাইজ ও কালার:' : '👗 পোশাকের সাইজ ও কালার:'}
-                    </span>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>সাইজ:</label>
-                        <input
-                          type="text"
-                          placeholder={tenant?.industryId === 'cat-shoes' ? '40, 41, 42' : 'M, L, XL, 32'}
-                          value={size}
-                          onChange={(e) => setSize(e.target.value)}
-                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#5b21b6', marginBottom: '3px' }}>রং / কালার:</label>
-                        <input
-                          type="text"
-                          placeholder="কালো / নীল / লাল"
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                      {fieldConfig.showSize && (
+                        <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.sizeLabel}</label>
+                          <input
+                            type="text"
+                            placeholder={fieldConfig.sizePlaceholder}
+                            value={size}
+                            onChange={(e) => setSize(e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      )}
 
-                {/* 📱 MOBILE SPECIFIC FIELDS */}
-                {tenant?.industryId === 'cat-mobile' && (
-                  <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '12px', border: '1px solid #bae6fd', display: 'grid', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#0369a1' }}>📱 গ্যাজেট ব্র্যান্ড ও ওয়ারেন্টি:</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ব্র্যান্ড:</label>
-                        <input
-                          type="text"
-                          placeholder="Samsung, Xiaomi"
-                          value={brand}
-                          onChange={(e) => setBrand(e.target.value)}
-                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
-                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#0284c7', marginBottom: '3px' }}>ওয়ারেন্টি:</label>
-                        <input
-                          type="text"
-                          placeholder="১ বছর"
-                          value={warranty}
-                          onChange={(e) => setWarranty(e.target.value)}
-                          style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
-                        />
-                      </div>
+                      {fieldConfig.showColor && (
+                        <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.colorLabel}</label>
+                          <input
+                            type="text"
+                            placeholder={fieldConfig.colorPlaceholder}
+                            value={color}
+                            onChange={(e) => setColor(e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      )}
+
+                      {fieldConfig.showBrand && (
+                        <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.brandLabel}</label>
+                          <input
+                            type="text"
+                            placeholder={fieldConfig.brandPlaceholder}
+                            value={brand}
+                            onChange={(e) => setBrand(e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      )}
+
+                      {fieldConfig.showWarranty && (
+                        <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.warrantyLabel}</label>
+                          <input
+                            type="text"
+                            placeholder={fieldConfig.warrantyPlaceholder}
+                            value={warranty}
+                            onChange={(e) => setWarranty(e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      )}
+
+                      {fieldConfig.showExpiryDate && (
+                        <div style={{ minWidth: 0, width: '100%', boxSizing: 'border-box' }}>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>{fieldConfig.expiryDateLabel}</label>
+                          <input
+                            type="date"
+                            value={expiryDate}
+                            onChange={(e) => setExpiryDate(e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', minWidth: 0, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

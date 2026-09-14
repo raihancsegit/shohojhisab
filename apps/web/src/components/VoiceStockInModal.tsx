@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoiceStockIn, VoiceStockInResult } from '../lib/voicePOSParser';
-import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { getIndustryVoiceConfig, getIndustryProductSuggestions } from '../lib/industryConfig';
 import { extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
 
 interface VoiceStockInModalProps {
@@ -398,12 +398,16 @@ export default function VoiceStockInModal({
               কুইক টেস্ট সিমুলেশন (১-ক্লিক করুন):
             </span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {[
-                { label: '💊 নাপা এক্সট্রা (+৫০ পাতা)', text: 'নাপা এক্সট্রা ৫০ পাতা স্টক যোগ করো কেনা ২২' },
-                { label: '🍚 চিনি (+১০০ কেজি)', text: 'চিনি ১০০ কেজি স্টক ইন কেনা ১৩০ বিক্রয় ১৪০' },
-                { label: '🛢️ সয়াবিন তেল (+২০ লিটার)', text: 'সয়াবিন তেল ২০ লিটার নতুন চালান' },
-                { label: '👕 পোলো শার্ট (+১৫ পিস)', text: 'পোলো শার্ট ১৫ পিস নতুন স্টক' }
-              ].map((s, idx) => (
+              {(voiceConfig.stockInSuggestions && voiceConfig.stockInSuggestions.length > 0
+                ? voiceConfig.stockInSuggestions.map((text) => ({
+                    label: `📦 ${text}`,
+                    text: `${text} স্টক ইন`
+                  }))
+                : getIndustryProductSuggestions(tenant?.industryId).slice(0, 4).map((p) => ({
+                    label: `${p.icon} ${p.name} (+১০ ${p.unit})`,
+                    text: `${p.name} ১০ ${p.unit} স্টক ইন কেনা ${p.costPrice || Math.round(p.price * 0.8)}`
+                  }))
+              ).map((s, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleProcessVoiceInput(s.text)}
