@@ -371,12 +371,16 @@ export default function PosPage() {
     };
   }, []);
 
-  // Remember shopkeeper's preferred POS mode in localStorage
+  // Default strictly to 'catalog' (ক্যাটালগ ও এক্সপ্রেস মেমো) on POS open
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sh_pos_mode');
-      if (saved === 'numpad' || saved === 'catalog') {
-        setPosMode(saved as 'catalog' | 'numpad');
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      if (modeParam === 'numpad') {
+        setPosMode('numpad');
+      } else {
+        setPosMode('catalog');
+        localStorage.setItem('sh_pos_mode', 'catalog');
       }
     }
   }, []);
@@ -2068,7 +2072,7 @@ export default function PosPage() {
       }}>
         <button
           type="button"
-          onClick={() => { setPosMode('catalog'); triggerHaptic('light'); }}
+          onClick={() => { changePosMode('catalog'); triggerHaptic('light'); }}
           style={{
             flex: 1,
             padding: '10px 14px',
@@ -2091,7 +2095,7 @@ export default function PosPage() {
         </button>
         <button
           type="button"
-          onClick={() => { setPosMode('numpad'); triggerHaptic('light'); }}
+          onClick={() => { changePosMode('numpad'); triggerHaptic('light'); }}
           style={{
             flex: 1,
             padding: '10px 14px',
