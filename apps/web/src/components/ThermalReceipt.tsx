@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { formatBDDateTime } from '../lib/dateUtils';
 
 interface ThermalReceiptProps {
   invoice: any;
@@ -125,7 +126,7 @@ export default function ThermalReceipt({ invoice, tenant, onClose }: ThermalRece
           {/* Invoice Meta */}
           <div style={{ marginBottom: '6px', fontSize: is58 ? '10px' : '11.5px' }}>
             <div><strong>মেমো নং:</strong> {invoice?.invoiceNo || invoice?.id || 'INV-001'}</div>
-            <div><strong>তারিখ:</strong> {invoice?.createdAt ? invoice.createdAt.slice(0, 16).replace('T', ' ') : new Date().toLocaleString()}</div>
+            <div><strong>তারিখ ও সময়:</strong> {formatBDDateTime(invoice?.createdAt || invoice?.date || new Date())}</div>
             {invoice?.customerName && (
               <div><strong>ক্রেতা:</strong> {invoice.customerName}</div>
             )}

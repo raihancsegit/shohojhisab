@@ -17,6 +17,7 @@ import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
+import { saveVaultSnapshot, autoRestoreIfWiped } from '../../lib/dataVault';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -408,7 +409,14 @@ export default function PosPage() {
       const prodRes = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (prodRes.ok) {
         const pList = await prodRes.json();
-        setProducts(Array.isArray(pList) ? pList : []);
+        const list = Array.isArray(pList) ? pList : [];
+        setProducts(list);
+        if (list.length > 0) {
+          saveVaultSnapshot(currentTenantId, { products: list });
+        } else {
+          // If server was wiped on redeploy, auto-restore from browser vault
+          autoRestoreIfWiped(currentTenantId, 0, 0, () => loadData());
+        }
       }
     } catch (e) {}
 
@@ -416,7 +424,11 @@ export default function PosPage() {
       const custRes = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (custRes.ok) {
         const cList = await custRes.json();
-        setCustomers(Array.isArray(cList) ? cList : []);
+        const list = Array.isArray(cList) ? cList : [];
+        setCustomers(list);
+        if (list.length > 0) {
+          saveVaultSnapshot(currentTenantId, { customers: list });
+        }
       }
     } catch (e) {}
 
@@ -1912,6 +1924,12 @@ export default function PosPage() {
           celebrationWish
         });
 
+        if (currentTenantId && data.order) {
+          saveVaultSnapshot(currentTenantId, {
+            sales: [data.order]
+          });
+        }
+
         setCart([]);
         setShowCheckoutModal(false);
         setCashTendered('');
@@ -2444,235 +2462,225 @@ export default function PosPage() {
         <>
           {/* ⚡ SMART NATURAL VOICE & EXPRESS ITEM ENTRY BAR */}
           <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        borderRadius: '20px',
-        padding: '16px',
-        marginBottom: '16px',
-        border: '1.5px solid rgba(16, 185, 129, 0.35)',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
-        color: '#ffffff'
-      }}>
-        {/* Top Header Label */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '20px' }}>⚡</span>
-            <div>
-              <strong style={{ fontSize: '14px', fontWeight: '900', color: '#f8fafc', display: 'block' }}>
-                স্মার্ট ভয়েস ও এক্সপ্রেস আইটেম এন্ট্রি
-              </strong>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                যেমন: &quot;চাল ৪ কেজি ৩০০ টাকা&quot; বা &quot;নাপা ১ প্যাকেট&quot; বা &quot;চিনি ২ কেজি&quot;
-              </span>
-            </div>
-            <span style={{ fontSize: '10px', background: '#059669', color: '#ffffff', padding: '2px 8px', borderRadius: '99px', fontWeight: '800', marginLeft: '4px' }}>
-              সরাসরি স্টক লিংক
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', color: '#a7f3d0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>⌨️ মুখে বলুন বা লিখে Enter চাপুন</span>
-          </div>
-        </div>
-
-        {/* Input Bar with Integrated Live Voice Mic */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleAddExpressItem();
-          }}
-          style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}
-        >
-          {/* Live Mic Button */}
-          <button
-            type="button"
-            onClick={toggleExpressListening}
-            style={{
-              height: '46px',
-              padding: '0 14px',
-              borderRadius: '12px',
-              border: 'none',
-              background: isExpressListening ? '#ef4444' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              fontWeight: '900',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              flexShrink: 0,
-              boxShadow: isExpressListening ? '0 0 16px rgba(239, 68, 68, 0.7)' : '0 4px 12px rgba(16, 185, 129, 0.3)',
-              transition: 'all 0.2s ease',
-              animation: isExpressListening ? 'pulse 1.5s infinite' : 'none'
-            }}
-            title="মুখে বলে আইটেম যোগ করুন"
-          >
-            <span style={{ fontSize: '18px' }}>{isExpressListening ? '🔴' : '🎙️'}</span>
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {isExpressListening ? 'শুনছি...' : 'ভয়েস'}
-            </span>
-          </button>
-
-          {/* Express Input */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <input
-              ref={expressInputRef}
-              type="text"
-              value={expressInput}
-              onChange={(e) => setExpressInput(e.target.value)}
-              placeholder={voiceConfig.example ? `মুখে বলুন বা লিখুন: "${voiceConfig.example}"` : 'মুখে বলুন বা পণ্যের নাম লিখুন...'}
-              style={{
-                width: '100%',
-                height: '46px',
-                padding: '0 38px 0 14px',
-                borderRadius: '12px',
-                border: '1.5px solid rgba(255, 255, 255, 0.15)',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#ffffff',
-                fontSize: '14px',
-                fontWeight: '600',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-            {expressInput && (
-              <button
-                type="button"
-                onClick={() => { setExpressInput(''); setExpressPreview(null); }}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Add Button */}
-          <button
-            type="submit"
-            style={{
-              height: '46px',
-              padding: '0 16px',
-              borderRadius: '12px',
-              border: 'none',
-              background: '#3b82f6',
-              color: '#ffffff',
-              fontWeight: '900',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-            }}
-          >
-            <span>যোগ করুন</span>
-            <span>↵</span>
-          </button>
-        </form>
-
-        {/* Live Parsed Preview Pill */}
-        {expressPreview && (
-          <div style={{
-            marginTop: '10px',
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid #10b981',
-            borderRadius: '10px',
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '8px',
-            fontSize: '12.5px'
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '12px 14px',
+            marginBottom: '14px',
+            border: '1.5px solid #cbd5e1',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+            color: '#0f172a'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: '900', color: '#34d399' }}>
-                ⚡ পাওয়া গেছে: {expressPreview.banglaName || expressPreview.name}
-              </span>
-              <span style={{ background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '6px' }}>
-                পরিমাণ: {expressPreview.quantity} {expressPreview.unit}
-              </span>
-              <span style={{ background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '6px' }}>
-                মোট: ৳{expressPreview.totalPrice} {expressPreview.quantity > 1 ? `(দর: ৳${expressPreview.unitPrice})` : ''}
+            {/* Top Header Label */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '18px' }}>🎙️</span>
+                <strong style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
+                  মুখে বলে বা লিখে দ্রুত আইটেম যোগ
+                </strong>
+              </div>
+              <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
+                ⚡ দ্রুত বিল
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {expressPreview.isExistingProduct ? (
-                <span style={{ color: Number(expressPreview.stock || 0) > 0 ? '#10b981' : '#f87171', fontWeight: '800' }}>
-                  {Number(expressPreview.stock || 0) > 0 ? `✓ স্টকে আছে: ${expressPreview.stock} ${expressPreview.unit || ''}` : '⚠️ স্টক নেই'}
-                </span>
-              ) : (
-                <span style={{ color: '#fbbf24', fontWeight: '800' }}>
-                  কাস্টম পণ্য
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => handleAddExpressItem()}
-                style={{
-                  background: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  fontWeight: '900',
-                  cursor: 'pointer'
-                }}
-              >
-                মেমোতে দিন ↵
-              </button>
-            </div>
-          </div>
-        )}
 
-        {/* ⚡ Rapid In-Stock Product Chips (1-Tap Add) */}
-        {topStapleProducts.length > 0 && (
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-            <span style={{ fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap', fontWeight: '700' }}>
-              জনপ্রিয় পণ্য:
-            </span>
-            {topStapleProducts.map(p => (
+            {/* Input Bar with Integrated Live Voice Mic */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddExpressItem();
+              }}
+              style={{ display: 'flex', gap: '6px', alignItems: 'center', position: 'relative' }}
+            >
+              {/* Live Mic Button */}
               <button
-                key={p.id}
                 type="button"
-                onClick={() => {
-                  addToCart(p, 1);
-                  setVoiceNotice(`✓ ${p.banglaName || p.name} মেমোতে যোগ হয়েছে!`);
-                  setTimeout(() => setVoiceNotice(''), 3000);
-                }}
+                onClick={toggleExpressListening}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '99px',
-                  padding: '4px 10px',
-                  color: '#f1f5f9',
-                  fontSize: '11.5px',
-                  fontWeight: '700',
+                  height: '42px',
+                  padding: '0 11px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: isExpressListening ? '#ef4444' : '#10b981',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '12.5px',
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  transition: 'all 0.15s ease'
+                  flexShrink: 0,
+                  boxShadow: isExpressListening ? '0 0 12px rgba(239, 68, 68, 0.6)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+                title="মুখে বলে আইটেম যোগ করুন"
+              >
+                <span style={{ fontSize: '16px' }}>{isExpressListening ? '🔴' : '🎙️'}</span>
+                <span style={{ whiteSpace: 'nowrap' }}>
+                  {isExpressListening ? 'শুনছি...' : 'ভয়েস'}
+                </span>
+              </button>
+
+              {/* Express Input */}
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input
+                  ref={expressInputRef}
+                  type="text"
+                  value={expressInput}
+                  onChange={(e) => setExpressInput(e.target.value)}
+                  placeholder={voiceConfig.example ? `যেমন: "${voiceConfig.example}"` : 'যেমন: চাল ২ কেজি, চিনি ১ কেজি...'}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    padding: '0 28px 0 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontSize: '13.5px',
+                    fontWeight: '600',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {expressInput && (
+                  <button
+                    type="button"
+                    onClick={() => { setExpressInput(''); setExpressPreview(null); }}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Add Button */}
+              <button
+                type="submit"
+                style={{
+                  height: '42px',
+                  padding: '0 14px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexShrink: 0
                 }}
               >
-                <span>⚡ {p.banglaName || p.name}</span>
-                <span style={{ color: '#34d399', fontSize: '10.5px' }}>৳{p.sellingPrice}</span>
+                <span>যোগ</span>
+                <span>+</span>
               </button>
-            ))}
+            </form>
+
+            {/* Live Parsed Preview Pill */}
+            {expressPreview && (
+              <div style={{
+                marginTop: '8px',
+                background: '#ecfdf5',
+                border: '1.5px solid #a7f3d0',
+                borderRadius: '10px',
+                padding: '8px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '6px',
+                fontSize: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <strong style={{ color: '#065f46' }}>
+                    ⚡ {expressPreview.banglaName || expressPreview.name}
+                  </strong>
+                  <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '6px', fontWeight: '700' }}>
+                    {expressPreview.quantity} {expressPreview.unit}
+                  </span>
+                  <span style={{ background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '6px', fontWeight: '800' }}>
+                    ৳{expressPreview.totalPrice}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {expressPreview.isExistingProduct ? (
+                    <span style={{ color: Number(expressPreview.stock || 0) > 0 ? '#059669' : '#dc2626', fontWeight: '800' }}>
+                      {Number(expressPreview.stock || 0) > 0 ? `স্টক: ${expressPreview.stock} ${expressPreview.unit || ''}` : '⚠️ স্টক নেই'}
+                    </span>
+                  ) : (
+                    <span style={{ color: '#d97706', fontWeight: '700' }}>
+                      কাস্টম
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleAddExpressItem()}
+                    style={{
+                      background: '#059669',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    মেমোতে নিন ↵
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ⚡ Rapid In-Stock Product Chips (1-Tap Add) */}
+            {topStapleProducts.length > 0 && (
+              <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', fontWeight: '700' }}>
+                  জনপ্রিয়:
+                </span>
+                {topStapleProducts.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      addToCart(p, 1);
+                      setVoiceNotice(`✓ ${p.banglaName || p.name} মেমোতে যোগ হয়েছে!`);
+                      setTimeout(() => setVoiceNotice(''), 3000);
+                    }}
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '99px',
+                      padding: '3px 10px',
+                      color: '#1e293b',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>⚡ {p.banglaName || p.name}</span>
+                    <span style={{ color: '#059669', fontSize: '11px', fontWeight: '800' }}>৳{p.sellingPrice}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
           {/* 🔍 1. TOP SEARCH, BARCODE SCAN & VOICE BAR */}
           <div style={{

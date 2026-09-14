@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
+import { formatBDDate, formatBDTime } from '../../lib/dateUtils';
+import { saveVaultSnapshot, autoRestoreIfWiped } from '../../lib/dataVault';
 
 export default function ReportsPage() {
   const { tenant, activeRoleMode, triggerHaptic } = useAuth();
@@ -71,7 +73,21 @@ export default function ReportsPage() {
 
     fetch(`/api/sales?tenantId=${currentTenantId}`)
       .then(res => res.json())
-      .then(data => setSalesList(Array.isArray(data) ? data : []))
+      .then(data => {
+        const list = Array.isArray(data) ? data : [];
+        setSalesList(list);
+        if (list.length > 0) {
+          saveVaultSnapshot(currentTenantId, { sales: list });
+        } else {
+          // If server was wiped on redeploy, auto-restore from browser vault
+          autoRestoreIfWiped(currentTenantId, 0, 0, () => {
+            loadAnalytics(period);
+            fetch(`/api/sales?tenantId=${currentTenantId}`)
+              .then(r => r.json())
+              .then(d => setSalesList(Array.isArray(d) ? d : []));
+          });
+        }
+      })
       .catch(() => {});
   }, [currentTenantId, period]);
 
@@ -276,63 +292,72 @@ export default function ReportsPage() {
         />
       ) : (
         <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-        {/* Total Sales / Revenue */}
-        <div className="ui-card" style={{ borderLeft: '5px solid #3b82f6', padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800' }}>মোট বিক্রি (Revenue)</span>
-            <span style={{ fontSize: '20px' }}>📈</span>
+        {/* 📊 4 CORE COMPACT KPI SUMMARY CARDS (Side-by-side 2-Column Mobile, 4-Column Desktop) */}
+        <div className="reports-kpi-grid">
+          {/* Card 1: Total Sales / Revenue */}
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #3b82f6', background: 'linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '800' }}>মোট বিক্রি (Revenue)</span>
+              <span style={{ fontSize: '18px' }}>📈</span>
+            </div>
+            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
+              ৳{Number(summary.totalSales || 0).toLocaleString('en-US')}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '800', background: '#dbeafe', padding: '2px 7px', borderRadius: '6px' }}>
+                {summary.orderCount || 0}টি মেমো
+              </span>
+            </div>
           </div>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
-            ৳{Number(summary.totalSales || 0).toLocaleString('en-US')}
-          </div>
-          <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '700' }}>
-            {summary.orderCount || 0}টি মেমো সম্পন্ন
-          </span>
-        </div>
 
-        {/* Total Cost of Goods */}
-        <div className="ui-card" style={{ borderLeft: '5px solid #64748b', padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800' }}>মালের কেনা খরচ (Cost)</span>
-            <span style={{ fontSize: '20px' }}>📦</span>
+          {/* Card 2: Total Cost of Goods */}
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #64748b', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#475569', fontWeight: '800' }}>মালের কেনা (Cost)</span>
+              <span style={{ fontSize: '18px' }}>📦</span>
+            </div>
+            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#334155', margin: '4px 0' }}>
+              ৳{Number(summary.totalCost || 0).toLocaleString('en-US')}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#475569', fontWeight: '800', background: '#f1f5f9', padding: '2px 7px', borderRadius: '6px' }}>
+                পাইকারি খরচ
+              </span>
+            </div>
           </div>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#475569', margin: '4px 0' }}>
-            ৳{Number(summary.totalCost || 0).toLocaleString('en-US')}
-          </div>
-          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
-            বিক্রি হওয়া পণ্যের পাইকারি খরচ
-          </span>
-        </div>
 
-        {/* Shop Expenses */}
-        <div className="ui-card" style={{ borderLeft: '5px solid #f59e0b', padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800' }}>দোকান খরচ (Expenses)</span>
-            <span style={{ fontSize: '20px' }}>💸</span>
+          {/* Card 3: Shop Expenses */}
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #f59e0b', background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#b45309', fontWeight: '800' }}>দোকান খরচ (Expense)</span>
+              <span style={{ fontSize: '18px' }}>💸</span>
+            </div>
+            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#d97706', margin: '4px 0' }}>
+              ৳{Number(summary.expenses || 0).toLocaleString('en-US')}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '800', background: '#fef3c7', padding: '2px 7px', borderRadius: '6px' }}>
+                ভাড়া, চা ও বিল
+              </span>
+            </div>
           </div>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#d97706', margin: '4px 0' }}>
-            ৳{Number(summary.expenses || 0).toLocaleString('en-US')}
-          </div>
-          <span style={{ fontSize: '12px', color: '#d97706', fontWeight: '700' }}>
-            চা-নাস্তা, ভাড়া ও বিদ্যুৎ বিল
-          </span>
-        </div>
 
-        {/* Net Profit / Earned */}
-        <div className="ui-card" style={{ borderLeft: '5px solid #10b981', padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '800' }}>খাঁটি নিট লাভ (Earned)</span>
-            <span style={{ fontSize: '20px' }}>💹</span>
+          {/* Card 4: Net Profit / Earned */}
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #10b981', background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#047857', fontWeight: '800' }}>খাঁটি লাভ (Earned)</span>
+              <span style={{ fontSize: '18px' }}>💹</span>
+            </div>
+            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#059669', margin: '4px 0' }}>
+              {activeRoleMode === 'owner' ? `৳${Number(summary.netProfit || 0).toLocaleString('en-US')}` : '৳••••••'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: activeRoleMode === 'owner' ? '#065f46' : '#94a3b8', fontWeight: '800', background: '#d1fae5', padding: '2px 7px', borderRadius: '6px' }}>
+                {activeRoleMode === 'owner' ? 'আসল মুনাফা' : '🔒 গোপন'}
+              </span>
+            </div>
           </div>
-          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#059669', margin: '4px 0' }}>
-            {activeRoleMode === 'owner' ? `৳${Number(summary.netProfit || 0).toLocaleString('en-US')}` : '৳••••••'}
-          </div>
-          <span style={{ fontSize: '12px', color: activeRoleMode === 'owner' ? '#059669' : '#94a3b8', fontWeight: '700' }}>
-            {activeRoleMode === 'owner' ? 'সব খরচ বাদে আসল মুনাফা' : '🔒 কর্মচারী মোডে লাভ গোপন'}
-          </span>
         </div>
-      </div>
 
       {/* ⏰ 1. PEAK HOURS & 💳 2. PAYMENT METHODS GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -730,7 +755,7 @@ export default function ReportsPage() {
                   const paid = Number(inv.paidAmount || inv.paid_amount || 0);
                   const total = Number(inv.totalAmount || inv.total_amount || 0);
                   const pMethod = inv.paymentMethod || inv.payment_method || 'cash';
-                  const dateStr = inv.createdAt || inv.created_at ? new Date(inv.createdAt || inv.created_at).toLocaleDateString('bn-BD') : 'আজ';
+                  const rawDate = inv.createdAt || inv.created_at;
 
                   return (
                     <tr key={inv.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -739,8 +764,14 @@ export default function ReportsPage() {
                           #{inv.invoiceNo || inv.invoice_no || `INV-${inv.id ? String(inv.id).slice(-6) : idx + 1}`}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 14px', color: '#64748b', fontSize: '12.5px' }}>
-                        {dateStr}
+                      <td style={{ padding: '10px 14px', fontSize: '12px' }}>
+                        <div style={{ fontWeight: '700', color: '#0f172a' }}>
+                          {formatBDDate(rawDate)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>🕒</span>
+                          <span>{formatBDTime(rawDate)}</span>
+                        </div>
                       </td>
                       <td style={{ padding: '12px 14px', fontWeight: '700', color: '#0f172a' }}>
                         {inv.customerName || inv.customer_name || 'নগদ ক্রেতা'}

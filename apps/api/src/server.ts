@@ -6046,20 +6046,31 @@ fastify.get('/api/reports/analytics', async (request) => {
     }));
   }
 
-  // 1. Peak Hours Analysis
+  // 1. Peak Hours Analysis (Calculated in Asia/Dhaka Bangladesh Timezone)
   const peakBuckets: { [key: string]: { label: string; count: number; revenue: number; icon: string } } = {
-    morning: { label: 'সকাল (৮টা - ১২টা)', count: 0, revenue: 0, icon: '🌅' },
+    morning: { label: 'সকাল (৬টা - ১২টা)', count: 0, revenue: 0, icon: '🌅' },
     afternoon: { label: 'দুপুর (১২টা - ৪টা)', count: 0, revenue: 0, icon: '☀️' },
     evening: { label: 'বিকাল (৪টা - ৮টা)', count: 0, revenue: 0, icon: '🌇' },
     night: { label: 'রাত (৮টা - ১২টা)', count: 0, revenue: 0, icon: '🌙' },
-    other: { label: 'অন্যান্য সময়', count: 0, revenue: 0, icon: '🕒' }
+    other: { label: 'অন্যান্য সময় (রাত ১২টা - সকাল ৬টা)', count: 0, revenue: 0, icon: '🕒' }
   };
 
   sales.forEach(s => {
     const d = new Date(s.created_at);
-    const hour = d.getHours();
+    let hour = d.getHours();
+    try {
+      const bdHourStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Dhaka',
+        hour: 'numeric',
+        hourCycle: 'h23'
+      }).format(d);
+      hour = parseInt(bdHourStr, 10);
+    } catch (e) {
+      // Fallback: Bangladesh is UTC+6
+      hour = (d.getUTCHours() + 6) % 24;
+    }
     const amt = Number(s.total_amount) || 0;
-    if (hour >= 8 && hour < 12) {
+    if (hour >= 6 && hour < 12) {
       peakBuckets.morning.count++;
       peakBuckets.morning.revenue += amt;
     } else if (hour >= 12 && hour < 16) {
@@ -6230,6 +6241,204 @@ fastify.get('/api/ai/undo-status', async (request, reply) => {
     undoAvailable: !!entry,
     action: entry || null
   };
+});
+
+// 🔒 TENANT DATA VAULT & DISK SAFEGUARD (Auto Backup & Instant Restore across Render Redeploys)
+fastify.get('/api/tenant/vault-backup', async (request, reply) => {
+  const { tenantId } = (request.query || {}) as any;
+  if (!tenantId) return reply.status(400).send({ error: 'tenantId is required' });
+
+  try {
+    const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+    const customers = db.prepare('SELECT * FROM customers WHERE tenant_id = ?').all(tenantId);
+    const products = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId);
+    const sales = db.prepare('SELECT * FROM sales WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId) as any[];
+    const saleIds = sales.map(s => s.id);
+    
+    let saleItems: any[] = [];
+    if (saleIds.length > 0) {
+      const placeholders = saleIds.map(() => '?').join(',');
+      saleItems = db.prepare(`SELECT * FROM sale_items WHERE sale_id IN (${placeholders})`).all(...saleIds);
+    }
+    const expenses = db.prepare('SELECT * FROM expenses WHERE tenant_id = ?').all(tenantId);
+    const dealers = db.prepare('SELECT * FROM dealers WHERE tenant_id = ?').all(tenantId);
+
+    return {
+      success: true,
+      exportedAt: new Date().toISOString(),
+      tenantId,
+      tenant,
+      counts: {
+        customers: customers.length,
+        products: products.length,
+        sales: sales.length,
+        expenses: expenses.length,
+        dealers: dealers.length
+      },
+      data: {
+        tenant,
+        customers,
+        products,
+        sales,
+        saleItems,
+        expenses,
+        dealers
+      }
+    };
+  } catch (err: any) {
+    fastify.log.error(err);
+    return reply.status(500).send({ error: 'Failed to export vault backup', details: err.message });
+  }
+});
+
+fastify.post('/api/tenant/vault-restore', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { tenantId, data } = body;
+  if (!tenantId || !data) return reply.status(400).send({ error: 'tenantId and vault data are required' });
+
+  try {
+    const restoreTx = db.transaction(() => {
+      let restoredSales = 0;
+      let restoredProducts = 0;
+      let restoredCustomers = 0;
+      let restoredExpenses = 0;
+
+      // 1. Restore Products
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        const insertProd = db.prepare(`
+          INSERT OR IGNORE INTO products (id, tenant_id, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, sub_unit, conversion_ratio, barcode, min_stock_alert, is_active, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const p of data.products) {
+          insertProd.run(
+            p.id,
+            tenantId,
+            p.name || p.bangla_name || 'পণ্য',
+            p.bangla_name || p.name || 'পণ্য',
+            p.category_id || 'cat-grocery',
+            Number(p.purchase_price) || 0,
+            Number(p.selling_price) || 0,
+            Number(p.stock) || 0,
+            p.unit || 'পিস',
+            p.sub_unit || null,
+            Number(p.conversion_ratio) || 1,
+            p.barcode || null,
+            Number(p.min_stock_alert) || 5,
+            p.is_active !== undefined ? (p.is_active ? 1 : 0) : 1,
+            p.created_at || new Date().toISOString()
+          );
+          restoredProducts++;
+        }
+      }
+
+      // 2. Restore Customers
+      if (Array.isArray(data.customers) && data.customers.length > 0) {
+        const insertCust = db.prepare(`
+          INSERT OR IGNORE INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, avatar, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const c of data.customers) {
+          insertCust.run(
+            c.id,
+            tenantId,
+            c.name,
+            c.phone || '',
+            c.address || '',
+            Number(c.total_due) || 0,
+            Number(c.credit_limit) || 5000,
+            c.avatar || '👤',
+            c.created_at || new Date().toISOString()
+          );
+          restoredCustomers++;
+        }
+      }
+
+      // 3. Restore Sales & Sale Items
+      if (Array.isArray(data.sales) && data.sales.length > 0) {
+        const insertSale = db.prepare(`
+          INSERT OR IGNORE INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, is_offline, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const s of data.sales) {
+          insertSale.run(
+            s.id,
+            tenantId,
+            s.invoice_no || s.invoiceNo || ('INV-' + s.id.slice(-6)),
+            Number(s.subtotal) || 0,
+            Number(s.discount) || 0,
+            Number(s.total_amount || s.totalAmount) || 0,
+            Number(s.paid_amount || s.paidAmount) || 0,
+            Number(s.due_amount || s.dueAmount) || 0,
+            Number(s.profit_amount || s.profitAmount) || 0,
+            s.payment_method || s.paymentMethod || 'cash',
+            s.customer_id || s.customerId || null,
+            s.customer_name || s.customerName || null,
+            s.cashier || 'দোকান মালিক',
+            s.is_offline ? 1 : 0,
+            s.created_at || s.createdAt || new Date().toISOString()
+          );
+          restoredSales++;
+        }
+
+        if (Array.isArray(data.saleItems) && data.saleItems.length > 0) {
+          const insertItem = db.prepare(`
+            INSERT OR IGNORE INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          for (const item of data.saleItems) {
+            insertItem.run(
+              item.id || uuidv4(),
+              item.sale_id || item.saleId,
+              item.product_id || item.productId,
+              item.product_name || item.productName || 'পণ্য',
+              Number(item.quantity) || 1,
+              Number(item.purchase_price || item.purchasePrice) || 0,
+              Number(item.selling_price || item.sellingPrice) || 0,
+              Number(item.total_price || item.totalPrice) || 0,
+              Number(item.profit) || 0
+            );
+          }
+        }
+      }
+
+      // 4. Restore Expenses
+      if (Array.isArray(data.expenses) && data.expenses.length > 0) {
+        const insertExp = db.prepare(`
+          INSERT OR IGNORE INTO expenses (id, tenant_id, category, amount, note, date, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const ex of data.expenses) {
+          insertExp.run(
+            ex.id,
+            tenantId,
+            ex.category || 'অন্যান্য',
+            Number(ex.amount) || 0,
+            ex.note || '',
+            ex.date || new Date().toISOString().slice(0, 10),
+            ex.created_at || new Date().toISOString()
+          );
+          restoredExpenses++;
+        }
+      }
+
+      return {
+        restoredSales,
+        restoredProducts,
+        restoredCustomers,
+        restoredExpenses
+      };
+    });
+
+    const result = restoreTx();
+    return {
+      success: true,
+      message: 'ভল্ট ব্যাকআপ থেকে ডাটা সফলভাবে রিস্টোর করা হয়েছে',
+      restored: result
+    };
+  } catch (err: any) {
+    fastify.log.error(err);
+    return reply.status(500).send({ error: 'রিস্টোর করতে সমস্যা হয়েছে', details: err.message });
+  }
 });
 
 // Root & Health Checks

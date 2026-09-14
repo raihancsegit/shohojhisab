@@ -841,29 +841,29 @@ export default function KhataPage() {
       </div>
 
       {/* 🌟 Amar Dokan Style High-Contrast Hero Cockpit */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '18px' }}>
         {/* 🟢 মোট পাবো (Customer Receivable) */}
         <div className="ui-card" style={{
           background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%)',
           border: '1.5px solid #10b981',
           borderRadius: '16px',
-          padding: '16px 18px',
+          padding: '12px 14px',
           position: 'relative',
           overflow: 'hidden'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>🟢</span> মোট পাবো (গ্রাহক বাকি)
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🟢</span> মোট পাবো
             </span>
-            <span style={{ fontSize: '11px', fontWeight: '800', background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '99px' }}>
-              {receivableCount} জন বাকিদার
+            <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#d1fae5', color: '#065f46', padding: '1px 6px', borderRadius: '99px' }}>
+              {receivableCount} জন
             </span>
           </div>
-          <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#047857', margin: '4px 0' }}>
+          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#047857', margin: '3px 0' }}>
             ৳{totalReceivable.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-            দোকানের মোট নিবন্ধিত খরিদ্দার: {customers.length} জন
+          <div style={{ fontSize: '11px', color: '#64748b' }}>
+            মোট খরিদ্দার: {customers.length} জন
           </div>
         </div>
 
@@ -872,22 +872,22 @@ export default function KhataPage() {
           background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.04) 100%)',
           border: '1.5px solid #ef4444',
           borderRadius: '16px',
-          padding: '16px 18px',
+          padding: '12px 14px',
           position: 'relative',
           overflow: 'hidden'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>🔴</span> মোট দেবো (মহাজন দেনা)
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🔴</span> মোট দেবো
             </span>
             <Link
               href="/dealers"
               style={{
-                fontSize: '11px',
+                fontSize: '10.5px',
                 fontWeight: '800',
                 background: '#fee2e2',
                 color: '#991b1b',
-                padding: '2px 8px',
+                padding: '1px 6px',
                 borderRadius: '99px',
                 textDecoration: 'none'
               }}
@@ -895,11 +895,11 @@ export default function KhataPage() {
               {payableCount} জন ডিলার ➔
             </Link>
           </div>
-          <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#b91c1c', margin: '4px 0' }}>
+          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#b91c1c', margin: '3px 0' }}>
             ৳{totalPayable.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-            কোম্পানি / সরবরাহকারী মহাজনদের খাতা
+          <div style={{ fontSize: '11px', color: '#64748b' }}>
+            মহাজন দেনা
           </div>
         </div>
 
