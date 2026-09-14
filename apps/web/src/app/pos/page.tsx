@@ -1025,10 +1025,18 @@ export default function PosPage() {
 
         playBeep(1100);
         triggerHaptic('success');
-        const first = res.items[0];
         const dispName = first.banglaName || first.name;
         setVoiceNotice(`✓ ${dispName} (${first.quantity} ${first.unit}) মোট ৳${first.totalPrice} মেমোতে যোগ হয়েছে!`);
-        speakAnnouncement(`${dispName} ${first.quantity} ${first.unit} যোগ হয়েছে।`);
+
+        // Deduplicate repeated quantity/unit before speaking (e.g. "দেশি রসুন ডাল ১ কেজি ১ কেজি" -> "দেশি রসুন ডাল ১ কেজি")
+        let cleanSpokenName = dispName;
+        const qUnitRegex = new RegExp(`\\b${first.quantity}\\s*${first.unit}\\b`, 'gi');
+        if (qUnitRegex.test(cleanSpokenName)) {
+          cleanSpokenName = cleanSpokenName.replace(qUnitRegex, '').trim();
+        }
+        let spokenAdd = `${cleanSpokenName} ${first.quantity} ${first.unit} যোগ হয়েছে।`;
+        spokenAdd = spokenAdd.replace(/(\d+(?:\.\d+)?\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|টি|টা))\s+\1/gi, '$1').trim();
+        speakAnnouncement(spokenAdd);
         setExpressInput('');
         setExpressPreview(null);
         setTimeout(() => setVoiceNotice(''), 4000);
@@ -1117,6 +1125,7 @@ export default function PosPage() {
         setIsExpressListening(true);
         triggerHaptic('medium');
         playBeep(920);
+        window.dispatchEvent(new CustomEvent('app-mic-started', { detail: { source: 'pos-express' } }));
       };
 
       rec.onresult = (event: any) => {

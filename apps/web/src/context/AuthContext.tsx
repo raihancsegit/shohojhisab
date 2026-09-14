@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiUrl } from '../lib/config';
+import { autoRestoreIfWiped } from '../lib/dataVault';
 
 export interface ShopFeatures {
   enableInstallments?: boolean;
@@ -406,6 +407,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsedTenant = JSON.parse(savedTenantRaw);
         setUserRole('shopkeeper');
         setTenant(parsedTenant);
+
+        // Auto-restore safeguard: if server database was wiped by Render container redeploy, restore from browser vault immediately
+        autoRestoreIfWiped(parsedTenant.id, undefined, undefined, () => {
+          console.log('[AuthContext] Data Vault auto-restored wiped data successfully!');
+          window.dispatchEvent(new CustomEvent('vault-restored'));
+        });
 
         // Verify status & updated features in background
         fetch(apiUrl(`/api/tenants/${parsedTenant.id}/subscription-status`))

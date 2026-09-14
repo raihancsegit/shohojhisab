@@ -39,7 +39,15 @@ const fastify = Fastify({ logger: true });
 // Resolve DB path safely for both local monorepo and standalone cloud deployments (Render/Railway/Docker)
 const candidate1 = path.resolve(__dirname, '../../../local-business-os.db');
 const candidate2 = path.resolve(process.cwd(), 'local-business-os.db');
-const dbPath = process.env.DB_PATH || (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1)) ? candidate1 : candidate2);
+let resolvedDefaultPath = candidate2;
+if (fs.existsSync('/var/data')) {
+  resolvedDefaultPath = '/var/data/local-business-os.db';
+} else if (fs.existsSync('/data')) {
+  resolvedDefaultPath = '/data/local-business-os.db';
+} else if (fs.existsSync(candidate1) || fs.existsSync(path.dirname(candidate1))) {
+  resolvedDefaultPath = candidate1;
+}
+const dbPath = process.env.DB_PATH || resolvedDefaultPath;
 console.log(`[DB] Using SQLite Database at: ${dbPath}`);
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
