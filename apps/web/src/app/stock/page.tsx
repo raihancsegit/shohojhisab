@@ -3037,169 +3037,170 @@ export default function StockPage() {
 
       {/* 📋 দোকানের সার্বিক স্টক খতিয়ান ও ইন-আউট অডিট রিপোর্ট (Shop-wide Stock Movement Ledger & Audit Report Modal) */}
       {showAllLedgerModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
-          zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '24px',
-            padding: '24px',
-            width: '100%',
-            maxWidth: '920px',
-            maxHeight: '92vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-          }}>
+        <div className="ledger-modal-overlay">
+          <style>{`
+            .ledger-modal-overlay {
+              position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+              background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(6px);
+              -webkit-backdrop-filter: blur(6px);
+              z-index: 120; display: flex; align-items: center; justifyContent: center;
+              padding: 12px;
+            }
+            .ledger-modal-container {
+              background: #ffffff;
+              border-radius: 24px;
+              padding: 22px 24px 16px 24px;
+              width: 100%;
+              max-width: 960px;
+              height: 92vh;
+              max-height: 94vh;
+              display: flex;
+              flex-direction: column;
+              box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+              overflow: hidden;
+            }
+            .ledger-kpi-grid {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 10px;
+              margin-bottom: 12px;
+              flex-shrink: 0;
+            }
+            .ledger-desktop-table {
+              display: block;
+              width: 100%;
+            }
+            .ledger-mobile-cards {
+              display: none;
+            }
+
+            @media (max-width: 768px) {
+              .ledger-modal-overlay {
+                padding: 6px !important;
+              }
+              .ledger-modal-container {
+                padding: 14px 12px 10px 12px !important;
+                border-radius: 18px !important;
+                height: 96dvh !important;
+                max-height: 98dvh !important;
+              }
+              .ledger-modal-header h3 {
+                font-size: 15px !important;
+              }
+              .ledger-modal-header span {
+                font-size: 11px !important;
+              }
+              .ledger-kpi-grid {
+                gap: 6px !important;
+                margin-bottom: 8px !important;
+              }
+              .ledger-kpi-card {
+                padding: 6px 8px !important;
+                border-radius: 10px !important;
+              }
+              .ledger-kpi-val {
+                font-size: 14px !important;
+                margin-top: 1px !important;
+              }
+              .ledger-kpi-sub {
+                font-size: 9.5px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+              }
+              .ledger-filter-row {
+                flex-direction: column !important;
+                gap: 6px !important;
+                margin-bottom: 8px !important;
+              }
+              .ledger-desktop-table {
+                display: none !important;
+              }
+              .ledger-mobile-cards {
+                display: flex !important;
+                flex-direction: column;
+                gap: 8px;
+              }
+            }
+          `}</style>
+
+          <div className="ledger-modal-container">
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexShrink: 0 }}>
+            <div className="ledger-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', flexShrink: 0 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>📋</span> <span>দোকানের সার্বিক স্টক লেনদেন খাতা ও অডিট রিপোর্ট</span>
                 </h3>
-                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                  {tenant?.shopName} • নতুন মাল আসা (Stock In) ও বিক্রির মাধ্যমে স্টক আউট (Sales) এর সম্পূর্ণ হিসাব
+                <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  {tenant?.shopName} • নতুন স্টক ইন ও বিক্রির মাধ্যমে স্টক আউটের সম্পূর্ণ হিসাব
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAllLedgerModal(false)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', fontSize: '16px', color: '#475569' }}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '15px', color: '#475569', display: 'grid', placeItems: 'center' }}
               >
                 ✕
               </button>
             </div>
 
-            {/* KPI Summary Cards */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '10px',
-              marginBottom: '16px',
-              flexShrink: 0
-            }}>
+            {/* KPI Summary Cards - Always 3 in a row side-by-side */}
+            <div className="ledger-kpi-grid">
               {/* Card 1: Stock In */}
-              <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '14px', padding: '12px 14px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>📥</span> মোট নতুন স্টক (ইন)
+              <div className="ledger-kpi-card" style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: '12px', padding: '8px 10px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📥</span> স্টক ইন
                 </span>
-                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#15803d', marginTop: '3px' }}>
-                  +{ledgerSummary.totalInQty} একক
+                <div className="num-font ledger-kpi-val" style={{ fontSize: '16px', fontWeight: '900', color: '#15803d', marginTop: '1px' }}>
+                  +{ledgerSummary.totalInQty}
                 </div>
-                <span style={{ fontSize: '11px', color: '#166534', marginTop: '2px', display: 'block' }}>
-                  মোট ক্রয়মূল্য: <strong>৳{ledgerSummary.totalInValue.toLocaleString('en-US')}</strong>
+                <span className="ledger-kpi-sub" style={{ fontSize: '10.5px', color: '#166534', marginTop: '1px', display: 'block' }}>
+                  ক্রয়: <strong>৳{ledgerSummary.totalInValue.toLocaleString('en-US')}</strong>
                 </span>
               </div>
 
               {/* Card 2: Sales Out */}
-              <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '14px', padding: '12px 14px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>📤</span> মোট বিক্রি হয়ে স্টক আউট
+              <div className="ledger-kpi-card" style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', padding: '8px 10px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📤</span> বিক্রি আউট
                 </span>
-                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#c2410c', marginTop: '3px' }}>
-                  -{ledgerSummary.totalOutQty} একক
+                <div className="num-font ledger-kpi-val" style={{ fontSize: '16px', fontWeight: '900', color: '#c2410c', marginTop: '1px' }}>
+                  -{ledgerSummary.totalOutQty}
                 </div>
-                <span style={{ fontSize: '11px', color: '#9a3412', marginTop: '2px', display: 'block' }}>
-                  মোট বিক্রয়মূল্য: <strong>৳{ledgerSummary.totalOutValue.toLocaleString('en-US')}</strong>
+                <span className="ledger-kpi-sub" style={{ fontSize: '10.5px', color: '#9a3412', marginTop: '1px', display: 'block' }}>
+                  বিক্রয়: <strong>৳{ledgerSummary.totalOutValue.toLocaleString('en-US')}</strong>
                 </span>
               </div>
 
               {/* Card 3: Total Logs */}
-              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '12px 14px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>📊</span> মোট রেকর্ড সংখ্যা
+              <div className="ledger-kpi-card" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '8px 10px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📊</span> মোট রেকর্ড
                 </span>
-                <div className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '3px' }}>
-                  {ledgerSummary.totalLogs}টি এন্ট্রি
+                <div className="num-font ledger-kpi-val" style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', marginTop: '1px' }}>
+                  {ledgerSummary.totalLogs}টি
                 </div>
-                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'block' }}>
-                  তারিখ ও সময় অনুযায়ী সাজানো
+                <span className="ledger-kpi-sub" style={{ fontSize: '10.5px', color: '#64748b', marginTop: '1px', display: 'block' }}>
+                  সব লেনদেন
                 </span>
               </div>
             </div>
 
             {/* Filter Controls Bar */}
-            <div style={{
+            <div className="ledger-filter-row" style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               flexWrap: 'wrap',
-              marginBottom: '12px',
+              marginBottom: '10px',
               flexShrink: 0
             }}>
-              {/* Date Filter Tabs */}
-              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
-                {[
-                  { id: 'all', label: 'সব সময়' },
-                  { id: 'today', label: 'আজ' },
-                  { id: 'last7', label: 'বিগত ৭ দিন' },
-                  { id: 'month', label: 'এই মাস' }
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      const newDateF = t.id as any;
-                      setLedgerDateFilter(newDateF);
-                      loadAllStockLedger(ledgerFilter, newDateF, ledgerSearch);
-                    }}
-                    style={{
-                      background: ledgerDateFilter === t.id ? '#ffffff' : 'transparent',
-                      color: ledgerDateFilter === t.id ? '#0f172a' : '#64748b',
-                      border: 'none',
-                      padding: '5px 10px',
-                      borderRadius: '8px',
-                      fontSize: '11.5px',
-                      fontWeight: ledgerDateFilter === t.id ? '800' : '600',
-                      cursor: 'pointer',
-                      boxShadow: ledgerDateFilter === t.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Type Filter Tabs */}
-              <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '10px' }}>
-                {[
-                  { id: 'all', label: 'সব লেনদেন' },
-                  { id: 'stock_in', label: '📥 শুধু স্টক ইন' },
-                  { id: 'sale', label: '📤 শুধু বিক্রি' }
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      const newType = t.id as any;
-                      setLedgerFilter(newType);
-                      loadAllStockLedger(newType, ledgerDateFilter, ledgerSearch);
-                    }}
-                    style={{
-                      background: ledgerFilter === t.id ? '#ffffff' : 'transparent',
-                      color: ledgerFilter === t.id ? '#0f172a' : '#64748b',
-                      border: 'none',
-                      padding: '5px 10px',
-                      borderRadius: '8px',
-                      fontSize: '11.5px',
-                      fontWeight: ledgerFilter === t.id ? '800' : '600',
-                      cursor: 'pointer',
-                      boxShadow: ledgerFilter === t.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                    }}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
               {/* Search Box */}
-              <div style={{ position: 'relative', minWidth: '180px', flex: 1 }}>
+              <div style={{ position: 'relative', minWidth: '150px', flex: 1 }}>
                 <input
                   type="text"
-                  placeholder="🔍 পণ্য, মহাজন বা মেমো দিয়ে খুঁজুন..."
+                  placeholder="🔍 পণ্য, মহাজন বা মেমো খুঁজুন..."
                   value={ledgerSearch}
                   onChange={(e) => {
                     setLedgerSearch(e.target.value);
@@ -3212,16 +3213,93 @@ export default function StockPage() {
                     border: '1px solid #cbd5e1',
                     fontSize: '12px',
                     outline: 'none',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    background: '#ffffff'
                   }}
                 />
               </div>
+
+              {/* Filter Tabs Container */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Date Filter Tabs */}
+                <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+                  {[
+                    { id: 'all', label: 'সব সময়' },
+                    { id: 'today', label: 'আজ' },
+                    { id: 'last7', label: '৭ দিন' },
+                    { id: 'month', label: 'এই মাস' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        const newDateF = t.id as any;
+                        setLedgerDateFilter(newDateF);
+                        loadAllStockLedger(ledgerFilter, newDateF, ledgerSearch);
+                      }}
+                      style={{
+                        background: ledgerDateFilter === t.id ? '#ffffff' : 'transparent',
+                        color: ledgerDateFilter === t.id ? '#0f172a' : '#64748b',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: ledgerDateFilter === t.id ? '800' : '600',
+                        cursor: 'pointer',
+                        boxShadow: ledgerDateFilter === t.id ? '0 1px 2px rgba(0,0,0,0.08)' : 'none'
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Type Filter Tabs */}
+                <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+                  {[
+                    { id: 'all', label: 'সব' },
+                    { id: 'stock_in', label: '📥 স্টক ইন' },
+                    { id: 'sale', label: '📤 বিক্রি' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        const newType = t.id as any;
+                        setLedgerFilter(newType);
+                        loadAllStockLedger(newType, ledgerDateFilter, ledgerSearch);
+                      }}
+                      style={{
+                        background: ledgerFilter === t.id ? '#ffffff' : 'transparent',
+                        color: ledgerFilter === t.id ? '#0f172a' : '#64748b',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: ledgerFilter === t.id ? '800' : '600',
+                        cursor: 'pointer',
+                        boxShadow: ledgerFilter === t.id ? '0 1px 2px rgba(0,0,0,0.08)' : 'none'
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Scrollable Audit Table */}
-            <div style={{ overflowY: 'auto', flex: 1, border: '1px solid #e2e8f0', borderRadius: '14px' }}>
+            {/* Scrollable Audit Records List with Generous Height */}
+            <div style={{
+              overflowY: 'auto',
+              flex: 1,
+              minHeight: '260px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '14px',
+              background: '#f8fafc',
+              padding: '6px'
+            }}>
               {loadingLedger ? (
-                <div style={{ padding: '30px', textAlign: 'center' }}>
+                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
                   <DataLoader text="সার্বিক স্টক ও বিক্রয় খতিয়ান লোড হচ্ছে..." />
                 </div>
               ) : ledgerLogs.length === 0 ? (
@@ -3230,110 +3308,199 @@ export default function StockPage() {
                   এই ফিল্টারে কোনো স্টক ইন বা বিক্রির রেকর্ড পাওয়া যায়নি।
                 </div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
-                    <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800' }}>
-                      <th style={{ padding: '9px 12px' }}>📅 তারিখ ও সময়</th>
-                      <th style={{ padding: '9px 12px' }}>📦 পণ্যের নাম</th>
-                      <th style={{ padding: '9px 10px' }}>ধরন</th>
-                      <th style={{ padding: '9px 10px' }}>পরিমাণ</th>
-                      <th style={{ padding: '9px 10px' }}>একক দর</th>
-                      <th style={{ padding: '9px 10px' }}>মোট টাকা</th>
-                      <th style={{ padding: '9px 12px' }}>উৎস / রেফারেন্স</th>
-                      <th style={{ padding: '9px 12px' }}>নোট</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  {/* Desktop Full 8-Column Table (>= 768px) */}
+                  <div className="ledger-desktop-table" style={{ background: '#ffffff', borderRadius: '10px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
+                      <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+                        <tr style={{ borderBottom: '1.5px solid #cbd5e1', color: '#475569', fontWeight: '800' }}>
+                          <th style={{ padding: '9px 12px' }}>📅 তারিখ ও সময়</th>
+                          <th style={{ padding: '9px 12px' }}>📦 পণ্যের নাম</th>
+                          <th style={{ padding: '9px 10px' }}>ধরন</th>
+                          <th style={{ padding: '9px 10px' }}>পরিমাণ</th>
+                          <th style={{ padding: '9px 10px' }}>একক দর</th>
+                          <th style={{ padding: '9px 10px' }}>মোট টাকা</th>
+                          <th style={{ padding: '9px 12px' }}>উৎস / রেফারেন্স</th>
+                          <th style={{ padding: '9px 12px' }}>নোট</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledgerLogs.map((log: any, idx: number) => {
+                          const isInflow = log.type === 'stock_in';
+                          const isSale = log.type === 'sale';
+                          const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
+                            year: 'numeric', month: 'short', day: 'numeric'
+                          }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                          const totalAmt = Math.round((Number(log.quantity) || 0) * (Number(log.unit_price) || 0));
+
+                          return (
+                            <tr
+                              key={log.id || idx}
+                              style={{
+                                borderBottom: '1px solid #f1f5f9',
+                                background: isInflow ? '#f0fdf4' : isSale ? '#ffffff' : '#fafafa'
+                              }}
+                            >
+                              <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                {formattedDate}
+                              </td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <strong style={{ color: '#0f172a', fontSize: '12.5px' }}>
+                                  {log.product_name}
+                                </strong>
+                              </td>
+                              <td style={{ padding: '8px 10px' }}>
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: '900',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: isInflow ? '#dcfce7' : isSale ? '#ffedd5' : '#f1f5f9',
+                                  color: isInflow ? '#15803d' : isSale ? '#c2410c' : '#475569',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {isInflow ? '📥 নতুন স্টক ইন' : isSale ? '🛒 বিক্রি (আউট)' : log.type === 'return' ? '↩️ ফেরত' : '⚖️ সমন্বয়'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 10px' }}>
+                                <span
+                                  className="num-font"
+                                  style={{
+                                    fontSize: '13px',
+                                    fontWeight: '900',
+                                    color: isInflow ? '#15803d' : '#c2410c'
+                                  }}
+                                >
+                                  {isInflow ? `+${log.quantity}` : `-${log.quantity}`} {log.unit}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 10px' }}>
+                                <span className="num-font" style={{ color: '#475569', fontWeight: '700' }}>
+                                  ৳{log.unit_price || 0}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 10px' }}>
+                                <span className="num-font" style={{ fontWeight: '900', color: isInflow ? '#15803d' : '#0f172a' }}>
+                                  ৳{totalAmt.toLocaleString('en-US')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '8px 12px', color: '#475569', fontSize: '11.5px' }}>
+                                {log.source_ref || (isInflow ? 'চালান' : 'মেমো')}
+                              </td>
+                              <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', maxWidth: '180px' }}>
+                                {log.note || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile High-Legibility Cards (< 768px) - NO horizontal scroll, full visibility */}
+                  <div className="ledger-mobile-cards">
                     {ledgerLogs.map((log: any, idx: number) => {
                       const isInflow = log.type === 'stock_in';
                       const isSale = log.type === 'sale';
                       const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
-                        year: 'numeric', month: 'short', day: 'numeric'
-                      }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                        month: 'short', day: 'numeric'
+                      }) + ', ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
                       const totalAmt = Math.round((Number(log.quantity) || 0) * (Number(log.unit_price) || 0));
 
                       return (
-                        <tr
+                        <div
                           key={log.id || idx}
                           style={{
-                            borderBottom: '1px solid #f1f5f9',
-                            background: isInflow ? '#f0fdf4' : isSale ? '#ffffff' : '#fafafa'
+                            background: isInflow ? '#f0fdf4' : '#ffffff',
+                            border: isInflow ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '10px 12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                           }}
                         >
-                          <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap' }}>
-                            {formattedDate}
-                          </td>
-                          <td style={{ padding: '8px 12px' }}>
-                            <strong style={{ color: '#0f172a', fontSize: '12.5px' }}>
-                              {log.product_name}
-                            </strong>
-                          </td>
-                          <td style={{ padding: '8px 10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                              📅 {formattedDate}
+                            </span>
                             <span style={{
-                              fontSize: '10px',
-                              fontWeight: '900',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
+                              fontSize: '10.5px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
                               background: isInflow ? '#dcfce7' : isSale ? '#ffedd5' : '#f1f5f9',
-                              color: isInflow ? '#15803d' : isSale ? '#c2410c' : '#475569',
-                              whiteSpace: 'nowrap'
+                              color: isInflow ? '#15803d' : isSale ? '#c2410c' : '#475569'
                             }}>
-                              {isInflow ? '📥 নতুন স্টক ইন' : isSale ? '🛒 বিক্রি (আউট)' : log.type === 'return' ? '↩️ ফেরত' : '⚖️ সমন্বয়'}
+                              {isInflow ? '📥 স্টক ইন' : isSale ? '🛒 বিক্রি (আউট)' : log.type}
                             </span>
-                          </td>
-                          <td style={{ padding: '8px 10px' }}>
-                            <span
-                              className="num-font"
-                              style={{
-                                fontSize: '13px',
-                                fontWeight: '900',
-                                color: isInflow ? '#15803d' : '#c2410c'
-                              }}
-                            >
-                              {isInflow ? `+${log.quantity}` : `-${log.quantity}`} {log.unit}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 10px' }}>
-                            <span className="num-font" style={{ color: '#475569', fontWeight: '700' }}>
-                              ৳{log.unit_price || 0}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 10px' }}>
-                            <span className="num-font" style={{ fontWeight: '900', color: isInflow ? '#15803d' : '#0f172a' }}>
-                              ৳{totalAmt.toLocaleString('en-US')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 12px', color: '#475569', fontSize: '11.5px' }}>
-                            {log.source_ref || (isInflow ? 'চালান' : 'মেমো')}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: '#64748b', fontSize: '11px', maxWidth: '180px' }}>
-                            {log.note || '-'}
-                          </td>
-                        </tr>
+                          </div>
+
+                          <div style={{ fontWeight: '800', fontSize: '13.5px', color: '#0f172a', marginTop: '1px' }}>
+                            {log.product_name}
+                          </div>
+
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: isInflow ? '#dcfce7' : '#f8fafc',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            marginTop: '3px'
+                          }}>
+                            <div>
+                              <span style={{ fontSize: '11px', color: '#64748b' }}>পরিমাণ: </span>
+                              <strong className="num-font" style={{ color: isInflow ? '#15803d' : '#c2410c', fontSize: '13px' }}>
+                                {isInflow ? `+${log.quantity}` : `-${log.quantity}`} {log.unit}
+                              </strong>
+                              {log.unit_price > 0 && (
+                                <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>
+                                  (@ ৳{log.unit_price})
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: '11px', color: '#64748b' }}>মোট: </span>
+                              <strong className="num-font" style={{ color: isInflow ? '#15803d' : '#0f172a', fontSize: '13.5px' }}>
+                                ৳{totalAmt.toLocaleString('en-US')}
+                              </strong>
+                            </div>
+                          </div>
+
+                          {(log.source_ref || log.note) && (
+                            <div style={{ fontSize: '10.5px', color: '#64748b', display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              {log.source_ref && <span>📑 {log.source_ref}</span>}
+                              {log.note && <span>💬 {log.note}</span>}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </>
               )}
             </div>
 
             {/* Modal Bottom Actions */}
             <div style={{
-              marginTop: '14px',
-              paddingTop: '12px',
+              marginTop: '10px',
+              paddingTop: '10px',
               borderTop: '1px solid #f1f5f9',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: '10px'
+              gap: '8px',
+              flexShrink: 0
             }}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={handleExportLedgerCSV}
                   style={{
-                    padding: '7px 14px',
+                    padding: '8px 14px',
                     borderRadius: '10px',
                     border: '1px solid #a7f3d0',
                     background: '#ecfdf5',
@@ -3352,7 +3519,7 @@ export default function StockPage() {
                   type="button"
                   onClick={() => window.print()}
                   style={{
-                    padding: '7px 14px',
+                    padding: '8px 14px',
                     borderRadius: '10px',
                     border: '1px solid #cbd5e1',
                     background: '#f8fafc',
@@ -3373,7 +3540,7 @@ export default function StockPage() {
                 type="button"
                 onClick={() => setShowAllLedgerModal(false)}
                 style={{
-                  padding: '8px 20px',
+                  padding: '8px 18px',
                   borderRadius: '10px',
                   border: 'none',
                   background: '#0f172a',
