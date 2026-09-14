@@ -352,7 +352,7 @@ export default function VoiceKhataModal({
                   <span style={{ width: '6px', height: '18px', background: '#ef4444', borderRadius: '4px', animation: 'pulse 1.2s infinite 0.4s' }} />
                 </div>
                 <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-                  পরিষ্কার বাংলায় বলুন... (AI স্বয়ংক্রিয়ভাবে বুঝে নিবে)
+                  পরিষ্কার বাংলায় বলুন... (স্বয়ংক্রিয়ভাবে হিসাব সংরক্ষণ হবে)
                 </span>
               </div>
             )}

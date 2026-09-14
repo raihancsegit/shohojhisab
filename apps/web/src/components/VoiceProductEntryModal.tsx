@@ -257,7 +257,7 @@ export default function VoiceProductEntryModal({
                 মুখে বলে নতুন পণ্য যোগ (Voice Product Entry)
               </h3>
               <p style={{ margin: 0, fontSize: '12px', opacity: 0.85, fontWeight: '600' }}>
-                টাইপ না করে সরাসরি মুখে বলুন — AI স্বয়ংক্রিয়ভাবে ফিল্ড পূরণ করবে
+                টাইপ না করে সরাসরি মুখে বলুন — স্বয়ংক্রিয়ভাবে ফিল্ড পূরণ হবে
               </p>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function VoiceProductEntryModal({
                 color: isListening ? '#15803d' : '#475569',
                 textTransform: 'uppercase'
               }}>
-                {isListening ? '● AI ভয়েস লিসেনিং অন' : '○ মাইক বন্ধ'}
+                {isListening ? '● ভয়েস রেকর্ড অন' : '○ মাইক বন্ধ'}
               </span>
               <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
                 (বাংলায় কথা বলুন)
@@ -407,7 +407,7 @@ export default function VoiceProductEntryModal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '900', color: '#4338ca' }}>
-                  ✓ AI সনাক্তকৃত নতুন পণ্যের বিবরণ
+                  ✓ সনাক্তকৃত নতুন পণ্যের বিবরণ
                 </span>
                 <span style={{
                   background: '#dbeafe',
@@ -499,7 +499,7 @@ export default function VoiceProductEntryModal({
                 কোনো পণ্য মুখে বলুন অথবা উপরের বাটনে ক্লিক করুন
               </p>
               <p style={{ fontSize: '12px', margin: '0 0 12px', color: '#94a3b8' }}>
-                AI আপনার কথার মধ্য থেকে নাম, স্টক, কেনা দর ও বিক্রয় দর স্বয়ংক্রিয়ভাবে আলাদা করবে
+                কথার মধ্য থেকে নাম, স্টক, কেনা দর ও বিক্রয় দর স্বয়ংক্রিয়ভাবে সনাক্ত হবে
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
                 {voiceConfig.quickSaleSuggestions.slice(0, 4).map((sample, idx) => (

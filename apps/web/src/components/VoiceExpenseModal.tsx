@@ -228,7 +228,7 @@ export default function VoiceExpenseModal({
             <div>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>ভয়েসে দৈনিক খরচ এন্ট্রি</span>
-                <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '4px' }}>AI</span>
+                <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '4px' }}>ভয়েস</span>
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '11.5px', opacity: 0.85 }}>
                 {isListening ? 'কথা বলুন, অটো সেভ হবে' : 'মাইক্রোফোনে ট্যাপ করে শুরু করুন'}

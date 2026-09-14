@@ -3527,10 +3527,31 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           stockDeduction = qty;
         }
 
+        const currentStock = Number(matchedProd.stock) || 0;
+
+        // Strict Stock Check
+        if (currentStock <= 0) {
+          return {
+            success: false,
+            action: 'out_of_stock',
+            speech: `⚠️ সতর্কবার্তা: "${matchedProd.bangla_name || matchedProd.name}" বর্তমানে দোকানে স্টকে নেই (স্টক ০)! বিক্রি করতে হলে আগে নতুন মাল স্টক ইন করুন।`,
+            reply: `❌ **স্টক শেষ (Out of Stock)!**\n• পণ্য: **${matchedProd.bangla_name || matchedProd.name}**\n• বর্তমান মজুদ: **০ ${matchedProd.unit || 'টি'}**\nঅনুগ্রহ করে বিক্রি করার পূর্বে মালটি স্টকে যোগ (Stock In) করুন।`,
+            actionLink: { text: 'স্টক ইন করুন →', href: `/stock?search=${encodeURIComponent(matchedProd.bangla_name || matchedProd.name)}` }
+          };
+        }
+
+        if (stockDeduction > currentStock) {
+          return {
+            success: false,
+            action: 'insufficient_stock',
+            speech: `⚠️ স্টকে পর্যাপ্ত মাল নেই! "${matchedProd.bangla_name || matchedProd.name}" স্টকে মাত্র ${currentStock} ${matchedProd.unit || 'টি'} আছে, কিন্তু আপনি ${qty} ${displayUnit} চেয়েছেন।`,
+            reply: `⚠️ **পর্যাপ্ত স্টক নেই!**\n• পণ্য: **${matchedProd.bangla_name || matchedProd.name}**\n• স্টকে আছে: **${currentStock} ${matchedProd.unit || 'টি'}**\n• চাওয়া হয়েছে: **${qty} ${displayUnit}**\nঅনুগ্রহ করে সঠিক পরিমাণ বলুন।`,
+            actionLink: { text: 'স্টক খাতা দেখুন →', href: `/stock?search=${encodeURIComponent(matchedProd.bangla_name || matchedProd.name)}` }
+          };
+        }
+
         const lineTotal = Math.round(qty * effectivePricePerSpokenUnit);
         const lineProfit = Math.max(0, Math.round(lineTotal - (stockDeduction * effectivePurchasePerSpokenUnit)));
-
-        const currentStock = Number(matchedProd.stock) || 0;
         const newStock = Math.max(0, parseFloat((currentStock - stockDeduction).toFixed(3)));
 
         // Update product stock in DB
@@ -3602,7 +3623,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         customer?.id || null,
         customer?.name || (isDue ? 'বাকি কাস্টমার' : 'নগদ কাস্টমার'),
         summaryList || (isDue ? 'ভয়েস বাকি মেমো' : 'ভয়েস স্মার্ট মেমো'),
-        'ভয়েস এআই',
+        'হিসাব সহকারী',
         now
       );
 
@@ -3806,7 +3827,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         db.prepare(`
           INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
+        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'হিসাব সহকারী', now);
 
         const itemId = 'sitem-' + uuidv4().slice(0, 8);
         db.prepare(`
@@ -3887,7 +3908,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         db.prepare(`
           INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'ভয়েস এআই', now);
+        `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'হিসাব সহকারী', now);
 
         const itemId = 'sitem-' + uuidv4().slice(0, 8);
         const prodId = 'prod-custom-' + uuidv4().slice(0, 6);
@@ -4843,7 +4864,7 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(paymentId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'ভয়েস এআই', now);
+    `).run(paymentId, tenantId, invoiceNo, amount, 0, amount, amount, 0, 0, 'due_payment', customer.id, customer.name, 'ভয়েস বাকি আদায় জমা', 'হিসাব সহকারী', now);
 
     const itemId = 'sitem-' + uuidv4().slice(0, 8);
     db.prepare(`
@@ -4981,7 +5002,7 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(saleId, tenantId, invoiceNo, finalAmount, 0, finalAmount, 0, finalAmount, Math.round(finalAmount * 0.15), 'due', customer.id, customer.name, summaryList, 'ভয়েস এআই', now);
+    `).run(saleId, tenantId, invoiceNo, finalAmount, 0, finalAmount, 0, finalAmount, Math.round(finalAmount * 0.15), 'due', customer.id, customer.name, summaryList, 'হিসাব সহকারী', now);
 
     if (processedItems.length > 0) {
       for (const item of processedItems) {

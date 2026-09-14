@@ -15,7 +15,7 @@ export default function AiAssistantPage() {
     {
       id: '1',
       sender: 'ai',
-      text: `আসসালামু আলাইকুম! আমি ${tenant?.shopName || 'আপনার দোকানের'} স্মার্ট এআই বিজনেস অ্যাসিস্ট্যান্ট।\n\nআপনি মুখে যা বলবেন (যেমন: "আজকের লাভ কত", "রহিম ভাই ৫০০ টাকা বাকি নিল", "চা নাস্তা ৬০ টাকা খরচ", "কোন মালের স্টক কম") আমি স্বয়ংক্রিয়ভাবে হিসাব সংরক্ষণ ও রিপোর্ট জানিয়ে দেব।`,
+      text: `আসসালামু আলাইকুম! আমি ${tenant?.shopName || 'আপনার দোকানের'} ডিজিটাল হিসাব সহকারী।\n\nআপনি মুখে যা বলবেন (যেমন: "আজকের লাভ কত", "রহিম ভাই ৫০০ টাকা বাকি নিল", "চা নাস্তা ৬০ টাকা খরচ", "কোন মালের স্টক কম") আমি স্বয়ংক্রিয়ভাবে হিসাব সংরক্ষণ ও রিপোর্ট জানিয়ে দেব।`,
       time: 'লাইভ',
       actionLink: null
     }
@@ -212,10 +212,10 @@ export default function AiAssistantPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #f59e0b, #ec4899)', display: 'grid', placeItems: 'center', fontSize: '28px' }}>
-            🤖
+            🏪
           </div>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: '900', margin: 0 }}>দোকান এআই বিজনেস অ্যাসিস্ট্যান্ট</h1>
+            <h1 style={{ fontSize: '20px', fontWeight: '900', margin: 0 }}>দোকানের ডিজিটাল হিসাব সহকারী</h1>
             <span style={{ fontSize: '13px', color: '#e9d5ff' }}>মুখে বলুন — স্বয়ংক্রিয় হিসাব ও লাইভ উত্তর পান</span>
           </div>
         </div>
@@ -338,7 +338,7 @@ export default function AiAssistantPage() {
 
         {loading && (
           <div style={{ alignSelf: 'flex-start', background: '#f1f5f9', padding: '12px 18px', borderRadius: '18px', fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span> এআই হিসাব প্রসেস করছে...
+            <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span> সহকারী হিসাব প্রসেস করছে...
           </div>
         )}
       </div>

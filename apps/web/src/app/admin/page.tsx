@@ -1362,7 +1362,7 @@ export default function SuperAdminPage() {
               { id: 'payment', label: '💳 পেমেন্ট ও মার্চেন্ট', desc: 'বিকাশ, নগদ ও পেমেন্ট রুলস' },
               { id: 'sms', label: '📩 এসএমএস গেটওয়ে', desc: 'এসএমএস এপিআই ও অ্যালার্ট মেসেজ' },
               { id: 'billing', label: '💎 প্ল্যান ও বিলিং', desc: 'প্ল্যান প্রাইসিং ও ফ্রি ট্রায়াল' },
-              { id: 'features', label: '⚡ গ্লোবাল ফিচার ফ্ল্যাগস', desc: 'ভয়েস এআই, ওসসিআর ও নোটিশ' },
+              { id: 'features', label: '⚡ গ্লোবাল ফিচার ফ্ল্যাগস', desc: 'ভয়েস সহকারী, চালান স্ক্যানার ও নোটিশ' },
               { id: 'backup', label: '💾 ব্যাকআপ ও ডায়াগনস্টিক', desc: 'ক্লাউড ব্যাকআপ ও ক্যাশ ক্লিয়ার' },
               { id: 'audit', label: '📜 সিস্টেম অডিট লগ', desc: 'অ্যাডমিন অ্যাক্টিভিটি হিস্ট্রি' }
             ].map(tab => (
@@ -1891,8 +1891,8 @@ export default function SuperAdminPage() {
               <form onSubmit={handleSaveSettings} style={{ display: 'grid', gap: '16px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
                   {[
-                    { key: 'globalVoicePOS', label: '🎙️ ভয়েস এআই মেমো ও স্মার্ট ক্যালকুলেটর' },
-                    { key: 'globalOcrScanner', label: '📸 এআই চালান ফটো স্ক্যানার (OCR)' },
+                    { key: 'globalVoicePOS', label: '🎙️ ভয়েস মেমো ও স্মার্ট ক্যালকুলেটর' },
+                    { key: 'globalOcrScanner', label: '📸 চালান ফটো স্ক্যানার (OCR)' },
                     { key: 'globalThermalPrint', label: '🖨️ থার্মাল রিসিপ্ট প্রিন্টিং ইঞ্জিন (ESC/POS)' },
                     { key: 'globalMultiBranch', label: '🏢 মাল্টি-ব্রাঞ্চ ও ওয়্যারহাউস স্থানান্তর' },
                     { key: 'showAnnouncementBanner', label: '📢 ড্যাশবোর্ড সার্বজনীন নোটিশ ব্যানার' },
@@ -2240,7 +2240,7 @@ export default function SuperAdminPage() {
             <form onSubmit={handleSaveShopFeatures} style={{ display: 'grid', gap: '10px' }}>
               {[
                 { key: 'enableMultiBranch', label: 'মাল্টি-ব্রাঞ্চ (Multi-Branch Support)' },
-                { key: 'enableChallanOcr', label: 'এআই চালান ক্যামেরা স্ক্যানার (OCR Memo Reader)' },
+                { key: 'enableChallanOcr', label: 'চালান ক্যামেরা স্ক্যানার (OCR Memo Reader)' },
                 { key: 'enableInstallments', label: 'কিস্তি খাতা (Installments / EMI)' },
                 { key: 'enableExpiryTracker', label: 'মেয়াদ রাডার (Expiry Date Tracker)' },
                 { key: 'enableBarcodePrinter', label: 'বারকোড ও স্টিকার প্রিন্টার' },

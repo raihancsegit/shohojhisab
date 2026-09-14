@@ -58,7 +58,7 @@ export default function ChallanOcrPage() {
   };
 
   return (
-    <FeatureGate requiredPlan="pro" title="এআই চালান স্ক্যানার (Challan OCR) প্রো প্ল্যানে অন্তর্ভুক্ত">
+    <FeatureGate requiredPlan="pro" title="চালান ক্যামেরা স্ক্যানার প্রো প্ল্যানে অন্তর্ভুক্ত">
       <div style={{ maxWidth: '880px', margin: '0 auto', padding: '24px 16px 40px' }}>
       
       {/* Top Banner */}
@@ -77,13 +77,13 @@ export default function ChallanOcrPage() {
       }}>
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: '99px', fontSize: '13px', fontWeight: '700', marginBottom: '8px' }}>
-            <span>📸</span> এআই চালান স্ক্যানার ও স্মার্ট রি-অর্ডার
+            <span>📸</span> চালান ক্যামেরা স্ক্যানার ও রি-অর্ডার
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: '900', letterSpacing: '-0.5px' }}>
             কাগজের চালান ফটো তুলুন — টাইপ ছাড়াই স্টক তুলুন!
           </h1>
           <span style={{ fontSize: '13.5px', color: '#c7d2fe' }}>
-            মহাজনের চালানের ছবি তুললেই এআই নাম, দাম ও পরিমাণ স্বয়ংক্রিয়ভাবে ইনভেন্টরিতে যুক্ত করে দেয়।
+            মহাজনের চালানের ছবি তুললেই নাম, দাম ও পরিমাণ স্বয়ংক্রিয়ভাবে ইনভেন্টরিতে যুক্ত হয়ে যায়।
           </span>
         </div>
 
@@ -136,7 +136,7 @@ export default function ChallanOcrPage() {
               মহাজনের চালানের ছবি তুলুন বা আপলোড করুন
             </h3>
             <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '440px', margin: '0 auto 20px' }}>
-              হাতে লেখা বা প্রিন্ট করা মেমো ক্যামেরার সামনে ধরুন — এআই স্বয়ংক্রিয়ভাবে মালের তালিকা বের করে দেবে।
+              হাতে লেখা বা প্রিন্ট করা মেমো ক্যামেরার সামনে ধরুন — স্বয়ংক্রিয়ভাবে মালের তালিকা তৈরি হবে।
             </p>
 
             <button
@@ -159,7 +159,7 @@ export default function ChallanOcrPage() {
               }}
             >
               <span>{isScanning ? '⏳' : '⚡'}</span>
-              <span>{isScanning ? 'এআই চালান প্রসেস করছে...' : 'চালান স্ক্যান সিমুলেশন করুন'}</span>
+              <span>{isScanning ? 'চালান প্রসেস হচ্ছে...' : 'চালান স্ক্যান সিমুলেশন করুন'}</span>
             </button>
           </div>
 
@@ -169,7 +169,7 @@ export default function ChallanOcrPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
                 <div>
                   <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '11.5px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px' }}>
-                    ✓ ১০০% নিখুঁত এআই এক্সট্রাকশন
+                    ✓ ১০০% নিখুঁত স্ক্যান সম্পন্ন
                   </span>
                   <h4 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '6px' }}>{scannedResult.supplierName}</h4>
                   <span style={{ fontSize: '12.5px', color: '#64748b' }}>চালান নং: {scannedResult.challanNo} • তারিখ: {scannedResult.date}</span>

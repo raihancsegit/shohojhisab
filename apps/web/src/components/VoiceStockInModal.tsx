@@ -355,7 +355,7 @@ export default function VoiceStockInModal({
                 color: isListening ? '#15803d' : '#475569',
                 textTransform: 'uppercase'
               }}>
-                {isListening ? '● AI ভয়েস লিসেনিং অন' : '○ মাইক বন্ধ'}
+                {isListening ? '● ভয়েস রেকর্ড অন' : '○ মাইক বন্ধ'}
               </span>
               <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
                 (চালান বা পণ্যের স্টক বলুন)
@@ -439,7 +439,7 @@ export default function VoiceStockInModal({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '900', color: '#047857' }}>
-                  ✓ AI সনাক্তকৃত স্টক ইন বিবরণ
+                  ✓ সনাক্তকৃত স্টক ইন বিবরণ
                 </span>
                 <span style={{
                   background: parsedStock.product ? '#dcfce7' : '#fef3c7',
@@ -536,7 +536,7 @@ export default function VoiceStockInModal({
                 কোনো পণ্য ও চালানের পরিমাণ মুখে বলুন অথবা উপরের বাটনে ক্লিক করুন
               </p>
               <p style={{ fontSize: '12px', margin: '0 0 12px', color: '#94a3b8' }}>
-                AI আপনার কথ্য কথার ভিত্তিতে ক্যাটালগের সঠিক পণ্য খুঁজে নিয়ে বর্তমান স্টকের সাথে যোগ করবে
+                আপনার কথ্য কথার ভিত্তিতে ক্যাটালগের সঠিক পণ্য খুঁজে নিয়ে বর্তমান স্টকের সাথে যোগ করা হবে
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
                 {voiceConfig.stockInSuggestions.map((sample, idx) => (

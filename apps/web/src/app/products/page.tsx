@@ -265,7 +265,7 @@ export default function ProductsPage() {
               boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
             }}
           >
-            <span>🎙️</span> মুখে বলে পণ্য যোগ (AI Voice)
+            <span>🎙️</span> মুখে বলে পণ্য যোগ (ভয়েস এন্ট্রি)
           </button>
 
           <button

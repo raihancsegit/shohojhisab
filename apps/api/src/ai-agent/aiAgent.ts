@@ -150,6 +150,7 @@ export function executeStockSaleOrDue(
     unitPrice: number;
     lineTotal: number;
     stockDeduction: number;
+    currentStock: number;
     newStock: number;
   }> = [];
 
@@ -209,8 +210,42 @@ export function executeStockSaleOrDue(
       unitPrice: Math.round(unitPrice),
       lineTotal,
       stockDeduction,
+      currentStock,
       newStock
     });
+  }
+
+  // STRICT STOCK & INVENTORY VALIDATION
+  for (const item of processedItems) {
+    if (!item.productId) {
+      return {
+        success: false,
+        action: 'product_not_found',
+        speech: `⚠️ দুঃখিত, দোকানে "${item.productName}" নামের কোনো পণ্য তালিকায় খুঁজে পাওয়া যায়নি। সঠিক নাম বলুন বা পণ্য তালিকায় যুক্ত করুন।`,
+        reply: `⚠️ **পণ্য পাওয়া যায়নি:**\n• নাম: **${item.productName}**\nদোকানের পণ্য তালিকায় এই পণ্যটি নেই। অনুগ্রহ করে পণ্যটি তালিকায় যুক্ত করুন বা সঠিক নামে ডাকুন।`,
+        actionLink: { text: 'পণ্য তালিকা দেখুন →', href: '/products' }
+      };
+    }
+
+    if (item.currentStock <= 0) {
+      return {
+        success: false,
+        action: 'out_of_stock',
+        speech: `⚠️ সতর্কবার্তা: "${item.productName}" বর্তমানে দোকানে স্টকে নেই (স্টক ০)! বিক্রি করতে হলে আগে নতুন মাল স্টক ইন করুন।`,
+        reply: `❌ **স্টক শেষ (Out of Stock)!**\n• পণ্য: **${item.productName}**\n• বর্তমান মজুদ: **০ ${item.unit}**\nঅনুগ্রহ করে বিক্রি করার পূর্বে মালটি স্টকে যোগ (Stock In) করুন।`,
+        actionLink: { text: 'স্টক ইন করুন →', href: `/stock?search=${encodeURIComponent(item.productName)}` }
+      };
+    }
+
+    if (item.stockDeduction > item.currentStock) {
+      return {
+        success: false,
+        action: 'insufficient_stock',
+        speech: `⚠️ স্টকে পর্যাপ্ত মাল নেই! "${item.productName}" স্টকে মাত্র ${item.currentStock} ${item.unit} আছে, কিন্তু আপনি ${item.quantity} ${item.unit} চেয়েছেন।`,
+        reply: `⚠️ **পর্যাপ্ত স্টক নেই!**\n• পণ্য: **${item.productName}**\n• স্টকে আছে: **${item.currentStock} ${item.unit}**\n• চাওয়া হয়েছে: **${item.quantity} ${item.unit}**\nঅনুগ্রহ করে সঠিক পরিমাণ বলুন।`,
+        actionLink: { text: 'স্টক খাতা দেখুন →', href: `/stock?search=${encodeURIComponent(item.productName)}` }
+      };
+    }
   }
 
   const finalTotalAmount = Number(params.explicitTotalAmount) > 0 ? Number(params.explicitTotalAmount) : calculatedTotal;
@@ -246,7 +281,7 @@ export function executeStockSaleOrDue(
       customer ? customer.id : null,
       customer ? customer.name : 'খুচরা কাস্টমার',
       summaryList,
-      'ভয়েস এআই এজেন্ট',
+      'হিসাব সহকারী (ভয়েস)',
       now
     );
 
@@ -306,15 +341,19 @@ export function executeStockSaleOrDue(
     items: processedItems
   });
 
+  const stockSummaryList = processedItems.map(i => `${i.productName} (অবশিষ্ট: ${i.newStock} ${i.unit})`).join(', ');
+
   const speech = params.isDue
-    ? `✓ ${customer ? customer.name : 'কাস্টমার'} এর বাকি খাতায় ৳${finalTotalAmount} টাকা (${summaryList}) যোগ ও স্টক আপডেট হয়েছে।`
-    : `✓ ক্যাশ বিক্রি ৳${finalTotalAmount} টাকা সম্পন্ন এবং ${summaryList} স্টক থেকে কমানো হয়েছে।`;
+    ? `✓ ${customer ? customer.name : 'কাস্টমার'} এর বাকি খাতায় ৳${finalTotalAmount} টাকা (${summaryList}) যোগ হয়েছে। অবশিষ্ট স্টক: ${stockSummaryList}।`
+    : `✓ ক্যাশ বিক্রি ৳${finalTotalAmount} টাকা সম্পন্ন! স্টক থেকে ${summaryList} কাটা হয়েছে। অবশিষ্ট স্টক: ${stockSummaryList}।`;
 
   const reply = `✅ **${params.isDue ? 'বাকি এন্ট্রি ও স্টক আপডেট সম্পন্ন!' : 'ক্যাশ বিক্রয় সম্পন্ন!'}**\n` +
     (customer ? `• কাস্টমার: **${customer.name}**\n` : '') +
     `• মোট টাকা: **৳${finalTotalAmount.toLocaleString('en-US')}**\n` +
     (params.isDue && customer ? `• বর্তমান মোট বকেয়া: **৳${newDue.toLocaleString('en-US')}**\n` : '') +
-    `• মালপত্র: ${summaryList}`;
+    `• বিক্রিত পণ্য: **${summaryList}**\n` +
+    `• 📦 **দোকানে বাকি মজুদ (Stock):**\n` +
+    processedItems.map(i => `   └ ${i.productName}: **${i.newStock} ${i.unit}**`).join('\n');
 
   return {
     success: true,
@@ -349,7 +388,7 @@ export async function runGeminiShopAgent(
   if (!apiKey) return null;
 
   const tenant = db.prepare('SELECT id, shop_name, owner_name, industry_category_id FROM tenants WHERE id = ?').get(tenantId) as any;
-  const products = db.prepare('SELECT id, bangla_name, name, stock, unit, sub_unit, selling_price, conversion_ratio FROM products WHERE tenant_id = ? LIMIT 60').all(tenantId) as any[];
+  const products = db.prepare('SELECT id, bangla_name, name, stock, unit, sub_unit, selling_price, purchase_price, low_stock_threshold, conversion_ratio FROM products WHERE tenant_id = ? LIMIT 80').all(tenantId) as any[];
   const customers = db.prepare('SELECT id, name, phone, total_due FROM customers WHERE tenant_id = ? LIMIT 50').all(tenantId) as any[];
 
   // Compact grounding prompt
@@ -374,7 +413,7 @@ export async function runGeminiShopAgent(
   };
   const categoryName = categoryNames[categoryId] || 'Retail Store';
 
-  const systemInstruction = `You are the specialized AI Shopkeeper Assistant for "${tenant?.shop_name || 'দোকান'}" (${categoryName}) in Bangladesh.
+  const systemInstruction = `You are the specialized Shopkeeper Accounting Assistant for "${tenant?.shop_name || 'দোকান'}" (${categoryName}) in Bangladesh.
 Your task is to understand shopkeeper Bengali voice commands and extract structured JSON actions for retail transactions tailored to this shop category.
 
 Grounding Inventory Data:
@@ -393,7 +432,7 @@ Actions you can return:
 1. "stock_sale_or_due": For selling goods, credit/due, or cash sales (e.g. "রহিম ৫০ টাকা বাকি ২ কেজি চিনি", "২ পাতা নাপা বিক্রি ক্যাশে", "করিমরে ১ জোড়া জুতা বাকিতে দাও", "১০ ফুট পাইপ বিক্রি").
 2. "due_payment": For customer paying back due money (e.g. "রহিম ২০০ টাকা জমা দিল", "করিমের বাকি শোধ ১০০ টাকা").
 3. "expense": For shop daily expense (e.g. "চা নাস্তা ৫০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা").
-4. "query": For balance or stock inquiry.
+4. "query": For balance, customer due, or product stock inquiry (e.g. "চিনির স্টক কত", "নাপা আছে কিনা", "করিমের বাকি কত", "কোন মালের স্টক কম").
 
 OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 {
@@ -416,9 +455,9 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500); // 3.5s max latency constraint
+    const timeout = setTimeout(() => controller.abort(), 4500);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
@@ -479,7 +518,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           const invoiceNo = 'PAY-' + Date.now().toString().slice(-4);
           db.prepare(`
             INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
-            VALUES (?, ?, ?, ?, 0, ?, ?, 0, 0, 'due_payment', ?, ?, 'এআই এজেন্ট বাকি আদায় জমা', 'ভয়েস এআই', ?)
+            VALUES (?, ?, ?, ?, 0, ?, ?, 0, 0, 'due_payment', ?, ?, 'সহকারী দ্বারা বাকি আদায় জমা', 'হিসাব সহকারী', ?)
           `).run(saleId, tenantId, invoiceNo, amount, amount, amount, cust.id, cust.name, new Date().toISOString());
 
           const actionId = 'act-' + uuidv4().slice(0, 8);
@@ -544,6 +583,59 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           actionLink: { text: 'খরচ তালিকা দেখুন →', href: '/expenses' },
           data: { actionId, amount, title }
         };
+      }
+    }
+
+    // 4. Handle Live Stock or Customer Due Queries
+    if (parsed.intent === 'query') {
+      const queryItem = (parsed.items && parsed.items[0]) || null;
+      const queryName = queryItem?.productName || parsed.note || spokenText;
+      let matchedProd: any = null;
+      if (queryItem?.productId) {
+        matchedProd = db.prepare('SELECT * FROM products WHERE id = ?').get(queryItem.productId);
+      }
+      if (!matchedProd && queryName) {
+        matchedProd = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1')
+          .get(tenantId, `%${queryName}%`, `%${queryName}%`);
+      }
+
+      if (matchedProd) {
+        const pStock = Number(matchedProd.stock) || 0;
+        const pUnit = matchedProd.unit || 'টি';
+        const pPrice = matchedProd.selling_price || 0;
+        const pName = matchedProd.bangla_name || matchedProd.name;
+        const isLow = pStock <= (matchedProd.low_stock_threshold || 5);
+        return {
+          success: true,
+          action: 'stock_query',
+          speech: `${pName} এর বর্তমান স্টক ${pStock} ${pUnit}। বিক্রয়মূল্য ৳${pPrice} টাকা। ${isLow ? 'সতর্কতা: স্টক কমে গেছে!' : ''}`,
+          reply: `📦 **মজুদ (Stock) রিপোর্ট:**\n• পণ্য: **${pName}**\n• বর্তমান স্টক: **${pStock} ${pUnit}** ${isLow ? '⚠️ *(কম স্টক)*' : '✅'}\n• খুচরা বিক্রয়মূল্য: **৳${pPrice}**\n• কেনা দর: **৳${matchedProd.purchase_price || 0}**`,
+          navigateTo: '/stock',
+          actionLink: { text: 'স্টক বিবরণ দেখুন →', href: `/stock?search=${encodeURIComponent(pName)}` },
+          data: { product: matchedProd, stock: pStock }
+        };
+      }
+
+      // Check customer due query
+      if (parsed.customerId || parsed.customerName) {
+        let cust: any = null;
+        if (parsed.customerId) {
+          cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(parsed.customerId);
+        } else if (parsed.customerName) {
+          cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`);
+        }
+        if (cust) {
+          const due = Number(cust.total_due) || 0;
+          return {
+            success: true,
+            action: 'due_query',
+            speech: `${cust.name} এর বর্তমান বকেয়া বাকি আছে ৳${due} টাকা।`,
+            reply: `👤 **বাকি খাতার তথ্য:**\n• কাস্টমার: **${cust.name}**\n• বর্তমান মোট বাকি: **৳${due.toLocaleString('en-US')}**\n• ফোন: ${cust.phone || 'দেওয়া নেই'}`,
+            navigateTo: '/khata',
+            actionLink: { text: 'খাতায় দেখুন →', href: '/khata' },
+            data: { customer: cust, due }
+          };
+        }
       }
     }
 

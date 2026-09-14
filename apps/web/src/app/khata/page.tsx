@@ -765,7 +765,7 @@ export default function KhataPage() {
           <div>
             <div style={{ fontWeight: '800', fontSize: '13px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '4px' }}>
               ভয়েসে বাকি খাতা এন্ট্রি
-              <span style={{ fontSize: '9px', background: '#ef4444', color: '#fff', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase' }}>AI</span>
+              <span style={{ fontSize: '9px', background: '#ef4444', color: '#fff', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase' }}>ভয়েস</span>
             </div>
             <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '1px' }}>
               বলুন: <em>"রহিম এর খাতায় ৫০০ টাকা বাকি লেখো"</em>

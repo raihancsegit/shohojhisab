@@ -2030,7 +2030,7 @@ export default function PosPage() {
                 ভয়েস মেমো ও বিলিং
               </strong>
               <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
-                AI Live
+                লাইভ মেমো
               </span>
             </div>
           </div>

@@ -411,10 +411,10 @@ export default function VoiceAssistant() {
           display: 'inline-block',
           animation: isListening ? 'bounce 0.8s infinite alternate' : 'none'
         }}>
-          {isListening ? '🎙️' : '🤖'}
+          {isListening ? '🎙️' : '🏪'}
         </span>
         <span>
-          {isListening ? 'শুনছি... (থামুন)' : 'এআই সহকারী'}
+          {isListening ? 'শুনছি... (থামুন)' : 'হিসাব সহকারী'}
         </span>
         {!isListening && (
           <span style={{
