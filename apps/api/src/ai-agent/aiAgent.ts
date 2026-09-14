@@ -356,15 +356,41 @@ export async function runGeminiShopAgent(
   const productListStr = products.map(p => `${p.id}:${p.bangla_name || p.name}(৳${p.selling_price}/${p.unit || 'টি'},স্টক:${p.stock})`).join('; ');
   const customerListStr = customers.map(c => `${c.id}:${c.name}(বকেয়া:${c.total_due})`).join('; ');
 
-  const systemInstruction = `You are the AI Shopkeeper Assistant for "${tenant?.shop_name || 'দোকান'}" in Bangladesh.
-Your task is to understand shopkeeper Bengali voice commands and extract structured JSON actions for retail transactions.
+  const categoryId = tenant?.industry_category_id || 'cat-grocery';
+  const categoryNames: Record<string, string> = {
+    'cat-pharmacy': 'Pharmacy & Medicine Store',
+    'cat-grocery': 'Grocery & General Store',
+    'cat-clothing': 'Clothing & Fashion Store',
+    'cat-shoes': 'Footwear & Shoe Store',
+    'cat-hardware': 'Hardware, Electrical & Sanitary Store',
+    'cat-mobile': 'Mobile, Gadgets & Electronics Store',
+    'cat-restaurant': 'Restaurant & Food Service',
+    'cat-tea': 'Tea Stall & Snacks Corner',
+    'cat-meat-fish': 'Meat, Poultry & Fish Market',
+    'cat-sweet': 'Sweetmeat & Bakery Shop',
+    'cat-furniture': 'Furniture & Woodwork Store',
+    'cat-stationery': 'Stationery, Books & Library',
+    'cat-cosmetics': 'Cosmetics & Beauty Parlour'
+  };
+  const categoryName = categoryNames[categoryId] || 'Retail Store';
+
+  const systemInstruction = `You are the specialized AI Shopkeeper Assistant for "${tenant?.shop_name || 'দোকান'}" (${categoryName}) in Bangladesh.
+Your task is to understand shopkeeper Bengali voice commands and extract structured JSON actions for retail transactions tailored to this shop category.
 
 Grounding Inventory Data:
 Products: ${productListStr || 'None'}
 Customers: ${customerListStr || 'None'}
 
+Category Nuances:
+- If Pharmacy: Understand medicine strips (পাতা), bottles, tablets, boxes, and dosages.
+- If Clothing/Shoes: Understand piece counts, sets, sizes, and pairs (জোড়া).
+- If Hardware: Understand measurements (ফুট, মিটার, গজ, ইঞ্চি, রোল, কেজি, বস্তা).
+- If Mobile/Electronics: Understand piece counts, accessories, and installments (কিস্তি).
+- If Restaurant/Food: Understand servings (প্লেট, কাপ, গ্লাস, বাটি, পিস, সেট).
+- If Grocery/Meat/Fish: Understand weights (কেজি, গ্রাম, পোয়া, ছটাক, লিটার, বস্তা, হালি, ডজন).
+
 Actions you can return:
-1. "stock_sale_or_due": For selling goods, credit/due, or cash sales (e.g. "রহিম ৫০ টাকা বাকি ২ কেজি চিনি", "২ পাতা নাপা বিক্রি ক্যাশে", "করিমরে ১ কেজি ডাল বাকিতে দাও").
+1. "stock_sale_or_due": For selling goods, credit/due, or cash sales (e.g. "রহিম ৫০ টাকা বাকি ২ কেজি চিনি", "২ পাতা নাপা বিক্রি ক্যাশে", "করিমরে ১ জোড়া জুতা বাকিতে দাও", "১০ ফুট পাইপ বিক্রি").
 2. "due_payment": For customer paying back due money (e.g. "রহিম ২০০ টাকা জমা দিল", "করিমের বাকি শোধ ১০০ টাকা").
 3. "expense": For shop daily expense (e.g. "চা নাস্তা ৫০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা").
 4. "query": For balance or stock inquiry.
@@ -381,7 +407,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
       "productId": "matched product ID from list or null",
       "productName": "product name in Bangla",
       "quantity": number,
-      "unit": "কেজি"|"গ্রাম"|"প্যাকেট"|"পাতা"|"পিস"|"টি"|"বস্তা"|"লিটার"|"হালি"|"ডজন"|"বক্স",
+      "unit": "কেজি"|"গ্রাম"|"প্যাকেট"|"পাতা"|"পিস"|"টি"|"বস্তা"|"লিটার"|"হালি"|"ডজন"|"বক্স"|"জোড়া"|"ফুট"|"মিটার"|"গজ"|"প্লেট"|"কাপ"|"রিম"|"সেট",
       "unitPrice": number or null
     }
   ],

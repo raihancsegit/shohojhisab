@@ -4,11 +4,13 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
+import { getIndustryVoiceConfig } from '../lib/industryConfig';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const voiceConfig = getIndustryVoiceConfig(tenant?.industryId || (tenant as any)?.industry_category_id);
 
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -283,7 +285,11 @@ export default function VoiceAssistant() {
             )}
             <div style={{ marginTop: '2px', wordBreak: 'break-word', color: '#f8fafc', fontSize: '12px' }}>
               {feedbackType === 'listening'
-                ? (liveTranscript ? `"${liveTranscript}"` : 'বলুন: "আজকে স্টক কত", "বাকি খাতায় যাও", "৫০ টাকা খরচ"')
+                ? (liveTranscript
+                    ? `"${liveTranscript}"`
+                    : (voiceConfig?.quickSaleBannerHint
+                        ? `যেমন: "${voiceConfig.quickSaleBannerHint}"`
+                        : 'বলুন: "আজকে স্টক কত", "বাকি খাতায় যাও", "৫০ টাকা খরচ"'))
                 : feedbackText}
             </div>
           </div>
@@ -326,6 +332,40 @@ export default function VoiceAssistant() {
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 💡 Category-Specific Smart Spoken Suggestion Pills */}
+      {feedbackType === 'listening' && !liveTranscript && voiceConfig?.assistantSuggestions && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '5px',
+          justifyContent: 'flex-end',
+          maxWidth: '320px',
+          animation: 'fadeInUp 0.15s ease'
+        }}>
+          {voiceConfig.assistantSuggestions.slice(0, 3).map((sug, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => stopAndExecute(sug)}
+              style={{
+                background: 'rgba(30, 27, 75, 0.92)',
+                color: '#c7d2fe',
+                border: '1px solid rgba(199, 210, 254, 0.3)',
+                borderRadius: '12px',
+                padding: '4px 9px',
+                fontSize: '11px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                backdropFilter: 'blur(6px)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+            >
+              🗣️ {sug}
+            </button>
+          ))}
         </div>
       )}
 
