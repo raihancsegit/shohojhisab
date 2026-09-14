@@ -21,13 +21,19 @@ export default function VoicePOSCalculatorModal({
   onCompleteSale,
   onProductAutoAdded
 }: VoicePOSCalculatorModalProps) {
-  const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled } = useAuth();
-  const currentTenantId = tenant?.id;
+  const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled, currentStaffUser } = useAuth();
+  const currentTenantId = tenant?.id || (typeof window !== 'undefined' ? localStorage.getItem('lbos_tenant_id') : null) || 'tenant-1';
   const voiceConfig = getIndustryVoiceConfig(tenant?.industryId);
 
   const [items, setItems] = useState<ParsedVoiceItem[]>([]);
   const [discount, setDiscount] = useState<number>(0);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerPhone, setSelectedCustomerPhone] = useState<string>('');
+  const [showCustomerPicker, setShowCustomerPicker] = useState<boolean>(false);
+  const [customerSearch, setCustomerSearch] = useState<string>('');
+  const [newCustName, setNewCustName] = useState<string>('');
+  const [newCustPhone, setNewCustPhone] = useState<string>('');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন...');
@@ -232,12 +238,12 @@ export default function VoicePOSCalculatorModal({
         });
       }
 
-      // If items not found or out of stock, announce clearly
+      // If items not found or out of stock, announce clearly with loud voice feedback!
       if (outOfStockNames.length > 0) {
         triggerHaptic('warning');
         playBeep(450);
         const nameList = outOfStockNames.join(', ');
-        speakAnnouncement(`দুঃখিত, ${nameList} পণ্যটি বর্তমানে স্টকে নেই!`);
+        speakAnnouncement(`দুঃখিত, "${nameList}" পণ্যটির স্টক শেষ বা নেই!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই!`);
       }
 
@@ -245,8 +251,8 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = notFoundNames.join(', ');
-        speakAnnouncement(`দুঃখিত, ${nameList} স্টকে পাওয়া যায়নি!`);
-        setLastActionMessage(`⚠️ "${nameList}" স্টকে পাওয়া যায়নি!`);
+        speakAnnouncement(`দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
+        setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
       }
 
       // Only add verified items that actually exist in stock!
@@ -284,7 +290,9 @@ export default function VoicePOSCalculatorModal({
     // 2. CASH CHECKOUT
     if (result.type === 'cash_checkout') {
       if (itemsRef.current.length === 0) {
-        setLastActionMessage('⚠️ কার্টে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
+        playBeep(450);
+        triggerHaptic('warning');
+        setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
         return;
       }
       handleFinalizeSale('cash');
@@ -294,12 +302,35 @@ export default function VoicePOSCalculatorModal({
     // 3. DUE / KHATA CHECKOUT
     if (result.type === 'due_checkout') {
       if (itemsRef.current.length === 0) {
-        setLastActionMessage('⚠️ কার্টে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
+        playBeep(450);
+        triggerHaptic('warning');
+        setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
         return;
       }
-      const targetCustomer = result.customerName || selectedCustomerName || 'বাকি গ্রাহক';
-      setSelectedCustomerName(targetCustomer);
-      handleFinalizeSale('due', targetCustomer);
+      const rawTarget = (result.customerName || selectedCustomerName || '').trim();
+      const cleanCandidate = rawTarget.replace(/(ভাই|চাচা|কাকা|দাদা|আপা|সাহেব|হাজী|এর|ের)/g, '').trim().toLowerCase();
+
+      // Look up in existing customer list
+      const matchedCust = customers.find(c => {
+        const cName = (c.name || '').trim().toLowerCase();
+        const cClean = cName.replace(/(ভাই|চাচা|কাকা|দাদা|আপা|সাহেব|হাজী|এর|ের)/g, '').trim();
+        return (cClean && cClean === cleanCandidate) || (cName && cName.includes(cleanCandidate)) || (cleanCandidate && cleanCandidate.includes(cName));
+      });
+
+      if (matchedCust) {
+        setSelectedCustomerName(matchedCust.name);
+        setSelectedCustomerId(matchedCust.id);
+        setSelectedCustomerPhone(matchedCust.phone || '');
+        handleFinalizeSale('due', matchedCust.name, matchedCust.id, matchedCust.phone || '');
+      } else {
+        // Customer not found in baki khata! Announce and open picker
+        triggerHaptic('warning');
+        playBeep(450);
+        speakAnnouncement(`দুঃখিত, "${rawTarget}" নামের কোনো খরিদ্দার বাকি তালিকায় পাওয়া যায়নি!`);
+        setLastActionMessage(`⚠️ দুঃখিত, "${rawTarget}" নামের কোনো খরিদ্দার বাকি তালিকায় নেই!`);
+        setCustomerSearch(rawTarget);
+        setShowCustomerPicker(true);
+      }
       return;
     }
 
@@ -323,18 +354,47 @@ export default function VoicePOSCalculatorModal({
 
     // 6. CLEAR MEMO
     if (result.type === 'clear_memo') {
-      setItems([]);
-      setDiscount(0);
-      setSelectedCustomerName('');
-      playBeep(600);
-      setLastActionMessage('✓ মেমো ক্লিয়ার করা হয়েছে। নতুন হিসাব শুরু করুন।');
+      handleResetMemo();
       return;
     }
   };
 
+  // Dedicated Reset Memo with Sound, Haptic and Voice Announcement
+  const handleResetMemo = () => {
+    setItems([]);
+    itemsRef.current = [];
+    setDiscount(0);
+    setSelectedCustomerName('');
+    setSelectedCustomerId('');
+    setSelectedCustomerPhone('');
+    setLiveTranscript('');
+    playBeep(600);
+    triggerHaptic('light');
+    speakAnnouncement('মেমো ক্লিয়ার করা হয়েছে');
+    setLastActionMessage('✓ মেমো সম্পূর্ণ ক্লিয়ার হয়েছে। নতুন পণ্য মুখে বলুন...');
+  };
+
+  // Baki Khata Button Click
+  const handleBakiKhataClick = () => {
+    if (itemsRef.current.length === 0) {
+      playBeep(450);
+      triggerHaptic('warning');
+      setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই!');
+      return;
+    }
+    if (selectedCustomerName) {
+      handleFinalizeSale('due', selectedCustomerName, selectedCustomerId, selectedCustomerPhone);
+    } else {
+      triggerHaptic('light');
+      setShowCustomerPicker(true);
+      speakAnnouncement('বাকি খাতার জন্য খরিদ্দার নির্বাচন করুন');
+      setLastActionMessage('ℹ️ বাকি খাতার জন্য খরিদ্দার নির্বাচন করুন');
+    }
+  };
+
   // Finalize Sale (Cash or Due)
-  const handleFinalizeSale = async (method: 'cash' | 'due', custName = '') => {
-    if (itemsRef.current.length === 0 || !currentTenantId) return;
+  const handleFinalizeSale = async (method: 'cash' | 'due', custName = '', custId = '', custPhone = '') => {
+    if (itemsRef.current.length === 0) return;
     setIsSubmitting(true);
     triggerHaptic('medium');
 
@@ -343,23 +403,29 @@ export default function VoicePOSCalculatorModal({
     const paidAmount = method === 'cash' ? finalAmount : 0;
     const dueAmount = method === 'due' ? finalAmount : 0;
     const customer = custName || selectedCustomerName || (method === 'due' ? 'বাকি খরিদ্দার' : 'নগদ কাস্টমার');
+    const finalCustId = custId || selectedCustomerId || null;
+    const finalCustPhone = custPhone || selectedCustomerPhone || '';
 
     const payload = {
       tenantId: currentTenantId,
+      customerId: finalCustId,
       customerName: customer,
+      customerPhone: finalCustPhone,
       items: itemsRef.current.map(i => ({
         productId: i.productId || ('prod-' + Date.now().toString().slice(-6)),
         productName: i.banglaName || i.name,
         quantity: i.quantity,
+        selectedUnit: i.unit || 'পিস',
         sellingPrice: i.unitPrice,
         purchasePrice: Math.round(i.unitPrice * 0.8),
         totalPrice: i.totalPrice
       })),
-      discount,
+      discount: Number(discount || 0),
       totalAmount: finalAmount,
       paidAmount,
       dueAmount,
-      paymentMethod: method
+      paymentMethod: method,
+      cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক'
     };
 
     try {
@@ -373,6 +439,11 @@ export default function VoicePOSCalculatorModal({
         const data = await res.json();
         playBeep(1250);
         triggerHaptic('success');
+        speakAnnouncement(
+          method === 'due'
+            ? `${customer}-এর বাকি খাতায় ৳${finalAmount} টাকা লেখা সম্পন্ন হয়েছে।`
+            : `৳${finalAmount} টাকা নগদ বিক্রি সফল হয়েছে।`
+        );
         
         // Pass data to parent to show receipt
         onCompleteSale({
@@ -385,18 +456,28 @@ export default function VoicePOSCalculatorModal({
           paidAmount,
           dueAmount,
           customerName: customer,
+          customerPhone: finalCustPhone,
           paymentMethod: method
         });
 
         // Reset and close
         setItems([]);
+        itemsRef.current = [];
         setDiscount(0);
         setSelectedCustomerName('');
+        setSelectedCustomerId('');
+        setSelectedCustomerPhone('');
+        setShowCustomerPicker(false);
         onClose();
       } else {
-        alert('বিক্রি সম্পন্ন হতে সমস্যা হয়েছে!');
+        const errData = await res.json().catch(() => ({}));
+        playBeep(450);
+        triggerHaptic('warning');
+        alert(errData.error || 'বিক্রি সম্পন্ন হতে সমস্যা হয়েছে!');
       }
     } catch (e) {
+      playBeep(450);
+      triggerHaptic('warning');
       alert('সার্ভার কানেকশন এরর!');
     } finally {
       setIsSubmitting(false);
@@ -957,96 +1038,381 @@ export default function VoicePOSCalculatorModal({
 
           <div className="voice-bottom-actions" style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            flexDirection: 'column',
             gap: '10px'
           }}>
-            <div>
-              <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '800' }}>
-                মোট পণ্য: {items.length} টি {discount > 0 && `(ছাড়: ৳${discount})`}
+            {/* Top row: Summary and selected customer badge */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              width: '100%',
+              flexWrap: 'wrap',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800' }}>
+                  মোট পণ্য: {items.length} টি {discount > 0 && `(ছাড়: ৳${discount})`}
+                </span>
+                {selectedCustomerName && (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#991b1b',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '800'
+                  }}>
+                    👤 {selectedCustomerName}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerName('');
+                        setSelectedCustomerId('');
+                        setSelectedCustomerPhone('');
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontWeight: '900',
+                        fontSize: '12px',
+                        padding: '0 2px'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
               </div>
-              <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <span>সর্বমোট:</span>
-                <span style={{ color: '#059669', fontSize: '26px' }}>
+
+              <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span style={{ fontSize: '13.5px', color: '#475569', fontWeight: '800' }}>সর্বমোট:</span>
+                <span style={{ color: '#059669', fontSize: '24px', fontWeight: '900' }}>
                   ৳{totalPayable.toLocaleString('en-US')}
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div className="voice-bottom-btn-row" style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => { setItems([]); setDiscount(0); }}
-                  style={{
-                    background: '#f1f5f9',
-                    border: '1px solid #cbd5e1',
-                    color: '#475569',
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    fontWeight: '800',
-                    fontSize: '12.5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  রিসেট
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleFinalizeSale('due')}
-                  disabled={items.length === 0 || isSubmitting}
-                  style={{
-                    background: '#ef4444',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '10px 14px',
-                    borderRadius: '10px',
-                    fontWeight: '900',
-                    fontSize: '13px',
-                    cursor: items.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 10px rgba(239, 68, 68, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <span>🔴</span>
-                  <span>বাকি খাতা</span>
-                </button>
-              </div>
-
+            {/* Action buttons row - Sleek, Responsive, High Contrast */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              width: '100%',
+              alignItems: 'center'
+            }}>
+              {/* Reset Button */}
               <button
                 type="button"
-                className="voice-primary-btn"
+                onClick={handleResetMemo}
+                title="মেমো ক্লিয়ার করুন"
+                style={{
+                  height: '46px',
+                  padding: '0 16px',
+                  borderRadius: '12px',
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  color: '#334155',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '15px' }}>🔄</span>
+                <span>রিসেট</span>
+              </button>
+
+              {/* Baki Khata Button */}
+              <button
+                type="button"
+                onClick={handleBakiKhataClick}
+                disabled={items.length === 0 || isSubmitting}
+                title="বাকি খাতায় লিখুন"
+                style={{
+                  height: '46px',
+                  flex: '1',
+                  padding: '0 12px',
+                  borderRadius: '12px',
+                  background: items.length === 0 || isSubmitting
+                    ? '#fca5a5'
+                    : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: '900',
+                  fontSize: '13px',
+                  cursor: items.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
+                  boxShadow: items.length === 0 ? 'none' : '0 4px 12px rgba(225, 29, 72, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '15px' }}>📒</span>
+                <span>{selectedCustomerName ? `${selectedCustomerName}-এর বাকি` : 'বাকি খাতা'}</span>
+              </button>
+
+              {/* Cash Sale Button */}
+              <button
+                type="button"
                 onClick={() => handleFinalizeSale('cash')}
                 disabled={items.length === 0 || isSubmitting}
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '12px 20px',
+                  height: '46px',
+                  flex: '1.4',
+                  padding: '0 16px',
                   borderRadius: '12px',
+                  background: items.length === 0 || isSubmitting
+                    ? '#a7f3d0'
+                    : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  border: 'none',
+                  color: '#ffffff',
                   fontWeight: '900',
-                  fontSize: '14.5px',
+                  fontSize: '14px',
                   cursor: items.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 6px 16px rgba(16, 185, 129, 0.35)',
+                  boxShadow: items.length === 0 ? 'none' : '0 4px 14px rgba(5, 150, 105, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '6px',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <span>🟢</span>
-                <span>{isSubmitting ? 'বিক্রি হচ্ছে...' : `৳${totalPayable} নগদ বিক্রি`}</span>
-                <span>➔</span>
+                <span>⚡</span>
+                <span>{isSubmitting ? 'বিক্রি হচ্ছে...' : `৳${totalPayable.toLocaleString('en-US')} নগদ বিক্রি`}</span>
+                <span style={{ fontSize: '15px' }}>➔</span>
               </button>
             </div>
           </div>
         </div>
 
       </div>
+
+      {/* 👤 Interactive Baki Customer Picker Modal */}
+      {showCustomerPicker && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: 10005,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '420px',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>
+                  📖 বাকি খাতার খরিদ্দার নির্বাচন
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  খরিদ্দার নির্বাচন করুন বা মুখে নাম বলুন
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCustomerPicker(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontWeight: '900',
+                  color: '#64748b',
+                  fontSize: '15px',
+                  display: 'grid',
+                  placeItems: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Box */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+              <input
+                type="text"
+                autoFocus
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="🔍 খরিদ্দারের নাম বা মোবাইল নম্বর..."
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '13.5px',
+                  outline: 'none',
+                  fontWeight: '700'
+                }}
+              />
+            </div>
+
+            {/* Customer List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(() => {
+                const q = customerSearch.trim().toLowerCase();
+                const filtered = (customers || []).filter(c => {
+                  if (!q) return true;
+                  const cName = (c.name || '').toLowerCase();
+                  const cPhone = (c.phone || '').toLowerCase();
+                  return cName.includes(q) || cPhone.includes(q);
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '24px 10px', color: '#64748b' }}>
+                      <div style={{ fontSize: '28px', marginBottom: '6px' }}>🔍</div>
+                      <div style={{ fontSize: '13px', fontWeight: '800' }}>
+                        &quot;{customerSearch}&quot; নামে কোনো খরিদ্দার পাওয়া যায়নি!
+                      </div>
+                      <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                        নিচের বাটনে নাম লিখে নতুন খরিদ্দার হিসেবে যোগ করুন
+                      </div>
+                    </div>
+                  );
+                }
+
+                return filtered.map((cust) => (
+                  <div
+                    key={cust.id}
+                    onClick={() => {
+                      setSelectedCustomerName(cust.name);
+                      setSelectedCustomerId(cust.id);
+                      setSelectedCustomerPhone(cust.phone || '');
+                      setShowCustomerPicker(false);
+                      triggerHaptic('success');
+                      playBeep(950);
+                      speakAnnouncement(`${cust.name}-এর বাকি খাতা নির্বাচিত।`);
+                      handleFinalizeSale('due', cust.name, cust.id, cust.phone || '');
+                    }}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>
+                        👤 {cust.name}
+                      </div>
+                      {cust.phone && (
+                        <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                          📞 {cust.phone}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '800' }}>
+                        বর্তমান বাকি:
+                      </div>
+                      <div style={{ fontSize: '13.5px', fontWeight: '900', color: '#991b1b' }}>
+                        ৳{Number(cust.totalDue || cust.total_due || 0).toLocaleString('en-US')}
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+
+            {/* Quick Add New Customer Form */}
+            <div style={{ padding: '14px 16px', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="নতুন নাম (যেমন: শফিক ভাই)"
+                  value={newCustName}
+                  onChange={(e) => setNewCustName(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '12.5px',
+                    fontWeight: '700'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const finalName = (newCustName || customerSearch || '').trim();
+                    if (!finalName) {
+                      alert('দয়া করে খরিদ্দারের নাম লিখুন');
+                      return;
+                    }
+                    setSelectedCustomerName(finalName);
+                    setSelectedCustomerId('');
+                    setSelectedCustomerPhone('');
+                    setShowCustomerPicker(false);
+                    triggerHaptic('success');
+                    playBeep(950);
+                    speakAnnouncement(`${finalName}-এর নামে বাকি লেখা হচ্ছে`);
+                    handleFinalizeSale('due', finalName, '', '');
+                  }}
+                  style={{
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontWeight: '800',
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  + যুক্ত করুন
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -3255,6 +3255,13 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           reply,
           actionLink: { text: `"${matchedProd.bangla_name || matchedProd.name}" রিস্টক করুন →`, href: `/stock?search=${encodeURIComponent(matchedProd.bangla_name || matchedProd.name)}` }
         };
+      } else {
+        return {
+          success: false,
+          speech: `দুঃখিত, "${cleanedQuery}" নামের কোনো পণ্য আপনার স্টকে পাওয়া যায়নি বা নেই।`,
+          reply: `⚠️ **পণ্য পাওয়া যায়নি:**\n"${cleanedQuery}" নামের কোনো পণ্য আপনার স্টকে নেই। সঠিক নাম বলুন বা স্টক খাতা চেক করুন।`,
+          actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' }
+        };
       }
     }
   }
@@ -3906,6 +3913,14 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         reply: `👤 **কাস্টমার বাকি হিসাব:**\n• নাম: **${customer.name}**\n• মোবাইল: ${customer.phone || 'দেওয়া নেই'}\n• বর্তমান বকেয়া: **৳${due.toLocaleString('en-US')}**`,
         actionLink: { text: 'বাকি খাতা ওপেন করুন →', href: '/khata' },
         data: { customerName: customer.name, totalDue: due }
+      };
+    } else {
+      const attemptedName = cleanCandidateWords(rawText) || rawText.replace(/(দোকানে|বর্তমান|বকেয়া|বাকি|হিসাব|কত|পাবে|পাওনা|এর|ভাইয়ের|ভাই|চাচা|কাকা|টাকা)/gi, '').trim();
+      return {
+        success: false,
+        speech: `দুঃখিত, "${attemptedName || 'উক্ত'}" নামের কোনো খরিদ্দার বাকি তালিকায় পাওয়া যায়নি।`,
+        reply: `⚠️ **খরিদ্দার পাওয়া যায়নি:**\n"${attemptedName || 'উক্ত'}" নামের কোনো কাস্টমার আপনার বাকি তালিকায় নেই। সঠিক নাম বলুন বা বাকি খাতা চেক করুন।`,
+        actionLink: { text: 'বাকির খাতা দেখুন →', href: '/khata' }
       };
     }
   }
@@ -5205,9 +5220,10 @@ fastify.get('/api/sales', async (request) => {
 
 fastify.post('/api/sales', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, items, paymentMethod = 'cash', customerId, customerName, customerPhone, discount = 0, cashier = 'দোকান মালিক' } = body;
+  const { tenantId, items, paymentMethod = 'cash', customerId, customerName, customerPhone, discount = 0, cashier = 'দোকান মালিক' } = body || {};
 
   if (!items || !items.length) return reply.status(400).send({ error: 'Cart items required' });
+  const safeTenantId = tenantId || 'tenant-1';
 
   const executeSale = db.transaction(() => {
     let subtotal = 0;
@@ -5215,7 +5231,8 @@ fastify.post('/api/sales', async (request, reply) => {
     const processedItems: any[] = [];
     const now = new Date().toISOString();
 
-    const saleCount = (db.prepare('SELECT COUNT(*) as count FROM sales WHERE tenant_id = ?').get(tenantId) as any).count;
+    const saleCountRow = db.prepare('SELECT COUNT(*) as count FROM sales WHERE tenant_id = ?').get(safeTenantId) as any;
+    const saleCount = Number(saleCountRow?.count || 0);
     const invoiceNo = 'INV-' + (saleCount + 1001);
 
     const getProduct = db.prepare('SELECT * FROM products WHERE id = ?');
@@ -5283,7 +5300,7 @@ fastify.post('/api/sales', async (request, reply) => {
           const stkLogId = 'stklog-' + uuidv4().slice(0, 8);
           logStock.run(
             stkLogId,
-            tenantId,
+            safeTenantId,
             product.id,
             name,
             qty,
@@ -5320,7 +5337,7 @@ fastify.post('/api/sales', async (request, reply) => {
       });
     }
 
-    const totalAmount = Math.max(0, subtotal - Number(discount));
+    const totalAmount = Math.max(0, subtotal - Number(discount || 0));
     let paidAmount = totalAmount;
     let dueAmount = 0;
 
@@ -5330,7 +5347,7 @@ fastify.post('/api/sales', async (request, reply) => {
     }
 
     let finalCustomerId = customerId && customerId !== 'none' ? customerId : null;
-    let finalCustomerName = customerName;
+    let finalCustomerName = customerName || (paymentMethod === 'due' ? 'বাকি খরিদ্দার' : 'নগদ কাস্টমার');
 
     if (finalCustomerId) {
       const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(finalCustomerId) as any;
@@ -5340,8 +5357,8 @@ fastify.post('/api/sales', async (request, reply) => {
           db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(dueAmount, finalCustomerId);
         }
       }
-    } else if (dueAmount > 0 && customerName && customerName !== 'নগদ কাস্টমার') {
-      const existingCust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name = ? OR (phone != "" AND phone = ?))').get(tenantId, customerName, customerPhone || '') as any;
+    } else if (dueAmount > 0 && finalCustomerName && finalCustomerName !== 'নগদ কাস্টমার') {
+      const existingCust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name = ? OR (phone != "" AND phone = ?))').get(safeTenantId, finalCustomerName, customerPhone || '') as any;
       if (existingCust) {
         finalCustomerId = existingCust.id;
         finalCustomerName = existingCust.name;
@@ -5351,17 +5368,33 @@ fastify.post('/api/sales', async (request, reply) => {
         db.prepare(`
           INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, avatar, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(finalCustomerId, tenantId, customerName, customerPhone || '', '', dueAmount, 5000, '👤', new Date().toISOString());
+        `).run(finalCustomerId, safeTenantId, finalCustomerName, customerPhone || '', '', dueAmount, 5000, '👤', now);
       }
     }
 
     const saleId = uuidv4();
-    const netProfit = totalProfit - Number(discount);
+    const netProfit = totalProfit - Number(discount || 0);
 
     db.prepare(`
       INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, is_offline, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(saleId, tenantId, invoiceNo, subtotal, Number(discount), totalAmount, paidAmount, dueAmount, netProfit, paymentMethod, finalCustomerId, finalCustomerName || null, cashier, 0, now);
+    `).run(
+      saleId,
+      safeTenantId,
+      invoiceNo,
+      subtotal,
+      Number(discount || 0),
+      totalAmount,
+      paidAmount,
+      dueAmount,
+      netProfit,
+      paymentMethod,
+      finalCustomerId || null,
+      finalCustomerName,
+      cashier || 'দোকান মালিক',
+      0,
+      now
+    );
 
     const insertItem = db.prepare(`
       INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
@@ -5376,7 +5409,7 @@ fastify.post('/api/sales', async (request, reply) => {
       invoiceNo,
       items: processedItems,
       subtotal,
-      discount: Number(discount),
+      discount: Number(discount || 0),
       totalAmount,
       paidAmount,
       dueAmount,
@@ -5391,7 +5424,8 @@ fastify.post('/api/sales', async (request, reply) => {
     const res = executeSale();
     return { success: true, order: res };
   } catch (err: any) {
-    return reply.status(500).send({ error: err.message });
+    fastify.log.error(err);
+    return reply.status(400).send({ error: err.message || 'বিক্রি সম্পন্ন করতে সমস্যা হয়েছে' });
   }
 });
 

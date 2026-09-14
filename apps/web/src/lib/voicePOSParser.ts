@@ -582,8 +582,26 @@ function parseSingleVoiceItem(
       }
     }
 
-    // If not found in shop's existing products and no explicit price provided, reject
+    // If not found in shop's existing products and no explicit price provided,
+    // do NOT silently swallow valid commercial item names (e.g. "বিস্কুট একটা").
+    // Return with isExistingProduct: false and isOutOfStock: true so Voice POS & AI can alert the shopkeeper!
     if (!matchedProd && (!extractedPrice || extractedPrice <= 0)) {
+      if (cleanedName && cleanedName.length >= 2 && !isBackgroundNoise(cleanedName)) {
+        const detected = detectProductCategory(cleanedName);
+        return {
+          name: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
+          banglaName: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
+          quantity,
+          unit: unitMatched ? unit : detected.defaultUnit,
+          unitPrice: 0,
+          totalPrice: 0,
+          isExistingProduct: false,
+          productId: undefined,
+          stock: 0,
+          isOutOfStock: true,
+          category: detected.categoryId
+        };
+      }
       return null;
     }
   }
