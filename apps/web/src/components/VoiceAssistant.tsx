@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
@@ -392,6 +393,27 @@ export default function VoiceAssistant() {
               🗣️ {sug}
             </button>
           ))}
+          <Link
+            href="/voice-guide"
+            onClick={cancelVoice}
+            style={{
+              background: 'rgba(5, 150, 105, 0.92)',
+              color: '#ecfdf5',
+              border: '1px solid rgba(110, 231, 183, 0.4)',
+              borderRadius: '12px',
+              padding: '4px 9px',
+              fontSize: '11px',
+              fontWeight: '700',
+              textDecoration: 'none',
+              backdropFilter: 'blur(6px)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            📖 কমান্ড গাইড →
+          </Link>
         </div>
       )}
 

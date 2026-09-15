@@ -796,6 +796,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
     { href: '/support', label: 'হেল্প এন্ড সাপোর্ট', icon: '🎧', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/tutorials', label: 'টিউটোরিয়াল ভিডিও', icon: '🎬', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'ভিডিও' },
+    { href: '/voice-guide', label: 'ভয়েস নির্দেশিকা (কমান্ড গাইড)', icon: '🎙️', iconBg: '#ecfdf5', iconColor: '#059669', badge: 'এআই' },
   ];
 
 
