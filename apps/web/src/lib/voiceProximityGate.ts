@@ -33,8 +33,8 @@ class VoiceProximityManager {
   // When speaking 10-30cm from mobile phone mic with AGC disabled, RMS is typically 22-80.
   // Distant chatter (1-3 meters away) or background TV typically registers at 2-12.
   private readonly THRESHOLDS: Record<ProximityDistanceMode, number> = {
-    near: 16,     // ১ হাত / ~৩০ সেমি - দোকান ভিড় ও টিভি ফিল্টার (ডিফল্ট)
-    medium: 9,    // ২ হাত / ~৬০ সেমি
+    near: 6,      // ১ হাত / ~৩০ সেমি - দোকান ভিড় ফিল্টার
+    medium: 3,    // ২ হাত / ~৬০ সেমি
     all: 0        // ফিল্টার অফ (সব কথা গ্রহণ)
   };
 

@@ -91,9 +91,12 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
 
   const rawCombined = (finalTranscript || interimTranscript).trim();
 
-  // Near-field proximity distance filter: reject distant chatter/TV noise if phone is far from speaker
-  if (rawCombined && !voiceProximityManager.isNearSpeechActive()) {
-    return { fullTranscript: '', isFinal: false, isDistantNoise: true };
+  // Near-field proximity distance check: if mode is strictly enabled and audio level is zero, note it but don't block valid speech
+  if (rawCombined && voiceProximityManager.getMode() !== 'all' && !voiceProximityManager.isNearSpeechActive()) {
+    // Only filter if it's pure short noise and not recognized clear sentence
+    if (rawCombined.length < 3) {
+      return { fullTranscript: '', isFinal: false, isDistantNoise: true };
+    }
   }
 
   // Check if this is an echo of the assistant's own voice

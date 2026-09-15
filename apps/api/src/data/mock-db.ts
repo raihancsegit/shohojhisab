@@ -60,17 +60,17 @@ export interface Expense {
 // Initial Pre-seeded Products (50+ Real Bangladeshi Products)
 export const initialProducts: Product[] = [
   // Grocery Products
-  { id: 'g-1', barcode: '894110012301', name: 'Teer Soybean Oil 1L', banglaName: 'তীর সয়াবিন তেল ১ লিটার', category: 'grocery', purchasePrice: 165, sellingPrice: 180, stock: 45, unit: 'লিটার', lowStockThreshold: 10, imageEmoji: '🛢️' },
-  { id: 'g-2', barcode: '894110012302', name: 'Rupchanda Soybean Oil 2L', banglaName: 'রূপচাঁদা সয়াবিন তেল ২ লিটার', category: 'grocery', purchasePrice: 330, sellingPrice: 360, stock: 24, unit: 'লিটার', lowStockThreshold: 5, imageEmoji: '🛢️' },
+  { id: 'g-1', barcode: '894110012301', name: 'Rupchanda Fortified Soybean Oil 1L', banglaName: 'রূপচাঁদা সয়াবিন তেল', category: 'grocery', purchasePrice: 175, sellingPrice: 190, stock: 45, unit: 'লিটার', lowStockThreshold: 10, imageEmoji: '🛢️' },
+  { id: 'g-2', barcode: '894110012302', name: 'Teer Pure Mustard Oil 500ml', banglaName: 'তীর সরিষার তেল', category: 'grocery', purchasePrice: 135, sellingPrice: 150, stock: 30, unit: 'বোতল', lowStockThreshold: 8, imageEmoji: '🛢️' },
   { id: 'g-3', barcode: '894110012303', name: 'Miniket Rice 50kg', banglaName: 'মিনিকেট চাল ৫০ কেজি বস্তা', category: 'grocery', purchasePrice: 3250, sellingPrice: 3500, stock: 15, unit: 'বস্তা', lowStockThreshold: 3, imageEmoji: '🍚' },
   { id: 'g-4', barcode: '894110012304', name: 'Nazirshail Rice 25kg', banglaName: 'নাজিরশাইল চাল ২৫ কেজি', category: 'grocery', purchasePrice: 1800, sellingPrice: 1950, stock: 20, unit: 'বস্তা', lowStockThreshold: 4, imageEmoji: '🍚' },
-  { id: 'g-5', barcode: '894110012305', name: 'Fresh White Sugar 1kg', banglaName: 'ফ্রেশ চিনি ১ কেজি', category: 'grocery', purchasePrice: 130, sellingPrice: 140, stock: 80, unit: 'কেজি', lowStockThreshold: 15, imageEmoji: '🧂' },
-  { id: 'g-6', barcode: '894110012306', name: 'Farm Egg (Hali)', banglaName: 'ফার্মের লাল ডিম ১ হালি', category: 'grocery', purchasePrice: 42, sellingPrice: 48, stock: 120, unit: 'হালি', lowStockThreshold: 20, imageEmoji: '🥚' },
-  { id: 'g-7', barcode: '894110012307', name: 'Lux Soft Rose Soap 100g', banglaName: 'লাক্স সাবান ১০০ গ্রাম', category: 'grocery', purchasePrice: 50, sellingPrice: 60, stock: 65, unit: 'পিস', lowStockThreshold: 12, imageEmoji: '🧼' },
-  { id: 'g-8', barcode: '894110012308', name: 'Dettol Soap 75g', banglaName: 'ডেটোল সাবান ৭৫ গ্রাম', category: 'grocery', purchasePrice: 48, sellingPrice: 55, stock: 40, unit: 'পিস', lowStockThreshold: 10, imageEmoji: '🧼' },
-  { id: 'g-9', barcode: '894110012309', name: 'Maggi 2-Minute Noodles 4-Pack', banglaName: 'ম্যাগি নুডুলস ৪ প্যাক', category: 'grocery', purchasePrice: 75, sellingPrice: 90, stock: 50, unit: 'প্যাক', lowStockThreshold: 10, imageEmoji: '🍜' },
-  { id: 'g-10', barcode: '894110012310', name: 'Radhuni Turmeric Powder 200g', banglaName: 'রাঁধুনী হলুদ গুঁড়া ২০০ গ্রাম', category: 'grocery', purchasePrice: 85, sellingPrice: 100, stock: 35, unit: 'প্যাক', lowStockThreshold: 8, imageEmoji: '🌶️' },
-  { id: 'g-11', barcode: '894110012311', name: 'Red Lentil (Mosur Dal) 1kg', banglaName: 'দেশি মসুর ডাল ১ কেজি', category: 'grocery', purchasePrice: 125, sellingPrice: 140, stock: 60, unit: 'কেজি', lowStockThreshold: 15, imageEmoji: '🥣' },
+  { id: 'g-5', barcode: '894110012305', name: 'Fresh White Sugar 1kg', banglaName: 'ফ্রেশ চিনি', category: 'grocery', purchasePrice: 130, sellingPrice: 140, stock: 80, unit: 'কেজি', lowStockThreshold: 15, imageEmoji: '🧂' },
+  { id: 'g-6', barcode: '894110012306', name: 'Farm Egg (Hali)', banglaName: 'ফার্মের লাল ডিম', category: 'grocery', purchasePrice: 42, sellingPrice: 48, stock: 120, unit: 'হালি', lowStockThreshold: 20, imageEmoji: '🥚' },
+  { id: 'g-7', barcode: '894110012307', name: 'Lux Soft Rose Soap 100g', banglaName: 'লাক্স সাবান', category: 'grocery', purchasePrice: 50, sellingPrice: 60, stock: 65, unit: 'পিস', lowStockThreshold: 12, imageEmoji: '🧼' },
+  { id: 'g-8', barcode: '894110012308', name: 'Dettol Soap 75g', banglaName: 'ডেটোল সাবান', category: 'grocery', purchasePrice: 48, sellingPrice: 55, stock: 40, unit: 'পিস', lowStockThreshold: 10, imageEmoji: '🧼' },
+  { id: 'g-9', barcode: '894110012309', name: 'Maggi 2-Minute Noodles 4-Pack', banglaName: 'ম্যাগি নুডুলস', category: 'grocery', purchasePrice: 75, sellingPrice: 90, stock: 50, unit: 'প্যাক', lowStockThreshold: 10, imageEmoji: '🍜' },
+  { id: 'g-10', barcode: '894110012310', name: 'Radhuni Turmeric Powder 200g', banglaName: 'রাঁধুনী হলুদ গুঁড়া', category: 'grocery', purchasePrice: 85, sellingPrice: 100, stock: 35, unit: 'প্যাক', lowStockThreshold: 8, imageEmoji: '🌶️' },
+  { id: 'g-11', barcode: '894110012311', name: 'Red Lentil (Mosur Dal) 1kg', banglaName: 'দেশি মসুর ডাল', category: 'grocery', purchasePrice: 125, sellingPrice: 140, stock: 60, unit: 'কেজি', lowStockThreshold: 15, imageEmoji: '🥣' },
   { id: 'g-12', barcode: '894110012312', name: 'Potato (Deshi) 1kg', banglaName: 'দেশি নতুন আলু ১ কেজি', category: 'grocery', purchasePrice: 38, sellingPrice: 50, stock: 200, unit: 'কেজি', lowStockThreshold: 30, imageEmoji: '🥔' },
   { id: 'g-13', barcode: '894110012313', name: 'Onion (Deshi) 1kg', banglaName: 'দেশি পেঁয়াজ ১ কেজি', category: 'grocery', purchasePrice: 75, sellingPrice: 90, stock: 150, unit: 'কেজি', lowStockThreshold: 25, imageEmoji: '🧅' },
 

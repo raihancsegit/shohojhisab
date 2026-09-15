@@ -26,6 +26,7 @@ export default function VoiceAssistant() {
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
   const autoDismissTimerRef = useRef<any>(null);
+  const inactivityTimerRef = useRef<any>(null);
   const latestTranscriptRef = useRef<string>('');
   const isListeningRef = useRef<boolean>(false);
 
@@ -48,6 +49,7 @@ export default function VoiceAssistant() {
       unsubscribe();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
   }, []);
 
@@ -69,6 +71,7 @@ export default function VoiceAssistant() {
 
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
 
     latestTranscriptRef.current = '';
     setLiveTranscript('');
@@ -77,6 +80,13 @@ export default function VoiceAssistant() {
     isListeningRef.current = true;
     setIsListening(true);
     setIsProcessing(false);
+
+    // Auto dismiss after 10s if nothing is spoken
+    inactivityTimerRef.current = setTimeout(() => {
+      if (isListeningRef.current && !latestTranscriptRef.current.trim()) {
+        cancelVoice();
+      }
+    }, 10000);
 
     // Start acoustic proximity distance gate (autoGainControl disabled)
     voiceProximityManager.start().catch((err) => {
@@ -98,24 +108,22 @@ export default function VoiceAssistant() {
         const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
 
         if (isDistantNoise) {
-          // Ambient / distant noise detected (crowd or TV) - filter out
-          setFeedbackType('listening');
-          setFeedbackText('⚠️ দূরের আওয়াজ/টিভি ফিল্টার হয়েছে (কাছে এসে বলুন)');
           return;
         }
 
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
-        // Auto-complete after 1.2s silence
+        // Auto-complete after 1.1s silence
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isListeningRef.current && latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
           }
-        }, 1200);
+        }, 1100);
       };
 
       recognition.onerror = (err: any) => {
@@ -149,6 +157,7 @@ export default function VoiceAssistant() {
   const stopListeningOnly = () => {
     voiceProximityManager.stop();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     isListeningRef.current = false;
     setIsListening(false);
     playMicStopSound();

@@ -686,20 +686,20 @@ function getPlanFeaturesJson(planId: string): string {
 // Comprehensive Starter Pack Templates for all 12 Shop Categories
 const STARTER_PACKS: { [catId: string]: any[] } = {
   'cat-grocery': [
-    { barcode: '89411001', name: 'Teer Soybean Oil 1L', banglaName: 'তীর সয়াবিন তেল ১ লিটার', purchasePrice: 165, sellingPrice: 180, stock: 40, unit: 'লিটার', icon: '🛢️', brand: 'Teer' },
-    { barcode: '89411002', name: 'Rupchanda Oil 2L', banglaName: 'রূপচাঁদা সয়াবিন তেল ২ লিটার', purchasePrice: 330, sellingPrice: 360, stock: 24, unit: 'লিটার', icon: '🛢️', brand: 'Rupchanda' },
+    { barcode: '89411001', name: 'Teer Soybean Oil 1L', banglaName: 'তীর সয়াবিন তেল', purchasePrice: 165, sellingPrice: 180, stock: 40, unit: 'লিটার', icon: '🛢️', brand: 'Teer' },
+    { barcode: '89411002', name: 'Rupchanda Oil 2L', banglaName: 'রূপচাঁদা সয়াবিন তেল', purchasePrice: 330, sellingPrice: 360, stock: 24, unit: 'লিটার', icon: '🛢️', brand: 'Rupchanda' },
     { barcode: '89411003', name: 'Miniket Rice 50kg', banglaName: 'মিনিকেট চাল ৫০ কেজি বস্তা', purchasePrice: 3250, sellingPrice: 3500, stock: 15, unit: 'বস্তা', icon: '🍚', brand: 'Rashid' },
     { barcode: '89411004', name: 'Nazirshail Rice 25kg', banglaName: 'নাজিরশাইল চাল ২৫ কেজি বস্তা', purchasePrice: 1850, sellingPrice: 2050, stock: 20, unit: 'বস্তা', icon: '🍚', brand: 'Pran' },
-    { barcode: '89411005', name: 'Fresh White Sugar 1kg', banglaName: 'ফ্রেশ চিনি ১ কেজি', purchasePrice: 130, sellingPrice: 140, stock: 75, unit: 'কেজি', icon: '🧂', brand: 'Fresh' },
-    { barcode: '89411006', name: 'Farm Red Egg (Hali)', banglaName: 'ফার্মের লাল ডিম ১ হালি', purchasePrice: 42, sellingPrice: 48, stock: 100, unit: 'হালি', icon: '🥚' },
-    { barcode: '89411007', name: 'Lux Soap 100g', banglaName: 'লাক্স সাবান ১০০ গ্রাম', purchasePrice: 50, sellingPrice: 60, stock: 50, unit: 'পিস', icon: '🧼', brand: 'Unilever' },
-    { barcode: '89411008', name: 'Wheel Washing Powder 500g', banglaName: 'হুইল ওয়াশিং পাউডার ৫০০ গ্রাম', purchasePrice: 55, sellingPrice: 65, stock: 40, unit: 'প্যাকেট', icon: '🧺', brand: 'Unilever' },
-    { barcode: '89411009', name: 'Maggi Noodles 4-Pack', banglaName: 'ম্যাগি নুডুলস ৪ প্যাক', purchasePrice: 75, sellingPrice: 90, stock: 40, unit: 'প্যাক', icon: '🍜', brand: 'Nestle' },
-    { barcode: '89411010', name: 'ACI Pure Salt 1kg', banglaName: 'এসিআই পিওর লবণ ১ কেজি', purchasePrice: 38, sellingPrice: 45, stock: 80, unit: 'কেজি', icon: '🧂', brand: 'ACI' },
-    { barcode: '89411011', name: 'Deshi Mosur Dal 1kg', banglaName: 'দেশি মসুর ডাল ১ কেজি', purchasePrice: 125, sellingPrice: 140, stock: 60, unit: 'কেজি', icon: '🥣' },
-    { barcode: '89411012', name: 'Deshi Red Onion 1kg', banglaName: 'দেশি লাল পেঁয়াজ ১ কেজি', purchasePrice: 70, sellingPrice: 85, stock: 50, unit: 'কেজি', icon: '🧅' },
-    { barcode: '89411013', name: 'Ispahani Mirzapore Tea 200g', banglaName: 'ইস্পাহানি মির্জাপুর চা ২০০ গ্রাম', purchasePrice: 105, sellingPrice: 120, stock: 30, unit: 'প্যাকেট', icon: '☕', brand: 'Ispahani' },
-    { barcode: '89411014', name: 'Dano Milk Powder 500g', banglaName: 'ডানো গুঁড়ো দুধ ৫০০ গ্রাম', purchasePrice: 420, sellingPrice: 460, stock: 25, unit: 'প্যাকেট', icon: '🥛', brand: 'Arla' }
+    { barcode: '89411005', name: 'Fresh White Sugar', banglaName: 'ফ্রেশ চিনি', purchasePrice: 130, sellingPrice: 140, stock: 75, unit: 'কেজি', icon: '🧂', brand: 'Fresh' },
+    { barcode: '89411006', name: 'Farm Red Egg', banglaName: 'ফার্মের লাল ডিম', purchasePrice: 42, sellingPrice: 48, stock: 100, unit: 'হালি', icon: '🥚' },
+    { barcode: '89411007', name: 'Lux Soap 100g', banglaName: 'লাক্স সাবান', purchasePrice: 50, sellingPrice: 60, stock: 50, unit: 'পিস', icon: '🧼', brand: 'Unilever' },
+    { barcode: '89411008', name: 'Wheel Washing Powder 500g', banglaName: 'হুইল ওয়াশিং পাউডার', purchasePrice: 55, sellingPrice: 65, stock: 40, unit: 'প্যাকেট', icon: '🧺', brand: 'Unilever' },
+    { barcode: '89411009', name: 'Maggi Noodles 4-Pack', banglaName: 'ম্যাগি নুডুলস', purchasePrice: 75, sellingPrice: 90, stock: 40, unit: 'প্যাক', icon: '🍜', brand: 'Nestle' },
+    { barcode: '89411010', name: 'ACI Pure Salt', banglaName: 'এসিআই পিওর লবণ', purchasePrice: 38, sellingPrice: 45, stock: 80, unit: 'কেজি', icon: '🧂', brand: 'ACI' },
+    { barcode: '89411011', name: 'Deshi Mosur Dal', banglaName: 'দেশি মসুর ডাল', purchasePrice: 125, sellingPrice: 140, stock: 60, unit: 'কেজি', icon: '🥣' },
+    { barcode: '89411012', name: 'Deshi Red Onion', banglaName: 'দেশি লাল পেঁয়াজ', purchasePrice: 70, sellingPrice: 85, stock: 50, unit: 'কেজি', icon: '🧅' },
+    { barcode: '89411013', name: 'Ispahani Mirzapore Tea 200g', banglaName: 'ইস্পাহানি মির্জাপুর চা', purchasePrice: 105, sellingPrice: 120, stock: 30, unit: 'প্যাকেট', icon: '☕', brand: 'Ispahani' },
+    { barcode: '89411014', name: 'Dano Milk Powder 500g', banglaName: 'ডানো গুঁড়ো দুধ', purchasePrice: 420, sellingPrice: 460, stock: 25, unit: 'প্যাকেট', icon: '🥛', brand: 'Arla' }
   ],
   'cat-pharmacy': [
     { barcode: '89422001', name: 'Napa Extra Tablet', banglaName: 'নাপা এক্সট্রা ট্যাবলেট (পাতা)', purchasePrice: 24, sellingPrice: 30, stock: 150, unit: 'পাতা', icon: '💊', genericName: 'Paracetamol + Caffeine', expiryDate: '2027-06-30', brand: 'Beximco' },
@@ -959,6 +959,29 @@ try {
   }
 } catch (e) {
   console.error('Error seeding default tenants', e);
+}
+
+// Auto-clean redundant package weight labels from existing database product names
+try {
+  const cleanUpdates: [string, string][] = [
+    ['দেশি মসুর ডাল', 'দেশি মসুর ডাল ১ কেজি'],
+    ['ফ্রেশ চিনি', 'ফ্রেশ চিনি ১ কেজি'],
+    ['এসিআই পিওর লবণ', 'এসিআই পিওর লবণ ১ কেজি'],
+    ['দেশি লাল পেঁয়াজ', 'দেশি লাল পেঁয়াজ ১ কেজি'],
+    ['তীর সয়াবিন তেল', 'তীর সয়াবিন তেল ১ লিটার'],
+    ['রূপচাঁদা সয়াবিন তেল', 'রূপচাঁদা সয়াবিন তেল ২ লিটার'],
+    ['ফার্মের লাল ডিম', 'ফার্মের লাল ডিম ১ হালি'],
+    ['লাক্স সাবান', 'লাক্স সাবান ১০০ গ্রাম'],
+    ['হুইল ওয়াশিং পাউডার', 'হুইল ওয়াশিং পাউডার ৫০০ গ্রাম'],
+    ['ম্যাগি নুডুলস', 'ম্যাগি নুডুলস ৪ প্যাক'],
+    ['ইস্পাহানি মির্জাপুর চা', 'ইস্পাহানি মির্জাপুর চা ২০০ গ্রাম'],
+    ['ডানো গুঁড়ো দুধ', 'ডানো গুঁড়ো দুধ ৫০০ গ্রাম']
+  ];
+  for (const [cleanName, oldName] of cleanUpdates) {
+    db.prepare('UPDATE products SET bangla_name = ? WHERE bangla_name = ?').run(cleanName, oldName);
+  }
+} catch (err) {
+  console.warn('Could not auto-clean product names:', err);
 }
 
 // Routes
