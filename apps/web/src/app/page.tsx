@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
-import { formatBDDateLong, formatBDDate, formatBDDateTime } from '../lib/dateUtils';
+import { formatBDDateLong, formatBDDate, formatBDDateTime, formatBDTime } from '../lib/dateUtils';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
@@ -1224,16 +1224,17 @@ export default function ShopkeeperDashboard() {
                 <strong style={{ fontSize: '14px', color: '#64748b', display: 'block' }}>{periodLabel} এ কোনো মেমো কাটা হয়নি</strong>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderBottom: '1.5px solid #e2e8f0', color: '#64748b', textAlign: 'left', background: '#f8fafc' }}>
                       <th style={{ padding: '12px 14px', borderRadius: '10px 0 0 10px' }}>মেমো নং</th>
-                      <th style={{ padding: '12px 14px' }}>ক্রেতা</th>
-                      <th style={{ padding: '12px 14px' }}>মোট টাকা</th>
-                      <th style={{ padding: '12px 14px' }}>পরিশোধ</th>
-                      <th style={{ padding: '12px 14px' }}>বকেয়া</th>
-                      <th style={{ padding: '12px 14px', borderRadius: '0 10px 10px 0' }}>পেমেন্ট মাধ্যম</th>
+                      <th style={{ padding: '12px 14px' }}>🕒 সময় ও তারিখ</th>
+                      <th style={{ padding: '12px 14px' }}>👤 ক্রেতা</th>
+                      <th style={{ padding: '12px 14px' }}>💰 মোট টাকা</th>
+                      <th style={{ padding: '12px 14px' }}>💵 পরিশোধ</th>
+                      <th style={{ padding: '12px 14px' }}>🔴 বকেয়া</th>
+                      <th style={{ padding: '12px 14px', borderRadius: '0 10px 10px 0', textAlign: 'right' }}>রসিদ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1242,10 +1243,20 @@ export default function ShopkeeperDashboard() {
                         <td style={{ padding: '12px 14px', fontWeight: '800', color: '#0f172a' }}>
                           #{s.invoiceNo || s.invoice_no || s.id?.slice(0, 6)}
                         </td>
-                        <td style={{ padding: '12px 14px', color: '#334155' }}>
-                          {s.customerName || s.customer_name || 'নগদ ক্রেতা'}
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>🕒</span>
+                            <span>{formatBDTime(s.createdAt || s.created_at || s.date || Date.now())}</span>
+                          </div>
+                          <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '1px' }}>
+                            {formatBDDate(s.createdAt || s.created_at || s.date || Date.now())}
+                          </div>
                         </td>
-                        <td className="num-font" style={{ padding: '12px 14px', fontWeight: '900', color: '#0f172a' }}>
+                        <td style={{ padding: '12px 14px', color: '#334155' }}>
+                          <strong style={{ display: 'block', color: '#0f172a' }}>{s.customerName || s.customer_name || 'নগদ ক্রেতা'}</strong>
+                          {s.customerPhone && <span style={{ fontSize: '11px', color: '#64748b' }}>{s.customerPhone}</span>}
+                        </td>
+                        <td className="num-font" style={{ padding: '12px 14px', fontWeight: '900', color: '#0f172a', fontSize: '14.5px' }}>
                           ৳{Number(s.totalAmount || s.total_amount || 0).toLocaleString('en-US')}
                         </td>
                         <td className="num-font" style={{ padding: '12px 14px', color: '#059669', fontWeight: '800' }}>
@@ -1254,7 +1265,7 @@ export default function ShopkeeperDashboard() {
                         <td className="num-font" style={{ padding: '12px 14px', color: Number(s.dueAmount || s.due_amount || 0) > 0 ? '#dc2626' : '#94a3b8', fontWeight: '800' }}>
                           ৳{Number(s.dueAmount || s.due_amount || 0).toLocaleString('en-US')}
                         </td>
-                        <td style={{ padding: '12px 14px' }}>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           <button
                             onClick={() => setSelectedInvoice(s)}
                             style={{
