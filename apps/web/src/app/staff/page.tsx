@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme } from '../../lib/industryConfig';
 import DataLoader from '../../components/DataLoader';
+import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 
 interface StaffMember {
   id: string;
@@ -900,7 +901,7 @@ export default function StaffManagementPage() {
                     ক্যাশিয়ার: {activeShift.staff_name}
                   </h2>
                   <p style={{ margin: 0, fontSize: '12px', color: '#a7f3d0' }}>
-                    শিফট শুরুর সময়: {new Date(activeShift.opening_time).toLocaleTimeString('bn-BD')} (প্রারম্ভিক ক্যাশ: ৳ {formatPrice(activeShift.opening_float)})
+                    শিফট শুরুর সময়: {formatBDTime(activeShift.opening_time)} (প্রারম্ভিক ক্যাশ: ৳ {formatPrice(activeShift.opening_float)})
                   </p>
                 </div>
 
@@ -980,7 +981,7 @@ export default function StaffManagementPage() {
                     <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
                       <td style={{ padding: '12px', fontWeight: '800', color: '#0f172a' }}>{s.staff_name}</td>
                       <td style={{ padding: '12px', fontSize: '11.5px', color: '#64748b' }}>
-                        {new Date(s.opening_time).toLocaleDateString('bn-BD')} {new Date(s.opening_time).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
+                        {formatBDDateTime(s.opening_time)}
                       </td>
                       <td style={{ padding: '12px' }} className="num-font">৳ {formatPrice(s.opening_float)}</td>
                       <td style={{ padding: '12px', color: '#16a34a', fontWeight: '800' }} className="num-font">৳ {formatPrice(s.cash_sales_total)}</td>
@@ -1312,7 +1313,7 @@ export default function StaffManagementPage() {
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
-                  {new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })} ({new Date(log.created_at).toLocaleDateString('bn-BD')})
+                  {formatBDDateTime(log.created_at)}
                 </div>
               </div>
             ))}

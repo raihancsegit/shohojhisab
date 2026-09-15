@@ -81,6 +81,61 @@ export function getBDDateOffsetStr(daysOffset: number): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
+export function formatBDDateTime(d: Date | string | number = new Date()): string {
+  if (!d) return 'আজ';
+  const dateObj = typeof d === 'object' ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return String(d);
+  try {
+    const datePart = dateObj.toLocaleDateString('bn-BD', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Dhaka'
+    });
+    const timePart = dateObj.toLocaleTimeString('bn-BD', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Dhaka'
+    });
+    return `${datePart}, ${timePart}`;
+  } catch (e) {
+    return dateObj.toLocaleString('bn-BD', { timeZone: 'Asia/Dhaka' });
+  }
+}
+
+export function formatBDDate(d: Date | string | number = new Date()): string {
+  if (!d) return 'আজ';
+  const dateObj = typeof d === 'object' ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return String(d);
+  try {
+    return dateObj.toLocaleDateString('bn-BD', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Asia/Dhaka'
+    });
+  } catch (e) {
+    return dateObj.toLocaleDateString('bn-BD', { timeZone: 'Asia/Dhaka' });
+  }
+}
+
+export function formatBDTime(d: Date | string | number = new Date()): string {
+  if (!d) return '';
+  const dateObj = typeof d === 'object' ? d : new Date(d);
+  if (isNaN(dateObj.getTime())) return '';
+  try {
+    return dateObj.toLocaleTimeString('bn-BD', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Dhaka'
+    });
+  } catch (e) {
+    return dateObj.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' });
+  }
+}
+
 fastify.register(cors, {
   origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
@@ -2196,8 +2251,8 @@ fastify.post('/api/staff/attendance/check-in', async (request, reply) => {
     return reply.status(401).send({ error: 'ভুল পিন নাম্বার!' });
   }
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const nowTime = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  const todayStr = getBDTodayStr();
+  const nowTime = formatBDTime();
   const existing = db.prepare('SELECT * FROM staff_attendance WHERE tenant_id = ? AND staff_id = ? AND date = ?').get(tenantId, staffId, todayStr) as any;
 
   if (existing) {
@@ -2217,8 +2272,8 @@ fastify.post('/api/staff/attendance/check-in', async (request, reply) => {
 
 fastify.post('/api/staff/attendance/check-out', async (request, reply) => {
   const { tenantId, staffId } = request.body as any;
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const nowTime = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  const todayStr = getBDTodayStr();
+  const nowTime = formatBDTime();
 
   const att = db.prepare('SELECT * FROM staff_attendance WHERE tenant_id = ? AND staff_id = ? AND date = ?').get(tenantId, staffId, todayStr) as any;
   if (!att) return reply.status(404).send({ error: 'আগে চেক-ইন করুন' });
@@ -3538,7 +3593,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         let lastRestockText = '';
         let spokenRestock = '';
         if (lastStockIn) {
-          const inDate = new Date(lastStockIn.created_at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+          const inDate = formatBDDate(lastStockIn.created_at);
           lastRestockText = `\n• **সর্বশেষ রিস্টক:** ${inDate}-এ +${lastStockIn.quantity} ${lastStockIn.unit} (${lastStockIn.source_ref || 'নতুন চালান'})`;
           spokenRestock = `। সর্বশেষ ${inDate} তারিখে ${lastStockIn.quantity} ${lastStockIn.unit} রিস্টক হয়েছিল`;
         }
@@ -5129,8 +5184,7 @@ fastify.get('/api/customers', async (request) => {
 
           let dateFmt = '';
           if (s.created_at) {
-            const d = new Date(s.created_at);
-            dateFmt = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+            dateFmt = formatBDDate(s.created_at);
           }
 
           const amt = isPay ? Number(s.paid_amount || s.total_amount || 0) : Number(s.due_amount || s.total_amount || 0);
@@ -6498,7 +6552,7 @@ fastify.post('/api/running-tabs', async (request, reply) => {
   }
 
   const now = new Date().toISOString();
-  const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = formatBDTime();
   
   // Format items with timestamp if not present
   const formattedItems = (items || []).map((it: any) => ({
@@ -6699,12 +6753,11 @@ fastify.get('/api/customers/:id/ledger', async (request, reply) => {
 
   const ledgerEntries = sales.map(s => {
     const saleItems = getItems.all(s.id) as any[];
-    const dateObj = new Date(s.created_at);
     return {
       id: s.id,
       invoiceNo: s.invoice_no,
-      date: dateObj.toLocaleDateString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric' }),
-      time: dateObj.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+      date: formatBDDate(s.created_at),
+      time: formatBDTime(s.created_at),
       rawCreatedAt: s.created_at,
       totalAmount: Number(s.total_amount) || 0,
       paidAmount: Number(s.paid_amount) || 0,

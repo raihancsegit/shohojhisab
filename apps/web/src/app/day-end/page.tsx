@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
+import { formatBDDateLong } from '../../lib/dateUtils';
 
 export default function DayEndPage() {
   const { tenant, speakAnnouncement, triggerHaptic } = useAuth();
@@ -112,7 +113,7 @@ export default function DayEndPage() {
   };
 
   const handleSendDayEndWhatsApp = () => {
-    const todayStr = new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
+    const todayStr = formatBDDateLong(new Date());
     const countedNotesDetails = Object.entries(notesCount)
       .filter(([_, count]) => Number(count) > 0)
       .map(([denom, count]) => `  • ৳${denom} × ${count}টি = ৳${Number(denom) * Number(count)}`)

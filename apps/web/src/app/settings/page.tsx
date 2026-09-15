@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { downloadBackupFile } from '../../lib/dataVault';
+import { formatBDDateTime } from '../../lib/dateUtils';
 
 type SettingsTab = 'main' | 'general' | 'items' | 'parties' | 'transactions' | 'printing' | 'backup';
 
@@ -1724,7 +1725,7 @@ export default function SettingsHubPage() {
                   <span>সর্বশেষ ক্লাউড ব্যাকআপ:</span>
                   <strong style={{ color: '#0f172a' }}>
                     {cloudSyncStatus?.lastSyncTime
-                      ? new Date(cloudSyncStatus.lastSyncTime).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ', ' + new Date(cloudSyncStatus.lastSyncTime).toLocaleDateString('bn-BD')
+                      ? formatBDDateTime(cloudSyncStatus.lastSyncTime)
                       : 'এখনো হয়নি'}
                   </strong>
                 </div>

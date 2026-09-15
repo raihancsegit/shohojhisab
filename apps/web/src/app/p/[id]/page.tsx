@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import DataLoader from '../../../components/DataLoader';
+import { formatBDDate } from '../../../lib/dateUtils';
 
 export default function CustomerPublicPassbookPage() {
   const params = useParams();
@@ -171,7 +172,7 @@ export default function CustomerPublicPassbookPage() {
                       মেমো: {s.invoiceNo || s.invoice_no || `INV-${idx + 1}`}
                     </div>
                     <div style={{ fontSize: '11.5px', color: '#64748b' }}>
-                      📅 {new Date(s.createdAt || s.created_at || Date.now()).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      📅 {formatBDDate(s.createdAt || s.created_at || Date.now())}
                     </div>
                   </div>
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import DataLoader from '../../../components/DataLoader';
+import { formatBDDate } from '../../../lib/dateUtils';
 
 function PassbookContent() {
   const searchParams = useSearchParams();
@@ -177,7 +178,7 @@ function PassbookContent() {
                     মেমো #{s.invoiceNo || s.invoice_no || s.id?.slice(0, 6)}
                   </strong>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    {s.createdAt ? new Date(s.createdAt).toLocaleDateString('bn-BD') : 'আজকে'} • {s.paymentMethod === 'cash' ? 'নগদ' : s.paymentMethod === 'due' ? 'বাকি' : 'বিকাশ'}
+                    {s.createdAt || s.created_at ? formatBDDate(s.createdAt || s.created_at) : 'আজকে'} • {s.paymentMethod === 'cash' ? 'নগদ' : s.paymentMethod === 'due' ? 'বাকি' : 'বিকাশ'}
                   </span>
                 </div>
 

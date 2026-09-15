@@ -18,6 +18,7 @@ import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
 import { saveVaultSnapshot, autoRestoreIfWiped } from '../../lib/dataVault';
+import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -806,7 +807,7 @@ export default function PosPage() {
           industrySubtitle: indTheme.receiptSubtitle,
           terms: indTheme.terms,
           invoiceNo: data.order?.invoiceNo || 'INV-' + Date.now().toString().slice(-6),
-          date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+          date: formatBDDateTime(new Date()),
           cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
           items: finalItems.map(i => {
             const qty = i.quantity || 1;
@@ -1801,7 +1802,7 @@ export default function PosPage() {
     const custObj = customers.find(c => c.id === selectedCustomer);
     const holdItem = {
       id: 'hold-' + Date.now(),
-      time: new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+      time: formatBDTime(new Date()),
       customerName: custObj ? custObj.name : 'ক্রেতা ' + (heldCarts.length + 1),
       cart: [...cart],
       totalAmount: subtotalCart
@@ -1907,7 +1908,7 @@ export default function PosPage() {
           industrySubtitle: indTheme.receiptSubtitle,
           terms: indTheme.terms,
           invoiceNo: data.order?.invoiceNo || 'INV-' + Date.now().toString().slice(-6),
-          date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+          date: formatBDDateTime(new Date()),
           cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
           items: [...cart],
           subtotal: subtotalCart,
@@ -5809,7 +5810,7 @@ export default function PosPage() {
               industrySubtitle: indTheme.receiptSubtitle,
               terms: indTheme.terms,
               invoiceNo: saleData.invoiceNo || rawOrder.invoiceNo || ('INV-' + Date.now().toString().slice(-6)),
-              date: new Date().toLocaleDateString('bn-BD') + ' ' + new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
+              date: formatBDDateTime(new Date()),
               cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
               items: (saleData.items && saleData.items.length > 0) ? saleData.items : (rawOrder.items || []),
               subtotal: saleData.subtotal ?? rawOrder.subtotal ?? rawOrder.totalAmount ?? 0,

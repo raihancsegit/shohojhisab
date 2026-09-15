@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
-import { formatBDDate, formatBDTime } from '../../lib/dateUtils';
+import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 import { saveVaultSnapshot, autoRestoreIfWiped } from '../../lib/dataVault';
 
 export default function ReportsPage() {
@@ -107,7 +107,7 @@ export default function ReportsPage() {
 
     csvContent += `দোকানের নাম:,${tenant?.shopName || 'দোকান'}\n`;
     csvContent += `রিপোর্টের সময়সীমা:,${analyticsData.periodLabel}\n`;
-    csvContent += `তারিখ:,${new Date().toLocaleDateString('bn-BD')}\n\n`;
+    csvContent += `তারিখ:,${formatBDDateTime(new Date())}\n\n`;
 
     csvContent += `--- আর্থিক সারসংক্ষেপ ---\n`;
     csvContent += `মোট বিক্রি (Revenue):,৳${analyticsData.summary?.totalSales || 0}\n`;
@@ -1047,7 +1047,7 @@ export default function ReportsPage() {
             <div id="day-end-slip" style={{ border: '2px dashed #cbd5e1', borderRadius: '16px', padding: '16px', background: '#fafafa', fontFamily: 'monospace', fontSize: '13px' }}>
               <div style={{ textAlign: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', marginBottom: '10px' }}>
                 <strong style={{ fontSize: '16px', display: 'block', color: '#0f172a' }}>{tenant?.shopName || 'দোকান'}</strong>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>তারিখ: {new Date().toLocaleDateString('bn-BD')} {new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>তারিখ: {formatBDDateTime(new Date())}</span>
               </div>
 
               <div style={{ display: 'grid', gap: '6px', color: '#334155' }}>

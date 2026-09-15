@@ -21,6 +21,7 @@ import VoiceStockInModal from '../../components/VoiceStockInModal';
 import IndustryUnitSelect, { MultiUnitBreakdownPreview } from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
+import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -470,7 +471,7 @@ export default function StockPage() {
     triggerHaptic('success');
     const headers = ['তারিখ ও সময়', 'পণ্যের নাম', 'লেনদেনের ধরন', 'পরিমাণ', 'একক', 'একক দর (টাকা)', 'মোট মূল্য (টাকা)', 'উৎস / চালান', 'নোট'];
     const rows = ledgerLogs.map(l => [
-      new Date(l.created_at).toLocaleString('bn-BD'),
+      formatBDDateTime(l.created_at),
       l.product_name,
       l.type === 'stock_in' ? 'স্টক ইন (নতুন মাল)' : l.type === 'sale' ? 'বিক্রয় (স্টক আউট)' : l.type === 'return' ? 'ফেরত' : 'সমন্বয়',
       l.quantity,
@@ -2949,9 +2950,7 @@ export default function StockPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {historyLogs.map((log: any) => {
                     const isInflow = log.type === 'stock_in';
-                    const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
-                      year: 'numeric', month: 'short', day: 'numeric'
-                    }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                    const formattedDate = formatBDDateTime(log.created_at);
 
                     return (
                       <div
@@ -3329,9 +3328,7 @@ export default function StockPage() {
                         {ledgerLogs.map((log: any, idx: number) => {
                           const isInflow = log.type === 'stock_in';
                           const isSale = log.type === 'sale';
-                          const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
-                            year: 'numeric', month: 'short', day: 'numeric'
-                          }) + ' ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                          const formattedDate = formatBDDateTime(log.created_at);
                           const totalAmt = Math.round((Number(log.quantity) || 0) * (Number(log.unit_price) || 0));
 
                           return (
@@ -3403,9 +3400,7 @@ export default function StockPage() {
                     {ledgerLogs.map((log: any, idx: number) => {
                       const isInflow = log.type === 'stock_in';
                       const isSale = log.type === 'sale';
-                      const formattedDate = new Date(log.created_at).toLocaleDateString('bn-BD', {
-                        month: 'short', day: 'numeric'
-                      }) + ', ' + new Date(log.created_at).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' });
+                      const formattedDate = formatBDDateTime(log.created_at);
                       const totalAmt = Math.round((Number(log.quantity) || 0) * (Number(log.unit_price) || 0));
 
                       return (

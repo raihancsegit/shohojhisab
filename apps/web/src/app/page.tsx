@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
+import { formatBDDateLong, formatBDDate, formatBDDateTime } from '../lib/dateUtils';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
@@ -75,8 +76,7 @@ export default function ShopkeeperDashboard() {
     else if (hour >= 17 && hour < 20) setGreeting('শুভ সন্ধ্যা');
     else setGreeting('শুভ রাত্রি');
 
-    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    setCurrentDateString(new Date().toLocaleDateString('bn-BD', options));
+    setCurrentDateString(formatBDDateLong(new Date()));
   }, []);
 
   // 🔄 Mobile Pull-to-Refresh Gesture Engine
@@ -121,7 +121,7 @@ export default function ShopkeeperDashboard() {
   // 📲 1-Tap WhatsApp Receipt Share
   const shareReceiptViaWhatsApp = (customerName: string, amount: number, memoType: string, note?: string) => {
     triggerHaptic('medium');
-    const text = `🧾 *${tenant?.shopName || 'সহজ হিসাব'}*\n📍 ${tenant?.location || 'বাজার'}\n📅 ${new Date().toLocaleDateString('bn-BD')}\n\n👤 কাস্টমার: ${customerName}\n🔖 বিবরণ: ${memoType} ${note ? `(${note})` : ''}\n💵 টাকা: ৳${amount.toLocaleString('en-US')}\n\nধন্যবাদ, আপনার হিসাব ডিজিটাল খাতা ও ক্লাউডে সংরক্ষিত আছে! ✨`;
+    const text = `🧾 *${tenant?.shopName || 'সহজ হিসাব'}*\n📍 ${tenant?.location || 'বাজার'}\n📅 ${formatBDDate(new Date())}\n\n👤 কাস্টমার: ${customerName}\n🔖 বিবরণ: ${memoType} ${note ? `(${note})` : ''}\n💵 টাকা: ৳${amount.toLocaleString('en-US')}\n\nধন্যবাদ, আপনার হিসাব ডিজিটাল খাতা ও ক্লাউডে সংরক্ষিত আছে! ✨`;
     const encoded = encodeURIComponent(text);
     if (navigator.share) {
       navigator.share({
@@ -1316,7 +1316,7 @@ export default function ShopkeeperDashboard() {
                 <p style={{ margin: 0, fontSize: '11px', color: '#475569' }}>মোবাইল: {tenant?.phone || ''}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '6px', color: '#475569' }}>
                   <span>মেমো: #{selectedInvoice.invoiceNo || selectedInvoice.invoice_no || selectedInvoice.id?.slice(0, 6)}</span>
-                  <span>{new Date(selectedInvoice.created_at || new Date()).toLocaleDateString('bn-BD')}</span>
+                  <span>{formatBDDate(selectedInvoice.created_at || new Date())}</span>
                 </div>
                 <div style={{ textAlign: 'left', fontSize: '11.5px', marginTop: '4px', fontWeight: '700' }}>
                   ক্রেতা: {selectedInvoice.customerName || selectedInvoice.customer_name || 'নগদ ক্রেতা'}
