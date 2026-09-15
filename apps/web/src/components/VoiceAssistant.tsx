@@ -90,43 +90,57 @@ export default function VoiceAssistant() {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
 
+      const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      recognition.continuous = true;
+      recognition.continuous = !isMobile;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript) return;
+        let full = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const item = event.results[i];
+          if (item && item[0] && item[0].transcript) {
+            full += (full ? ' ' : '') + item[0].transcript;
+          }
+        }
+        const cleaned = cleanSpokenBengali(full);
+        if (!cleaned) return;
 
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-        latestTranscriptRef.current = fullTranscript;
-        setLiveTranscript(fullTranscript);
+        latestTranscriptRef.current = cleaned;
+        setLiveTranscript(cleaned);
 
-        // Auto-complete after 750ms silence
+        // Auto-complete after 700ms silence
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
           }
-        }, 750);
+        }, 700);
       };
 
       recognition.onerror = (err: any) => {
-        if (err.error === 'no-speech') return;
+        console.warn('Voice recognition error:', err.error);
         if (err.error === 'not-allowed') {
           setFeedbackType('error');
-          setFeedbackText('মাইক্রোফোন পারমিশন প্রয়োজন। ব্রাউজারে অনুমতি দিন।');
+          setFeedbackText('মাইক্রোফোন পারমিশন বন্ধ আছে। ব্রাউজার সেটিংসে গিয়ে অনুমতি দিন।');
           setIsListening(false);
           isListeningRef.current = false;
-          autoDismissTimerRef.current = setTimeout(() => {
-            setFeedbackType(null);
-          }, 4000);
+        } else if (err.error !== 'no-speech') {
+          if (latestTranscriptRef.current.trim()) {
+            stopAndExecute(latestTranscriptRef.current.trim());
+          }
         }
       };
 
       recognition.onend = () => {
+        if (latestTranscriptRef.current.trim()) {
+          stopAndExecute(latestTranscriptRef.current.trim());
+          return;
+        }
+
         if (isListeningRef.current && !isProcessing) {
           try {
             recognition.start();
@@ -160,8 +174,9 @@ export default function VoiceAssistant() {
 
   const stopAndExecute = async (spokenText?: string) => {
     stopListeningOnly();
-    const query = cleanSpokenBengali(spokenText || latestTranscriptRef.current || liveTranscript);
-    if (!query || isEchoedTTSResponse(query)) {
+    const raw = spokenText || latestTranscriptRef.current || liveTranscript;
+    const query = cleanSpokenBengali(raw);
+    if (!query) {
       setFeedbackType('error');
       setFeedbackText('কথা বোঝা যায়নি, আবার বলুন।');
       autoDismissTimerRef.current = setTimeout(() => {
@@ -302,9 +317,7 @@ export default function VoiceAssistant() {
               {feedbackType === 'listening'
                 ? (liveTranscript
                     ? `"${liveTranscript}"`
-                    : (voiceConfig?.quickSaleBannerHint
-                        ? `যেমন: "${voiceConfig.quickSaleBannerHint}"`
-                        : 'বলুন: "আজকে স্টক কত", "বাকি খাতায় যাও", "৫০ টাকা খরচ"'))
+                    : 'মুখে বলুন (যেমন: "মেমো পেজে যাও", "আজকে বিক্রি কত")')
                 : feedbackText}
             </div>
           </div>
@@ -350,39 +363,14 @@ export default function VoiceAssistant() {
         </div>
       )}
 
-
-
-      {/* 💡 Category-Specific Smart Spoken Suggestion Pills */}
-      {feedbackType === 'listening' && !liveTranscript && voiceConfig?.assistantSuggestions && (
+      {/* 📖 Direct Link to Voice Guide (without old suggestion pills) */}
+      {feedbackType === 'listening' && !liveTranscript && (
         <div style={{
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: '5px',
           justifyContent: 'flex-end',
           maxWidth: '320px',
           animation: 'fadeInUp 0.15s ease'
         }}>
-          {voiceConfig.assistantSuggestions.slice(0, 3).map((sug, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => stopAndExecute(sug)}
-              style={{
-                background: 'rgba(30, 27, 75, 0.92)',
-                color: '#c7d2fe',
-                border: '1px solid rgba(199, 210, 254, 0.3)',
-                borderRadius: '12px',
-                padding: '4px 9px',
-                fontSize: '11px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                backdropFilter: 'blur(6px)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}
-            >
-              🗣️ {sug}
-            </button>
-          ))}
           <Link
             href="/voice-guide"
             onClick={cancelVoice}
@@ -391,8 +379,8 @@ export default function VoiceAssistant() {
               color: '#ecfdf5',
               border: '1px solid rgba(110, 231, 183, 0.4)',
               borderRadius: '12px',
-              padding: '4px 9px',
-              fontSize: '11px',
+              padding: '5px 12px',
+              fontSize: '11.5px',
               fontWeight: '700',
               textDecoration: 'none',
               backdropFilter: 'blur(6px)',
@@ -402,7 +390,7 @@ export default function VoiceAssistant() {
               gap: '4px'
             }}
           >
-            📖 কমান্ড গাইড →
+            📖 সকল ভয়েস কমান্ড গাইড →
           </Link>
         </div>
       )}
