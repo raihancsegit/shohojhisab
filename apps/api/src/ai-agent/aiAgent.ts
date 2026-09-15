@@ -36,7 +36,11 @@ export interface LastActionEntry {
 }
 
 // In-memory store for 1-tap undo capability (2-minute window)
-const lastActionsByTenant = new Map<string, LastActionEntry>();
+export const lastActionsByTenant = new Map<string, LastActionEntry>();
+
+export function recordLastAction(tenantId: string, entry: LastActionEntry) {
+  lastActionsByTenant.set(tenantId, entry);
+}
 
 export function getUndoAction(tenantId: string): LastActionEntry | null {
   const entry = lastActionsByTenant.get(tenantId);

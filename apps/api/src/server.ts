@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { runGeminiShopAgent, undoLastAction, getUndoAction } from './ai-agent/aiAgent';
+import { runGeminiShopAgent, undoLastAction, getUndoAction, recordLastAction } from './ai-agent/aiAgent';
 import { cloudSync } from './cloud-sync/cloudSync';
 
 // Auto-load .env safely for local development and background processes
@@ -3337,6 +3337,97 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   };
 
+  // 0. Voice Undo & Transaction Rollback Intent ("ভুল হয়েছে কাটো", "আগেরটা বাতিল করো", "আনডু করো", "undo")
+  if (/বাতিল|কাটো|মোছো|ভুল\s*হয়েছে|ভুল\s*হইছে|আগেরটা\s*কাটো|আনডু|\bundo\b|ক্যানসেল|ক্যানচেল|ডিলিট\s*করো/.test(rawText)) {
+    const undoRes = undoLastAction(db, tenantId);
+    if (undoRes.success) {
+      return {
+        success: true,
+        action: 'undo_success',
+        speech: undoRes.message,
+        reply: `↩️ **অ্যাকশন বাতিল সম্পন্ন:**\n${undoRes.message}\n\nপূর্বের ব্যালেন্স ও পণ্যের স্টক সঠিকভাবে ফিরিয়ে আনা হয়েছে।`,
+        data: undoRes.data
+      };
+    } else {
+      return {
+        success: false,
+        action: 'undo_failed',
+        speech: undoRes.message,
+        reply: `⚠️ **বাতিল করা সম্ভব হয়নি:**\n${undoRes.message}`
+      };
+    }
+  }
+
+  // 0.1. Voice WhatsApp Reminder / Receipt Intent ("রহিম ভাইকে তাগাদা মেসেজ পাঠাও", "হোয়াটসঅ্যাপে রসিদ পাঠাও")
+  if (/হোয়াটসঅ্যাপ|whatsapp|হয়াটসঅ্যাপ|রসিদ\s*পাঠাও|মেসেজ\s*দাও|তাগাদা\s*(মেসেজ|পাঠাও)|রশিদ\s*পাঠাও/.test(rawText)) {
+    let customer = findCustomerInUtterance(rawText);
+    if (!customer) {
+      customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND total_due > 0 ORDER BY updated_at DESC, created_at DESC LIMIT 1').get(tenantId) as any;
+    }
+    if (customer) {
+      const shopInfo = db.prepare('SELECT shop_name, phone FROM tenants WHERE id = ?').get(tenantId) as any;
+      const shopName = shopInfo?.shop_name || 'আমাদের দোকান';
+      const custPhone = customer.phone ? String(customer.phone).replace(/[^0-9]/g, '') : '';
+      const dueAmt = Number(customer.total_due) || 0;
+      const msgText = encodeURIComponent(`সালাম ${customer.name}! ${shopName}-এ আপনার বর্তমান মোট বকেয়া পাওনা ৳${dueAmt} টাকা। অনুগ্রহ করে দ্রুত পরিশোধের অনুরোধ রইলো। ধন্যবাদ!`);
+      const waLink = custPhone ? `https://wa.me/88${custPhone}?text=${msgText}` : `https://wa.me/?text=${msgText}`;
+
+      const speech = `${customer.name}-কে হোয়াটসঅ্যাপে ৳${dueAmt} টাকার তাগাদা মেসেজ পাঠানোর লিংক তৈরি করা হয়েছে।`;
+      return {
+        success: true,
+        action: 'whatsapp_reminder',
+        navigateTo: '/khata',
+        speech,
+        reply: `📱 **হোয়াটসঅ্যাপ তাগাদা মেসেজ প্রস্তুত:**\n• কাস্টমার: **${customer.name}**\n• মোবাইল: **${customer.phone || 'দেওয়া নেই'}**\n• বকেয়া: **৳${dueAmt.toLocaleString('en-US')}**\n\n[ক্লিক করে সরাসরি হোয়াটসঅ্যাপে পাঠান →](${waLink})`,
+        actionLink: { text: 'হোয়াটসঅ্যাপে পাঠান 📲', href: waLink },
+        data: { customerName: customer.name, due: dueAmt, waLink }
+      };
+    }
+  }
+
+  // 0.2. Voice Print / Cash Drawer Intent ("মেমো প্রিন্ট করো", "বিল বের করো", "রসিদ প্রিন্ট করো")
+  if (/প্রিন্ট\s*করো|মেমো\s*প্রিন্ট|রসিদ\s*প্রিন্ট|বিল\s*প্রিন্ট|স্লিপ\s*বের\s*করো|ক্যাশ\s*ড্রয়ার\s*খোল/.test(rawText)) {
+    return {
+      success: true,
+      action: 'trigger_print',
+      speech: 'থার্মাল প্রিন্টারে মেমো প্রিন্ট ও ক্যাশ ড্রয়ার ওপেন করার নির্দেশ পাঠানো হয়েছে।',
+      reply: '🖨️ **প্রিন্ট রিকোয়েস্ট পাঠানো হয়েছে:**\nথার্মাল স্লিপ প্রিন্ট হচ্ছে...',
+      actionLink: { text: 'মেমো দেখুন →', href: '/pos' }
+    };
+  }
+
+  // 0.3. Evening AI Business Review & Performance Briefing ("আজকের বিজনেসের পর্যালোচনা বলো", "ব্যবসার রিভিউ দাও")
+  if (/ব্যবসার?\s*(পর্যালোচনা|রিভিউ|কেমন\s*হলো|পরামর্শ)|আজকের?\s*(ব্যবসার?\s*রিভিউ|পর্যালোচনা|পরামর্শ)/.test(rawText)) {
+    const todaySalesRow = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?) AND payment_method != 'due_payment'`).get(tenantId, todayDate, `${todayDate}%`) as any;
+    const todayExpRow = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)`).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+    const topItem = db.prepare(`SELECT product_name, SUM(quantity) as qty, SUM(total_price) as total FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE s.tenant_id = ? AND (date(s.created_at) = ? OR s.created_at LIKE ?) GROUP BY product_name ORDER BY total DESC LIMIT 1`).get(tenantId, todayDate, `${todayDate}%`) as any;
+
+    const sAmt = Number(todaySalesRow?.s) || 0;
+    const grossP = Number(todaySalesRow?.p) || 0;
+    const eAmt = Number(todayExpRow?.e) || 0;
+    const netP = grossP - eAmt;
+    const margin = sAmt > 0 ? Math.round((netP / sAmt) * 100) : 0;
+    const topName = topItem?.product_name || 'অন্যান্য পণ্য';
+
+    let advice = 'ব্যবসায়ের সার্বিক গতি স্বাভাবিক রয়েছে।';
+    if (sAmt > 5000 && margin > 15) {
+      advice = 'মাশাল্লাহ! আজ বিক্রি ও লাভের মার্জিন দুটোই চমৎকার ছিল।';
+    } else if (eAmt > grossP) {
+      advice = 'সতর্কতা: আজকের খরচের পরিমাণ লাভের চেয়ে বেশি হয়েছে, অপ্রয়োজনীয় ব্যয় নিয়ন্ত্রণ করুন।';
+    }
+
+    const speech = `আজকের ব্যবসায়িক পর্যালোচনা: সারাদিনে ৳${sAmt.toLocaleString('en-US')} টাকা বিক্রি হয়েছে এবং নিট লাভ হয়েছে ৳${netP.toLocaleString('en-US')} টাকা (মার্জিন ${margin}%)। সবচেয়ে বেশি বিক্রি হয়েছে ${topName}। ${advice}`;
+    return {
+      success: true,
+      action: 'business_review',
+      navigateTo: '/reports',
+      speech,
+      reply: `🌟 **আজকের এআই ব্যবসায়িক পর্যালোচনা:**\n• **মোট বিক্রি:** ৳${sAmt.toLocaleString('en-US')} (${Number(todaySalesRow?.c) || 0}টি মেমো)\n• **মোট খরচ:** ৳${eAmt.toLocaleString('en-US')}\n• **নিট লাভ:** ৳${netP.toLocaleString('en-US')} (নিট মার্জিন: **${margin}%**)\n• **টপ সেলিং আইটেম:** ${topName}\n\n💡 **এআই পরামর্শ:** ${advice}`,
+      actionLink: { text: 'রিপোর্ট পেজ দেখুন →', href: '/reports' },
+      data: { sales: sAmt, profit: netP, expenses: eAmt, margin, topItem: topName }
+    };
+  }
+
   // 1. Ultra-Tolerant Intelligent Route Navigation Matcher
   const matchedNavRoute = matchNavigationIntent(rawText, normalized);
   if (matchedNavRoute) {
@@ -3857,13 +3948,41 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         );
       }
 
+      // Record for 1-tap Voice Undo capability
+      recordLastAction(tenantId, {
+        actionId: 'act-' + uuidv4().slice(0, 8),
+        tenantId,
+        timestamp: Date.now(),
+        type: 'sale',
+        saleId,
+        customerId: customer?.id,
+        customerName: customer?.name,
+        previousDue: isDue ? (Number(customer?.total_due || 0) - finalAmount) : undefined,
+        newDue: isDue ? Number(customer?.total_due || 0) : undefined,
+        amount: finalAmount,
+        items: processedItems.map(i => ({
+          productId: i.product.id,
+          productName: i.product.bangla_name || i.product.name,
+          quantity: i.qty,
+          stockDeduction: i.stockDeduction,
+          unit: i.displayUnit,
+          lineTotal: i.lineTotal
+        }))
+      });
+
+      // Proactive Low-Stock Notice
+      const lowStockAlerts = processedItems
+        .filter(i => i.newStock <= (Number(i.product.low_stock_threshold) || 5))
+        .map(i => `${i.product.bangla_name || i.product.name} আর মাত্র ${i.newStock} ${i.product.unit || ''} বাকি`);
+      const lowStockSpoken = lowStockAlerts.length > 0 ? `। সতর্কতা: ${lowStockAlerts.join(', ')} আছে` : '';
+
       const paymentStatus = isDue ? (customer ? `${customer.name}-এর বাকি` : 'বাকিতে') : 'নগদ';
       const speech = isDue
-        ? `✓ ${customer ? customer.name : 'কাস্টমার'}-এর বাকি খাতায় ৳${finalAmount} টাকা (${summaryList}) যোগ হয়েছে এবং গুদাম স্টক আপডেট সম্পন্ন হয়েছে।`
-        : `✓ ${summaryList} মোট ৳${totalSaleAmount} টাকা নগদ বিক্রি সফল হয়েছে। স্টক আপডেট করা হয়েছে।`;
+        ? `✓ ${customer ? customer.name : 'কাস্টমার'}-এর বাকি খাতায় ৳${finalAmount} টাকা (${summaryList}) যোগ হয়েছে এবং গুদাম স্টক আপডেট সম্পন্ন হয়েছে${lowStockSpoken}।`
+        : `✓ ${summaryList} মোট ৳${totalSaleAmount} টাকা নগদ বিক্রি সফল হয়েছে। স্টক আপডেট করা হয়েছে${lowStockSpoken}।`;
 
       const replyItemsMarkdown = processedItems.map(i => 
-        `• **${i.product.bangla_name || i.product.name}**: ${i.qty} ${i.displayUnit} = **৳${i.lineTotal.toLocaleString('en-US')}** (অবশিষ্ট স্টক: ${i.newStock} ${i.product.unit || ''})`
+        `• **${i.product.bangla_name || i.product.name}**: ${i.qty} ${i.displayUnit} = **৳${i.lineTotal.toLocaleString('en-US')}** (অবশিষ্ট স্টক: ${i.newStock} ${i.product.unit || ''}${i.newStock <= 5 ? ' ⚠️ কম স্টক' : ''})`
       ).join('\n');
 
       return {
@@ -3872,8 +3991,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         navigateTo: isDue ? '/khata' : '/pos',
         speech,
         reply: isDue
-          ? `📖 **বাকি খাতা ও স্টক আপডেট সম্পন্ন!** (মেমো: #${invoiceNo})\n• কাস্টমার: **${customer?.name || 'বাকি গ্রাহক'}**\n${replyItemsMarkdown}\n\n• যোগ হওয়া বাকি: **৳${finalAmount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer?.total_due || finalAmount).toLocaleString('en-US')}**`
-          : `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!** (ইনভয়েস: #${invoiceNo})\n${replyItemsMarkdown}\n\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• মাধ্যম: **${paymentStatus}**`,
+          ? `📖 **বাকি খাতা ও স্টক আপডেট সম্পন্ন!** (মেমো: #${invoiceNo})\n• কাস্টমার: **${customer?.name || 'বাকি গ্রাহক'}**\n${replyItemsMarkdown}\n\n• যোগ হওয়া বাকি: **৳${finalAmount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer?.total_due || finalAmount).toLocaleString('en-US')}**\n\n*ভুল হলে মুখে বলুন "আগেরটা কাটো" বা "আনডু করো"*`
+          : `🧾 **মেমো তৈরি ও স্টক আপডেট সম্পন্ন!** (ইনভয়েস: #${invoiceNo})\n${replyItemsMarkdown}\n\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• মাধ্যম: **${paymentStatus}**\n\n*ভুল হলে মুখে বলুন "আগেরটা কাটো" বা "আনডু করো"*`,
         actionLink: isDue
           ? { text: `${customer?.name || 'কাস্টমার'}-এর খাতা দেখুন →`, href: '/khata' }
           : { text: 'ক্যাশ কাউন্টারে মেমো দেখুন →', href: '/pos' },
@@ -3979,12 +4098,23 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(expId, tenantId, cleanTitle, amount, category, icon, now);
 
+      // Record for Voice Undo capability
+      recordLastAction(tenantId, {
+        actionId: 'act-' + uuidv4().slice(0, 8),
+        tenantId,
+        timestamp: Date.now(),
+        type: 'expense',
+        expenseId: expId,
+        amount,
+        items: []
+      });
+
       const speech = `✓ ${cleanTitle} ৳${amount} টাকা খরচ খাতায় সংরক্ষণ করা হয়েছে।`;
       return {
         success: true,
         action: 'expense_logged',
         speech,
-        reply: `💸 **খরচ এন্ট্রি সফল!**\n• খাত: **${cleanTitle}** (${category})\n• টাকার পরিমাণ: **৳${amount.toLocaleString('en-US')}**\n• তারিখ: ${now.slice(0, 10)}`,
+        reply: `💸 **খরচ এন্ট্রি সফল!**\n• খাত: **${cleanTitle}** (${category})\n• টাকার পরিমাণ: **৳${amount.toLocaleString('en-US')}**\n• তারিখ: ${now.slice(0, 10)}\n\n*ভুল হলে মুখে বলুন "আগেরটা কাটো" বা "আনডু করো"*`,
         actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' },
         data: { title: cleanTitle, amount, category }
       };
@@ -4029,13 +4159,28 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(itemId, saleId, 'prod-payment', 'নগদ বাকি আদায় জমা', 1, 0, amount, amount, 0);
 
-        const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
+        // Record for Voice Undo capability
+        recordLastAction(tenantId, {
+          actionId: 'act-' + uuidv4().slice(0, 8),
+          tenantId,
+          timestamp: Date.now(),
+          type: 'due_paid',
+          customerId: customer.id,
+          customerName: customer.name,
+          previousDue: currentDue,
+          newDue,
+          amount,
+          saleId,
+          items: []
+        });
+
+        const speech = `আলহামদুলিল্লাহ! ${customer.name} এর বাকি থেকে ৳${amount} টাকা জমা নেওয়া হয়েছে। বর্তমান অবশিষ্ট বকেয়া ৳${newDue} টাকা।`;
         return {
           success: true,
           action: 'due_paid',
           navigateTo: '/khata',
           speech,
-          reply: `✅ **বাকি আদায় সম্পন্ন!**\n• কাস্টমার: **${customer.name}**\n• জমা নেওয়া হয়েছে: **৳${amount.toLocaleString('en-US')}**\n• অবশিষ্ট বর্তমান বকেয়া: **৳${newDue.toLocaleString('en-US')}**`,
+          reply: `✅ **বাকি আদায় সম্পন্ন!**\n• কাস্টমার: **${customer.name}**\n• জমা নেওয়া হয়েছে: **৳${amount.toLocaleString('en-US')}**\n• অবশিষ্ট বর্তমান বকেয়া: **৳${newDue.toLocaleString('en-US')}**\n\n*ভুল হলে মুখে বলুন "আগেরটা কাটো" বা "আনডু করো"*`,
           actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
           data: { customerName: customer.name, paidAmount: amount, remainingDue: newDue }
         };
@@ -4052,6 +4197,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
 
     if (amount > 0) {
+      let prevDue = 0;
       // 1. Direct utterance match against all existing customers
       let customer = findCustomerInUtterance(rawText);
 
@@ -4070,19 +4216,20 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
             INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).run(custId, tenantId, custDisplayName, '01700000000', 'লোকাল কাস্টমার', amount, 5000, now);
-          customer = { id: custId, name: custDisplayName, total_due: amount };
+          customer = { id: custId, name: custDisplayName, total_due: amount, credit_limit: 5000 };
+          prevDue = 0;
         } else if (!customer) {
-          // Fallback to most recent customer with dues
           customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1').get(tenantId) as any;
           if (customer) {
-            const newDue = (Number(customer.total_due) || 0) + amount;
+            prevDue = Number(customer.total_due) || 0;
+            const newDue = prevDue + amount;
             db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
             customer.total_due = newDue;
           }
         }
       } else {
-        // Update matched existing customer due (NO DUPLICATION)
-        const newDue = (Number(customer.total_due) || 0) + amount;
+        prevDue = Number(customer.total_due) || 0;
+        const newDue = prevDue + amount;
         db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, customer.id);
         customer.total_due = newDue;
       }
@@ -4113,13 +4260,35 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(itemId, saleId, prodId, note, 1, costPrice, amount, amount, profit);
 
-        const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা${cleanItems ? ` (${cleanItems})` : ''} যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা।`;
+        // Record for Voice Undo capability
+        recordLastAction(tenantId, {
+          actionId: 'act-' + uuidv4().slice(0, 8),
+          tenantId,
+          timestamp: Date.now(),
+          type: 'due_given',
+          customerId: customer.id,
+          customerName: customer.name,
+          previousDue: prevDue,
+          newDue: Number(customer.total_due),
+          amount,
+          saleId,
+          items: []
+        });
+
+        // Credit Limit Intelligence Check
+        const creditLimit = Number(customer.credit_limit) || 5000;
+        let creditWarning = '';
+        if (Number(customer.total_due) > creditLimit) {
+          creditWarning = `। সতর্কতা: ${customer.name} এর মোট বাকি ক্রেডিট লিমিট (৳${creditLimit}) অতিক্রম করেছে`;
+        }
+
+        const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${amount} টাকা${cleanItems ? ` (${cleanItems})` : ''} যোগ করা হয়েছে। বর্তমান মোট বকেয়া ৳${customer.total_due} টাকা${creditWarning}।`;
         return {
           success: true,
           action: 'due_given',
           navigateTo: '/khata',
           speech,
-          reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• যোগকৃত নতুন বাকি: **+৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**`,
+          reply: `📖 **বাকি খাতা আপডেট সফল!**\n• কাস্টমার: **${customer.name}**\n• যোগকৃত নতুন বাকি: **+৳${amount.toLocaleString('en-US')}**\n• বর্তমান মোট বকেয়া: **৳${Number(customer.total_due).toLocaleString('en-US')}**${Number(customer.total_due) > creditLimit ? `\n\n⚠️ **ক্রেডিট লিমিট সতর্কতা:** মোট বকেয়া ৳${creditLimit} টাকার লিমিট অতিক্রম করেছে!` : ''}\n\n*ভুল হলে মুখে বলুন "আগেরটা কাটো" বা "আনডু করো"*`,
           actionLink: { text: `${customer.name}-এর খাতা দেখুন →`, href: `/khata` },
           data: { customerName: customer.name, amount, totalDue: customer.total_due, invoiceNo }
         };
