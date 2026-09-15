@@ -70,9 +70,13 @@ export default function VoiceKhataModal({
       return;
     }
 
-    // Cancel active TTS output so microphone doesn't transcribe speaker audio
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    // Cancel active TTS output and clear locks
+    if (typeof window !== 'undefined') {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      (window as any).__IS_TTS_SPEAKING__ = false;
+      (window as any).__LAST_TTS_TEXT__ = '';
     }
 
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -96,18 +100,18 @@ export default function VoiceKhataModal({
 
       recognition.onresult = (event: any) => {
         const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
+        if (!fullTranscript) return;
 
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
-        // Smart silence timer (1.3 seconds of pause triggers auto-processing)
+        // Smart silence timer (1.0 second of pause triggers auto-processing)
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isMountedRef.current && latestTranscriptRef.current.trim()) {
             handleProcessCommand(latestTranscriptRef.current.trim());
           }
-        }, 1300);
+        }, 1000);
       };
 
       recognition.onerror = (err: any) => {

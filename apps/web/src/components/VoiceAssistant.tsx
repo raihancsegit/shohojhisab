@@ -54,9 +54,13 @@ export default function VoiceAssistant() {
       return;
     }
 
-    // Stop any active speech
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    // Stop any active speech and reset TTS locks
+    if (typeof window !== 'undefined') {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      (window as any).__IS_TTS_SPEAKING__ = false;
+      (window as any).__LAST_TTS_TEXT__ = '';
     }
 
     triggerHaptic?.('medium');
@@ -94,19 +98,19 @@ export default function VoiceAssistant() {
 
       recognition.onresult = (event: any) => {
         const { fullTranscript } = extractTranscriptFromEvent(event);
-        if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
+        if (!fullTranscript) return;
 
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
-        // Auto-complete after 0.85s silence
+        // Auto-complete after 750ms silence
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          if (isListeningRef.current && latestTranscriptRef.current.trim()) {
+          if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
           }
-        }, 850);
+        }, 750);
       };
 
       recognition.onerror = (err: any) => {

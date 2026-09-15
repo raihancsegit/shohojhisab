@@ -39,23 +39,11 @@ export function cleanSpokenBengali(text: string): string {
  */
 export function isEchoedTTSResponse(text: string): boolean {
   if (!text) return false;
-  const s = text.trim().toLowerCase();
-
-  // Check if TTS is currently active
-  if (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__) {
+  // If native browser speech synthesis is actively producing audio right now
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
     return true;
   }
-
-  // Check against last spoken TTS text
-  if (typeof window !== 'undefined' && (window as any).__LAST_TTS_TEXT__) {
-    const lastTTS = String((window as any).__LAST_TTS_TEXT__).trim().toLowerCase();
-    if (lastTTS && (s.includes(lastTTS) || lastTTS.includes(s) || getBengaliStringSimilarity(s, lastTTS) > 0.65)) {
-      return true;
-    }
-  }
-
-  // Known confirmation keywords from system TTS speech
-  return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা|বর্তমান\s*মোট\s*বকেয়া|সাউন্ডবক্স|সফলভাবে/i.test(s);
+  return false;
 }
 
 /**
@@ -66,23 +54,18 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
   if (!event || !event.results) return { fullTranscript: '', isFinal: false };
 
   // If TTS is actively speaking, drop the microphone event immediately to prevent feedback loop
-  if (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__) {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
     return { fullTranscript: '', isFinal: false };
   }
 
   let finalTranscript = '';
   let interimTranscript = '';
   let hasFinal = false;
-  let lowestConfidence = 1.0;
 
   for (let i = 0; i < event.results.length; i++) {
     const result = event.results[i];
     if (result && result[0] && result[0].transcript) {
       const trans = result[0].transcript.trim();
-      const conf = typeof result[0].confidence === 'number' ? result[0].confidence : 1.0;
-      if (conf > 0 && conf < lowestConfidence) {
-        lowestConfidence = conf;
-      }
       if (result.isFinal) {
         finalTranscript += (finalTranscript ? ' ' : '') + trans;
         hasFinal = true;
@@ -97,13 +80,7 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
     ? `${finalTranscript} ${interimTranscript}`
     : (finalTranscript || interimTranscript);
 
-  // Background noise / TV faint sound rejection: if confidence is extremely low and string is tiny snippet
-  if (rawCombined && lowestConfidence < 0.25 && rawCombined.length < 3) {
-    return { fullTranscript: '', isFinal: false, isDistantNoise: true };
-  }
-
-  // Check if this is an echo of the assistant's own voice
-  if (isEchoedTTSResponse(rawCombined)) {
+  if (!rawCombined) {
     return { fullTranscript: '', isFinal: false };
   }
 
