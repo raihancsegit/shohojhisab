@@ -60,8 +60,10 @@ export default function ReportsPage() {
     if (!currentTenantId) return;
     setLoading(true);
     let queryUrl = `/api/reports/analytics?tenantId=${currentTenantId}&period=${selectedPeriod}`;
-    if (selectedPeriod === 'custom' && (start || customStartDate) && (end || customEndDate)) {
-      queryUrl += `&startDate=${start || customStartDate}&endDate=${end || customEndDate}`;
+    const s = start || customStartDate;
+    const e = end || customEndDate;
+    if (selectedPeriod === 'custom' && s && e) {
+      queryUrl += `&startDate=${s}&endDate=${e}`;
     }
     fetch(queryUrl)
       .then(res => res.json())
@@ -72,32 +74,30 @@ export default function ReportsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  };
 
-  useEffect(() => {
-    if (!currentTenantId) return;
-    if (period !== 'custom') {
-      loadAnalytics(period);
+    let salesUrl = `/api/sales?tenantId=${currentTenantId}&period=${selectedPeriod}`;
+    if (selectedPeriod === 'custom' && s && e) {
+      salesUrl += `&startDate=${s}&endDate=${e}`;
     }
-
-    fetch(`/api/sales?tenantId=${currentTenantId}`)
+    fetch(salesUrl)
       .then(res => res.json())
       .then(data => {
         const list = Array.isArray(data) ? data : [];
         setSalesList(list);
         if (list.length > 0) {
           saveVaultSnapshot(currentTenantId, { sales: list });
-        } else {
-          // If server was wiped on redeploy, auto-restore from browser vault
-          autoRestoreIfWiped(currentTenantId, 0, 0, () => {
-            loadAnalytics(period);
-            fetch(`/api/sales?tenantId=${currentTenantId}`)
-              .then(r => r.json())
-              .then(d => setSalesList(Array.isArray(d) ? d : []));
-          });
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!currentTenantId) return;
+    if (period !== 'custom') {
+      loadAnalytics(period);
+    } else if (customStartDate && customEndDate) {
+      loadAnalytics('custom', customStartDate, customEndDate);
+    }
   }, [currentTenantId, period]);
 
   // One-Click Excel / CSV Export with UTF-8 BOM

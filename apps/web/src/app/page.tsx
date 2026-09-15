@@ -210,9 +210,9 @@ export default function ShopkeeperDashboard() {
 
   useEffect(() => {
     if (tenant?.id) {
-      loadShopData();
+      loadShopData(selectedPeriod, customStartDate, customEndDate);
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, selectedPeriod]);
 
   if (isLoading || (loading && recentSales.length === 0)) {
     return (
@@ -699,14 +699,14 @@ export default function ShopkeeperDashboard() {
                 </div>
 
                 <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fed7aa', fontWeight: '800', display: 'block' }}>💹 আজকের নিট লাভ</span>
+                  <span style={{ fontSize: '10.5px', color: '#fed7aa', fontWeight: '800', display: 'block' }}>💹 {periodLabel} নিট লাভ</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {activeRoleMode === 'owner' ? (privacyMode ? '••••' : `৳ ${((metrics as any)?.todayNetProfit !== undefined ? (metrics as any).todayNetProfit : metrics.netProfit || 0).toLocaleString('en-US')}`) : '🔒 মোড'}
                   </strong>
                 </div>
 
                 <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fbcfe8', fontWeight: '800', display: 'block' }}>💸 আজকের দোকান খরচ</span>
+                  <span style={{ fontSize: '10.5px', color: '#fbcfe8', fontWeight: '800', display: 'block' }}>💸 {periodLabel} দোকান খরচ</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayExpenses !== undefined ? (metrics as any).todayExpenses : metrics.expenses || 0).toLocaleString('en-US')}`}
                   </strong>
@@ -1216,11 +1216,11 @@ export default function ShopkeeperDashboard() {
             </div>
 
             {loading ? (
-              <DataLoader type="table" count={4} text="আজকের বিক্রয় ও মেমো তালিকা লোড হচ্ছে..." />
+              <DataLoader type="table" count={4} text={`${periodLabel} এর বিক্রয় ও মেমো তালিকা লোড হচ্ছে...`} />
             ) : recentSales.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '36px 14px', color: '#94a3b8' }}>
                 <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>🧾</span>
-                <strong style={{ fontSize: '14px', color: '#64748b', display: 'block' }}>আজকে এখনও কোনো মেমো কাটা হয়নি</strong>
+                <strong style={{ fontSize: '14px', color: '#64748b', display: 'block' }}>{periodLabel} এ কোনো মেমো কাটা হয়নি</strong>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
