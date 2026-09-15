@@ -1121,56 +1121,60 @@ export default function KhataPage() {
           কোনো গ্রাহক পাওয়া যায়নি। "নতুন বাকি খাতা এন্ট্রি" বাটনে ক্লিক করে খরিদ্দার যুক্ত করুন।
         </div>
       ) : viewMode === 'table' ? (
-        <div className="ui-card" style={{ padding: '0', overflowX: 'auto', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+        <div className="ui-card" style={{ padding: '0', overflowX: 'auto', borderRadius: '18px', border: '1.5px solid #e2e8f0', marginBottom: '16px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+          <table style={{ width: '100%', minWidth: '780px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '800' }}>
-                <th style={{ padding: '12px 16px' }}>খরিদ্দার</th>
-                <th style={{ padding: '12px 14px' }}>যোগাযোগ</th>
-                <th style={{ padding: '12px 14px' }}>সর্বশেষ বাকি পণ্য ও তারিখ</th>
-                <th style={{ padding: '12px 14px' }}>দেওয়ার তারিখ</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>বর্তমান বকেয়া</th>
-                <th style={{ padding: '12px 16px', textAlign: 'center' }}>অ্যাকশন</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', fontWeight: '800' }}>
+                <th style={{ padding: '14px 18px' }}>👤 খরিদ্দার</th>
+                <th style={{ padding: '14px 14px' }}>📱 যোগাযোগ</th>
+                <th style={{ padding: '14px 14px' }}>🛍️ সর্বশেষ বাকি ও ফর্দ</th>
+                <th style={{ padding: '14px 14px' }}>📅 তারিখ</th>
+                <th style={{ padding: '14px 16px', textAlign: 'right' }}>💰 বর্তমান বকেয়া</th>
+                <th style={{ padding: '14px 18px', textAlign: 'center' }}>⚡ অ্যাকশন</th>
               </tr>
             </thead>
             <tbody>
               {paginatedCustomers.map((c, idx) => {
                 const due = Number(c.totalDue || c.total_due || 0);
+                const isOverLimit = due > Number(c.creditLimit || c.credit_limit || 5000);
                 return (
-                  <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'transparent' : 'rgba(248, 250, 252, 0.4)' }}>
-                    <td style={{ padding: '12px 16px' }}>
+                  <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#fafafa', transition: 'background 0.15s ease' }}>
+                    <td style={{ padding: '12px 18px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '10px',
-                          background: due > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                          color: due > 0 ? '#b91c1c' : '#047857',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '12px',
+                          background: due > 0 ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+                          color: due > 0 ? '#b91c1c' : '#15803d',
                           display: 'grid',
                           placeItems: 'center',
                           fontWeight: '900',
                           fontSize: '15px',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          boxShadow: due > 0 ? '0 2px 6px rgba(239, 68, 68, 0.15)' : 'none'
                         }}>
                           {c.name ? c.name.charAt(0) : '👤'}
                         </div>
                         <div>
-                          <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '13.5px' }}>{c.name}</div>
-                          {due > Number(c.creditLimit || c.credit_limit || 5000) && (
-                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px' }}>
-                              সীমা পার
+                          <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '14px' }}>{c.name}</div>
+                          {isOverLimit && (
+                            <span style={{ fontSize: '9.5px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '1px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
+                              ⚠️ সীমা অতিক্রম
                             </span>
                           )}
                         </div>
                       </div>
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: '700', color: '#334155' }}>
-                        <a href={`tel:${c.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') ? (
+                        <a href={`tel:${c.phone}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '700', fontSize: '12px' }}>
                           📱 {c.phone}
                         </a>
-                      </div>
-                      {c.address && <div style={{ fontSize: '11px', color: '#64748b' }}>📍 {c.address}</div>}
+                      ) : (
+                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>📱 নাম্বার নেই</span>
+                      )}
+                      {c.address && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>📍 {c.address}</div>}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '12.5px' }}>{c.lastItemsSummary || 'পূর্বের বাকি'}</div>
@@ -1182,16 +1186,16 @@ export default function KhataPage() {
                           📅 {c.promiseDate || c.promise_date}
                         </span>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>নির্ধারিত নেই</span>
+                        <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>নির্ধারিত নেই</span>
                       )}
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
                         ৳{due.toLocaleString('en-US')}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <td style={{ padding: '12px 18px', textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
                         {due > 0 && (
                           <button
                             onClick={() => sendWhatsAppReminder(c)}
@@ -1200,7 +1204,7 @@ export default function KhataPage() {
                               color: '#fff',
                               border: 'none',
                               padding: '5px 9px',
-                              borderRadius: '7px',
+                              borderRadius: '8px',
                               fontSize: '11px',
                               fontWeight: '800',
                               cursor: 'pointer',
@@ -1214,22 +1218,6 @@ export default function KhataPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
-                          style={{
-                            background: '#10b981',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '5px 9px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            cursor: 'pointer'
-                          }}
-                          title="টাকা আদায়"
-                        >
-                          💵 আদায়
-                        </button>
-                        <button
                           onClick={() => {
                             setShowAddDueModal(c);
                             setAddDueAmount('');
@@ -1242,9 +1230,9 @@ export default function KhataPage() {
                             background: '#ef4444',
                             color: '#fff',
                             border: 'none',
-                            padding: '5px 9px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
+                            padding: '5px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
                             fontWeight: '800',
                             cursor: 'pointer'
                           }}
@@ -1253,14 +1241,30 @@ export default function KhataPage() {
                           ➕ বাকি
                         </button>
                         <button
+                          onClick={() => { setShowPayModal(c); setPayAmount(String(due)); }}
+                          style={{
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="টাকা আদায়"
+                        >
+                          💵 আদায়
+                        </button>
+                        <button
                           onClick={() => startCustomerVoice(c)}
                           style={{
                             background: '#fff1f2',
                             color: '#b91c1c',
                             border: '1px solid #fecdd3',
                             padding: '5px 8px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
                             fontWeight: '800',
                             cursor: 'pointer'
                           }}
@@ -1271,12 +1275,12 @@ export default function KhataPage() {
                         <button
                           onClick={() => loadCustomerLedger(c)}
                           style={{
-                            background: '#f1f5f9',
-                            color: '#334155',
-                            border: '1px solid #cbd5e1',
+                            background: '#eff6ff',
+                            color: '#1d4ed8',
+                            border: '1px solid #bfdbfe',
                             padding: '5px 8px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
                             fontWeight: '800',
                             cursor: 'pointer'
                           }}
@@ -1287,12 +1291,12 @@ export default function KhataPage() {
                         <Link
                           href={`/khata/passbook?id=${c.id}`}
                           style={{
-                            background: '#eff6ff',
-                            color: '#1d4ed8',
-                            border: '1px solid #bfdbfe',
+                            background: '#f8fafc',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
                             padding: '5px 8px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
                             fontWeight: '800',
                             textDecoration: 'none',
                             display: 'inline-flex',
@@ -1309,8 +1313,8 @@ export default function KhataPage() {
                             color: '#dc2626',
                             border: '1px solid #fecaca',
                             padding: '5px 8px',
-                            borderRadius: '7px',
-                            fontSize: '11px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
                             fontWeight: '800',
                             cursor: 'pointer'
                           }}
@@ -1327,7 +1331,7 @@ export default function KhataPage() {
           </table>
         </div>
       ) : (
-        <div className="mobile-grid-2col">
+        <div className="khata-cards-grid">
           {paginatedCustomers.map(c => {
             const due = Number(c.totalDue || c.total_due || 0);
             const isOverLimit = due > Number(c.creditLimit || c.credit_limit || 5000);
@@ -1337,31 +1341,32 @@ export default function KhataPage() {
                 className="khata-grid-card"
                 style={{
                   border: due > 0 ? (isOverLimit ? '1.5px solid #f87171' : '1.5px solid #fecdd3') : '1.5px solid #e2e8f0',
-                  boxShadow: due > 0 ? '0 4px 14px rgba(239, 68, 68, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.03)',
+                  boxShadow: due > 0 ? '0 4px 16px rgba(239, 68, 68, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.03)',
                   background: '#ffffff',
                   borderRadius: '18px',
-                  padding: '14px',
+                  padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '10px'
+                  gap: '12px'
                 }}
               >
                 <div>
                   {/* Top Header: Customer Info & Delete */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
                       <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '12px',
-                        background: due > 0 ? '#fee2e2' : '#ecfdf5',
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '14px',
+                        background: due > 0 ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
                         color: due > 0 ? '#b91c1c' : '#047857',
                         display: 'grid',
                         placeItems: 'center',
-                        fontSize: '15px',
+                        fontSize: '17px',
                         fontWeight: '900',
-                        flexShrink: 0
+                        flexShrink: 0,
+                        boxShadow: due > 0 ? '0 2px 6px rgba(239, 68, 68, 0.15)' : 'none'
                       }}>
                         {c.name ? c.name.charAt(0) : '👤'}
                       </div>
@@ -1369,8 +1374,8 @@ export default function KhataPage() {
                         <h4
                           style={{
                             margin: 0,
-                            fontSize: '14px',
-                            fontWeight: '800',
+                            fontSize: '15px',
+                            fontWeight: '900',
                             color: '#0f172a',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -1380,17 +1385,20 @@ export default function KhataPage() {
                         >
                           {c.name}
                         </h4>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
                           {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') ? (
                             <a
                               href={`tel:${c.phone}`}
-                              style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                              style={{ fontSize: '11.5px', color: '#2563eb', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                               title="সরাসরি কল দিন"
                             >
                               📱 {c.phone}
                             </a>
                           ) : (
-                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>📱 নাম্বার নেই</span>
+                            <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>📱 নাম্বার নেই</span>
+                          )}
+                          {c.address && (
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>• 📍 {c.address}</span>
                           )}
                         </div>
                       </div>
@@ -1406,7 +1414,7 @@ export default function KhataPage() {
                         borderRadius: '8px',
                         color: '#94a3b8',
                         cursor: 'pointer',
-                        padding: '4px 6px',
+                        padding: '5px 8px',
                         fontSize: '12px',
                         lineHeight: 1
                       }}
@@ -1419,25 +1427,25 @@ export default function KhataPage() {
                   {/* Due Amount Highlight Banner */}
                   <div style={{
                     background: due > 0 ? 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)' : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-                    border: due > 0 ? '1px solid #fecdd3' : '1px solid #a7f3d0',
-                    borderRadius: '12px',
-                    padding: '8px 10px',
+                    border: due > 0 ? '1.5px solid #fecdd3' : '1.5px solid #a7f3d0',
+                    borderRadius: '14px',
+                    padding: '10px 14px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: '8px'
+                    marginBottom: '10px'
                   }}>
                     <div>
-                      <span style={{ fontSize: '10.5px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '800', display: 'block' }}>
+                      <span style={{ fontSize: '11px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '800', display: 'block' }}>
                         {due > 0 ? '🔴 বর্তমান মোট বকেয়া' : '🟢 হিসাব পরিশোধিত'}
                       </span>
                       {isOverLimit && (
-                        <span style={{ fontSize: '9px', fontWeight: '900', background: '#dc2626', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
-                          সীমা পার
+                        <span style={{ fontSize: '9.5px', fontWeight: '900', background: '#dc2626', color: '#ffffff', padding: '1px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
+                          সীমা অতিক্রম
                         </span>
                       )}
                     </div>
-                    <strong className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
+                    <strong className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
                       ৳{due.toLocaleString('en-US')}
                     </strong>
                   </div>
@@ -1446,12 +1454,12 @@ export default function KhataPage() {
                   <div style={{
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '6px 8px',
-                    marginBottom: '8px',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
+                    marginBottom: '10px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: '6px'
                   }}>
                     {c.recentTransactions && c.recentTransactions.length > 0 ? (
                       c.recentTransactions.slice(0, 2).map((tx: any) => {
@@ -1463,33 +1471,33 @@ export default function KhataPage() {
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              fontSize: '11px',
-                              gap: '6px',
+                              fontSize: '11.5px',
+                              gap: '8px',
                               background: isPay ? '#f0fdf4' : '#ffffff',
                               border: isPay ? '1px solid #bbf7d0' : '1px solid #f1f5f9',
-                              borderRadius: '6px',
-                              padding: '4px 6px'
+                              borderRadius: '8px',
+                              padding: '6px 8px'
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
                               <span style={{ fontWeight: '800', color: isPay ? '#166534' : '#9a3412', marginRight: '4px' }}>
                                 {isPay ? '💵 জমা' : '🛍️ বাকি'}
                               </span>
-                              <span style={{ fontSize: '10px', color: '#64748b', marginRight: '4px' }}>
+                              <span style={{ fontSize: '10.5px', color: '#64748b', marginRight: '4px' }}>
                                 ({tx.date})
                               </span>
                               <span style={{ color: '#334155', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {tx.items}
                               </span>
                             </div>
-                            <strong className="num-font" style={{ fontSize: '11.5px', fontWeight: '900', color: isPay ? '#059669' : '#dc2626', flexShrink: 0 }}>
+                            <strong className="num-font" style={{ fontSize: '12.5px', fontWeight: '900', color: isPay ? '#059669' : '#dc2626', flexShrink: 0 }}>
                               {isPay ? `-৳${tx.amount}` : `+৳${tx.amount}`}
                             </strong>
                           </div>
                         );
                       })
                     ) : (
-                      <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <span>🛍️</span>
                         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {c.lastItemsSummary || 'পূর্বের বাকি হিসাব'} {c.lastDate ? `(${c.lastDate})` : ''}
@@ -1501,7 +1509,7 @@ export default function KhataPage() {
 
                 <div>
                   {/* Primary Action Buttons: [+ বাকি দিন] & [💵 জমা নিন] */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1516,16 +1524,17 @@ export default function KhataPage() {
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '7px 6px',
-                        borderRadius: '10px',
-                        fontSize: '11.5px',
+                        padding: '9px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12.5px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)'
+                        gap: '5px',
+                        boxShadow: '0 3px 8px rgba(239, 68, 68, 0.25)',
+                        transition: 'transform 0.1s ease'
                       }}
                       title="বাকি পণ্য বা ফর্দ যোগ করুন"
                     >
@@ -1539,16 +1548,17 @@ export default function KhataPage() {
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '7px 6px',
-                        borderRadius: '10px',
-                        fontSize: '11.5px',
+                        padding: '9px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12.5px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '4px',
-                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
+                        gap: '5px',
+                        boxShadow: '0 3px 8px rgba(16, 185, 129, 0.25)',
+                        transition: 'transform 0.1s ease'
                       }}
                       title="টাকা আদায় / জমা নিন"
                     >
@@ -1557,7 +1567,7 @@ export default function KhataPage() {
                   </div>
 
                   {/* Clean Secondary Toolbar: [💬 তাগাদা] [📜 খতিয়ান] [🎙️ ভয়েস] [📖 পাসবুক] */}
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
                     {/* WhatsApp Reminder if due > 0 */}
                     {due > 0 ? (
                       <button
@@ -1567,24 +1577,24 @@ export default function KhataPage() {
                           background: '#ecfdf5',
                           color: '#059669',
                           border: '1px solid #a7f3d0',
-                          padding: '4px 8px',
-                          borderRadius: '8px',
-                          fontSize: '11px',
+                          padding: '5px 10px',
+                          borderRadius: '10px',
+                          fontSize: '11.5px',
                           fontWeight: '800',
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '3px'
+                          gap: '4px'
                         }}
                         title="WhatsApp এ তাগাদা পাঠান"
                       >
                         <span>💬</span> তাগাদা
                       </button>
                     ) : (
-                      <span style={{ fontSize: '10.5px', color: '#10b981', fontWeight: '800' }}>✓ পরিশোধিত</span>
+                      <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>✓ পরিশোধিত</span>
                     )}
 
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                       {/* Voice Entry */}
                       <button
                         type="button"
@@ -1593,9 +1603,9 @@ export default function KhataPage() {
                           background: '#fff1f2',
                           color: '#b91c1c',
                           border: '1px solid #fecdd3',
-                          padding: '4px 7px',
-                          borderRadius: '8px',
-                          fontSize: '11px',
+                          padding: '5px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11.5px',
                           fontWeight: '800',
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -1615,9 +1625,9 @@ export default function KhataPage() {
                           background: '#eff6ff',
                           color: '#1d4ed8',
                           border: '1px solid #bfdbfe',
-                          padding: '4px 8px',
-                          borderRadius: '8px',
-                          fontSize: '11px',
+                          padding: '5px 10px',
+                          borderRadius: '10px',
+                          fontSize: '11.5px',
                           fontWeight: '800',
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -1637,14 +1647,14 @@ export default function KhataPage() {
                           background: '#f8fafc',
                           color: '#475569',
                           border: '1px solid #cbd5e1',
-                          padding: '4px 6px',
-                          borderRadius: '8px',
-                          fontSize: '11px',
+                          padding: '5px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11.5px',
                           textDecoration: 'none',
                           display: 'inline-flex',
                           alignItems: 'center'
                         }}
-                        title="ডিজিタル পাসবুক পোর্টাল"
+                        title="ডিজিটাল পাসবুক পোর্টাল"
                       >
                         📖
                       </Link>
