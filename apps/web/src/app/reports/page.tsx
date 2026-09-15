@@ -11,7 +11,10 @@ export default function ReportsPage() {
   const { tenant, activeRoleMode, triggerHaptic } = useAuth();
   const currentTenantId = tenant?.id;
 
-  const [period, setPeriod] = useState<'today' | '3days' | 'week' | 'month'>('today');
+  const [period, setPeriod] = useState<'today' | 'yesterday' | '3days' | 'week' | 'thisMonth' | 'month' | 'custom'>('today');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
   const [startingCashInput, setStartingCashInput] = useState('0');
@@ -53,10 +56,14 @@ export default function ReportsPage() {
 
   const [salesList, setSalesList] = useState<any[]>([]);
 
-  const loadAnalytics = (selectedPeriod: 'today' | '3days' | 'week' | 'month') => {
+  const loadAnalytics = (selectedPeriod: string, start?: string, end?: string) => {
     if (!currentTenantId) return;
     setLoading(true);
-    fetch(`/api/reports/analytics?tenantId=${currentTenantId}&period=${selectedPeriod}`)
+    let queryUrl = `/api/reports/analytics?tenantId=${currentTenantId}&period=${selectedPeriod}`;
+    if (selectedPeriod === 'custom' && (start || customStartDate) && (end || customEndDate)) {
+      queryUrl += `&startDate=${start || customStartDate}&endDate=${end || customEndDate}`;
+    }
+    fetch(queryUrl)
       .then(res => res.json())
       .then(data => {
         if (data && data.summary) {
@@ -69,7 +76,9 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!currentTenantId) return;
-    loadAnalytics(period);
+    if (period !== 'custom') {
+      loadAnalytics(period);
+    }
 
     fetch(`/api/sales?tenantId=${currentTenantId}`)
       .then(res => res.json())
@@ -235,7 +244,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* 4 PERIOD FILTER BUTTONS (আজকের, ৩ দিনের, সাপ্তাহিক, মাসিক) */}
+      {/* PERIOD FILTER BUTTONS (আজকের, গতকালের, ৩ দিন, সাপ্তাহিক, এই মাস, কাস্টম তারিখ) */}
       <div style={{
         background: '#ffffff',
         border: '1.5px solid #e2e8f0',
@@ -243,31 +252,37 @@ export default function ReportsPage() {
         padding: '5px',
         marginBottom: '16px',
         display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
+        gridTemplateColumns: 'repeat(3, 1fr)',
         gap: '6px',
         boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
       }}>
         {[
           { key: 'today', label: 'আজকের হিসাব', icon: '☀️' },
+          { key: 'yesterday', label: 'গতকালের হিসাব', icon: '⏮️' },
           { key: '3days', label: 'গত ৩ দিনের', icon: '🕒' },
           { key: 'week', label: 'সাপ্তাহিক (৭ দিন)', icon: '📈' },
-          { key: 'month', label: 'মাসিক (৩০ দিন)', icon: '🗓️' },
+          { key: 'thisMonth', label: 'এই মাসের', icon: '🗓️' },
+          { key: 'custom', label: 'কাস্টম তারিখ', icon: '📅' },
         ].map(tab => (
           <button
             key={tab.key}
             type="button"
             onClick={() => {
-              setPeriod(tab.key as any);
+              if (tab.key === 'custom') {
+                setShowCustomDateModal(true);
+              } else {
+                setPeriod(tab.key as any);
+              }
               triggerHaptic('light');
             }}
             style={{
-              padding: '7px 8px',
+              padding: '8px 6px',
               borderRadius: '9px',
               border: 'none',
               background: period === tab.key ? '#10b981' : '#f8fafc',
               color: period === tab.key ? '#ffffff' : '#475569',
               fontWeight: '800',
-              fontSize: '11.5px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -277,10 +292,154 @@ export default function ReportsPage() {
             }}
           >
             <span>{tab.icon}</span>
-            <span>{tab.label}</span>
+            <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
           </button>
         ))}
       </div>
+
+      {/* Selected Period Badge */}
+      {analyticsData.periodLabel && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          marginBottom: '14px',
+          padding: '4px 10px',
+          background: '#f0fdf4',
+          borderRadius: '8px',
+          border: '1px solid #bbf7d0',
+          width: 'fit-content'
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534' }}>
+            📌 প্রদর্শিত সময়সীমা: <b>{analyticsData.periodLabel}</b>
+          </span>
+        </div>
+      )}
+
+      {/* Custom Date Range Picker Modal */}
+      {showCustomDateModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            padding: '24px',
+            maxWidth: '380px',
+            width: '100%',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '24px' }}>📅</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>কাস্টম তারিখ রিপোর্ট</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>নির্দিষ্ট শুরুর ও শেষের তারিখ নির্বাচন করুন</p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  শুরুর তারিখ (Start Date):
+                </label>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    outline: 'none',
+                    color: '#0f172a'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                  শেষের তারিখ (End Date):
+                </label>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    outline: 'none',
+                    color: '#0f172a'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowCustomDateModal(false)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#475569',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!customStartDate || !customEndDate) {
+                    alert('দয়া করে শুরুর এবং শেষের তারিখ নির্বাচন করুন');
+                    return;
+                  }
+                  setPeriod('custom');
+                  loadAnalytics('custom', customStartDate, customEndDate);
+                  setShowCustomDateModal(false);
+                  triggerHaptic('success');
+                }}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                রিপোর্ট দেখুন ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 4 CORE KPI SUMMARY CARDS */}
       {loading ? (

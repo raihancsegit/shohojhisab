@@ -4044,6 +4044,101 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   }
 
+  // 10. Yesterday Financial Inquiry ("গতকালের হিসাব বলো", "গতকাল কত বিক্রি হয়েছে", "গতকালের লাভ কত")
+  if (/গতকাল|কালকের\s*হিসাব|কালকে\s*কত/.test(rawText)) {
+    const nowBD = new Date();
+    const bdOffset = 6 * 60;
+    const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
+    const yDate = new Date(localTime);
+    yDate.setDate(localTime.getDate() - 1);
+    const yesterdayStr = yDate.toISOString().slice(0, 10);
+
+    const ySales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) = ?`).get(tenantId, yesterdayStr) as any;
+    const yExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date = ? OR date(created_at) = ?)`).get(tenantId, yesterdayStr, yesterdayStr) as any;
+    const sAmt = Number(ySales?.s) || 0;
+    const pAmt = (Number(ySales?.p) || 0) - (Number(yExp?.e) || 0);
+    const expAmt = Number(yExp?.e) || 0;
+
+    const speech = `গতকাল আপনার দোকানে মোট ৳${sAmt.toLocaleString('en-US')} টাকার বিক্রি হয়েছিল, খরচ হয়েছিল ৳${expAmt.toLocaleString('en-US')} টাকা এবং নিট লাভ হয়েছিল ৳${pAmt.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_yesterday',
+      navigateTo: '/',
+      speech,
+      reply: `📊 **গতকালের ব্যবসায়িক হিসাব:**\n• মোট বিক্রি: **৳${sAmt.toLocaleString('en-US')}**\n• মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n• নিট লাভ: **৳${pAmt.toLocaleString('en-US')}**`,
+      actionLink: { text: 'ড্যাশবোর্ডে দেখুন →', href: '/?period=yesterday' }
+    };
+  }
+
+  // 11. Past 7 Days / Weekly Inquiry ("৭ দিনের হিসাব", "গত সপ্তাহের বিক্রি", "সপ্তাহের লাভ")
+  if (/৭\s*দিন|সাত\s*দিন|সপ্তাহ|গত\s*সপ্তাহ/.test(rawText)) {
+    const nowBD = new Date();
+    const bdOffset = 6 * 60;
+    const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
+    const wDate = new Date(localTime);
+    wDate.setDate(localTime.getDate() - 6);
+    const startStr = wDate.toISOString().slice(0, 10);
+
+    const wSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ?`).get(tenantId, startStr) as any;
+    const wExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date >= ? OR date(created_at) >= ?)`).get(tenantId, startStr, startStr) as any;
+    const sAmt = Number(wSales?.s) || 0;
+    const pAmt = (Number(wSales?.p) || 0) - (Number(wExp?.e) || 0);
+    const expAmt = Number(wExp?.e) || 0;
+
+    const speech = `গত ৭ দিনে আপনার দোকানে মোট ৳${sAmt.toLocaleString('en-US')} টাকার বিক্রি হয়েছে, মোট খরচ ৳${expAmt.toLocaleString('en-US')} টাকা এবং নিট লাভ ৳${pAmt.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_7days',
+      navigateTo: '/',
+      speech,
+      reply: `📈 **গত ৭ দিনের ব্যবসায়িক রিপোর্ট:**\n• মোট বিক্রি: **৳${sAmt.toLocaleString('en-US')}**\n• মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n• নিট লাভ: **৳${pAmt.toLocaleString('en-US')}**`,
+      actionLink: { text: 'ড্যাশবোর্ডে ফিল্টার করুন →', href: '/?period=7days' }
+    };
+  }
+
+  // 12. Current Month Inquiry ("এই মাসের বিক্রি কত", "মাসের হিসাব", "মাসের লাভ কত")
+  if (/এই\s*মাস|মাসের\s*হিসাব|মাসের\s*বিক্রি|মাসের\s*লাভ|চলতি\s*মাস/.test(rawText)) {
+    const nowBD = new Date();
+    const bdOffset = 6 * 60;
+    const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
+    const todayStr = localTime.toISOString().slice(0, 10);
+    const monthStartStr = `${todayStr.slice(0, 7)}-01`;
+
+    const mSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ?`).get(tenantId, monthStartStr) as any;
+    const mExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date >= ? OR date(created_at) >= ?)`).get(tenantId, monthStartStr, monthStartStr) as any;
+    const sAmt = Number(mSales?.s) || 0;
+    const pAmt = (Number(mSales?.p) || 0) - (Number(mExp?.e) || 0);
+    const expAmt = Number(mExp?.e) || 0;
+
+    const speech = `এই মাসে আপনার দোকানে মোট ৳${sAmt.toLocaleString('en-US')} টাকার বিক্রি হয়েছে এবং নিট লাভ ৳${pAmt.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_month',
+      navigateTo: '/',
+      speech,
+      reply: `📅 **এই মাসের ব্যবসায়িক সারসংক্ষেপ:**\n• চলতি মাসের বিক্রি: **৳${sAmt.toLocaleString('en-US')}**\n• চলতি মাসের খরচ: **৳${expAmt.toLocaleString('en-US')}**\n• চলতি মাসের লাভ: **৳${pAmt.toLocaleString('en-US')}**`,
+      actionLink: { text: 'ড্যাশবোর্ডে ফিল্টার করুন →', href: '/?period=thisMonth' }
+    };
+  }
+
+  // 13. Cash in Hand Inquiry ("ক্যাশ কত আছে", "ক্যাশ ব্যালেন্স কত", "নগদ কত")
+  if (/ক্যাশ\s*(কত|ব্যালেন্স|জমা)|নগদ\s*(টাকা|জমা|ব্যালেন্স)|ড্রয়ারে\s*কত/.test(rawText)) {
+    const allSales = db.prepare(`SELECT payment_method, paid_amount, total_amount FROM sales WHERE tenant_id = ?`).all(tenantId) as any[];
+    const allExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ?`).get(tenantId) as any;
+    const allCashIn = allSales.filter(s => s.payment_method === 'cash' || s.payment_method === 'due_payment').reduce((acc, s) => acc + (Number(s.paid_amount || s.total_amount) || 0), 0);
+    const liveCash = Math.max(0, allCashIn - (Number(allExp?.e) || 0));
+
+    const speech = `বর্তমানে আপনার দোকানে নগদ ক্যাশ জমা আছে ৳${liveCash.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_cash',
+      navigateTo: '/',
+      speech,
+      reply: `💵 **নগদ ক্যাশ ব্যালেন্স:** **৳${liveCash.toLocaleString('en-US')}**\n\nসারাদিনের ক্যাশ মিলাতে দিন শেষ পেজে যান।`,
+      actionLink: { text: 'ক্যাশ ক্লোজিং দেখুন →', href: '/day-end' }
+    };
+  }
+
   // Fallback Overview Summary
   const todaySalesRow = db.prepare(`
     SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as netProfit
@@ -5745,9 +5840,41 @@ fastify.put('/api/tenants/:id/features', async (request, reply) => {
   }
 });
 
-// Reports Day-End
+// Quick Shops List for fast shop switcher
+fastify.get('/api/shops/list', async (request) => {
+  const { phone } = request.query as any;
+  let rows: any[];
+  if (phone) {
+    rows = db.prepare('SELECT * FROM tenants WHERE phone = ? ORDER BY created_at DESC').all(String(phone).trim()) as any[];
+    if (rows.length === 0) {
+      rows = db.prepare('SELECT * FROM tenants ORDER BY created_at DESC LIMIT 12').all() as any[];
+    }
+  } else {
+    rows = db.prepare('SELECT * FROM tenants ORDER BY created_at DESC LIMIT 12').all() as any[];
+  }
+  const categories = db.prepare('SELECT * FROM categories').all() as any[];
+  const catMap = new Map(categories.map(c => [c.id, c]));
+
+  return rows.map(t => {
+    const cat = catMap.get(t.industry_category_id);
+    return {
+      id: t.id,
+      shopName: t.shop_name,
+      ownerName: t.owner_name,
+      phone: t.phone,
+      location: t.bazaar_location,
+      industryId: t.industry_category_id,
+      industryName: cat ? cat.bangla_name : 'সাধারণ',
+      industryIcon: cat ? cat.icon : '🏪',
+      status: t.status,
+      planId: t.plan_id
+    };
+  });
+});
+
+// Reports Day-End & Multi-Date Dashboard Financials
 fastify.get('/api/reports/day-end', async (request) => {
-  const { tenantId, date } = request.query as any;
+  const { tenantId, date, period = 'today', startDate, endDate } = request.query as any;
   if (!tenantId) return { totalSales: 0, cashSales: 0, grossProfit: 0, expenses: 0, netProfit: 0, cashInHand: 0, totalMarketDue: 0, orderCount: 0 };
 
   const sales = db.prepare('SELECT * FROM sales WHERE tenant_id = ?').all(tenantId) as any[];
@@ -5759,34 +5886,72 @@ fastify.get('/api/reports/day-end', async (request) => {
   const nowBD = new Date();
   const bdOffset = 6 * 60; // minutes
   const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
-  const todayStr = date || localTime.toISOString().slice(0, 10);
+  const todayStr = localTime.toISOString().slice(0, 10);
 
-  const isToday = (created_at: string) => {
+  let targetStartStr = todayStr;
+  let targetEndStr = todayStr;
+  let periodLabel = 'আজকের হিসাব';
+
+  if (startDate && endDate) {
+    targetStartStr = String(startDate).slice(0, 10);
+    targetEndStr = String(endDate).slice(0, 10);
+    periodLabel = `${targetStartStr} থেকে ${targetEndStr}`;
+  } else if (date) {
+    targetStartStr = String(date).slice(0, 10);
+    targetEndStr = String(date).slice(0, 10);
+    periodLabel = targetStartStr === todayStr ? 'আজকের হিসাব' : `${targetStartStr} এর হিসাব`;
+  } else if (period === 'yesterday') {
+    const yDate = new Date(localTime);
+    yDate.setDate(localTime.getDate() - 1);
+    targetStartStr = yDate.toISOString().slice(0, 10);
+    targetEndStr = targetStartStr;
+    periodLabel = 'গতকালের হিসাব';
+  } else if (period === '7days') {
+    const wDate = new Date(localTime);
+    wDate.setDate(localTime.getDate() - 6);
+    targetStartStr = wDate.toISOString().slice(0, 10);
+    targetEndStr = todayStr;
+    periodLabel = 'গত ৭ দিনের হিসাব';
+  } else if (period === '30days') {
+    const mDate = new Date(localTime);
+    mDate.setDate(localTime.getDate() - 29);
+    targetStartStr = mDate.toISOString().slice(0, 10);
+    targetEndStr = todayStr;
+    periodLabel = 'গত ৩০ দিনের হিসাব';
+  } else if (period === 'thisMonth') {
+    targetStartStr = `${todayStr.slice(0, 7)}-01`;
+    targetEndStr = todayStr;
+    periodLabel = 'এই মাসের হিসাব';
+  }
+
+  const isInRange = (created_at: string) => {
     if (!created_at) return false;
     try {
       const d = new Date(created_at);
       const dLocal = new Date(d.getTime() + (bdOffset + d.getTimezoneOffset()) * 60000);
-      return dLocal.toISOString().slice(0, 10) === todayStr;
+      const rowDateStr = dLocal.toISOString().slice(0, 10);
+      return rowDateStr >= targetStartStr && rowDateStr <= targetEndStr;
     } catch {
-      return String(created_at).startsWith(todayStr);
+      const rowDateStr = String(created_at).slice(0, 10);
+      return rowDateStr >= targetStartStr && rowDateStr <= targetEndStr;
     }
   };
 
-  // Today's Sales (exclude pure due_payment so payments aren't counted as new sales)
-  const todaySalesList = sales.filter(s => isToday(s.created_at) && s.payment_method !== 'due_payment');
-  const todaySales = todaySalesList.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
-  const todayCashSales = todaySalesList.filter(o => o.payment_method === 'cash').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
-  const todayDueSales = todaySalesList.reduce((acc, o) => acc + (Number(o.due_amount) || (o.payment_method === 'due' ? Number(o.total_amount) || 0 : 0)), 0);
-  const todayGrossProfit = todaySalesList.reduce((acc, o) => acc + (Number(o.profit_amount) || 0), 0);
-  const todayOrderCount = todaySalesList.length;
+  // Period Sales (exclude pure due_payment)
+  const periodSalesList = sales.filter(s => isInRange(s.created_at) && s.payment_method !== 'due_payment');
+  const periodSales = periodSalesList.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
+  const periodCashSales = periodSalesList.filter(o => o.payment_method === 'cash').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
+  const periodDueSales = periodSalesList.reduce((acc, o) => acc + (Number(o.due_amount) || (o.payment_method === 'due' ? Number(o.total_amount) || 0 : 0)), 0);
+  const periodGrossProfit = periodSalesList.reduce((acc, o) => acc + (Number(o.profit_amount) || 0), 0);
+  const periodOrderCount = periodSalesList.length;
 
-  // Today's Due Collections
-  const todayDueCollected = sales.filter(s => isToday(s.created_at) && s.payment_method === 'due_payment').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
+  // Period Due Collections
+  const periodDueCollected = sales.filter(s => isInRange(s.created_at) && s.payment_method === 'due_payment').reduce((acc, o) => acc + (Number(o.paid_amount || o.total_amount) || 0), 0);
 
-  // Today's Expenses
-  const todayExpensesList = expenses.filter(e => isToday(e.created_at));
-  const todayExpenses = todayExpensesList.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
-  const todayNetProfit = todayGrossProfit - todayExpenses;
+  // Period Expenses
+  const periodExpensesList = expenses.filter(e => isInRange(e.created_at || e.date));
+  const periodExpenses = periodExpensesList.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+  const periodNetProfit = periodGrossProfit - periodExpenses;
 
   // All-time aggregates
   const allTimeSales = sales.filter(s => s.payment_method !== 'due_payment').reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0);
@@ -5799,27 +5964,32 @@ fastify.get('/api/reports/day-end', async (request) => {
   const liveCashInHand = Math.max(0, allCashIn - allTimeExpenses);
 
   return {
-    todaySales,
-    todayCashSales,
-    todayDueSales,
-    todayGrossProfit,
-    todayExpenses,
-    todayNetProfit,
-    todayOrderCount,
-    todayDueCollected,
-    // Aliases matching dashboard expectations for today's summary:
-    totalSales: todaySales,
-    cashSales: todayCashSales,
-    grossProfit: todayGrossProfit,
-    expenses: todayExpenses,
-    netProfit: todayNetProfit,
+    periodLabel,
+    startDate: targetStartStr,
+    endDate: targetEndStr,
+    todaySales: periodSales,
+    todayCashSales: periodCashSales,
+    todayDueSales: periodDueSales,
+    todayGrossProfit: periodGrossProfit,
+    todayExpenses: periodExpenses,
+    todayNetProfit: periodNetProfit,
+    todayOrderCount: periodOrderCount,
+    todayDueCollected: periodDueCollected,
+    totalSales: periodSales,
+    cashSales: periodCashSales,
+    dueSales: periodDueSales,
+    grossProfit: periodGrossProfit,
+    expenses: periodExpenses,
+    netProfit: periodNetProfit,
+    orderCount: periodOrderCount,
+    dueCollected: periodDueCollected,
     cashInHand: liveCashInHand,
     totalMarketDue,
     totalDealerDue,
-    orderCount: todayOrderCount,
-    // All-time metadata
     allTimeSales,
-    allTimeExpenses
+    allTimeExpenses,
+    recentPeriodSales: periodSalesList.slice(0, 10),
+    periodExpensesList: periodExpensesList.slice(0, 10)
   };
 });
 
@@ -6113,39 +6283,75 @@ fastify.get('/api/customers/search', async (request) => {
 // 4. MULTI-PERIOD & INDIVIDUAL PRODUCT ANALYTICS REPORT
 // ==========================================
 fastify.get('/api/reports/analytics', async (request) => {
-  const { tenantId, period = 'today' } = request.query as any;
+  const { tenantId, period = 'today', startDate: customStart, endDate: customEnd } = request.query as any;
   if (!tenantId) return { summary: {}, productsBreakdown: [] };
 
-  const now = new Date();
-  let startDate = new Date();
+  const nowBD = new Date();
+  const bdOffset = 6 * 60; // minutes
+  const localTime = new Date(nowBD.getTime() + (bdOffset + nowBD.getTimezoneOffset()) * 60000);
+  const todayStr = localTime.toISOString().slice(0, 10);
 
-  if (period === 'today') {
-    startDate.setHours(0, 0, 0, 0);
+  let targetStartStr = todayStr;
+  let targetEndStr = todayStr;
+  let periodLabel = 'আজকের';
+
+  if (customStart && customEnd) {
+    targetStartStr = String(customStart).slice(0, 10);
+    targetEndStr = String(customEnd).slice(0, 10);
+    periodLabel = `${targetStartStr} থেকে ${targetEndStr}`;
+  } else if (period === 'yesterday') {
+    const yDate = new Date(localTime);
+    yDate.setDate(localTime.getDate() - 1);
+    targetStartStr = yDate.toISOString().slice(0, 10);
+    targetEndStr = targetStartStr;
+    periodLabel = 'গতকালের';
   } else if (period === '3days') {
-    startDate.setDate(now.getDate() - 3);
-    startDate.setHours(0, 0, 0, 0);
+    const d3 = new Date(localTime);
+    d3.setDate(localTime.getDate() - 2);
+    targetStartStr = d3.toISOString().slice(0, 10);
+    targetEndStr = todayStr;
+    periodLabel = 'গত ৩ দিনের';
   } else if (period === 'week' || period === '7days') {
-    startDate.setDate(now.getDate() - 7);
-    startDate.setHours(0, 0, 0, 0);
+    const d7 = new Date(localTime);
+    d7.setDate(localTime.getDate() - 6);
+    targetStartStr = d7.toISOString().slice(0, 10);
+    targetEndStr = todayStr;
+    periodLabel = 'গত ৭ দিনের';
+  } else if (period === 'thisMonth') {
+    targetStartStr = `${todayStr.slice(0, 7)}-01`;
+    targetEndStr = todayStr;
+    periodLabel = 'এই মাসের';
   } else if (period === 'month' || period === '30days') {
-    startDate.setDate(now.getDate() - 30);
-    startDate.setHours(0, 0, 0, 0);
+    const d30 = new Date(localTime);
+    d30.setDate(localTime.getDate() - 29);
+    targetStartStr = d30.toISOString().slice(0, 10);
+    targetEndStr = todayStr;
+    periodLabel = 'গত ৩০ দিনের';
+  } else if (period === 'all') {
+    targetStartStr = '2000-01-01';
+    targetEndStr = '2099-12-31';
+    periodLabel = 'সকল সময়ের';
   }
 
-  const startIso = startDate.toISOString();
+  const isInRange = (created_at: string) => {
+    if (!created_at) return false;
+    try {
+      const d = new Date(created_at);
+      const dLocal = new Date(d.getTime() + (bdOffset + d.getTimezoneOffset()) * 60000);
+      const rowDateStr = dLocal.toISOString().slice(0, 10);
+      return rowDateStr >= targetStartStr && rowDateStr <= targetEndStr;
+    } catch {
+      const rowDateStr = String(created_at).slice(0, 10);
+      return rowDateStr >= targetStartStr && rowDateStr <= targetEndStr;
+    }
+  };
 
-  // Get sales in this period
-  const sales = db.prepare(`
-    SELECT * FROM sales 
-    WHERE tenant_id = ? AND created_at >= ?
-    ORDER BY created_at DESC
-  `).all(tenantId, startIso) as any[];
+  const allSales = db.prepare(`SELECT * FROM sales WHERE tenant_id = ? ORDER BY created_at DESC`).all(tenantId) as any[];
+  const allExpenses = db.prepare(`SELECT * FROM expenses WHERE tenant_id = ? ORDER BY created_at DESC`).all(tenantId) as any[];
 
-  // Get expenses in this period
-  const expenses = db.prepare(`
-    SELECT * FROM expenses 
-    WHERE tenant_id = ? AND created_at >= ?
-  `).all(tenantId, startIso) as any[];
+  // Get sales and expenses in this period
+  const sales = allSales.filter(s => isInRange(s.created_at) && s.payment_method !== 'due_payment');
+  const expenses = allExpenses.filter(e => isInRange(e.created_at || e.date));
 
   const totalSales = sales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0);
   const cashSales = sales.filter(s => s.payment_method === 'cash').reduce((acc, s) => acc + (Number(s.paid_amount) || 0), 0);
@@ -6286,7 +6492,9 @@ fastify.get('/api/reports/analytics', async (request) => {
 
   return {
     period,
-    periodLabel: period === 'today' ? 'আজকের' : period === '3days' ? 'গত ৩ দিনের' : period === 'week' || period === '7days' ? 'সাপ্তাহিক (৭ দিন)' : 'মাসিক (৩০ দিন)',
+    periodLabel,
+    startDate: targetStartStr,
+    endDate: targetEndStr,
     summary: {
       totalSales,
       cashSales,

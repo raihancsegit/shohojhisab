@@ -404,8 +404,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTenant(null);
       } else if (savedRole === 'shopkeeper' && savedTenantRaw) {
         const parsedTenant = JSON.parse(savedTenantRaw);
+        if (parsedTenant) {
+          parsedTenant.industryId = parsedTenant.industryId || parsedTenant.industry_category_id || parsedTenant.industryCategoryId || parsedTenant.category_id || (parsedTenant.shopName?.toLowerCase().includes('pharma') ? 'cat-pharmacy' : 'cat-grocery');
+        }
         setUserRole('shopkeeper');
         setTenant(parsedTenant);
+
+        // Fetch fresh tenant metadata from live database to keep industry, shopName & status synced
+        if (parsedTenant?.id) {
+          fetch(apiUrl(`/api/auth/me?tenantId=${parsedTenant.id}`))
+            .then(res => res.json())
+            .then(freshTenant => {
+              if (freshTenant && freshTenant.id) {
+                setTenant(prev => {
+                  if (!prev) return prev;
+                  const updated = {
+                    ...prev,
+                    shopName: freshTenant.shopName || prev.shopName,
+                    ownerName: freshTenant.ownerName || prev.ownerName,
+                    location: freshTenant.location || prev.location,
+                    industryId: freshTenant.industryId || freshTenant.industry_category_id || prev.industryId,
+                    industryName: freshTenant.industryName || prev.industryName,
+                    industryIcon: freshTenant.industryIcon || prev.industryIcon,
+                    planId: freshTenant.planId || prev.planId,
+                    status: freshTenant.status || prev.status
+                  };
+                  localStorage.setItem('lbos_active_tenant', JSON.stringify(updated));
+                  return updated;
+                });
+              }
+            })
+            .catch(() => {});
+        }
 
         // Verify status & updated features in background
         fetch(apiUrl(`/api/tenants/${parsedTenant.id}/subscription-status`))
@@ -596,8 +626,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateActiveTenant = (tenantData: ShopTenant) => {
+    if (tenantData) {
+      tenantData.industryId = tenantData.industryId || (tenantData as any).industry_category_id || (tenantData as any).industryCategoryId || (tenantData.shopName?.toLowerCase().includes('pharma') ? 'cat-pharmacy' : 'cat-grocery');
+    }
     setTenant(tenantData);
     localStorage.setItem('lbos_active_tenant', JSON.stringify(tenantData));
+    localStorage.setItem('lbos_active_tenant_id', tenantData.id);
   };
 
   // Check if subscription plan has access to a tier

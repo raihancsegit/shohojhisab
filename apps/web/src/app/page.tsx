@@ -3,14 +3,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { getIndustryTheme } from '../lib/industryConfig';
+import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
   const router = useRouter();
-  const theme = getIndustryTheme(tenant?.industryId);
+  
+  const activeIndustryId = tenant?.industryId || (tenant as any)?.industry_category_id || (tenant as any)?.industryCategoryId || (tenant as any)?.category_id;
+  const theme = getIndustryTheme(activeIndustryId, tenant?.shopName);
 
   const [metrics, setMetrics] = useState({
     totalSales: 0,
@@ -22,6 +24,13 @@ export default function ShopkeeperDashboard() {
     totalMarketDue: 0,
     orderCount: 0
   });
+
+  // Date Filter & Custom Date Range States
+  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'yesterday' | '7days' | 'thisMonth' | 'custom'>('today');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [showCustomDateModal, setShowCustomDateModal] = useState(false);
+  const [periodLabel, setPeriodLabel] = useState('আজকের হিসাব');
 
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -132,18 +141,32 @@ export default function ShopkeeperDashboard() {
     }
   }, [isLoading, tenant, userRole, router]);
 
-  const loadShopData = async () => {
+  const loadShopData = async (periodOverride?: string, startOverride?: string, endOverride?: string) => {
     if (!tenant?.id) {
       setLoading(false);
       return;
     }
 
+    const p = periodOverride !== undefined ? periodOverride : selectedPeriod;
+    const sDate = startOverride !== undefined ? startOverride : customStartDate;
+    const eDate = endOverride !== undefined ? endOverride : customEndDate;
+
     try {
-      // 1. Fetch real Day-End live financials for this tenant
-      const repRes = await fetch(`/api/reports/day-end?tenantId=${tenant.id}`);
+      // 1. Fetch real Day-End / Multi-date financials for this tenant
+      let queryUrl = `/api/reports/day-end?tenantId=${tenant.id}&period=${p}`;
+      if (p === 'custom' && sDate && eDate) {
+        queryUrl += `&startDate=${sDate}&endDate=${eDate}`;
+      }
+      const repRes = await fetch(queryUrl);
       if (repRes.ok) {
         const repData = await repRes.json();
         setMetrics(repData);
+        if (repData.periodLabel) {
+          setPeriodLabel(repData.periodLabel);
+        }
+        if (repData.recentPeriodSales && Array.isArray(repData.recentPeriodSales)) {
+          setRecentSales(repData.recentPeriodSales.slice(0, 5));
+        }
       }
 
       // 2. Fetch products to count low stock
@@ -155,21 +178,14 @@ export default function ShopkeeperDashboard() {
         setLowStockCount(low);
       }
 
-      // 3. Fetch recent sales
-      const salesRes = await fetch(`/api/sales?tenantId=${tenant.id}`);
-      if (salesRes.ok) {
-        const sales = await salesRes.json();
-        setRecentSales(Array.isArray(sales) ? sales.slice(0, 5) : []);
-      }
-
-      // 4. Fetch customers
+      // 3. Fetch customers
       const custRes = await fetch(`/api/customers?tenantId=${tenant.id}`);
       if (custRes.ok) {
         const cList = await custRes.json();
         setCustomers(Array.isArray(cList) ? cList : []);
       }
 
-      // 5. Fetch dealers (for supplier payable metric)
+      // 4. Fetch dealers (for supplier payable metric)
       const dealRes = await fetch(`/api/dealers?tenantId=${tenant.id}`);
       if (dealRes.ok) {
         const dList = await dealRes.json();
@@ -376,6 +392,186 @@ export default function ShopkeeperDashboard() {
       </div>
 
       {/* ==========================================================================
+         📅 INTERACTIVE DATE FILTER BAR & CUSTOM RANGE SELECTOR
+         ========================================================================== */}
+      <div style={{
+        background: '#ffffff',
+        border: '1.5px solid #e2e8f0',
+        borderRadius: '16px',
+        padding: '8px 12px',
+        marginBottom: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+          {[
+            { id: 'today', label: 'আজ' },
+            { id: 'yesterday', label: 'গতকাল' },
+            { id: '7days', label: 'গত ৭ দিন' },
+            { id: 'thisMonth', label: 'এই মাস' },
+            { id: 'custom', label: '📅 কাস্টম তারিখ' },
+          ].map((item) => {
+            const isActive = selectedPeriod === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  if (item.id === 'custom') {
+                    setShowCustomDateModal(true);
+                  } else {
+                    setSelectedPeriod(item.id as any);
+                    loadShopData(item.id);
+                  }
+                }}
+                style={{
+                  background: isActive ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : '#f1f5f9',
+                  color: isActive ? '#ffffff' : '#475569',
+                  border: isActive ? '1px solid #4338ca' : '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '6px 12px',
+                  fontSize: '12.5px',
+                  fontWeight: isActive ? '800' : '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span>🗓️</span>
+          <span>{periodLabel}</span>
+        </div>
+      </div>
+
+      {/* 📅 Custom Date Range Modal */}
+      {showCustomDateModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)',
+          zIndex: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{ background: '#ffffff', borderRadius: '22px', padding: '22px', width: '100%', maxWidth: '360px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                📅 কাস্টম তারিখ নির্বাচন করুন
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCustomDateModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                শুরু তারিখ (From):
+              </label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                শেষ তারিখ (To):
+              </label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 12px', borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={!customStartDate || !customEndDate}
+              onClick={() => {
+                if (customStartDate && customEndDate) {
+                  triggerHaptic('success');
+                  setSelectedPeriod('custom');
+                  setShowCustomDateModal(false);
+                  loadShopData('custom', customStartDate, customEndDate);
+                }
+              }}
+              style={{
+                width: '100%',
+                background: (!customStartDate || !customEndDate) ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '12px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: (!customStartDate || !customEndDate) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              ✓ হিসাব ফিল্টার করুন
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ⏳ Pharmacy Smart Expiry Widget */}
+      {normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+          color: '#ffffff',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '24px' }}>⏳</span>
+            <div>
+              <div style={{ fontSize: '13.5px', fontWeight: '800' }}>ফার্মেসি মেয়াদ রাডার (Expiry Tracker)</div>
+              <div style={{ fontSize: '11px', color: '#bae6fd' }}>মেয়াদোত্তীর্ণ হতে চলা ঔষধ ও ড্রাগ মনিটর করুন</div>
+            </div>
+          </div>
+          <Link
+            href="/expiry-tracker"
+            style={{
+              background: '#ffffff',
+              color: '#0284c7',
+              padding: '6px 12px',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: '800',
+              textDecoration: 'none'
+            }}
+          >
+            রাডার দেখুন →
+          </Link>
+        </div>
+      )}
+
+      {/* ==========================================================================
          👑 HISABPATI-STYLE HERO BALANCE COCKPIT
          ========================================================================== */}
       {(() => {
@@ -403,43 +599,78 @@ export default function ShopkeeperDashboard() {
               position: 'relative',
               overflow: 'hidden'
             }}>
-              {/* Top Row: Subtitle + Memo Count + Privacy Eye Button */}
+              {/* Top Row: Subtitle + Memo Count + Voice Readout + Privacy Eye Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.16)', color: '#e0e7ff', padding: '3px 10px', borderRadius: '8px' }}>
-                    📊 আজকের দোকান হিসাব
+                    📊 {periodLabel}
                   </span>
                   <span style={{ fontSize: '11.5px', background: '#ecfdf5', color: '#065f46', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
                     {((metrics as any)?.todayOrderCount !== undefined ? (metrics as any).todayOrderCount : metrics.orderCount || 0)}টি মেমো বিক্রি
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={togglePrivacyMode}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.18)',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '36px',
-                    height: '36px',
-                    color: '#ffffff',
-                    fontSize: '17px',
-                    cursor: 'pointer',
-                    display: 'grid',
-                    placeItems: 'center',
-                    transition: 'background 0.2s ease'
-                  }}
-                  title={privacyMode ? 'ব্যালেন্স দেখতে চাপুন' : 'ব্যালেন্স গোপন রাখতে চাপুন'}
-                >
-                  {privacyMode ? '🙈' : '👁️'}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* 🔊 Voice Assistant Speech Readout Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('medium');
+                      const totalS = Number(metrics.totalSales || 0);
+                      const totalE = Number(metrics.expenses || 0);
+                      const totalP = Number(metrics.netProfit || 0);
+                      const liveC = Number(liveCashInHand || 0);
+                      speakAnnouncement(
+                        `${periodLabel} এ আপনার দোকানে মোট ${totalS.toLocaleString('en-US')} টাকা বিক্রি হয়েছে, খরচ ${totalE.toLocaleString('en-US')} টাকা এবং নিট লাভ ${totalP.toLocaleString('en-US')} টাকা। ক্যাশ জমা আছে ${liveC.toLocaleString('en-US')} টাকা।`,
+                        undefined,
+                        true
+                      );
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.18)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      color: '#ffffff',
+                      fontSize: '17px',
+                      cursor: 'pointer',
+                      display: 'grid',
+                      placeItems: 'center',
+                      transition: 'background 0.2s ease'
+                    }}
+                    title="হিসাব শুনুন (সহকারী ভয়েস স্পিকার)"
+                  >
+                    🔊
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={togglePrivacyMode}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.18)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      color: '#ffffff',
+                      fontSize: '17px',
+                      cursor: 'pointer',
+                      display: 'grid',
+                      placeItems: 'center',
+                      transition: 'background 0.2s ease'
+                    }}
+                    title={privacyMode ? 'ব্যালেন্স দেখতে চাপুন' : 'ব্যালেন্স গোপন রাখতে চাপুন'}
+                  >
+                    {privacyMode ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
 
-              {/* Centerpiece: আজকের মোট বিক্রি (Today's Total Sales) */}
+              {/* Centerpiece: মোট বিক্রি (Total Sales) */}
               <div style={{ marginBottom: '16px', textAlign: 'left' }}>
                 <div style={{ fontSize: '13px', color: '#c7d2fe', fontWeight: '800', marginBottom: '2px' }}>
-                  আজকের মোট বিক্রি
+                  {periodLabel} এর মোট বিক্রি
                 </div>
                 <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }} className="num-font">
                   {privacyMode ? '৳ ••••••' : `৳ ${((metrics as any)?.todaySales !== undefined ? (metrics as any).todaySales : metrics.totalSales || 0).toLocaleString('en-US')}`}

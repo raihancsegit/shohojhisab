@@ -11,16 +11,39 @@ import VoiceAssistant from '../components/VoiceAssistant';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
-  const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme } = useAuth();
+  const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme, updateActiveTenant } = useAuth();
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
 
   const [showModeModal, setShowModeModal] = useState(false);
+  const [showShopSwitchModal, setShowShopSwitchModal] = useState(false);
+  const [availableShops, setAvailableShops] = useState<any[]>([]);
   const [pinInput, setPinInput] = useState('');
   const [modeError, setModeError] = useState('');
   const [availableStaff, setAvailableStaff] = useState<any[]>([]);
 
-  const theme = getIndustryTheme(tenant?.industryId);
+  const activeIndustryId = tenant?.industryId || (tenant as any)?.industry_category_id || (tenant as any)?.industryCategoryId || (tenant as any)?.category_id;
+  const theme = getIndustryTheme(activeIndustryId, tenant?.shopName);
+
+  // Load available shops for 1-click shop switching
+  useEffect(() => {
+    if (showShopSwitchModal) {
+      const q = tenant?.phone ? `?phone=${encodeURIComponent(tenant.phone)}` : '';
+      fetch(`/api/shops/list${q}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setAvailableShops(data);
+        })
+        .catch(() => {});
+    }
+  }, [showShopSwitchModal, tenant?.phone]);
+
+  const handleSwitchShop = (targetShop: any) => {
+    triggerHaptic('success');
+    updateActiveTenant(targetShop);
+    setShowShopSwitchModal(false);
+    window.location.reload();
+  };
 
   // Load available staff for quick switch suggestions
   useEffect(() => {
@@ -52,7 +75,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
     { href: '/khata', label: theme.khataLabel, icon: '📒', show: true },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
-    { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
+    { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/expenses', label: 'দোকান খরচ', icon: '💸', show: true },
     { href: '/installments', label: 'কিস্তি খাতা', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: theme.dealerLabel, icon: '🚚', show: isFeatureEnabled('enableDealerKhata') },
@@ -110,36 +133,54 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
           )}
 
           {userRole === 'shopkeeper' && tenant ? (
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-              <div style={{
-                background: '#ffffff',
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '18px',
-                color: '#4f46e5',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                flexShrink: 0
-              }}>
-                {theme.icon}
-              </div>
-              <div className="header-shop-text">
-                <h1 className="header-shop-title">
-                  {tenant.shopName || 'সহজ হিসাব'}
-                </h1>
-                <div className="header-shop-meta">
-                  <span className="header-shop-badge">
-                    <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>
-                    {theme.name}
-                  </span>
-                  <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
-                    • {tenant.location || 'বাজার'}
-                  </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowShopSwitchModal(true); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textAlign: 'left',
+                  color: 'inherit'
+                }}
+                title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
+              >
+                <div style={{
+                  background: '#ffffff',
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '10px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '18px',
+                  color: '#4f46e5',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  flexShrink: 0
+                }}>
+                  {theme.icon}
                 </div>
-              </div>
-            </Link>
+                <div className="header-shop-text">
+                  <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>{tenant.shopName || 'সহজ হিসাব'}</span>
+                    <span style={{ fontSize: '9px', opacity: 0.8, color: '#93c5fd' }}>▼</span>
+                  </h1>
+                  <div className="header-shop-meta">
+                    <span className="header-shop-badge">
+                      <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>
+                      {theme.name}
+                    </span>
+                    <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
+                      • {tenant.location || 'বাজার'}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            </div>
           ) : userRole === 'admin' ? (
             <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
               <div style={{ background: '#ffffff', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', fontSize: '18px', color: '#e11d48', flexShrink: 0 }}>
@@ -501,6 +542,117 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
             >
               👥 সকল কর্মচারী ও পারমিশন ম্যানেজ করুন →
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 🏬 Multi-Shop Instant Switcher Modal */}
+      {showShopSwitchModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: authTheme === 'dark' ? '#1e293b' : '#ffffff',
+            color: authTheme === 'dark' ? '#ffffff' : '#0f172a',
+            borderRadius: '24px', padding: '22px', width: '100%', maxWidth: '400px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            border: authTheme === 'dark' ? '1px solid #334155' : 'none'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900' }}>
+                  🏬 দোকান ও ক্যাটাগরি সুইচ
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#64748b' }}>
+                  বর্তমান: <strong style={{ color: '#4f46e5' }}>{tenant?.shopName}</strong> ({theme.name})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShopSwitchModal(false)}
+                style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', color: 'inherit' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '8px', maxHeight: '280px', overflowY: 'auto', marginBottom: '14px' }}>
+              {availableShops.map((s) => {
+                const sTheme = getIndustryTheme(s.industryId, s.shopName);
+                const isCurrent = s.id === tenant?.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleSwitchShop(s)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      background: isCurrent ? (authTheme === 'dark' ? '#1e1b4b' : '#eef2ff') : (authTheme === 'dark' ? '#0f172a' : '#f8fafc'),
+                      border: isCurrent ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'inherit'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '20px' }}>{sTheme.icon}</span>
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: '800' }}>{s.shopName}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{sTheme.name} • {s.location || 'বাজার'}</div>
+                      </div>
+                    </div>
+                    {isCurrent && (
+                      <span style={{ background: '#4f46e5', color: '#fff', fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '99px' }}>
+                        সক্রিয় ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Link
+                href="/settings"
+                onClick={() => setShowShopSwitchModal(false)}
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  background: 'rgba(79, 70, 229, 0.1)',
+                  color: '#4f46e5',
+                  padding: '9px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  textDecoration: 'none'
+                }}
+              >
+                ⚙️ ক্যাটাগরি বদলান
+              </Link>
+              <Link
+                href="/setup"
+                onClick={() => setShowShopSwitchModal(false)}
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  background: '#4f46e5',
+                  color: '#fff',
+                  padding: '9px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  textDecoration: 'none'
+                }}
+              >
+                ➕ নতুন দোকান
+              </Link>
+            </div>
           </div>
         </div>
       )}

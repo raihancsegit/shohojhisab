@@ -301,9 +301,11 @@ export const INDUSTRY_THEMES: Record<string, IndustryTheme> = {
   }
 };
 
-export function normalizeIndustryId(industryId?: string): string {
-  if (!industryId) return 'cat-grocery';
-  const clean = String(industryId).toLowerCase().trim();
+export function normalizeIndustryId(industryId?: string, fallbackShopName?: string): string {
+  const clean = String(industryId || '').toLowerCase().trim();
+  const shopClean = String(fallbackShopName || '').toLowerCase().trim();
+
+  // 1. Direct match on industryId
   if (clean.includes('pharma') || clean.includes('drug') || clean.includes('ফার্মেসি') || clean.includes('ঔষধ') || clean.includes('ওষুধ')) return 'cat-pharmacy';
   if (clean.includes('cloth') || clean.includes('fashion') || clean.includes('পোশাক') || clean.includes('কাপড়') || clean.includes('গার্মেন্টস')) return 'cat-clothing';
   if (clean.includes('hardware') || clean.includes('sanitary') || clean.includes('হার্ডওয়্যার') || clean.includes('স্যানিটারি')) return 'cat-hardware';
@@ -316,14 +318,30 @@ export function normalizeIndustryId(industryId?: string): string {
   if (clean.includes('station') || clean.includes('book') || clean.includes('বই') || clean.includes('স্টেশনারি') || clean.includes('লাইব্রেরি')) return 'cat-stationery';
   if (clean.includes('tea') || clean.includes('চা')) return 'cat-tea';
   if (clean.includes('furniture') || clean.includes('ফার্নিচার') || clean.includes('আসবাবপত্র')) return 'cat-furniture';
+  if (clean.startsWith('cat-') && INDUSTRY_THEMES[clean] && clean !== 'cat-grocery') return clean;
+
+  // 2. Intelligent inference from shopName if industryId is missing or default
+  if (shopClean) {
+    if (shopClean.includes('pharma') || shopClean.includes('drug') || shopClean.includes('ফার্মেসি') || shopClean.includes('ঔষধ') || shopClean.includes('মেডিসিন') || shopClean.includes('medicine')) return 'cat-pharmacy';
+    if (shopClean.includes('cloth') || shopClean.includes('fashion') || shopClean.includes('পোশাক') || shopClean.includes('টেইলার') || shopClean.includes('বস্ত্র')) return 'cat-clothing';
+    if (shopClean.includes('hardware') || shopClean.includes('হার্ডওয়্যার') || shopClean.includes('স্যানিটারি')) return 'cat-hardware';
+    if (shopClean.includes('mobile') || shopClean.includes('ইলেকট্রনিক্স') || shopClean.includes('টেলিকম')) return 'cat-mobile';
+    if (shopClean.includes('restaurant') || shopClean.includes('ক্যাফে') || shopClean.includes('রেস্তোরাঁ') || shopClean.includes('হোটেল')) return 'cat-restaurant';
+    if (shopClean.includes('bakery') || shopClean.includes('মিষ্টি') || shopClean.includes('বেকারি') || shopClean.includes('কনফেকশনারি')) return 'cat-bakery';
+    if (shopClean.includes('cosmetic') || shopClean.includes('কসমেটিক') || shopClean.includes('বিউটি')) return 'cat-cosmetics';
+    if (shopClean.includes('shoe') || shopClean.includes('জুতা') || shopClean.includes('ফুটওয়্যার')) return 'cat-shoes';
+    if (shopClean.includes('meat') || shopClean.includes('গোশত') || shopClean.includes('মাংস') || shopClean.includes('মাছ')) return 'cat-meat-fish';
+    if (shopClean.includes('furniture') || shopClean.includes('ফার্নিচার') || shopClean.includes('আসবাবপত্র')) return 'cat-furniture';
+  }
+
   if (clean.includes('grocery') || clean.includes('মুদি') || clean.includes('জেনারেল')) return 'cat-grocery';
   if (clean.startsWith('cat-') && INDUSTRY_THEMES[clean]) return clean;
   if (INDUSTRY_THEMES[`cat-${clean}`]) return `cat-${clean}`;
   return 'cat-grocery';
 }
 
-export function getIndustryTheme(industryId?: string): IndustryTheme {
-  const key = normalizeIndustryId(industryId);
+export function getIndustryTheme(industryId?: string, fallbackShopName?: string): IndustryTheme {
+  const key = normalizeIndustryId(industryId, fallbackShopName);
   return INDUSTRY_THEMES[key] || INDUSTRY_THEMES['cat-grocery'];
 }
 
