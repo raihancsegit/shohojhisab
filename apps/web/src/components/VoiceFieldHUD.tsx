@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { parseBanglaNumber, VoiceFieldOptions } from '../lib/voiceFieldUtils';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
+import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 export default function VoiceFieldHUD() {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +73,7 @@ export default function VoiceFieldHUD() {
 
     try {
       playMicStartSound();
+      voiceProximityManager.start().catch((err) => console.warn('Proximity start warning:', err));
       const rec = new SpeechRecognition();
       rec.lang = 'bn-BD';
       rec.continuous = true;
@@ -90,7 +92,11 @@ export default function VoiceFieldHUD() {
       };
 
       rec.onresult = (event: any) => {
-        const { fullTranscript } = extractTranscriptFromEvent(event);
+        const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
+        if (isDistantNoise) {
+          setStatusMessage('⚠️ দূরের আওয়াজ/টিভি ফিল্টার হয়েছে (কাছে বলুন)');
+          return;
+        }
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         setLiveTranscript(fullTranscript);
@@ -140,6 +146,7 @@ export default function VoiceFieldHUD() {
   };
 
   const stopListening = () => {
+    voiceProximityManager.stop();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     isListeningRef.current = false;
     setIsListening(false);

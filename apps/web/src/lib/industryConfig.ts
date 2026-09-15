@@ -301,8 +301,29 @@ export const INDUSTRY_THEMES: Record<string, IndustryTheme> = {
   }
 };
 
+export function normalizeIndustryId(industryId?: string): string {
+  if (!industryId) return 'cat-grocery';
+  const clean = String(industryId).toLowerCase().trim();
+  if (clean.includes('pharma') || clean.includes('drug') || clean.includes('ফার্মেসি') || clean.includes('ঔষধ') || clean.includes('ওষুধ')) return 'cat-pharmacy';
+  if (clean.includes('cloth') || clean.includes('fashion') || clean.includes('পোশাক') || clean.includes('কাপড়') || clean.includes('গার্মেন্টস')) return 'cat-clothing';
+  if (clean.includes('hardware') || clean.includes('sanitary') || clean.includes('হার্ডওয়্যার') || clean.includes('স্যানিটারি')) return 'cat-hardware';
+  if (clean.includes('mobile') || clean.includes('electronic') || clean.includes('মোবাইল') || clean.includes('ইলেকট্রনিক্স')) return 'cat-mobile';
+  if (clean.includes('restaurant') || clean.includes('cafe') || clean.includes('খাবার') || clean.includes('রেস্তোরাঁ') || clean.includes('রেস্টুরেন্ট')) return 'cat-restaurant';
+  if (clean.includes('bakery') || clean.includes('sweet') || clean.includes('মিষ্টি') || clean.includes('বেকারি')) return 'cat-bakery';
+  if (clean.includes('cosmetic') || clean.includes('beauty') || clean.includes('কসমেটিক')) return 'cat-cosmetics';
+  if (clean.includes('shoe') || clean.includes('footwear') || clean.includes('জুতা') || clean.includes('জুতো')) return 'cat-shoes';
+  if (clean.includes('meat') || clean.includes('fish') || clean.includes('মাংস') || clean.includes('মাছ')) return 'cat-meat-fish';
+  if (clean.includes('station') || clean.includes('book') || clean.includes('বই') || clean.includes('স্টেশনারি') || clean.includes('লাইব্রেরি')) return 'cat-stationery';
+  if (clean.includes('tea') || clean.includes('চা')) return 'cat-tea';
+  if (clean.includes('furniture') || clean.includes('ফার্নিচার') || clean.includes('আসবাবপত্র')) return 'cat-furniture';
+  if (clean.includes('grocery') || clean.includes('মুদি') || clean.includes('জেনারেল')) return 'cat-grocery';
+  if (clean.startsWith('cat-') && INDUSTRY_THEMES[clean]) return clean;
+  if (INDUSTRY_THEMES[`cat-${clean}`]) return `cat-${clean}`;
+  return 'cat-grocery';
+}
+
 export function getIndustryTheme(industryId?: string): IndustryTheme {
-  const key = industryId || 'cat-grocery';
+  const key = normalizeIndustryId(industryId);
   return INDUSTRY_THEMES[key] || INDUSTRY_THEMES['cat-grocery'];
 }
 
@@ -442,7 +463,7 @@ export const INDUSTRY_UNITS: Record<string, Array<{ value: string; label: string
 export function getIndustryUnits(industryId?: string): {
   primaryUnits: Array<{ value: string; label: string }>;
 } {
-  const currentKey = industryId || 'cat-grocery';
+  const currentKey = normalizeIndustryId(industryId);
   const primaryUnits = INDUSTRY_UNITS[currentKey] || INDUSTRY_UNITS['cat-grocery'] || [];
   return { primaryUnits };
 }
@@ -767,7 +788,7 @@ export const INDUSTRY_VOICE_CONFIGS: Record<string, IndustryVoiceConfig> = {
 };
 
 export function getIndustryVoiceConfig(industryId?: string): IndustryVoiceConfig {
-  const key = industryId || 'cat-grocery';
+  const key = normalizeIndustryId(industryId);
   return INDUSTRY_VOICE_CONFIGS[key] || INDUSTRY_VOICE_CONFIGS['cat-grocery'];
 }
 
@@ -882,12 +903,12 @@ export const INDUSTRY_PRODUCT_SUGGESTIONS: Record<string, IndustryProductSuggest
 };
 
 export function getIndustryProductSuggestions(industryId?: string): IndustryProductSuggestion[] {
-  const key = industryId || 'cat-grocery';
+  const key = normalizeIndustryId(industryId);
   return INDUSTRY_PRODUCT_SUGGESTIONS[key] || INDUSTRY_PRODUCT_SUGGESTIONS['cat-grocery'];
 }
 
 export function getIndustryProductPlaceholder(industryId?: string): string {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return 'যেমন: নাপা এক্সট্রা ৫০০ মি.গ্রা., সেক্লো ২০ মি.গ্রা., হিস্টাসিন';
     case 'cat-clothing':
@@ -919,7 +940,7 @@ export function getIndustryProductPlaceholder(industryId?: string): string {
 }
 
 export function getIndustryBrandPlaceholder(industryId?: string): string {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return 'যেমন: Square / Beximco / Incepta / Renata';
     case 'cat-clothing':
@@ -941,7 +962,7 @@ export function getIndustryBrandPlaceholder(industryId?: string): string {
 }
 
 export function getIndustrySearchPlaceholder(industryId?: string): string {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return 'ঔষধের নাম, জেনেরিক বা বারকোড খুঁজুন...';
     case 'cat-clothing':
@@ -971,7 +992,7 @@ export function getIndustrySearchPlaceholder(industryId?: string): string {
 }
 
 export function getDefaultIndustryUnit(industryId?: string): string {
-  const currentKey = industryId || 'cat-grocery';
+  const currentKey = normalizeIndustryId(industryId);
   const units = INDUSTRY_UNITS[currentKey];
   if (units && units.length > 0) {
     return units[0].value;
@@ -980,7 +1001,7 @@ export function getDefaultIndustryUnit(industryId?: string): string {
 }
 
 export function getIndustryDealerPlaceholder(industryId?: string): string {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return 'যেমন: স্কয়ার ফার্মা / বেক্সিমকো ডিপো / ইনসেপ্টা';
     case 'cat-clothing':
@@ -1013,7 +1034,7 @@ export function getIndustryDealerPlaceholder(industryId?: string): string {
 }
 
 export function getIndustryLotPlaceholder(industryId?: string): string {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return 'যেমন: ব্যাচ নং B-2026, চালান নং ১০১';
     case 'cat-clothing':
@@ -1080,7 +1101,7 @@ export interface IndustryFieldConfig {
 }
 
 export function getIndustryFieldVisibility(industryId?: string): IndustryFieldConfig {
-  switch (industryId) {
+  switch (normalizeIndustryId(industryId)) {
     case 'cat-pharmacy':
       return {
         showGenericName: true,

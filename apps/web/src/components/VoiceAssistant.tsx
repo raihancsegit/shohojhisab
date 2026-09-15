@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { voiceProximityManager, ProximityState, ProximityDistanceMode } from '../lib/voiceProximityGate';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -19,6 +20,8 @@ export default function VoiceAssistant() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackType, setFeedbackType] = useState<'listening' | 'processing' | 'success' | 'error' | null>(null);
   const [isSupported, setIsSupported] = useState(true);
+  const [proximityState, setProximityState] = useState<ProximityState>(() => voiceProximityManager.getState());
+  const [showProximitySettings, setShowProximitySettings] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
@@ -32,12 +35,17 @@ export default function VoiceAssistant() {
       setIsSupported(false);
     }
 
+    const unsubscribe = voiceProximityManager.subscribe((state) => {
+      setProximityState(state);
+    });
+
     const handleTrigger = () => {
       startListening();
     };
     window.addEventListener('trigger-voice-assistant', handleTrigger);
     return () => {
       window.removeEventListener('trigger-voice-assistant', handleTrigger);
+      unsubscribe();
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
     };
@@ -70,6 +78,11 @@ export default function VoiceAssistant() {
     setIsListening(true);
     setIsProcessing(false);
 
+    // Start acoustic proximity distance gate (autoGainControl disabled)
+    voiceProximityManager.start().catch((err) => {
+      console.warn('Voice proximity start error:', err);
+    });
+
     try {
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
@@ -82,7 +95,15 @@ export default function VoiceAssistant() {
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript } = extractTranscriptFromEvent(event);
+        const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
+
+        if (isDistantNoise) {
+          // Ambient / distant noise detected (crowd or TV) - filter out
+          setFeedbackType('listening');
+          setFeedbackText('⚠️ দূরের আওয়াজ/টিভি ফিল্টার হয়েছে (কাছে এসে বলুন)');
+          return;
+        }
+
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         latestTranscriptRef.current = fullTranscript;
@@ -126,6 +147,7 @@ export default function VoiceAssistant() {
   };
 
   const stopListeningOnly = () => {
+    voiceProximityManager.stop();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     isListeningRef.current = false;
     setIsListening(false);
@@ -332,6 +354,65 @@ export default function VoiceAssistant() {
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 🎯 Near-Field Acoustic Distance Gate Status */}
+      {isListening && (
+        <div style={{
+          background: proximityState.isGateOpen ? 'rgba(6, 78, 59, 0.95)' : 'rgba(30, 41, 59, 0.95)',
+          border: proximityState.isGateOpen ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '14px',
+          padding: '5px 12px',
+          fontSize: '11.5px',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          backdropFilter: 'blur(8px)',
+          animation: 'fadeInUp 0.15s ease'
+        }}>
+          <span style={{ fontSize: '13px' }}>
+            {proximityState.mode === 'all' ? '🌐' : proximityState.isGateOpen ? '🎯' : '📡'}
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontWeight: '700' }}>
+              {proximityState.mode === 'all'
+                ? 'দূরত্ব ফিল্টার: বন্ধ (সব কথা)'
+                : proximityState.isGateOpen
+                  ? 'ফোনের কাছে (কথা গৃহীত)'
+                  : 'দূরের আওয়াজ/টিভি ফিল্টার হচ্ছে'}
+            </span>
+            {proximityState.mode !== 'all' && (
+              <span style={{ fontSize: '10px', color: proximityState.isGateOpen ? '#a7f3d0' : '#94a3b8' }}>
+                সাউন্ড: {proximityState.currentVolume}% (সীমা: {proximityState.threshold}%)
+              </span>
+            )}
+          </div>
+          {/* Quick Distance Mode Switcher */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextMode: ProximityDistanceMode = 
+                proximityState.mode === 'near' ? 'medium' : proximityState.mode === 'medium' ? 'all' : 'near';
+              voiceProximityManager.setMode(nextMode);
+            }}
+            title="দূরত্ব ফিল্টার পরিবর্তন করুন"
+            style={{
+              background: 'rgba(255,255,255,0.18)',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '3px 8px',
+              color: '#fff',
+              fontSize: '10.5px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              marginLeft: '4px'
+            }}
+          >
+            {proximityState.mode === 'near' ? '১ হাত' : proximityState.mode === 'medium' ? '২ হাত' : 'অফ'} ⚙️
+          </button>
         </div>
       )}
 

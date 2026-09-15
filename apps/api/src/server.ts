@@ -803,11 +803,39 @@ const STARTER_PACKS: { [catId: string]: any[] } = {
     { barcode: '89496004', name: 'Crispy Singara', banglaName: 'গরম মচমচে সিঙ্গারা', purchasePrice: 4, sellingPrice: 8, stock: 120, unit: 'পিস', icon: '🥟' },
     { barcode: '89496005', name: 'Beef Samucha', banglaName: 'বিফ সমুচা', purchasePrice: 6, sellingPrice: 12, stock: 80, unit: 'পিস', icon: '🥟' },
     { barcode: '89496006', name: 'Chicken Spring Roll', banglaName: 'চিকেন রোল', purchasePrice: 15, sellingPrice: 25, stock: 40, unit: 'পিস', icon: '🌯' }
+  ],
+  'cat-furniture': [
+    { barcode: '89495001', name: 'Segun Wood Double Bed', banglaName: 'সেগুন কাঠের ডাবল খাট', purchasePrice: 24000, sellingPrice: 32000, stock: 4, unit: 'পিস', icon: '🛏️' },
+    { barcode: '89495002', name: '4-Chair Dining Table Set', banglaName: '৪ চেয়ার ডাইনিং টেবিল সেট', purchasePrice: 16500, sellingPrice: 22000, stock: 5, unit: 'সেট', icon: '🪑' },
+    { barcode: '89495003', name: 'Office Revolving Chair', banglaName: 'অফিস রিভলভিং এক্সিকিউটিভ চেয়ার', purchasePrice: 4800, sellingPrice: 6500, stock: 12, unit: 'পিস', icon: '🪑' },
+    { barcode: '89495004', name: '3-Door Wooden Wardrobe', banglaName: '৩ পাল্লা উডেন ওয়ারড্রব', purchasePrice: 21000, sellingPrice: 28000, stock: 3, unit: 'পিস', icon: '🚪' }
   ]
 };
 
+export function normalizeIndustryCategory(catId?: string): string {
+  if (!catId) return 'cat-grocery';
+  const clean = String(catId).toLowerCase().trim();
+  if (clean.includes('pharma') || clean.includes('drug') || clean.includes('ফার্মেসি') || clean.includes('ঔষধ') || clean.includes('ওষুধ')) return 'cat-pharmacy';
+  if (clean.includes('cloth') || clean.includes('fashion') || clean.includes('পোশাক') || clean.includes('কাপড়') || clean.includes('গার্মেন্টস')) return 'cat-clothing';
+  if (clean.includes('hardware') || clean.includes('sanitary') || clean.includes('হার্ডওয়্যার') || clean.includes('স্যানিটারি')) return 'cat-hardware';
+  if (clean.includes('mobile') || clean.includes('electronic') || clean.includes('মোবাইল') || clean.includes('ইলেকট্রনিক্স')) return 'cat-mobile';
+  if (clean.includes('restaurant') || clean.includes('cafe') || clean.includes('খাবার') || clean.includes('রেস্তোরাঁ') || clean.includes('রেস্টুরেন্ট')) return 'cat-restaurant';
+  if (clean.includes('bakery') || clean.includes('sweet') || clean.includes('মিষ্টি') || clean.includes('বেকারি')) return 'cat-bakery';
+  if (clean.includes('cosmetic') || clean.includes('beauty') || clean.includes('কসমেটিক')) return 'cat-cosmetics';
+  if (clean.includes('shoe') || clean.includes('footwear') || clean.includes('জুতা') || clean.includes('জুতো')) return 'cat-shoes';
+  if (clean.includes('meat') || clean.includes('fish') || clean.includes('মাংস') || clean.includes('মাছ')) return 'cat-meat-fish';
+  if (clean.includes('station') || clean.includes('book') || clean.includes('বই') || clean.includes('স্টেশনারি') || clean.includes('লাইব্রেরি')) return 'cat-stationery';
+  if (clean.includes('tea') || clean.includes('চা')) return 'cat-tea';
+  if (clean.includes('furniture') || clean.includes('ফার্নিচার') || clean.includes('আসবাবপত্র')) return 'cat-furniture';
+  if (clean.includes('grocery') || clean.includes('মুদি') || clean.includes('জেনারেল')) return 'cat-grocery';
+  if (clean.startsWith('cat-') && STARTER_PACKS[clean]) return clean;
+  if (STARTER_PACKS[`cat-${clean}`]) return `cat-${clean}`;
+  return 'cat-grocery';
+}
+
 function autoImportStarterPack(tenantId: string, categoryId: string) {
-  const pack = STARTER_PACKS[categoryId] || STARTER_PACKS['cat-grocery'];
+  const normCat = normalizeIndustryCategory(categoryId);
+  const pack = STARTER_PACKS[normCat] || STARTER_PACKS['cat-grocery'];
   const insertP = db.prepare(`
     INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -827,7 +855,7 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
       item.barcode || ('894' + Math.floor(10000000 + Math.random() * 90000000)),
       item.name,
       item.banglaName,
-      categoryId,
+      normCat,
       pPrice,
       item.sellingPrice || 0,
       stockQty,
@@ -1507,7 +1535,7 @@ fastify.post('/api/admin/tenants', async (request, reply) => {
   const body = request.body as any;
   const id = 'tenant-' + uuidv4().slice(0, 8);
   const now = new Date().toISOString();
-  const categoryId = body.industryCategoryId || 'cat-grocery';
+  const categoryId = normalizeIndustryCategory(body.industryCategoryId);
   const planId = body.planId || 'plan-pro';
   const featuresJson = getPlanFeaturesJson(planId);
 
@@ -1565,6 +1593,38 @@ fastify.post('/api/admin/tenants', async (request, reply) => {
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
   }
+});
+
+// Update Tenant Industry Category & Optional Seed Defaults
+fastify.put('/api/tenants/:id/category', async (request, reply) => {
+  const { id } = request.params as any;
+  const { industryCategoryId, seedDefaults } = (request.body || {}) as any;
+  if (!industryCategoryId) return reply.status(400).send({ error: 'Industry category required' });
+  const normCat = normalizeIndustryCategory(industryCategoryId);
+
+  db.prepare('UPDATE tenants SET industry_category_id = ? WHERE id = ?').run(normCat, id);
+
+  if (seedDefaults) {
+    autoImportStarterPack(id, normCat);
+  }
+
+  const updated = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  const cat = db.prepare('SELECT * FROM categories WHERE id = ?').get(normCat) as any;
+
+  return {
+    success: true,
+    tenant: {
+      id: updated.id,
+      shopName: updated.shop_name,
+      ownerName: updated.owner_name,
+      phone: updated.phone,
+      location: updated.bazaar_location,
+      industryId: updated.industry_category_id,
+      industryName: cat ? cat.bangla_name : 'সাধারণ',
+      industryIcon: cat ? cat.icon : '📦'
+    },
+    message: `দোকানের ক্যাটাগরি সফলভাবে ${cat ? cat.bangla_name : normCat} তে পরিবর্তন করা হয়েছে!`
+  };
 });
 
 fastify.put('/api/admin/tenants/:id/plan', async (request, reply) => {
@@ -3327,7 +3387,9 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         .replace(/(স্টক\s*যোগ\s*করো|স্টক\s*যোগ\s*করুন|স্টক\s*যোগ|স্টক\s*বাড়াও|স্টকে\s*যোগ\s*করো|স্টকে\s*যোগ|মাল\s*(ঢুকলো|এসেছে|আসছে|কিনলাম|নিলাম|নামলো)|যোগ\s*করো|যোগ\s*করুন|যোগ|করো|করুন|আরও|পিস|পাতা|কেজি|লিটার|বোতল|প্যাকেট|বস্তা|ফুট|জোড়া|তে|এ|এড\s*করো|এড|কেনা\s*দাম|কেনা\s*দর|কেনা|রেট|দর|টাকা|হিসেবে)/gi, '')
         .trim();
 
-      if (cleanProd && cleanProd.length >= 2) {
+      const invalidWords = new Set(['এবং', 'ও', 'আর', 'টাকা', 'কিনা', 'আছে', 'না', 'বাকি', 'খরচ', 'null', 'undefined']);
+
+      if (cleanProd && cleanProd.length >= 2 && !invalidWords.has(cleanProd.toLowerCase())) {
         let product = db.prepare(`
           SELECT * FROM products WHERE tenant_id = ? AND (
             bangla_name LIKE ? OR name LIKE ? OR generic_name LIKE ? OR brand LIKE ? OR ? LIKE '%' || bangla_name || '%'
@@ -3369,15 +3431,17 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
             now
           );
         } else {
+          const tenantRow = db.prepare('SELECT industry_category_id FROM tenants WHERE id = ?').get(tenantId) as any;
+          const tenantCat = normalizeIndustryCategory(tenantRow?.industry_category_id);
           const newProdId = 'prod-' + uuidv4().slice(0, 8);
-          const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা/)?.[0] || 'পিস') : 'পিস';
+          const autoUnit = /কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা|জোড়া|ফুট|মিটার/.test(seg) ? (seg.match(/কেজি|লিটার|প্যাকেট|পাতা|বোতল|বস্তা|জোড়া|ফুট|মিটার/)?.[0] || 'পিস') : (tenantCat === 'cat-pharmacy' ? 'পাতা' : 'পিস');
           const initPurchase = parsedRate !== null ? parsedRate : 10;
           const initSelling = Math.round(initPurchase * 1.25);
           
           db.prepare(`
             INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, icon, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, 'cat-grocery', initPurchase, initSelling, addQty, autoUnit, 5, '📦', now);
+          `).run(newProdId, tenantId, '894' + Math.floor(10000000 + Math.random() * 90000000), cleanProd, cleanProd, tenantCat, initPurchase, initSelling, addQty, autoUnit, 5, tenantCat === 'cat-pharmacy' ? '💊' : '📦', now);
           
           updatedProducts.push({ 
             name: cleanProd, 
@@ -4273,7 +4337,7 @@ fastify.post('/api/products/seed-category-defaults', async (request, reply) => {
   if (!tenantId) return reply.status(400).send({ error: 'Tenant ID আবশ্যক' });
 
   const tenantRow = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId) as any;
-  const targetCat = categoryId || tenantRow?.industry_category_id || 'cat-grocery';
+  const targetCat = normalizeIndustryCategory(categoryId || tenantRow?.industry_category_id);
   const pack = STARTER_PACKS[targetCat] || STARTER_PACKS['cat-grocery'];
 
   const existingProds = db.prepare('SELECT name, bangla_name, barcode FROM products WHERE tenant_id = ?').all(tenantId) as any[];

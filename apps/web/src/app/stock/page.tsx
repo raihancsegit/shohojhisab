@@ -11,7 +11,8 @@ import {
   getIndustryFieldVisibility,
   getDefaultIndustryUnit,
   getIndustryDealerPlaceholder,
-  getIndustryLotPlaceholder
+  getIndustryLotPlaceholder,
+  normalizeIndustryId
 } from '../../lib/industryConfig';
 import Pagination from '../../components/Pagination';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal';
@@ -391,7 +392,7 @@ export default function StockPage() {
   // 1-Click Category Staple Products Seeder
   const handleSeedCategoryDefaults = async () => {
     if (!currentTenantId) return;
-    const confirmSeed = confirm(`আপনি কি আপনার দোকানের ক্যাটাগরির (${tenant?.industryId || 'দোকান'}) কমন ও নিয়মিত বিক্রিত পণ্যগুলো তালিকায় যুক্ত করতে চান?`);
+    const confirmSeed = confirm(`আপনি কি আপনার দোকানের ক্যাটাগরির (${theme.name}) কমন ও নিয়মিত বিক্রিত পণ্যগুলো তালিকায় যুক্ত করতে চান?`);
     if (!confirmSeed) return;
 
     setSeedingDefaults(true);
@@ -402,7 +403,7 @@ export default function StockPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenantId: currentTenantId,
-          categoryId: tenant?.industryId || 'cat-grocery'
+          categoryId: normalizeIndustryId(tenant?.industryId)
         })
       });
       const data = await res.json();

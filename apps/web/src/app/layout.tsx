@@ -8,7 +8,7 @@ import PWAInstaller from '../components/PWAInstaller';
 import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
 import VoiceFieldHUD from '../components/VoiceFieldHUD';
 import VoiceAssistant from '../components/VoiceAssistant';
-import { getIndustryTheme } from '../lib/industryConfig';
+import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme } = useAuth();
@@ -52,7 +52,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
     { href: '/khata', label: theme.khataLabel, icon: '📒', show: true },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
-    { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: tenant?.industryId === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
+    { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/expenses', label: 'দোকান খরচ', icon: '💸', show: true },
     { href: '/installments', label: 'কিস্তি খাতা', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: theme.dealerLabel, icon: '🚚', show: isFeatureEnabled('enableDealerKhata') },
@@ -638,7 +638,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/staff', label: 'কর্মচারী ও পারমিশন (Staff)', icon: '👥', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'টিম' },
     { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableMultiBranch') },
-    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#eef2ff', iconColor: '#4f46e5', show: tenant?.industryId === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
+    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#eef2ff', iconColor: '#4f46e5', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ' },
     { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },

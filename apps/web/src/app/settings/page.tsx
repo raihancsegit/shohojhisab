@@ -27,6 +27,7 @@ export default function SettingsHubPage() {
     ownerName: '',
     phone: '',
     location: '',
+    industryCategoryId: 'cat-grocery',
     // Security (সিকিউরিটি)
     enablePinCode: true,
     enableDeletePinVerification: false,
@@ -98,7 +99,8 @@ export default function SettingsHubPage() {
         shopName: tenant.shopName || '',
         ownerName: tenant.ownerName || '',
         phone: tenant.phone || '',
-        location: tenant.location || ''
+        location: tenant.location || '',
+        industryCategoryId: tenant.industryId || 'cat-grocery'
       }));
 
       const savedGeneral = localStorage.getItem(`sh_settings_general_${tenant.id}`);
@@ -125,12 +127,19 @@ export default function SettingsHubPage() {
       if (tabName === 'general') {
         localStorage.setItem(`sh_settings_general_${tenant.id}`, JSON.stringify(generalSettings));
         updateShopSettings('general', generalSettings);
+        const selectedCat = generalSettings.industryCategoryId || tenant.industryId || 'cat-grocery';
         updateActiveTenant({
           ...tenant,
           shopName: generalSettings.shopName,
           ownerName: generalSettings.ownerName,
-          location: generalSettings.location
+          location: generalSettings.location,
+          industryId: selectedCat
         });
+        fetch(`/api/tenants/${tenant.id}/category`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industryCategoryId: selectedCat })
+        }).catch(() => {});
       } else if (tabName === 'parties') {
         localStorage.setItem(`sh_settings_parties_${tenant.id}`, JSON.stringify(partySettings));
         updateShopSettings('parties', partySettings);
@@ -1237,6 +1246,32 @@ export default function SettingsHubPage() {
                   onChange={(e) => setGeneralSettings({ ...generalSettings, location: e.target.value })}
                   style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                 />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>দোকানের ক্যাটাগরি ও ধরন</label>
+                <select
+                  value={generalSettings.industryCategoryId || 'cat-grocery'}
+                  onChange={(e) => setGeneralSettings({ ...generalSettings, industryCategoryId: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+                >
+                  <option value="cat-pharmacy">💊 ফার্মেসি ও ড্রাগ স্টোর (Pharmacy)</option>
+                  <option value="cat-grocery">🛒 মুদি ও সুপার শপ (Grocery)</option>
+                  <option value="cat-clothing">👗 পোশাক ও ফ্যাশন শপ (Clothing)</option>
+                  <option value="cat-shoes">👞 জুতা ও ফুটওয়্যার (Footwear)</option>
+                  <option value="cat-hardware">🔧 হার্ডওয়্যার ও স্যানিটারি (Hardware)</option>
+                  <option value="cat-mobile">📱 মোবাইল ও ইলেকট্রনিক্স (Electronics)</option>
+                  <option value="cat-restaurant">🍛 রেস্তোরাঁ ও ক্যাফে (Restaurant)</option>
+                  <option value="cat-tea">☕ চা স্টল ও স্ন্যাক্স বার (Tea Stall)</option>
+                  <option value="cat-sweet">🧁 মিষ্টি ও মিষ্টান্ন ভাণ্ডার (Sweetmeat)</option>
+                  <option value="cat-bakery">🥐 বেকারি ও কনফেকশনারি (Bakery)</option>
+                  <option value="cat-stationery">📚 স্টেশনারি ও বই খাতা (Stationery)</option>
+                  <option value="cat-cosmetics">💄 কসমেটিক্স ও সাজসজ্জা (Cosmetics)</option>
+                  <option value="cat-meat-fish">🥩 মাংস ও মাছের বাজার (Meat & Fish)</option>
+                  <option value="cat-furniture">🪑 ফার্নিচার ও আসবাবপত্র (Furniture)</option>
+                </select>
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#64748b' }}>
+                  ক্যাটাগরি পরিবর্তনের সাথে সাথে হেডারের নাম, আইকন, ইউনিট ও স্পেশালাইজড বিলিং অটোমেটিক আপডেট হবে।
+                </p>
               </div>
             </div>
 

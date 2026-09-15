@@ -1,8 +1,11 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../../context/AuthContext';
+import { normalizeIndustryId } from '../../lib/industryConfig';
 
 export default function SetupWizardPage() {
+  const { updateActiveTenant, triggerHaptic } = useAuth();
   const [step, setStep] = useState(1);
   const [industry, setIndustry] = useState<'grocery' | 'pharmacy' | 'clothing' | 'hardware' | 'electronics'>('grocery');
   const [shopName, setShopName] = useState('জননী ফার্মেসি');
@@ -59,11 +62,58 @@ export default function SetupWizardPage() {
 
   const handleCompleteSetup = async () => {
     setLoading(true);
-    // Simulate industry profile configuration & database seeding
-    setTimeout(() => {
+    triggerHaptic?.('medium');
+    try {
+      const normalizedCat = normalizeIndustryId(industry);
+      const res = await fetch('/api/admin/tenants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopName,
+          ownerName,
+          phone,
+          pin: '1234',
+          location: address || 'স্থানীয় বাজার',
+          industryCategoryId: normalizedCat,
+          planId: 'plan-pro',
+          monthlyFee: 149,
+          importStarterPack: importPreseededCatalog
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.tenant) {
+        const tenantPayload = {
+          id: data.tenant.id,
+          shopName: data.tenant.shopName || shopName,
+          ownerName: data.tenant.ownerName || ownerName,
+          phone: data.tenant.phone || phone,
+          location: data.tenant.location || address,
+          industryId: data.tenant.industryId || normalizedCat,
+          industryName: data.tenant.industryName || (industry === 'pharmacy' ? 'ফার্মেসি ও ড্রাগ স্টোর' : 'মুদি ও সুপার শপ'),
+          industryIcon: data.tenant.industryIcon || (industry === 'pharmacy' ? '💊' : '🛒'),
+          status: 'active' as const,
+          planId: 'plan-pro',
+          monthlyFee: 149
+        };
+
+        localStorage.setItem('lbos_user_role', 'shopkeeper');
+        localStorage.setItem('lbos_active_tenant', JSON.stringify(tenantPayload));
+        localStorage.setItem('lbos_active_tenant_id', tenantPayload.id);
+        localStorage.setItem('lbos_tenant_pin', '1234');
+        localStorage.setItem('lbos_role_mode', 'owner');
+
+        updateActiveTenant(tenantPayload);
+        triggerHaptic?.('success');
+        setCompleted(true);
+      } else {
+        alert(data.error || 'দোকান তৈরি করতে সমস্যা হয়েছে');
+      }
+    } catch (e: any) {
+      alert('সার্ভারে যোগাযোগ করা সম্ভব হয়নি: ' + (e?.message || 'Error'));
+    } finally {
       setLoading(false);
-      setCompleted(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -424,7 +474,7 @@ export default function SetupWizardPage() {
               অভিনন্দন! দোকান সফলভাবে রেডি!
             </h2>
             <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
-              <strong>{shopName}</strong> এর জন্য <strong>{industry === 'pharmacy' ? 'ফার্মেসি' : 'মুদি'}</strong> মোড এবং রেডিমেড ক্যাটালগ ডাটাবেজে কনফিগার করা হয়েছে।
+              <strong>{shopName}</strong> এর জন্য <strong>{industryProfiles.find(p => p.id === industry)?.name || 'বিশেষায়িত'}</strong> মোড এবং রেডিমেড ক্যাটালগ ডাটাবেজে কনফিগার করা হয়েছে।
             </p>
 
             <div style={{ display: 'grid', gap: '10px' }}>

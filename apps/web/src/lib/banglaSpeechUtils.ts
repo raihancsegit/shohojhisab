@@ -58,11 +58,13 @@ export function isEchoedTTSResponse(text: string): boolean {
   return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা|বর্তমান\s*মোট\s*বকেয়া|সাউন্ডবক্স|সফলভাবে/i.test(s);
 }
 
+import { voiceProximityManager } from './voiceProximityGate';
+
 /**
  * Safely extracts the cumulative transcript from SpeechRecognition event
  * Guaranteed not to duplicate tokens across interim and final results
  */
-export function extractTranscriptFromEvent(event: any): { fullTranscript: string; isFinal: boolean } {
+export function extractTranscriptFromEvent(event: any): { fullTranscript: string; isFinal: boolean; isDistantNoise?: boolean } {
   if (!event || !event.results) return { fullTranscript: '', isFinal: false };
 
   // If TTS is actively speaking, drop the microphone event immediately to prevent feedback loop
@@ -88,6 +90,11 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
   }
 
   const rawCombined = (finalTranscript || interimTranscript).trim();
+
+  // Near-field proximity distance filter: reject distant chatter/TV noise if phone is far from speaker
+  if (rawCombined && !voiceProximityManager.isNearSpeechActive()) {
+    return { fullTranscript: '', isFinal: false, isDistantNoise: true };
+  }
 
   // Check if this is an echo of the assistant's own voice
   if (isEchoedTTSResponse(rawCombined)) {

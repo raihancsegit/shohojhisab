@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../../lib/audioFeedbackUtils';
+import { voiceProximityManager } from '../../lib/voiceProximityGate';
 
 export default function AiAssistantPage() {
   const router = useRouter();
@@ -118,9 +119,13 @@ export default function AiAssistantPage() {
   };
 
   const stopListening = () => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    voiceProximityManager.stop();
     setIsListening(false);
     playMicStopSound();
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -143,7 +148,7 @@ export default function AiAssistantPage() {
 
     if (isListening) {
       stopListening();
-      if (liveTranscript.trim()) {
+      if (liveTranscript.trim() && !liveTranscript.includes('ফিল্টার')) {
         handleAsk(liveTranscript.trim());
       }
       return;
@@ -153,6 +158,7 @@ export default function AiAssistantPage() {
     playMicStartSound();
     setLiveTranscript('');
     setIsListening(true);
+    voiceProximityManager.start().catch((err) => console.warn('Proximity start err:', err));
 
     try {
       const recognition = new SpeechRecognition();
@@ -163,7 +169,11 @@ export default function AiAssistantPage() {
       recognitionRef.current = recognition;
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript } = extractTranscriptFromEvent(event);
+        const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
+        if (isDistantNoise) {
+          setLiveTranscript('⚠️ দূরের আওয়াজ/টিভি ফিল্টার হয়েছে (কাছে বলুন)');
+          return;
+        }
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         setLiveTranscript(fullTranscript);
