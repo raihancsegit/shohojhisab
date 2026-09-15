@@ -216,11 +216,6 @@ export default function VoiceAssistant() {
           }
 
           if (data.navigateTo) {
-            // Save announcement for destination page as safety fallback
-            if (typeof window !== 'undefined' && data.speech) {
-              sessionStorage.setItem('pending_page_announcement', data.speech);
-            }
-
             if (pathname !== data.navigateTo) {
               router.push(data.navigateTo);
             }

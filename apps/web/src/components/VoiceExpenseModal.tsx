@@ -127,10 +127,9 @@ export default function VoiceExpenseModal({
 
           // If navigation intent is returned
           if (result.navigateTo) {
-            if (typeof window !== 'undefined' && result.speech) {
-              sessionStorage.setItem('pending_page_announcement', result.speech);
+            if (result.speech) {
+              speakAnnouncement(result.speech);
             }
-            speakAnnouncement(result.speech);
             setTimeout(() => {
               onClose();
               router.push(result.navigateTo);

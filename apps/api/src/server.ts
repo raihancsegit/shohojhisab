@@ -2831,11 +2831,19 @@ function cleanBengaliRoot(word: string): string {
     .trim();
 }
 
+
 function matchNavigationIntent(rawText: string, normalized: string): string | null {
   if (!rawText) return null;
   const lower = rawText.toLowerCase().trim();
 
-  // Guard against real business transactions being mistaken for navigation
+  // 1. Guard against questions and financial inquiries being mistaken for navigation
+  const isInquiry = (
+    /কত|কতটুকু|কতগুলো|কেমন|কি\s*অবস্থা|কী\s*অবস্থা|জানতে\s*চাই|বলো|বলুন|হিসাব\s*(কি|কী|বলো|দেন|দাও)|বলো\s*তো|আছে\s*কিনা|শেষ\s*কবে|কবে\s*আসছে|কে\s*কে|কোন\s*কোন|ঘাটতি|কম\s*আছে|সতর্কতা|ইনকোয়ারি|সামারি|সারসংক্ষেপ/.test(lower) ||
+    /আজকের\s*(বিক্রি|লাভ|খরচ|বাকি|হিসাব|ক্যাশ)|আজকে\s*(বিক্রি|লাভ|খরচ|বাকি|ক্যাশ)|মোট\s*বাকি|মার্কেট\s*বাকি|ক্যাশ\s*কত|নগদ\s*কত/.test(lower)
+  );
+  if (isInquiry) return null;
+
+  // 2. Guard against real business transactions being mistaken for navigation
   const isTransaction = (
     (/\d+/.test(normalized) && /(টাকা|টাকার|কেজি|গ্রাম|পিস|পাতা|বস্তা|লিটার|বোতল|প্যাকেট|ডজন|হালি|জোড়া|ফুট|মিটার|গজ|ইঞ্চি|রোল|প্লেট|কাপ|গ্লাস|বাটি|শলা|রিম|সেট|থান|বক্স|পাউন্ড|বাকি|জমা|শোধ|খরচ|মাল|নামলো|আসছে|ঢুকলো|কিনলাম|বাড়াও|যোগ)/.test(rawText)) ||
     /বিক্রি\s*(হলো|করলাম|হয়েছে|করছি)|বাকি\s*(নিল|দিল|জমা|শোধ|পরিশোধ|লেখো|লিখুন)|টাকা\s*(দিল|দিলো|জমা|পাইছি|পেয়েছি)|খরচ\s*(হলো|করলাম|হয়েছে|লেখো|লিখুন)|স্টক\s*(বাড়াও|বাড়া|তোলো)/.test(rawText)
@@ -2844,7 +2852,7 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 1. POS / Cash Counter / Sales Memo
   if (
-    /মেমো|মেমু|কাউন্টার|ক্যাশ|বিক্রি|বিল|পিওএস|\bpos\b|ক্যাশিয়ার|রশিদ|বিক্রিতে/.test(lower) &&
+    /মেমো\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|কাউন্টার|ক্যাশিয়ার|পিওএস|\bpos\b|বিক্রি\s*(পেজ|পাতা|যাও|যাব|চলো)|^মেমো$|^কাউন্টার$|^বিক্রি$/.test(lower) &&
     !/বাকি|জমা|খরচ/.test(lower)
   ) {
     return '/pos';
@@ -2852,7 +2860,7 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 2. Customer Khata / Due Ledger
   if (
-    /খাতা|খাতায়|খাতাই|খাতাতে|বাকির\s*খাতা|বাকি\s*পেজ|কাস্টমার\s*খাতা|দেনাদার|কার\s*কাছে\s*কত|বাকি\s*লিস্ট|খাতা\s*পেজ|বাকিদার|বাকি\s*দেখাও|বাকি\s*দেখব|বাকি\s*দেখতে\s*চাই|খতিয়ান|খতিয়ান|\bkhata\b|\bbaki\b/.test(lower) &&
+    /খাতা\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|বাকির\s*খাতা|বাকি\s*(পেজ|পাতা|যাও|যাব|চলো)|কাস্টমার\s*খাতা|দেনাদার\s*(লিস্ট|তালিকা|খাতা)|খতিয়ান|খতিয়ান|\bkhata\b|\bbaki\b|^খাতা$|^বাকির\s*খাতা$/.test(lower) &&
     !/নিল|দিল|টাকা|জমা|শোধ|খরচ/.test(lower)
   ) {
     return '/khata';
@@ -2860,7 +2868,7 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 3. Stock / Inventory / Warehouse
   if (
-    /স্টক|ইস্টক|ষ্টক|ইনভেন্টরি|গুদাম|মালপত্র|মালামাল|মজুদ|মালের\s*অবস্থা|মালের\s*তালিকা|গুদামের\s*খবর|\bstock\b|\binventory\b/.test(lower) &&
+    /স্টক\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|ইস্টক|ষ্টক|ইনভেন্টরি|গুদাম\s*(পেজ|দেখাও|যাও|যাব|চলো)|মালের\s*তালিকা|\bstock\b|\binventory\b|^স্টক$|^গুদাম$/.test(lower) &&
     !/যোগ|বাড়াও|বাড়া|এসেছে|ঢুকলো|কিনলাম|বিক্রি/.test(lower)
   ) {
     return '/stock';
@@ -2868,7 +2876,7 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 4. Expenses
   if (
-    /খরচ|খরচে|খরচের\s*খাতা|খরচ\s*পেজ|ব্যয়|ব্যায়|খরচপাতি|খরচাপাতি|আজকের\s*খরচ|\bkhoroch\b|\bexpense\b/.test(lower) &&
+    /খরচ\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|খরচের\s*খাতা|ব্যয়\s*(পেজ|তালিকা)|\bkhoroch\b|\bexpense\b|^খরচ$|^খরচের\s*খাতা$/.test(lower) &&
     !/লেখো|লিখুন|করলাম|হলো|\d+/.test(lower)
   ) {
     return '/expenses';
@@ -2876,42 +2884,42 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 5. Reports & Profit/Loss
   if (
-    /রিপোর্ট|রিপুর্ত|লাভ\s*লস|লাভের\s*হিসাব|আজকের\s*লাভ|বিক্রি\s*ও\s*লাভ|মাসিক\s*হিসাব|রিপোর্ট\s*দেখাও|হিসাব\s*নিকাশ|সামারি|লাভক্ষতি|লাভ\s*ক্ষতি|\breport\b|\bprofit\b/.test(lower)
+    /রিপোর্ট\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো|দেখাও|দেখব)|রিপুর্ত|লাভ\s*ক্ষতির\s*পেজ|লাভ\s*লস\s*পেজ|\breport\b|\bprofit\b|^রিপোর্ট$/.test(lower)
   ) {
     return '/reports';
   }
 
   // 6. Dealers & Suppliers / Mohajon
   if (
-    /মহাজন|মহজন|ডিলার|সাপ্লায়ার|সাপ্লায়ার|পাইকারি|মহাজনের\s*খাতা|ডিলারদের\s*খাতা|পাওনাদার|মহাজন\s*লিস্ট|\bdealer\b|\bsupplier\b|\bmohajon\b/.test(lower)
+    /মহাজন\s*(পেজ|খাতা|যাও|যাব|চলো)|ডিলার\s*(পেজ|খাতা|যাও|যাব|চলো)|সাপ্লায়ার|সাপ্লায়ার|মহাজনের\s*খাতা|\bdealer\b|\bsupplier\b|\bmohajon\b|^মহাজন$|^ডিলার$/.test(lower)
   ) {
     return '/dealers';
   }
 
   // 7. Expiry Tracker
   if (
-    /মেয়াদ|মেয়াদে|মেয়াদোত্তীর্ণ|এক্সপায়ারি|এক্সপায়ার|ডেট\s*ফেল|মেয়াদ\s*শেষ|\bexpiry\b/.test(lower)
+    /মেয়াদ\s*(পেজ|ট্র্যাকার|যাও|যাব|চলো)|মেয়াদোত্তীর্ণ|এক্সপায়ারি|এক্সপায়ার\s*পেজ|\bexpiry\b|^মেয়াদ$/.test(lower)
   ) {
     return '/expiry-tracker';
   }
 
   // 8. Day End / Cash Closing
   if (
-    /দিন\s*শেষ|দিনশেষ|ক্যাশ\s*ক্লোজিং|ক্লোজিং\s*পেজ|আজকের\s*ক্লোজিং|হিসাব\s*বন্ধ|ক্লোজিং|\bclosing\b|\bdayend\b/.test(lower)
+    /দিন\s*শেষ\s*(পেজ|যাও|যাব|চলো)|ক্যাশ\s*ক্লোজিং\s*(পেজ|যাও|যাব|চলো)|ক্লোজিং\s*পেজ|\bclosing\b|\bdayend\b|^দিন\s*শেষ$|^ক্লোজিং$/.test(lower)
   ) {
     return '/day-end';
   }
 
   // 9. Installments / Kisti
   if (
-    /কিস্তি|কেস্তী|কিস্তির\s*খাতা|কিস্তি\s*পেজ|কিস্তির\s*হিসাব|ইন্সটলমেন্ট|\binstallment\b|\bkisti\b/.test(lower)
+    /কিস্তি\s*(পেজ|খাতা|যাও|যাব|চলো)|কিস্তির\s*খাতা|ইন্সটলমেন্ট|\binstallment\b|\bkisti\b|^কিস্তি$/.test(lower)
   ) {
     return '/installments';
   }
 
   // 10. Products Catalog
   if (
-    /পণ্য\s*তালিকা|পণ্যসমূহ|নতুন\s*পণ্য|প্রোডাক্ট|প্রডাক্ট|আইটেম\s*লিস্ট|\bproducts?\b/.test(lower) &&
+    /পণ্য\s*তালিকা|পণ্য\s*(পেজ|যাও|যাব|চলো)|প্রোডাক্ট\s*(লিস্ট|পেজ)|আইটেম\s*লিস্ট|\bproducts?\b|^পণ্য$|^প্রোডাক্ট$/.test(lower) &&
     !/যোগ|বাড়াও/.test(lower)
   ) {
     return '/products';
@@ -2919,19 +2927,19 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 11. Settings & Shop Profile
   if (
-    /সেটিংস|সেটিং|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল|কনফিগারেশন|\bsettings?\b|\bprofile\b/.test(lower)
+    /সেটিংস|সেটিং\s*(পেজ|যাও|যাব|চলো)|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল|\bsettings?\b|\bprofile\b|^সেটিংস$/.test(lower)
   ) {
     return '/settings';
   }
 
   // 12. Home / Dashboard
   if (
-    /হোম|হোমে|ড্যাশবোর্ড|ড্যাশবোর্ডে|ডাশবোর্ড|সামনে|প্রধান\s*পাতা|মেইন\s*পেজ|শুরুতে|প্রথম\s*পেজ|\bhome\b|\bdashboard\b/.test(lower)
+    /হোম\s*(পেজ|যাও|যাব|চলো)|ড্যাশবোর্ড\s*(পেজ|যাও|যাব|চলো)|প্রধান\s*পাতা|মেইন\s*পেজ|\bhome\b|\bdashboard\b|^হোম$|^ড্যাশবোর্ড$/.test(lower)
   ) {
     return '/';
   }
 
-  // Fuzzy Token Matcher across tokens for speech typos like "খাতাই", "মেমু", "ইস্টকে"
+  // Fuzzy Token Matcher across tokens for explicit page commands like "খাতাই যাব", "মেমু পেজে চলো"
   const tokens = lower.split(/\s+/).map(t => cleanBengaliRoot(t)).filter(t => t.length >= 2);
   const routeFuzzyMap: Array<{ route: string; roots: string[] }> = [
     { route: '/khata', roots: ['খাত', 'বাকি', 'দেনাদার', 'খতিয়ান', 'খতিয়ান', 'khata', 'baki'] },
@@ -2948,11 +2956,14 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
     { route: '/', roots: ['হোম', 'ড্যাশবোর্ড', 'ডাশবোর্ড', 'home', 'dashboard'] }
   ];
 
-  for (const token of tokens) {
-    for (const item of routeFuzzyMap) {
-      for (const root of item.roots) {
-        if (token === root || calculateSimilarity(token, root) >= 0.75) {
-          return item.route;
+  const hasNavVerb = /যাও|যাব|চলো|চলুন|নিয়ে\s*চলো|খোলো|খোল|দেখাও|দেখব|ওপেন|পেজ|পাতা|লিস্ট|তালিকা|খাতা/.test(lower);
+  if (hasNavVerb) {
+    for (const token of tokens) {
+      for (const item of routeFuzzyMap) {
+        for (const root of item.roots) {
+          if (token === root || calculateSimilarity(token, root) >= 0.75) {
+            return item.route;
+          }
         }
       }
     }
@@ -4148,17 +4159,121 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     }
   }
 
+  // 8.5. Today's Sales & Profit Inquiry ("আজকের বিক্রি কত", "আজকে কত বিক্রি হলো", "আজকের লাভ কত", "আজকে কত লাভ হলো", "বিক্রি ও লাভ কত")
+  if (/আজকের?\s*(বিক্রি|লাভ|বেচাকেনা|লাভক্ষতি|লাভের)|আজকে\s*(কত\s*বিক্রি|বিক্রি\s*কত|কত\s*লাভ|লাভ\s*কত|কত\s*টাকার?\s*বিক্রি|কত\s*টাকার?\s*লাভ)|বিক্রি\s*(কত|কেমন)|লাভ\s*(কত|কেমন)/.test(rawText) && !/গতকাল|সপ্তাহ|মাস|বাকি|খরচ|স্টক/.test(rawText)) {
+    const todaySalesRow = db.prepare(`
+      SELECT COALESCE(SUM(total_amount), 0) as totalSales,
+             COALESCE(SUM(profit_amount), 0) as totalProfit,
+             COUNT(*) as invoiceCount
+      FROM sales
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?) AND payment_method != 'due_payment'
+    `).get(tenantId, todayDate, `${todayDate}%`) as any;
+
+    const todayExpRow = db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as totalExp
+      FROM expenses
+      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+
+    const sAmt = Number(todaySalesRow?.totalSales) || 0;
+    const grossProfit = Number(todaySalesRow?.totalProfit) || 0;
+    const expAmt = Number(todayExpRow?.totalExp) || 0;
+    const netProfit = grossProfit - expAmt;
+    const invCount = Number(todaySalesRow?.invoiceCount) || 0;
+
+    const speech = `আজকে আপনার দোকানে মোট ${invCount}টি মেমোতে ৳${sAmt.toLocaleString('en-US')} টাকার বিক্রি হয়েছে এবং খরচ বাদে নিট লাভ হয়েছে ৳${netProfit.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_today_sales',
+      navigateTo: '/reports',
+      speech,
+      reply: `📊 **আজকের লাইভ বিক্রি ও লাভের হিসাব:**\n• মোট বিক্রি (${invCount}টি মেমো): **৳${sAmt.toLocaleString('en-US')}**\n• মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n• নিট লাভ: **৳${netProfit.toLocaleString('en-US')}**\n\nবিস্তারিত বিশ্লেষণ দেখতে রিপোর্ট পেজে যান।`,
+      actionLink: { text: 'দৈনিক রিপোর্ট দেখুন →', href: '/reports' },
+      data: { sales: sAmt, profit: netProfit, expenses: expAmt, invoices: invCount }
+    };
+  }
+
+  // 8.6. Today's Expenses Inquiry ("আজকের খরচ কত", "আজকে কত খরচ হলো", "সারাদিনে কত খরচ হয়েছে")
+  if (/আজকের?\s*খরচ|আজকে\s*(কত\s*খরচ|খরচ\s*কত|কত\s*টাকার?\s*খরচ)|খরচ\s*(কত\s*হলো|কত\s*টাকা|কেমন)/.test(rawText) && !/গতকাল|সপ্তাহ|মাস|বিক্রি|লাভ|বাকি/.test(rawText)) {
+    const todayExpRow = db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as totalExp, COUNT(*) as expCount
+      FROM expenses
+      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+
+    const topExpList = db.prepare(`
+      SELECT title, amount, category FROM expenses
+      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
+      ORDER BY amount DESC LIMIT 4
+    `).all(tenantId, todayDate, todayDate, `${todayDate}%`) as any[];
+
+    const expAmt = Number(todayExpRow?.totalExp) || 0;
+    const expCount = Number(todayExpRow?.expCount) || 0;
+    const itemsText = topExpList.length > 0
+      ? '\n\n**প্রধান খরচসমূহ:**\n' + topExpList.map(e => `• ${e.title}: **৳${Number(e.amount).toLocaleString('en-US')}** (${e.category || 'অন্যান্য'})`).join('\n')
+      : '';
+
+    const speech = `আজকে আপনার দোকানে মোট ${expCount}টি খাতে ৳${expAmt.toLocaleString('en-US')} টাকা খরচ হয়েছে।`;
+    return {
+      success: true,
+      action: 'inquiry_today_expenses',
+      navigateTo: '/expenses',
+      speech,
+      reply: `💸 **আজকের খরচের খতিয়ান:**\n• মোট খরচ: **৳${expAmt.toLocaleString('en-US')}** (${expCount}টি এন্ট্রি)${itemsText}`,
+      actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' },
+      data: { expenses: expAmt, count: expCount }
+    };
+  }
+
+  // 8.7. Today's Shop Full Brief / Overall Summary ("আজকের হিসাব বলো", "সারাদিনের হিসাব বলো", "আজকের সার্বিক হিসাব", "দোকানের অবস্থা কেমন", "আজকের সারসংক্ষেপ")
+  if (/আজকের?\s*(হিসাব|সার্বিক\s*হিসাব|সামারি|সারসংক্ষেপ|অবস্থা)|সারাদিনের\s*হিসাব|দোকানের\s*(অবস্থা|হিসাব)/.test(rawText) && !/গতকাল|সপ্তাহ|মাস/.test(rawText)) {
+    const todaySalesRow = db.prepare(`
+      SELECT COALESCE(SUM(total_amount), 0) as totalSales,
+             COALESCE(SUM(profit_amount), 0) as totalProfit,
+             COUNT(*) as invoiceCount
+      FROM sales
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?) AND payment_method != 'due_payment'
+    `).get(tenantId, todayDate, `${todayDate}%`) as any;
+
+    const todayExpRow = db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as totalExp
+      FROM expenses
+      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+
+    const marketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as dueCustCount FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
+
+    const sAmt = Number(todaySalesRow?.totalSales) || 0;
+    const grossProfit = Number(todaySalesRow?.totalProfit) || 0;
+    const expAmt = Number(todayExpRow?.totalExp) || 0;
+    const netProfit = grossProfit - expAmt;
+    const mDue = Number(marketDueRow?.totalDue) || 0;
+    const invCount = Number(todaySalesRow?.invoiceCount) || 0;
+
+    const speech = `আজকের সারসংক্ষেপ: মোট বিক্রি ৳${sAmt.toLocaleString('en-US')} টাকা, মোট খরচ ৳${expAmt.toLocaleString('en-US')} টাকা, নিট লাভ ৳${netProfit.toLocaleString('en-US')} টাকা এবং মোট মার্কেট বাকি ৳${mDue.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      action: 'inquiry_today_brief',
+      navigateTo: '/',
+      speech,
+      reply: `🏪 **আজকের দোকানের সার্বিক হিসাব সারসংক্ষেপ:**\n• আজকের মোট বিক্রি (${invCount}টি মেমো): **৳${sAmt.toLocaleString('en-US')}**\n• আজকের মোট খরচ: **৳${expAmt.toLocaleString('en-US')}**\n• আজকের নিট লাভ: **৳${netProfit.toLocaleString('en-US')}**\n• মোট মার্কেট বাকি পাওনা: **৳${mDue.toLocaleString('en-US')}** (${Number(marketDueRow?.dueCustCount) || 0} জন গ্রাহক)`,
+      actionLink: { text: 'ড্যাশবোর্ড ওভারভিউ →', href: '/' },
+      data: { sales: sAmt, profit: netProfit, expenses: expAmt, marketDue: mDue }
+    };
+  }
+
   // 9. Market Total Due
-  if (/মোট\s*বাকি|মার্কেট\s*বাকি|পাওনা/.test(rawText)) {
-    const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
+  if (/মোট\s*বাকি|মার্কেট\s*বাকি|মার্কেটে\s*বাকি|কাস্টমারদের\s*বাকি|পাওনা/.test(rawText)) {
+    const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as count FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
     const marketDue = Number(totalMarketDueRow?.totalDue) || 0;
-    const speech = `মার্কেটে আপনার মোট বকেয়া পাওনা ৳${marketDue} টাকা।`;
+    const count = Number(totalMarketDueRow?.count) || 0;
+    const speech = `মার্কেটে মোট ${count} জন কাস্টমারের কাছে আপনার মোট বকেয়া পাওনা ৳${marketDue.toLocaleString('en-US')} টাকা।`;
     return {
       success: true,
       action: 'inquiry_market_due',
       navigateTo: '/khata',
       speech,
-      reply: `📖 **বাজারের মোট বকেয়া পাওনা:** **৳${marketDue.toLocaleString('en-US')}**\n\nবাকি খাতা থেকে তাগাদা মেসেজ পাঠাতে পারেন।`,
+      reply: `📖 **বাজারের মোট বকেয়া পাওনা:**\n• মোট বকেয়া: **৳${marketDue.toLocaleString('en-US')}**\n• দেনাদার কাস্টমার: **${count} জন**\n\nবাকি খাতা থেকে তাগাদা মেসেজ পাঠাতে পারেন।`,
       actionLink: { text: 'বাকি খাতা দেখুন →', href: '/khata' }
     };
   }
@@ -4172,8 +4287,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     yDate.setDate(localTime.getDate() - 1);
     const yesterdayStr = yDate.toISOString().slice(0, 10);
 
-    const ySales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) = ?`).get(tenantId, yesterdayStr) as any;
-    const yExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date = ? OR date(created_at) = ?)`).get(tenantId, yesterdayStr, yesterdayStr) as any;
+    const ySales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?) AND payment_method != 'due_payment'`).get(tenantId, yesterdayStr, `${yesterdayStr}%`) as any;
+    const yExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)`).get(tenantId, yesterdayStr, yesterdayStr, `${yesterdayStr}%`) as any;
     const sAmt = Number(ySales?.s) || 0;
     const pAmt = (Number(ySales?.p) || 0) - (Number(yExp?.e) || 0);
     const expAmt = Number(yExp?.e) || 0;
@@ -4198,7 +4313,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     wDate.setDate(localTime.getDate() - 6);
     const startStr = wDate.toISOString().slice(0, 10);
 
-    const wSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ?`).get(tenantId, startStr) as any;
+    const wSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ? AND payment_method != 'due_payment'`).get(tenantId, startStr) as any;
     const wExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date >= ? OR date(created_at) >= ?)`).get(tenantId, startStr, startStr) as any;
     const sAmt = Number(wSales?.s) || 0;
     const pAmt = (Number(wSales?.p) || 0) - (Number(wExp?.e) || 0);
@@ -4223,7 +4338,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const todayStr = localTime.toISOString().slice(0, 10);
     const monthStartStr = `${todayStr.slice(0, 7)}-01`;
 
-    const mSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ?`).get(tenantId, monthStartStr) as any;
+    const mSales = db.prepare(`SELECT COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COUNT(*) as c FROM sales WHERE tenant_id = ? AND date(created_at) >= ? AND payment_method != 'due_payment'`).get(tenantId, monthStartStr) as any;
     const mExp = db.prepare(`SELECT COALESCE(SUM(amount), 0) as e FROM expenses WHERE tenant_id = ? AND (date >= ? OR date(created_at) >= ?)`).get(tenantId, monthStartStr, monthStartStr) as any;
     const sAmt = Number(mSales?.s) || 0;
     const pAmt = (Number(mSales?.p) || 0) - (Number(mExp?.e) || 0);
@@ -4261,8 +4376,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
   // Fallback Overview Summary
   const todaySalesRow = db.prepare(`
     SELECT COALESCE(SUM(total_amount), 0) as totalSales, COALESCE(SUM(profit_amount), 0) as netProfit
-    FROM sales WHERE tenant_id = ? AND created_at LIKE ?
-  `).get(tenantId, `${todayDate}%`) as any;
+    FROM sales WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?)
+  `).get(tenantId, todayDate, `${todayDate}%`) as any;
   const totalMarketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue FROM customers WHERE tenant_id = ?').get(tenantId) as any;
 
   const s = Number(todaySalesRow?.totalSales) || 0;

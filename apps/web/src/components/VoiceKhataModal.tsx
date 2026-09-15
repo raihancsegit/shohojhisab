@@ -165,10 +165,7 @@ export default function VoiceKhataModal({
 
           // If navigation intent is returned (e.g. "মেমো পেজে যাও", "স্টকে যাব", "খরচে যাও")
           if (result.navigateTo) {
-            if (typeof window !== 'undefined' && result.speech) {
-              sessionStorage.setItem('pending_page_announcement', result.speech);
-            }
-            if (speakAnnouncement) {
+            if (speakAnnouncement && result.speech) {
               speakAnnouncement(result.speech);
             }
             setTimeout(() => {

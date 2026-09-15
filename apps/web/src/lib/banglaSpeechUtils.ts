@@ -58,8 +58,6 @@ export function isEchoedTTSResponse(text: string): boolean {
   return /লেখা\s*হয়েছে|যুক্ত\s*হয়েছে|হিসাব\s*সম্পন্ন|পরিশোধ\s*রেকর্ড|বাকি\s*খাতায়.*লেখা|খরচ\s*খাতায়.*যুক্ত|বাকি\s*থেকে.*জমা|বর্তমান\s*মোট\s*বকেয়া|সাউন্ডবক্স|সফলভাবে/i.test(s);
 }
 
-import { voiceProximityManager } from './voiceProximityGate';
-
 /**
  * Safely extracts the cumulative transcript from SpeechRecognition event
  * Guaranteed not to duplicate tokens across interim and final results
@@ -75,11 +73,16 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
   let finalTranscript = '';
   let interimTranscript = '';
   let hasFinal = false;
+  let lowestConfidence = 1.0;
 
   for (let i = 0; i < event.results.length; i++) {
     const result = event.results[i];
     if (result && result[0] && result[0].transcript) {
       const trans = result[0].transcript.trim();
+      const conf = typeof result[0].confidence === 'number' ? result[0].confidence : 1.0;
+      if (conf > 0 && conf < lowestConfidence) {
+        lowestConfidence = conf;
+      }
       if (result.isFinal) {
         finalTranscript += (finalTranscript ? ' ' : '') + trans;
         hasFinal = true;
@@ -91,12 +94,9 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
 
   const rawCombined = (finalTranscript || interimTranscript).trim();
 
-  // Near-field proximity distance check: if mode is strictly enabled and audio level is zero, note it but don't block valid speech
-  if (rawCombined && voiceProximityManager.getMode() !== 'all' && !voiceProximityManager.isNearSpeechActive()) {
-    // Only filter if it's pure short noise and not recognized clear sentence
-    if (rawCombined.length < 3) {
-      return { fullTranscript: '', isFinal: false, isDistantNoise: true };
-    }
+  // Background noise / TV faint sound rejection: if confidence is extremely low and string is tiny snippet
+  if (rawCombined && lowestConfidence < 0.25 && rawCombined.length < 3) {
+    return { fullTranscript: '', isFinal: false, isDistantNoise: true };
   }
 
   // Check if this is an echo of the assistant's own voice
