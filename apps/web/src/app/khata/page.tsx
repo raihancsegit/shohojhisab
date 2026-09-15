@@ -158,9 +158,19 @@ export default function KhataPage() {
   const handleAddDueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showAddDueModal?.id || !addDueAmount) return;
+
+    if (dueMode === 'stock' && selectedDueProducts.length === 0 && !addDueItems.trim()) {
+      alert('⚠️ কী কী পণ্যের জন্য বাকি তা নির্বাচন করুন অথবা ফর্দ লিখুন (বাধ্যতামূলক)!');
+      return;
+    }
+    if (dueMode === 'custom' && !addDueItems.trim()) {
+      alert('⚠️ কী কী পণ্য নিয়েছে বা কিসের জন্য বাকি তা লেখা বা বলা বাধ্যতামূলক!');
+      return;
+    }
+
     setAddDueSubmitting(true);
     try {
-      const summary = addDueItems || (selectedDueProducts.length > 0 ? selectedDueProducts.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', ') : 'বাকি পণ্য সামগ্রী');
+      const summary = addDueItems.trim() || (selectedDueProducts.length > 0 ? selectedDueProducts.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', ') : 'বাকি পণ্য সামগ্রী');
       const itemsPayload = selectedDueProducts.map(i => ({
         productId: i.productId,
         name: i.name,
@@ -1326,24 +1336,30 @@ export default function KhataPage() {
                 key={c.id}
                 className="khata-grid-card"
                 style={{
-                  border: due > 0 ? (isOverLimit ? '1.5px solid #f87171' : '1px solid #fecdd3') : '1px solid #e2e8f0',
-                  boxShadow: due > 0 ? '0 2px 8px rgba(239, 68, 68, 0.06)' : '0 1px 4px rgba(0, 0, 0, 0.03)',
-                  background: '#ffffff'
+                  border: due > 0 ? (isOverLimit ? '1.5px solid #f87171' : '1.5px solid #fecdd3') : '1.5px solid #e2e8f0',
+                  boxShadow: due > 0 ? '0 4px 14px rgba(239, 68, 68, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.03)',
+                  background: '#ffffff',
+                  borderRadius: '18px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '10px'
                 }}
               >
                 <div>
-                  {/* Top Customer Header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '6px' }}>
+                  {/* Top Header: Customer Info & Delete */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                       <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '10px',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '12px',
                         background: due > 0 ? '#fee2e2' : '#ecfdf5',
                         color: due > 0 ? '#b91c1c' : '#047857',
                         display: 'grid',
                         placeItems: 'center',
-                        fontSize: '14px',
+                        fontSize: '15px',
                         fontWeight: '900',
                         flexShrink: 0
                       }}>
@@ -1353,7 +1369,7 @@ export default function KhataPage() {
                         <h4
                           style={{
                             margin: 0,
-                            fontSize: '13px',
+                            fontSize: '14px',
                             fontWeight: '800',
                             color: '#0f172a',
                             whiteSpace: 'nowrap',
@@ -1364,22 +1380,33 @@ export default function KhataPage() {
                         >
                           {c.name}
                         </h4>
-                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          📱 {c.phone || 'নাম্বার নেই'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
+                          {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') ? (
+                            <a
+                              href={`tel:${c.phone}`}
+                              style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                              title="সরাসরি কল দিন"
+                            >
+                              📱 {c.phone}
+                            </a>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>📱 নাম্বার নেই</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Delete Icon Button */}
+                    {/* Delete Customer Button */}
                     <button
                       type="button"
                       onClick={() => setCustomerToDelete(c)}
                       style={{
-                        background: 'transparent',
-                        border: 'none',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
                         color: '#94a3b8',
                         cursor: 'pointer',
-                        padding: '2px',
+                        padding: '4px 6px',
                         fontSize: '12px',
                         lineHeight: 1
                       }}
@@ -1389,104 +1416,92 @@ export default function KhataPage() {
                     </button>
                   </div>
 
-                  {/* Badges: Credit limit / Promise date if available */}
-                  {(isOverLimit || c.promiseDate || c.promise_date) && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
-                      {isOverLimit && (
-                        <span style={{ fontSize: '9px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', padding: '1px 5px', borderRadius: '4px' }}>
-                          🚨 লিমিট পার
-                        </span>
-                      )}
-                      {(c.promiseDate || c.promise_date) && (
-                        <span style={{ fontSize: '9px', fontWeight: '700', background: '#eff6ff', color: '#2563eb', padding: '1px 5px', borderRadius: '4px' }}>
-                          📅 {c.promiseDate || c.promise_date}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Due Amount Highlight Box */}
+                  {/* Due Amount Highlight Banner */}
                   <div style={{
-                    background: due > 0 ? '#fff1f2' : '#ecfdf5',
+                    background: due > 0 ? 'linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)' : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
                     border: due > 0 ? '1px solid #fecdd3' : '1px solid #a7f3d0',
-                    borderRadius: '10px',
-                    padding: '6px 8px',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: '8px'
                   }}>
-                    <span style={{ fontSize: '10px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '700' }}>
-                      {due > 0 ? 'বকেয়া বাকি' : 'পরিশোধিত'}
-                    </span>
-                    <strong className="num-font" style={{ fontSize: '15px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
+                    <div>
+                      <span style={{ fontSize: '10.5px', color: due > 0 ? '#991b1b' : '#065f46', fontWeight: '800', display: 'block' }}>
+                        {due > 0 ? '🔴 বর্তমান মোট বকেয়া' : '🟢 হিসাব পরিশোধিত'}
+                      </span>
+                      {isOverLimit && (
+                        <span style={{ fontSize: '9px', fontWeight: '900', background: '#dc2626', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
+                          সীমা পার
+                        </span>
+                      )}
+                    </div>
+                    <strong className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: due > 0 ? '#b91c1c' : '#059669' }}>
                       ৳{due.toLocaleString('en-US')}
                     </strong>
                   </div>
 
-                  {/* Last Items Snippet */}
+                  {/* 📋 Date-wise Item / Payment History Timeline (কি কি খাইছে বা কত টাকা দিয়েছে) */}
                   <div style={{
-                    fontSize: '10.5px',
-                    color: '#64748b',
                     background: '#f8fafc',
-                    borderRadius: '8px',
-                    padding: '4px 6px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '6px 8px',
                     marginBottom: '8px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    border: '1px solid #f1f5f9'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
                   }}>
-                    🛍️ {c.lastItemsSummary || 'পূর্বের বাকি হিসাব'}
+                    {c.recentTransactions && c.recentTransactions.length > 0 ? (
+                      c.recentTransactions.slice(0, 2).map((tx: any) => {
+                        const isPay = tx.type === 'payment';
+                        return (
+                          <div
+                            key={tx.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              fontSize: '11px',
+                              gap: '6px',
+                              background: isPay ? '#f0fdf4' : '#ffffff',
+                              border: isPay ? '1px solid #bbf7d0' : '1px solid #f1f5f9',
+                              borderRadius: '6px',
+                              padding: '4px 6px'
+                            }}
+                          >
+                            <div style={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                              <span style={{ fontWeight: '800', color: isPay ? '#166534' : '#9a3412', marginRight: '4px' }}>
+                                {isPay ? '💵 জমা' : '🛍️ বাকি'}
+                              </span>
+                              <span style={{ fontSize: '10px', color: '#64748b', marginRight: '4px' }}>
+                                ({tx.date})
+                              </span>
+                              <span style={{ color: '#334155', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {tx.items}
+                              </span>
+                            </div>
+                            <strong className="num-font" style={{ fontSize: '11.5px', fontWeight: '900', color: isPay ? '#059669' : '#dc2626', flexShrink: 0 }}>
+                              {isPay ? `-৳${tx.amount}` : `+৳${tx.amount}`}
+                            </strong>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🛍️</span>
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {c.lastItemsSummary || 'পূর্বের বাকি হিসাব'} {c.lastDate ? `(${c.lastDate})` : ''}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  {/* Expanded In-card history if toggled */}
-                  {cardHistoryOpen[c.id] && (
-                    <div style={{
-                      background: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '8px',
-                      marginBottom: '8px',
-                      fontSize: '10.5px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', color: '#334155' }}>📋 বিগত ফর্দ:</span>
-                        <button
-                          onClick={() => loadCustomerLedger(c)}
-                          style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '2px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', cursor: 'pointer' }}
-                        >
-                          খতিয়ান ➔
-                        </button>
-                      </div>
-                      {cardHistoryData[c.id] && cardHistoryData[c.id].length > 0 ? (
-                        <div style={{ display: 'grid', gap: '4px' }}>
-                          {cardHistoryData[c.id].slice(0, 3).map((hEntry: any) => {
-                            const isPay = hEntry.isPayment || hEntry.paymentMethod === 'due_payment';
-                            return (
-                              <div key={hEntry.id} style={{ background: '#fff', borderRadius: '6px', padding: '4px 6px', border: isPay ? '1px solid #a7f3d0' : '1px solid #e2e8f0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px' }}>
-                                  <span style={{ fontWeight: '700', color: isPay ? '#059669' : '#b45309' }}>
-                                    {isPay ? '🟢 জমা' : `🔴 বাকি`}
-                                  </span>
-                                  <strong className="num-font" style={{ color: isPay ? '#059669' : '#dc2626' }}>
-                                    {isPay ? `-৳${hEntry.paidAmount}` : `+৳${hEntry.dueAmount}`}
-                                  </strong>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: 'center', color: '#64748b' }}>লোড হচ্ছে...</div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Primary 2-button row: [+ বাকি] and [✓ জমা] */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', marginBottom: '6px' }}>
+                  {/* Primary Action Buttons: [+ বাকি দিন] & [💵 জমা নিন] */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1501,18 +1516,18 @@ export default function KhataPage() {
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '6px 4px',
-                        borderRadius: '8px',
-                        fontSize: '11px',
+                        padding: '7px 6px',
+                        borderRadius: '10px',
+                        fontSize: '11.5px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '3px',
-                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                        gap: '4px',
+                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.25)'
                       }}
-                      title="বাকি পণ্য যোগ করুন"
+                      title="বাকি পণ্য বা ফর্দ যোগ করুন"
                     >
                       <span>➕</span> বাকি দিন
                     </button>
@@ -1524,16 +1539,16 @@ export default function KhataPage() {
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         color: '#fff',
                         border: 'none',
-                        padding: '6px 4px',
-                        borderRadius: '8px',
-                        fontSize: '11px',
+                        padding: '7px 6px',
+                        borderRadius: '10px',
+                        fontSize: '11.5px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '3px',
-                        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                        gap: '4px',
+                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
                       }}
                       title="টাকা আদায় / জমা নিন"
                     >
@@ -1541,138 +1556,99 @@ export default function KhataPage() {
                     </button>
                   </div>
 
-                  {/* Micro Actions Bar: [📞] [💬] [🎙️] [📋] [📜] [📖] */}
+                  {/* Clean Secondary Toolbar: [💬 তাগাদা] [📜 খতিয়ান] [🎙️ ভয়েস] [📖 পাসবুক] */}
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
-                    {/* Call button */}
-                    {c.phone && c.phone.length > 5 && !c.phone.includes('নেই') ? (
-                      <a
-                        href={`tel:${c.phone}`}
-                        style={{
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          border: '1px solid #a7f3d0',
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '6px',
-                          display: 'grid',
-                          placeItems: 'center',
-                          fontSize: '11px',
-                          textDecoration: 'none'
-                        }}
-                        title="সরাসরি কল দিন"
-                      >
-                        📞
-                      </a>
-                    ) : (
-                      <span style={{ width: '26px' }} />
-                    )}
-
                     {/* WhatsApp Reminder if due > 0 */}
-                    {due > 0 && (
+                    {due > 0 ? (
                       <button
                         type="button"
                         onClick={() => sendWhatsAppReminder(c)}
                         style={{
-                          background: '#25d366',
-                          color: '#fff',
-                          border: 'none',
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '6px',
-                          display: 'grid',
-                          placeItems: 'center',
+                          background: '#ecfdf5',
+                          color: '#059669',
+                          border: '1px solid #a7f3d0',
+                          padding: '4px 8px',
+                          borderRadius: '8px',
                           fontSize: '11px',
-                          cursor: 'pointer'
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
                         }}
-                        title="WhatsApp তাগাদা"
+                        title="WhatsApp এ তাগাদা পাঠান"
                       >
-                        💬
+                        <span>💬</span> তাগাদা
                       </button>
+                    ) : (
+                      <span style={{ fontSize: '10.5px', color: '#10b981', fontWeight: '800' }}>✓ পরিশোধিত</span>
                     )}
 
-                    {/* Voice action */}
-                    <button
-                      type="button"
-                      onClick={() => startCustomerVoice(c)}
-                      style={{
-                        background: '#fff1f2',
-                        color: '#b91c1c',
-                        border: '1px solid #fecdd3',
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '6px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                      }}
-                      title="ভয়েস এন্ট্রি"
-                    >
-                      🎙️
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      {/* Voice Entry */}
+                      <button
+                        type="button"
+                        onClick={() => startCustomerVoice(c)}
+                        style={{
+                          background: '#fff1f2',
+                          color: '#b91c1c',
+                          border: '1px solid #fecdd3',
+                          padding: '4px 7px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}
+                        title="মুখে বলে বাকি বা জমা দিন"
+                      >
+                        🎙️
+                      </button>
 
-                    {/* Expand history */}
-                    <button
-                      type="button"
-                      onClick={() => toggleInCardHistory(c)}
-                      style={{
-                        background: cardHistoryOpen[c.id] ? '#0f172a' : '#f8fafc',
-                        color: cardHistoryOpen[c.id] ? '#fff' : '#334155',
-                        border: '1px solid #cbd5e1',
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '6px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                      }}
-                      title="বিগত ফর্দ দেখুন"
-                    >
-                      📋
-                    </button>
+                      {/* Full Ledger Modal */}
+                      <button
+                        type="button"
+                        onClick={() => loadCustomerLedger(c)}
+                        style={{
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          padding: '4px 8px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                        title="সম্পূর্ণ খতিয়ান ও ফর্দ দেখুন"
+                      >
+                        <span>📜</span> খতিয়ান
+                      </button>
 
-                    {/* Full Ledger */}
-                    <button
-                      type="button"
-                      onClick={() => loadCustomerLedger(c)}
-                      style={{
-                        background: '#eff6ff',
-                        color: '#1e40af',
-                        border: '1px solid #bfdbfe',
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '6px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '11px',
-                        cursor: 'pointer'
-                      }}
-                      title="ফুল খতিয়ান"
-                    >
-                      📜
-                    </button>
-
-                    {/* Passbook Link */}
-                    <Link
-                      href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
-                      target="_blank"
-                      style={{
-                        background: '#f8fafc',
-                        color: '#475569',
-                        border: '1px solid #cbd5e1',
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '6px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '11px',
-                        textDecoration: 'none'
-                      }}
-                      title="ডিজিটাল পাসবুক"
-                    >
-                      📖
-                    </Link>
+                      {/* Digital Passbook Link */}
+                      <Link
+                        href={`/khata/passbook?id=${c.id}&tenantId=${currentTenantId}`}
+                        target="_blank"
+                        style={{
+                          background: '#f8fafc',
+                          color: '#475569',
+                          border: '1px solid #cbd5e1',
+                          padding: '4px 6px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center'
+                        }}
+                        title="ডিজিタル পাসবুক পোর্টাল"
+                      >
+                        📖
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2064,7 +2040,7 @@ export default function KhataPage() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <label style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>
-                        কী কী পণ্য নিয়েছে / কিসের বাকি (ফর্দ):
+                        কী কী পণ্য নিয়েছে / কিসের বাকি (ফর্দ): <span style={{ color: '#dc2626' }}>* (বাধ্যতামূলক)</span>
                       </label>
                       <button
                         type="button"
@@ -2092,7 +2068,8 @@ export default function KhataPage() {
                       value={addDueItems}
                       onChange={(e) => setAddDueItems(e.target.value)}
                       rows={3}
-                      placeholder="যেমন: তীর তেল ১ লিটার, চিনি ২ কেজি, সাবান ২টি"
+                      required
+                      placeholder="যেমন: ২ কেজি চাল, ১ লিটার তেল, ১ প্যাকেট বিস্কুট"
                       style={{
                         width: '100%',
                         padding: '10px 12px',

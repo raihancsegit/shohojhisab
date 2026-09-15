@@ -93,34 +93,20 @@ export default function VoiceAssistant() {
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
-        if (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__) {
-          return;
-        }
-
-        let finalT = '';
-        let interimT = '';
-        for (let i = 0; i < event.results.length; ++i) {
-          const res = event.results[i];
-          if (res && res[0] && res[0].transcript) {
-            if (res.isFinal) finalT += (finalT ? ' ' : '') + res[0].transcript;
-            else interimT += (interimT ? ' ' : '') + res[0].transcript;
-          }
-        }
-
-        const fullTranscript = (finalT || interimT).trim();
+        const { fullTranscript } = extractTranscriptFromEvent(event);
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
-        // Auto-complete after 0.9s silence
+        // Auto-complete after 0.85s silence
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isListeningRef.current && latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
           }
-        }, 900);
+        }, 850);
       };
 
       recognition.onerror = (err: any) => {

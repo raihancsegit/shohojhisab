@@ -4242,9 +4242,21 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           .replace(/(দেড়শো|দেড়শ|আড়াইশো|আড়াইশ|একশত|একশো|হাজার)/gi, '')
           .replace(/(বাকি\s*নিল|বাকি\s*দিলাম|বাকি\s*লেখ|বাকি\s*লিখ|বাকি\s*লেখো|বাকি\s*হলো|বাকিতে|বাকি\s*যোগ|বাকি\s*এড|বাকি|নিল|দিলাম|খাতায়|খাতা|যোগ\s*হবে|এড\s*হবে|এড|add)/gi, '')
           .replace(new RegExp(customer.name, 'gi'), '')
-          .replace(/(ভাই|চাচা|মামা)/gi, '')
+          .replace(/(ভাই|চাচা|মামা|কাকা|দাদা|আপা|সাহেব|বেগম|হাজী)/gi, '')
           .trim();
-        const note = cleanItems || 'বাকি হিসাব এন্ট্রি';
+
+        // 🚨 MANDATORY ITEM/REASON REQUIREMENT:
+        // If no product name or purpose is stated (e.g. user just said "কুদ্দুস ৫০০ টাকা বাকি"), prompt for items!
+        if (!cleanItems || cleanItems.length < 2 || /^(বাকি|হিসাব|টাকা|হবে|যোগ)$/i.test(cleanItems)) {
+          return {
+            success: false,
+            action: 'due_items_required',
+            speech: `${customer.name}-এর ৳${amount} টাকা বাকি লেখার জন্য পণ্যের বিবরণ প্রয়োজন। কিসের জন্য বাকি লিখেছেন তা মুখে বলুন (যেমন: ২ কেজি চাল বাবদ ৳${amount})।`,
+            reply: `⚠️ **পণ্যের নাম বা বিবরণ প্রয়োজন (বাধ্যতামূলক):**\n${customer.name}-এর **৳${amount.toLocaleString('en-US')}** বাকি রেকর্ড করার জন্য কিসের জন্য এই বাকি তা উল্লেখ করা বাধ্যতামূলক।\n\n*উদাহরণ:* *"${customer.name} ২ কেজি চাল আর ১ লিটার তেল ${amount} টাকা বাকি"*`
+          };
+        }
+
+        const note = cleanItems;
 
         db.prepare(`
           INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
@@ -5077,11 +5089,11 @@ fastify.get('/api/customers', async (request) => {
 
   const rows = db.prepare('SELECT * FROM customers WHERE tenant_id = ? ORDER BY total_due DESC').all(tenantId) as any[];
 
-  const getLastSale = db.prepare(`
-    SELECT s.id, s.invoice_no, s.created_at, s.due_amount, s.total_amount
+  const getRecentSales = db.prepare(`
+    SELECT s.id, s.invoice_no, s.created_at, s.due_amount, s.paid_amount, s.total_amount, s.payment_method, s.note
     FROM sales s
     WHERE (s.customer_id = ? OR s.customer_name = ?) AND s.tenant_id = ?
-    ORDER BY s.created_at DESC LIMIT 1
+    ORDER BY s.created_at DESC LIMIT 3
   `);
 
   const getSaleItems = db.prepare('SELECT product_name, quantity, total_price FROM sale_items WHERE sale_id = ?');
@@ -5090,19 +5102,56 @@ fastify.get('/api/customers', async (request) => {
     let lastItemsSummary = '';
     let lastDateFormatted = '';
     let lastInvoiceNo = '';
+    const recentTransactions: Array<{
+      id: string;
+      date: string;
+      type: 'due' | 'payment';
+      items: string;
+      amount: number;
+      invoiceNo: string;
+    }> = [];
 
-    let lastSale: any = null;
     try {
-      lastSale = getLastSale.get(r.id, r.name, tenantId) as any;
-      if (lastSale) {
-        lastInvoiceNo = lastSale.invoice_no || '';
-        const items = getSaleItems.all(lastSale.id) as any[];
-        if (items && items.length > 0) {
-          lastItemsSummary = items.map(it => `${it.product_name} (${it.quantity}টি)`).join(', ');
+      const recentList = getRecentSales.all(r.id, r.name, tenantId) as any[];
+      if (recentList && recentList.length > 0) {
+        lastInvoiceNo = recentList[0].invoice_no || '';
+        
+        for (const s of recentList) {
+          const isPay = s.payment_method === 'due_payment' || (Number(s.due_amount) === 0 && Number(s.paid_amount) > 0);
+          let summary = s.note || '';
+          if (!summary && !isPay) {
+            const items = getSaleItems.all(s.id) as any[];
+            if (items && items.length > 0) {
+              summary = items.map(it => `${it.product_name} (${it.quantity}টি)`).join(', ');
+            }
+          }
+          if (!summary) summary = isPay ? 'নগদ জমা পরিশোধ' : 'বাকি ফর্দ';
+
+          let dateFmt = '';
+          if (s.created_at) {
+            const d = new Date(s.created_at);
+            dateFmt = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short' });
+          }
+
+          const amt = isPay ? Number(s.paid_amount || s.total_amount || 0) : Number(s.due_amount || s.total_amount || 0);
+
+          recentTransactions.push({
+            id: s.id,
+            date: dateFmt || 'সম্প্রতি',
+            type: isPay ? 'payment' : 'due',
+            items: summary,
+            amount: amt,
+            invoiceNo: s.invoice_no || ''
+          });
         }
-        if (lastSale.created_at) {
-          const d = new Date(lastSale.created_at);
-          lastDateFormatted = d.toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        const firstDue = recentTransactions.find(t => t.type === 'due');
+        if (firstDue) {
+          lastItemsSummary = firstDue.items;
+          lastDateFormatted = firstDue.date;
+        } else if (recentTransactions.length > 0) {
+          lastItemsSummary = recentTransactions[0].items;
+          lastDateFormatted = recentTransactions[0].date;
         }
       }
     } catch (e) {}
@@ -5119,9 +5168,10 @@ fastify.get('/api/customers', async (request) => {
       promiseDate: r.promise_date || '',
       createdAt: r.created_at,
       lastDate: lastDateFormatted,
-      lastDateRaw: lastSale ? lastSale.created_at : r.created_at,
+      lastDateRaw: recentTransactions.length > 0 ? recentTransactions[0].date : r.created_at,
       lastItemsSummary: lastItemsSummary || (Number(r.total_due) > 0 ? 'পূর্বের বকেয়া খাতা' : 'কোনো বকেয়া নেই'),
-      lastInvoiceNo
+      lastInvoiceNo,
+      recentTransactions
     };
   });
 });

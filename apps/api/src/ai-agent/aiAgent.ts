@@ -253,6 +253,17 @@ export function executeStockSaleOrDue(
   }
 
   const finalTotalAmount = Number(params.explicitTotalAmount) > 0 ? Number(params.explicitTotalAmount) : calculatedTotal;
+
+  // 🚨 MANDATORY ITEM/REASON REQUIREMENT:
+  if (params.isDue && processedItems.length === 0 && (!params.note || params.note === 'পণ্য সামগ্রী' || params.note.length < 2)) {
+    return {
+      success: false,
+      action: 'due_items_required',
+      speech: `${customer ? customer.name : 'কাস্টমার'}-এর ৳${finalTotalAmount} টাকা বাকি লেখার জন্য পণ্যের বিবরণ বা নাম প্রয়োজন। কিসের জন্য বাকি তা মুখে বলুন (যেমন: ২ কেজি চাল বাবদ ৳${finalTotalAmount})।`,
+      reply: `⚠️ **পণ্যের নাম বা বিবরণ প্রয়োজন (বাধ্যতামূলক):**\n${customer ? customer.name : 'কাস্টমার'}-এর ৳${finalTotalAmount.toLocaleString('en-US')} টাকা বাকি লেখার জন্য কিসের জন্য এই বাকি তা উল্লেখ করা বাধ্যতামূলক।\n\n*উদাহরণ:* *"${customer ? customer.name : 'কাস্টমার'} ২ কেজি চিনি ${finalTotalAmount} টাকা বাকি"*`
+    };
+  }
+
   const previousDue = customer ? (Number(customer.total_due) || 0) : 0;
   const newDue = params.isDue && customer ? previousDue + finalTotalAmount : previousDue;
 

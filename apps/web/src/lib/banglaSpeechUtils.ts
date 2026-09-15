@@ -92,7 +92,10 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
     }
   }
 
-  const rawCombined = (finalTranscript || interimTranscript).trim();
+  // Combine final and interim safely
+  const rawCombined = (finalTranscript && interimTranscript)
+    ? `${finalTranscript} ${interimTranscript}`
+    : (finalTranscript || interimTranscript);
 
   // Background noise / TV faint sound rejection: if confidence is extremely low and string is tiny snippet
   if (rawCombined && lowestConfidence < 0.25 && rawCombined.length < 3) {

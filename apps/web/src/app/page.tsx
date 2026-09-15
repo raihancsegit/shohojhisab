@@ -413,13 +413,14 @@ export default function ShopkeeperDashboard() {
             { id: 'yesterday', label: 'গতকাল' },
             { id: '7days', label: 'গত ৭ দিন' },
             { id: 'thisMonth', label: 'এই মাস' },
-            { id: 'custom', label: '📅 কাস্টম তারিখ' },
+            { id: 'custom', label: '📅', title: 'কাস্টম তারিখ' },
           ].map((item) => {
             const isActive = selectedPeriod === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
+                title={item.title || item.label}
                 onClick={() => {
                   triggerHaptic('light');
                   if (item.id === 'custom') {
@@ -434,7 +435,7 @@ export default function ShopkeeperDashboard() {
                   color: isActive ? '#ffffff' : '#475569',
                   border: isActive ? '1px solid #4338ca' : '1px solid #e2e8f0',
                   borderRadius: '10px',
-                  padding: '6px 12px',
+                  padding: item.id === 'custom' ? '6px 10px' : '6px 12px',
                   fontSize: '12.5px',
                   fontWeight: isActive ? '800' : '600',
                   cursor: 'pointer',
