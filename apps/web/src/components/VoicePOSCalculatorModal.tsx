@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
+import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 
 interface VoicePOSCalculatorModalProps {
@@ -47,6 +48,8 @@ export default function VoicePOSCalculatorModal({
   const debounceTimerRef = useRef<any>(null);
   const lastProcessedRef = useRef<{ text: string; time: number }>({ text: '', time: 0 });
   const accumulatedTranscriptRef = useRef<string>('');
+  const isTTSActiveRef = useRef<boolean>(false);
+  const ttsCooldownTimerRef = useRef<any>(null);
 
   // Sound generator
   const playBeep = (freq = 880) => {
@@ -63,6 +66,32 @@ export default function VoicePOSCalculatorModal({
       osc.start();
       osc.stop(ctx.currentTime + 0.08);
     } catch (e) {}
+  };
+
+  // Safe TTS speaker that mutes recognition to prevent self-transcription echo
+  const speakFeedback = (text: string, onDone?: () => void) => {
+    isTTSActiveRef.current = true;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    if (ttsCooldownTimerRef.current) clearTimeout(ttsCooldownTimerRef.current);
+    accumulatedTranscriptRef.current = '';
+    setLiveTranscript('');
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+    }
+
+    speakAnnouncement(text, () => {
+      // 800ms cooldown for speaker acoustic echo to dissipate
+      ttsCooldownTimerRef.current = setTimeout(() => {
+        isTTSActiveRef.current = false;
+        if (isComponentMounted.current && !isMuted && isOpen) {
+          try {
+            recognitionRef.current?.start();
+          } catch (e) {}
+        }
+        if (onDone) onDone();
+      }, 800);
+    }, true);
   };
 
   // Start / Maintain Continuous Hands-Free Listening Loop
@@ -91,8 +120,8 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onresult = (event: any) => {
-        // Echo Prevention: Do not capture speech while the system itself is speaking TTS
-        if (typeof window !== 'undefined' && (window as any).speechSynthesis?.speaking) {
+        // Echo Prevention: Do not capture speech while TTS is active or cooling down
+        if (isTTSActiveRef.current || (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__)) {
           return;
         }
 
@@ -108,10 +137,18 @@ export default function VoicePOSCalculatorModal({
         }
 
         const currentSaid = (finalChunk || interimText).trim();
-        if (currentSaid) {
-          setLiveTranscript(currentSaid);
-          accumulatedTranscriptRef.current = currentSaid;
+        if (!currentSaid) return;
+
+        // Extra guard: Ignore if transcript is echo of confirmation keywords
+        if (
+          isEchoedTTSResponse(currentSaid) ||
+          /যোগ\s*হয়েছে|মেমোতে\s*যোগ|স্টকে\s*নেই|স্টক\s*শেষ|পরিশোধ|বাকি\s*খাতায়|মোট\s*বকেয়া|সাউন্ডবক্স/i.test(currentSaid)
+        ) {
+          return;
         }
+
+        setLiveTranscript(currentSaid);
+        accumulatedTranscriptRef.current = currentSaid;
 
         // Debounce: Wait for user to finish speaking the whole phrase before parsing
         if (debounceTimerRef.current) {
@@ -120,6 +157,10 @@ export default function VoicePOSCalculatorModal({
 
         const waitMs = finalChunk ? 450 : 750;
         debounceTimerRef.current = setTimeout(() => {
+          if (isTTSActiveRef.current || (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__)) {
+            return;
+          }
+
           const textToProcess = accumulatedTranscriptRef.current.trim();
           if (!textToProcess) return;
 
@@ -147,8 +188,8 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onend = () => {
-        // Auto-restart loop if still open and not muted
-        if (isComponentMounted.current && !isMuted) {
+        // Auto-restart loop if still open, not muted, and not currently speaking TTS
+        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
           setTimeout(() => {
             try {
               recognition.start();
@@ -243,7 +284,7 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = outOfStockNames.join(', ');
-        speakAnnouncement(`দুঃখিত, "${nameList}" পণ্যটির স্টক শেষ বা নেই!`);
+        speakFeedback(`দুঃখিত, "${nameList}" পণ্যটির স্টক শেষ বা নেই!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই!`);
       }
 
@@ -251,7 +292,7 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = notFoundNames.join(', ');
-        speakAnnouncement(`দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
+        speakFeedback(`দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
       }
 
@@ -282,7 +323,7 @@ export default function VoicePOSCalculatorModal({
         const spokenSummary = validInStockItems.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
 
         setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${newTotal})`);
-        speakAnnouncement(`${spokenSummary} মেমোতে যোগ হয়েছে।`);
+        speakFeedback(`${spokenSummary} মেমোতে যোগ হয়েছে।`);
       }
       return;
     }
@@ -326,7 +367,7 @@ export default function VoicePOSCalculatorModal({
         // Customer not found in baki khata! Announce and open picker
         triggerHaptic('warning');
         playBeep(450);
-        speakAnnouncement(`দুঃখিত, "${rawTarget}" নামের কোনো খরিদ্দার বাকি তালিকায় পাওয়া যায়নি!`);
+        speakFeedback(`দুঃখিত, "${rawTarget}" নামের কোনো খরিদ্দার বাকি তালিকায় পাওয়া যায়নি!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${rawTarget}" নামের কোনো খরিদ্দার বাকি তালিকায় নেই!`);
         setCustomerSearch(rawTarget);
         setShowCustomerPicker(true);
@@ -370,7 +411,7 @@ export default function VoicePOSCalculatorModal({
     setLiveTranscript('');
     playBeep(600);
     triggerHaptic('light');
-    speakAnnouncement('মেমো ক্লিয়ার করা হয়েছে');
+    speakFeedback('মেমো ক্লিয়ার করা হয়েছে');
     setLastActionMessage('✓ মেমো সম্পূর্ণ ক্লিয়ার হয়েছে। নতুন পণ্য মুখে বলুন...');
   };
 
@@ -387,7 +428,7 @@ export default function VoicePOSCalculatorModal({
     } else {
       triggerHaptic('light');
       setShowCustomerPicker(true);
-      speakAnnouncement('বাকি খাতার জন্য খরিদ্দার নির্বাচন করুন');
+      speakFeedback('বাকি খাতার জন্য খরিদ্দার নির্বাচন করুন');
       setLastActionMessage('ℹ️ বাকি খাতার জন্য খরিদ্দার নির্বাচন করুন');
     }
   };
@@ -439,7 +480,7 @@ export default function VoicePOSCalculatorModal({
         const data = await res.json();
         playBeep(1250);
         triggerHaptic('success');
-        speakAnnouncement(
+        speakFeedback(
           method === 'due'
             ? `${customer}-এর বাকি খাতায় ৳${finalAmount} টাকা লেখা সম্পন্ন হয়েছে।`
             : `৳${finalAmount} টাকা নগদ বিক্রি সফল হয়েছে।`
@@ -1321,7 +1362,7 @@ export default function VoicePOSCalculatorModal({
                       setShowCustomerPicker(false);
                       triggerHaptic('success');
                       playBeep(950);
-                      speakAnnouncement(`${cust.name}-এর বাকি খাতা নির্বাচিত।`);
+                      speakFeedback(`${cust.name}-এর বাকি খাতা নির্বাচিত।`);
                       handleFinalizeSale('due', cust.name, cust.id, cust.phone || '');
                     }}
                     style={{
@@ -1390,7 +1431,7 @@ export default function VoicePOSCalculatorModal({
                     setShowCustomerPicker(false);
                     triggerHaptic('success');
                     playBeep(950);
-                    speakAnnouncement(`${finalName}-এর নামে বাকি লেখা হচ্ছে`);
+                    speakFeedback(`${finalName}-এর নামে বাকি লেখা হচ্ছে`);
                     handleFinalizeSale('due', finalName, '', '');
                   }}
                   style={{
