@@ -191,12 +191,14 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onend = () => {
-        // Auto-restart loop if still open, not muted, and not currently speaking TTS
-        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+        // Auto-restart loop if still open, not muted, not currently speaking TTS, and online
+        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current && typeof navigator !== 'undefined' && navigator.onLine) {
           setTimeout(() => {
             try {
               recognition.start();
-            } catch (e) {}
+            } catch (e) {
+              setIsListening(false);
+            }
           }, 300);
         } else {
           setIsListening(false);

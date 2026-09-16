@@ -131,7 +131,9 @@ export default function VoiceAssistant() {
           isListeningRef.current = false;
         } else if (err.error === 'network' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
           setFeedbackType('listening');
-          setFeedbackText('🎙️ শুনছি... বলুন বা টাইপ করুন');
+          setFeedbackText('🟢 অফলাইন মোড: কমান্ড বাটনে চাপুন বা লিখুন');
+          setIsListening(false);
+          isListeningRef.current = false;
         } else if (err.error !== 'no-speech') {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -145,10 +147,16 @@ export default function VoiceAssistant() {
           return;
         }
 
-        if (isListeningRef.current && !isProcessing) {
+        if (isListeningRef.current && !isProcessing && typeof navigator !== 'undefined' && navigator.onLine) {
           try {
             recognition.start();
-          } catch (e) {}
+          } catch (e) {
+            setIsListening(false);
+            isListeningRef.current = false;
+          }
+        } else {
+          setIsListening(false);
+          isListeningRef.current = false;
         }
       };
 
@@ -159,7 +167,7 @@ export default function VoiceAssistant() {
       setIsListening(false);
       isListeningRef.current = false;
       setFeedbackType('listening');
-      setFeedbackText('🎙️ শুনছি... বলুন বা টাইপ করুন');
+      setFeedbackText('🟢 অফলাইন সহকারী প্রস্তুত');
     }
   };
 
@@ -278,10 +286,14 @@ export default function VoiceAssistant() {
   };
 
   const quickOfflineChips = [
-    { label: '📊 বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
-    { label: '📦 মোট স্টক', cmd: 'আজকের স্টক কত' },
-    { label: '📖 বাজারে বাকি', cmd: 'বাজারে মোট বাকি কত' },
-    { label: '➕ নাপা ৫০ পাতা স্টক', cmd: 'নাপা ৫০ পাতা স্টক যোগ করো' }
+    { label: '📊 আজকের বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
+    { label: '📦 মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
+    { label: '🛒 POS কাউন্টার', cmd: 'পস পেজে যাও' },
+    { label: '📖 বাকির খাতা', cmd: 'খাতায় যাও' },
+    { label: '📖 বাজারে বাকি কত?', cmd: 'বাজারে মোট বাকি কত' },
+    { label: '➕ নাপা ৫০ পাতা স্টক', cmd: 'নাপা ৫০ পাতা স্টক যোগ করো' },
+    { label: '☕ চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' },
+    { label: '📊 সম্পূর্ণ রিপোর্ট', cmd: 'রিপোর্ট পেজে যাও' }
   ];
 
   if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
