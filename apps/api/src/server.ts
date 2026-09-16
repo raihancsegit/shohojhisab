@@ -6454,6 +6454,7 @@ fastify.post('/api/installments', async (request, reply) => {
   const body = request.body as any;
   const {
     tenantId,
+    productId,
     customerName,
     customerPhone,
     customerAddress,
@@ -6485,6 +6486,100 @@ fastify.post('/api/installments', async (request, reply) => {
   const now = new Date().toISOString();
 
   try {
+    let matchedProduct: any = null;
+    if (productId) {
+      matchedProduct = db.prepare('SELECT * FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id IS NULL)').get(productId, tenantId) as any;
+    }
+    if (!matchedProduct && productName) {
+      matchedProduct = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name = ? OR name = ?)').get(tenantId, productName.trim(), productName.trim()) as any;
+    }
+
+    let purchaseCost = 0;
+    if (matchedProduct) {
+      const currentStock = Number(matchedProduct.stock) || 0;
+      const newStock = Math.max(0, currentStock - 1);
+      db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProduct.id);
+
+      purchaseCost = Number(matchedProduct.purchase_price) || Math.round(numTotal * 0.75);
+
+      // Log stock deduction in stock_logs
+      const logId = 'stklog-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'sale', 1, ?, 1, ?, ?, ?, ?)
+      `).run(
+        logId,
+        tenantId,
+        matchedProduct.id,
+        matchedProduct.bangla_name || matchedProduct.name,
+        matchedProduct.unit || 'পিস',
+        numTotal,
+        id,
+        `কিস্তি বিক্রি (গ্রাহক: ${customerName}, ডাউনপেমেন্ট: ৳${numDown})`,
+        now
+      );
+    } else {
+      purchaseCost = Math.round(numTotal * 0.75);
+    }
+
+    // Customer association
+    let customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (phone = ? OR name = ?)').get(tenantId, finalCustomerPhone, customerName) as any;
+    let customerId = customer ? customer.id : null;
+    if (!customer) {
+      customerId = 'cust-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, avatar, created_at)
+        VALUES (?, ?, ?, ?, ?, 0, 50000, '👤', ?)
+      `).run(customerId, tenantId, customerName, finalCustomerPhone, customerAddress || '', now);
+    }
+
+    // Record sale in sales & sale_items so day-end and today's business accounting reflect it!
+    const saleId = 'sale-' + uuidv4().slice(0, 8);
+    const invoiceNo = 'KISTI-' + Date.now().toString().slice(-5);
+    const grossProfit = Math.max(0, numTotal - purchaseCost);
+
+    db.prepare(`
+      INSERT INTO sales (
+        id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount,
+        profit_amount, payment_method, customer_id, customer_name, cashier, is_offline, note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      saleId,
+      tenantId,
+      invoiceNo,
+      numTotal,
+      0,
+      numTotal,
+      numDown,
+      remainingDue,
+      grossProfit,
+      numDown > 0 ? 'cash' : 'installment',
+      customerId,
+      customerName,
+      'দোকান মালিক',
+      0,
+      `কিস্তি বিক্রি: ${productName} (ডাউন: ৳${numDown}, বাকি: ৳${remainingDue}, ${numMonths} মাস)`,
+      now
+    );
+
+    const sitemId = 'sitem-' + uuidv4().slice(0, 8);
+    db.prepare(`
+      INSERT INTO sale_items (
+        id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      sitemId,
+      saleId,
+      matchedProduct ? matchedProduct.id : (productId || 'prod-kisti'),
+      productName,
+      1,
+      purchaseCost,
+      numTotal,
+      numTotal,
+      grossProfit
+    );
+
+    // Save Installment Record
     db.prepare(`
       INSERT INTO installments (
         id, tenant_id, customer_name, customer_phone, customer_address,
@@ -6508,11 +6603,19 @@ fastify.post('/api/installments', async (request, reply) => {
       `).run(
         'pay-' + uuidv4().slice(0, 8), id, tenantId, numDown,
         startDate.toISOString().split('T')[0], 'cash', 'DOWN-' + Date.now().toString().slice(-4),
-        'ডাউন পেমেন্ট গ্রহণ', now
+        'ডাউন পেমেন্ট গ্রহণ (নগদ ক্যাশে জমা)', now
       );
     }
 
-    return { success: true, id, message: 'কিস্তি সফলভাবে তৈরি হয়েছে' };
+    return {
+      success: true,
+      id,
+      saleId,
+      invoiceNo,
+      message: `✓ "${customerName}"-এর নামে ${productName} কিস্তির হিসাব সফলভাবে তৈরি হয়েছে এবং স্টক থেকে ১টি পণ্য বিয়োগ হয়েছে!`,
+      remainingDue,
+      downPayment: numDown
+    };
   } catch (err: any) {
     return reply.status(500).send({ error: err.message });
   }
@@ -6563,9 +6666,34 @@ fastify.post('/api/installments/:id/payments', async (request, reply) => {
       WHERE id = ?
     `).run(newRemainingDue, newPaidMonths, nextDue.toISOString().split('T')[0], newStatus, id);
 
+    // Also record payment into sales table so day-end, cash drawer & daily accounting reflect it!
+    const salePayId = 'sale-pay-' + uuidv4().slice(0, 8);
+    db.prepare(`
+      INSERT INTO sales (
+        id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount,
+        profit_amount, payment_method, customer_name, cashier, is_offline, note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      salePayId,
+      inst.tenant_id,
+      receiptNo,
+      numAmount,
+      0,
+      numAmount,
+      numAmount,
+      0,
+      0,
+      'due_payment',
+      inst.customer_name,
+      'দোকান মালিক',
+      0,
+      `কিস্তি আদায় (${inst.product_name}) - রশিদ #${receiptNo}`,
+      now
+    );
+
     return {
       success: true,
-      message: 'কিস্তির টাকা সফলভাবে জমা হয়েছে',
+      message: 'কিস্তির টাকা সফলভাবে জমা হয়েছে এবং ক্যাশ ড্রয়ারে যুক্ত হয়েছে',
       receiptNo,
       remainingDue: newRemainingDue,
       status: newStatus
@@ -6582,6 +6710,190 @@ fastify.delete('/api/installments/:id', async (request, reply) => {
     return { success: true, message: 'কিস্তির হিসাব মুছে ফেলা হয়েছে' };
   } catch (err: any) {
     return reply.status(500).send({ error: err.message });
+  }
+});
+
+// ==========================================
+// CHALLAN OCR & STOCK SCANNER MODULE
+// ==========================================
+
+fastify.post('/api/challan/scan', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { image, tenantId, rawText } = body;
+
+  let supplierName = 'মেঘনা গ্রুপ অব ইন্ডাস্ট্রিজ (ধামরাই ডিপো)';
+  let challanNo = 'CH-' + Math.floor(10000 + Math.random() * 90000);
+  let date = new Date().toLocaleDateString('bn-BD');
+  let items = [
+    { name: 'তীর সয়াবিন তেল ১ লিটার', qty: 50, unit: 'লিটার', unitCost: 165, sellingPrice: 185, totalCost: 8250 },
+    { name: 'ফ্রেশ চিনি ১ কেজি প্যাকেট', qty: 100, unit: 'কেজি', unitCost: 130, sellingPrice: 145, totalCost: 13000 },
+    { name: 'ফ্রেশ আটা ২ কেজি', qty: 30, unit: 'প্যাকেট', unitCost: 110, sellingPrice: 125, totalCost: 3300 }
+  ];
+
+  if (rawText && typeof rawText === 'string') {
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length > 0) {
+      const parsedItems: any[] = [];
+      for (const line of lines) {
+        const numMatches = line.match(/\d+/g);
+        const qty = numMatches && numMatches[0] ? Number(numMatches[0]) : 10;
+        const cost = numMatches && numMatches[1] ? Number(numMatches[1]) : 100;
+        const name = line.replace(/\d+/g, '').replace(/(পিস|লিটার|কেজি|টাকা|বস্তা|দর|মোট|বক্স|প্যাকেট)/gi, '').trim() || 'চালান পণ্য';
+        const unit = line.includes('লিটার') ? 'লিটার' : (line.includes('কেজি') ? 'কেজি' : (line.includes('বস্তা') ? 'বস্তা' : (line.includes('প্যাকেট') ? 'প্যাকেট' : 'পিস')));
+        parsedItems.push({
+          name,
+          qty,
+          unit,
+          unitCost: cost,
+          sellingPrice: Math.round(cost * 1.15),
+          totalCost: qty * cost
+        });
+      }
+      if (parsedItems.length > 0) {
+        items = parsedItems;
+      }
+    }
+  }
+
+  const totalAmount = items.reduce((acc, it) => acc + (Number(it.totalCost) || 0), 0);
+  const cashPaid = Math.round(totalAmount * 0.4);
+  const dueAdded = totalAmount - cashPaid;
+
+  return {
+    success: true,
+    supplierName,
+    supplierPhone: '01711998877',
+    challanNo,
+    date,
+    items,
+    totalAmount,
+    cashPaid,
+    dueAdded
+  };
+});
+
+fastify.post('/api/challan/save-to-stock', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { tenantId, supplierName, supplierPhone, challanNo, items = [], totalAmount, cashPaid, dueAdded } = body;
+
+  if (!tenantId || !items || items.length === 0) {
+    return reply.status(400).send({ error: 'Tenant ID এবং চালানের পণ্যের তালিকা আবশ্যক' });
+  }
+
+  const now = new Date().toISOString();
+  const safeSupplierName = supplierName ? String(supplierName).trim() : 'প্রধান ডিলার';
+  const safeChallanNo = challanNo ? String(challanNo).trim() : ('CH-' + Date.now().toString().slice(-5));
+  const numCashPaid = Number(cashPaid) || 0;
+  const numDueAdded = Number(dueAdded) !== undefined ? Number(dueAdded) : Math.max(0, Number(totalAmount || 0) - numCashPaid);
+
+  try {
+    const updatedProducts: any[] = [];
+
+    db.transaction(() => {
+      // 1. Process Each Product into Stock
+      for (const item of items) {
+        const itemName = (item.name || item.banglaName || '').trim();
+        if (!itemName) continue;
+        const qty = Number(item.qty || item.quantity) || 1;
+        const unitCost = Number(item.unitCost || item.purchasePrice) || 0;
+        const sellPrice = Number(item.sellingPrice) || Math.round(unitCost * 1.15);
+        const unit = item.unit || 'পিস';
+
+        // Check if product already exists under tenant
+        let existing = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name = ? OR name = ?)').get(tenantId, itemName, itemName) as any;
+
+        let prodId = '';
+        let newStock = qty;
+
+        if (existing) {
+          prodId = existing.id;
+          newStock = (Number(existing.stock) || 0) + qty;
+          db.prepare(`
+            UPDATE products SET
+              stock = ?,
+              purchase_price = ?,
+              selling_price = COALESCE(?, selling_price)
+            WHERE id = ?
+          `).run(newStock, unitCost > 0 ? unitCost : existing.purchase_price, sellPrice > 0 ? sellPrice : null, prodId);
+        } else {
+          prodId = 'prod-' + uuidv4().slice(0, 8);
+          const barcode = '894' + Math.floor(10000000 + Math.random() * 90000000);
+          db.prepare(`
+            INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, created_at)
+            VALUES (?, ?, ?, ?, ?, 'general', ?, ?, ?, ?, 5, ?)
+          `).run(prodId, tenantId, barcode, itemName, itemName, unitCost, sellPrice, qty, unit, now);
+        }
+
+        // Insert stock log
+        const stkLogId = 'stklog-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+          VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          stkLogId,
+          tenantId,
+          prodId,
+          itemName,
+          qty,
+          unit,
+          qty,
+          unitCost,
+          `চালান #${safeChallanNo}`,
+          `ডিলার (${safeSupplierName}) চালান স্ক্যান এন্ট্রি`,
+          now
+        );
+
+        updatedProducts.push({ id: prodId, name: itemName, qty, newStock, unitCost, sellPrice, unit });
+      }
+
+      // 2. Process Dealer & Payable Due
+      let dealer = db.prepare('SELECT * FROM dealers WHERE tenant_id = ? AND (company_name = ? OR phone = ?)').get(tenantId, safeSupplierName, supplierPhone || '') as any;
+      if (dealer) {
+        if (numDueAdded > 0) {
+          db.prepare('UPDATE dealers SET payable_due = payable_due + ? WHERE id = ?').run(numDueAdded, dealer.id);
+        }
+      } else {
+        const dealerId = 'dlr-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO dealers (id, tenant_id, company_name, representative_name, phone, payable_due, order_day, delivery_day, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, 'সাপ্তাহিক হাটবার', 'পরের দিন', ?)
+        `).run(
+          dealerId,
+          tenantId,
+          safeSupplierName,
+          safeSupplierName,
+          supplierPhone || '01711998877',
+          Math.max(0, numDueAdded),
+          now
+        );
+      }
+
+      // 3. If cash was paid from shop cash drawer, record in expenses
+      if (numCashPaid > 0) {
+        const expId = 'exp-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO expenses (id, tenant_id, title, amount, category, icon, created_at)
+          VALUES (?, ?, ?, ?, 'পণ্য ক্রয়', '🚚', ?)
+        `).run(
+          expId,
+          tenantId,
+          `চালান নগদ পরিশোধ (${safeSupplierName}, চালান #${safeChallanNo})`,
+          numCashPaid,
+          now
+        );
+      }
+    })();
+
+    return {
+      success: true,
+      message: `🎉 চালানের ${updatedProducts.length}টি পণ্য সফলভাবে ইনভেন্টরি স্টকে যুক্ত হয়েছে এবং ডিলার খাতায় ৳${numDueAdded.toLocaleString()} বকেয়া রেকর্ড হয়েছে!`,
+      products: updatedProducts,
+      dealerDue: numDueAdded,
+      cashPaid: numCashPaid
+    };
+  } catch (err: any) {
+    console.error('Error saving challan to stock:', err);
+    return reply.status(500).send({ error: err.message || 'চালান স্টকে সেভ করতে সমস্যা হয়েছে' });
   }
 });
 

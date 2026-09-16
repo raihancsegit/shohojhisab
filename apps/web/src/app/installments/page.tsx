@@ -31,8 +31,14 @@ export default function InstallmentsPage() {
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
 
+  // Products from Stock
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+
   // New Installment Form
   const [form, setForm] = useState({
+    productId: '',
     customerName: '',
     customerPhone: '',
     customerAddress: '',
@@ -110,6 +116,23 @@ export default function InstallmentsPage() {
         // Live populate field
         if (fieldKey === 'paymentAmount') {
           setPaymentAmount(processed);
+        } else if (fieldKey === 'productName') {
+          // If spoken, try to match stock product
+          const match = products.find(p => 
+            (p.bangla_name && p.bangla_name.toLowerCase().includes(processed.toLowerCase())) ||
+            (p.name && p.name.toLowerCase().includes(processed.toLowerCase()))
+          );
+          if (match) {
+            setSelectedProduct(match);
+            setForm(prev => ({
+              ...prev,
+              productId: match.id,
+              productName: match.bangla_name || match.name,
+              totalAmount: prev.totalAmount || String(match.selling_price || '')
+            }));
+          } else {
+            setForm(prev => ({ ...prev, productName: processed }));
+          }
         } else {
           setForm(prev => ({ ...prev, [fieldKey]: processed }));
         }
@@ -164,8 +187,20 @@ export default function InstallmentsPage() {
     setLoading(false);
   };
 
+  const loadProducts = async () => {
+    if (!currentTenantId) return;
+    try {
+      const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     loadInstallments();
+    loadProducts();
   }, [currentTenantId]);
 
   // Handle Add Installment
@@ -182,17 +217,21 @@ export default function InstallmentsPage() {
         body: JSON.stringify({
           tenantId: currentTenantId,
           ...form,
+          productId: form.productId || selectedProduct?.id || '',
           customerPhone: form.customerPhone || '01700000000'
         })
       });
 
       if (res.ok) {
-        setNotice(`✓ "${form.customerName}"-এর নামে ${form.productName} কিস্তির হিসাব সফলভাবে তৈরি হয়েছে!`);
+        setNotice(`✓ "${form.customerName}"-এর নামে ${form.productName} কিস্তির হিসাব সফলভাবে তৈরি হয়েছে এবং স্টক ও ক্যাশ আপডেট হয়েছে!`);
         if (speakAnnouncement) {
-          speakAnnouncement(`${form.customerName} এর কিস্তি হিসাব সফলভাবে সংরক্ষণ করা হয়েছে`);
+          speakAnnouncement(`${form.customerName} এর কিস্তি হিসাব সফলভাবে সংরক্ষণ ও স্টক আপডেট করা হয়েছে`);
         }
         setShowAddModal(false);
+        setSelectedProduct(null);
+        setShowProductDropdown(false);
         setForm({
+          productId: '',
           customerName: '',
           customerPhone: '',
           customerAddress: '',
@@ -205,7 +244,8 @@ export default function InstallmentsPage() {
           notes: ''
         });
         await loadInstallments();
-        setTimeout(() => setNotice(''), 3500);
+        await loadProducts();
+        setTimeout(() => setNotice(''), 4500);
       }
     } catch (e) {}
   };
@@ -691,10 +731,12 @@ export default function InstallmentsPage() {
                 </div>
               </div>
 
-              {/* Field 4: Product Name / Model */}
-              <div>
+              {/* Field 4: Product Name / Model with In-Stock Selector */}
+              <div style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📱 পণ্যের নাম / মডেল:</label>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>
+                    📱 পণ্য সিলেক্ট করুন (ইনভেন্টরি স্টক):
+                  </label>
                   <button
                     type="button"
                     onClick={() => startFieldVoice('productName', false, 'পণ্যের নাম ও মডেল')}
@@ -716,23 +758,133 @@ export default function InstallmentsPage() {
                     <span>🎙️</span> {activeVoiceField === 'productName' ? '⏹ শুনছি...' : 'মুখে বলুন'}
                   </button>
                 </div>
-                <input
-                  type="text"
-                  placeholder="যেমন: Samsung Galaxy A15 (128GB) / Walton ফ্রিজ"
-                  value={form.productName}
-                  onChange={(e) => setForm({ ...form, productName: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    border: activeVoiceField === 'productName' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
-                    fontSize: '13.5px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    background: activeVoiceField === 'productName' ? '#fff5f5' : '#fff'
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 স্টক থেকে পণ্য খুঁজুন বা লিখুন..."
+                    value={form.productName}
+                    onFocus={() => setShowProductDropdown(true)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = products.find(p => (p.bangla_name || p.name || '').toLowerCase() === val.toLowerCase());
+                      setSelectedProduct(match || null);
+                      setForm(prev => ({
+                        ...prev,
+                        productName: val,
+                        productId: match ? match.id : '',
+                        totalAmount: match ? String(match.selling_price || prev.totalAmount) : prev.totalAmount
+                      }));
+                      setShowProductDropdown(true);
+                    }}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'productName' ? '2px solid #ef4444' : (selectedProduct ? '1.5px solid #10b981' : '1.5px solid #cbd5e1'),
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'productName' ? '#fff5f5' : '#fff'
+                    }}
+                  />
+                  {form.productName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm(prev => ({ ...prev, productName: '', productId: '' }));
+                        setSelectedProduct(null);
+                        setShowProductDropdown(true);
+                      }}
+                      style={{
+                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                        background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '20px', height: '20px',
+                        fontSize: '10px', color: '#64748b', cursor: 'pointer'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Stock Match / Custom Product Badge */}
+                {selectedProduct ? (
+                  <div style={{
+                    marginTop: '6px', padding: '6px 10px', borderRadius: '8px',
+                    background: '#ecfdf5', border: '1px solid #a7f3d0',
+                    fontSize: '11.5px', color: '#065f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                  }}>
+                    <span>📦 <strong>ইনভেন্টরি স্টকে আছে:</strong> {selectedProduct.stock} {selectedProduct.unit || 'পিস'}</span>
+                    <span style={{ fontWeight: '800', color: '#047857' }}>বিক্রিতে ১টি বাদ যাবে ✓</span>
+                  </div>
+                ) : form.productName ? (
+                  <div style={{
+                    marginTop: '6px', padding: '4px 8px', borderRadius: '6px',
+                    background: '#f8fafc', border: '1px solid #e2e8f0',
+                    fontSize: '11px', color: '#64748b'
+                  }}>
+                    ℹ️ কাস্টম পণ্য বিবরণ (স্টকে না থাকলেও কিস্তি হিসাব তৈরি হবে)
+                  </div>
+                ) : null}
+
+                {/* Dropdown List of In-Stock Products */}
+                {showProductDropdown && products.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0,
+                    background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 200, maxHeight: '200px',
+                    overflowY: 'auto', marginTop: '4px'
+                  }}>
+                    <div style={{ padding: '6px 10px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '11px', fontWeight: '800', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>দোকানের ইনভেন্টরি স্টক তালিকা</span>
+                      <button type="button" onClick={() => setShowProductDropdown(false)} style={{ background: 'none', border: 'none', fontSize: '11px', color: '#64748b', cursor: 'pointer' }}>বন্ধ করুন ✕</button>
+                    </div>
+                    {products
+                      .filter(p => !form.productName || (p.bangla_name || p.name || '').toLowerCase().includes(form.productName.toLowerCase()))
+                      .slice(0, 8)
+                      .map((prod) => {
+                        const pName = prod.bangla_name || prod.name;
+                        const pStock = Number(prod.stock) || 0;
+                        const pPrice = Number(prod.selling_price) || 0;
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => {
+                              setSelectedProduct(prod);
+                              setForm(prev => ({
+                                ...prev,
+                                productId: prod.id,
+                                productName: pName,
+                                totalAmount: String(pPrice || prev.totalAmount)
+                              }));
+                              setShowProductDropdown(false);
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              borderBottom: '1px solid #f1f5f9',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              background: selectedProduct?.id === prod.id ? '#f0fdf4' : '#fff'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                                {prod.icon || '📦'} {pName}
+                              </div>
+                              <span style={{ fontSize: '11px', color: pStock <= 2 ? '#dc2626' : '#64748b' }}>
+                                স্টক: {pStock} {prod.unit || 'পিস'} {pStock <= 0 ? '(স্টক শেষ)' : ''}
+                              </span>
+                            </div>
+                            <div className="num-font" style={{ fontSize: '13px', fontWeight: '900', color: '#4f46e5' }}>
+                              ৳{pPrice.toLocaleString('en-US')}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
 
               {/* Field 5 & 6: Total Amount & Down Payment */}
