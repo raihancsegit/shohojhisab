@@ -4,29 +4,52 @@ import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { AuthProvider } from '../src/context/AuthContext';
 import { CartProvider } from '../src/context/CartContext';
+import { NavProvider } from '../src/context/NavContext';
+import SideMenuDrawer from '../src/components/SideMenuDrawer';
+import ActionSheetModal from '../src/components/ActionSheetModal';
+import ShopSwitcherModal from '../src/components/ShopSwitcherModal';
+import StaffShiftModal from '../src/components/StaffShiftModal';
 import FloatingVoiceFab from '../src/components/FloatingVoiceFab';
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <CartProvider>
-        <View style={styles.container}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: '#059669' },
-              headerTintColor: '#ffffff',
-              headerTitleStyle: { fontWeight: 'bold' },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="expenses" options={{ title: 'দোকান খরচ' }} />
-            <Stack.Screen name="reports" options={{ title: 'বিক্রি ও লাভ রিপোর্ট' }} />
-            <Stack.Screen name="products" options={{ title: 'পণ্য তালিকা' }} />
-            <Stack.Screen name="settings" options={{ title: 'দোকান সেটিংস' }} />
-          </Stack>
-          <FloatingVoiceFab />
-        </View>
+        <NavProvider>
+          <View style={styles.container}>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: '#4f46e5' },
+                headerTintColor: '#ffffff',
+                headerTitleStyle: { fontWeight: 'bold' },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="dealers" options={{ title: '🛍️ ক্রয় (ডিলার খাতা)' }} />
+              <Stack.Screen name="day-end" options={{ title: '🌙 ক্যাশ ড্রয়ার ও দিন শেষ' }} />
+              <Stack.Screen name="installments" options={{ title: '📅 বাকির কিস্তি' }} />
+              <Stack.Screen name="staff" options={{ title: '👥 কর্মচারী ও পারমিশন' }} />
+              <Stack.Screen name="branches" options={{ title: '🏢 দোকানের শাখা' }} />
+              <Stack.Screen name="expiry-tracker" options={{ title: '⏳ মেয়াদোত্তীর্ণ রাডার' }} />
+              <Stack.Screen name="subscription" options={{ title: '💳 প্যাকেজ ও সাবস্ক্রিপশন' }} />
+              <Stack.Screen name="support" options={{ title: '🎧 হেল্প এন্ড সাপোর্ট' }} />
+              <Stack.Screen name="tutorials" options={{ title: '🎬 টিউটোরিয়াল ভিডিও' }} />
+              <Stack.Screen name="voice-guide" options={{ title: '🎙️ ভয়েস নির্দেশিকা' }} />
+              <Stack.Screen name="expenses" options={{ title: '💸 ব্যয় / দৈনিক খরচ' }} />
+              <Stack.Screen name="reports" options={{ title: '📊 রিপোর্টস ও লাভ-ক্ষতি' }} />
+              <Stack.Screen name="products" options={{ title: '📦 পণ্য তালিকা' }} />
+              <Stack.Screen name="settings" options={{ title: '⚙️ দোকানের সেটিংস' }} />
+            </Stack>
+
+            {/* Global Modals & Navigation Overlays */}
+            <SideMenuDrawer />
+            <ActionSheetModal />
+            <ShopSwitcherModal />
+            <StaffShiftModal />
+            <FloatingVoiceFab />
+          </View>
+        </NavProvider>
       </CartProvider>
     </AuthProvider>
   );
