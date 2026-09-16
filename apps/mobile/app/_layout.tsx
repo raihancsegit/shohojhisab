@@ -43,9 +43,14 @@ export default function RootLayout() {
               <Stack.Screen name="challan-ocr" options={{ title: '📸 চালান স্ক্যানার' }} />
               <Stack.Screen name="expenses" options={{ title: '💸 ব্যয় / দৈনিক খরচ' }} />
               <Stack.Screen name="reports" options={{ title: '📊 রিপোর্টস ও লাভ-ক্ষতি' }} />
-              <Stack.Screen name="products" options={{ title: '📦 পণ্য তালিকা' }} />
+              <Stack.Screen name="login" options={{ title: '🔐 লগইন / সাইন ইন', headerShown: false }} />
+              <Stack.Screen name="catalog" options={{ title: '🌐 ডিজিটাল ক্যাটালগ ও মেনু' }} />
+              <Stack.Screen name="ai-assistant" options={{ title: '🤖 এআই ডিজিটাল সহকারী' }} />
+              <Stack.Screen name="products" options={{ title: '📦 পণ্য তালিকা ও ক্যাটালগ' }} />
               <Stack.Screen name="settings" options={{ title: '⚙️ দোকানের সেটিংস' }} />
             </Stack>
+
+
 
             {/* Global Modals & Navigation Overlays */}
             <SideMenuDrawer />
