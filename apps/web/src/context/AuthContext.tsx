@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { apiUrl } from '../lib/config';
 
 export interface ShopFeatures {
+  enableCustomerKhata?: boolean;
   enableInstallments?: boolean;
   enableWholesale?: boolean;
   enableDealerKhata?: boolean;
@@ -671,7 +672,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isFeatureEnabled = (key: keyof ShopFeatures): boolean => {
     if (!tenant) return false;
     
-    // Check custom overrides saved in localStorage or tenant.features
+    // 1. Strict check: Custom overrides saved in localStorage
     if (typeof window !== 'undefined') {
       const savedFeaturesStr = localStorage.getItem(`lbos_feature_toggles_${tenant.id}`);
       if (savedFeaturesStr) {
@@ -682,17 +683,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    // 2. Strict check: tenant.features object
     if (tenant.features && typeof tenant.features[key] === 'boolean') {
       return tenant.features[key]!;
     }
 
-    // Full Enterprise / Multi-Branch Plan unlocks everything
-    if (!tenant.planId || tenant.planId === 'plan-enterprise' || tenant.planId === 'plan-multi' || tenant.planId === 'enterprise') {
-      return true;
-    }
-
-    // Default intelligent behavior by industry
+    // 3. Default intelligent behavior by industry if not explicitly set
     const ind = tenant.industryId || 'cat-grocery';
+    if (key === 'enableCustomerKhata') {
+      return true; // Default ON for all shops unless toggled off
+    }
     if (key === 'enableInstallments') {
       return ind === 'cat-mobile' || ind === 'cat-furniture' || ind === 'cat-electronics';
     }
@@ -710,6 +710,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (key === 'enableWholesale') {
       return ind === 'cat-grocery' || ind === 'cat-clothing' || ind === 'cat-hardware';
+    }
+    if (key === 'enableDealerKhata') {
+      return true;
+    }
+    if (key === 'enableCashDrawer') {
+      return true;
     }
     
     // Core modules always enabled

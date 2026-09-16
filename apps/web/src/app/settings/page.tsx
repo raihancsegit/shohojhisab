@@ -94,6 +94,7 @@ export default function SettingsHubPage() {
 
   // 6. Modular Features & Toggles (কিস্তি খাতা, মেয়াদ রাডার, মহাজন খাতা ইত্যাদি)
   const [featuresState, setFeaturesState] = useState({
+    enableCustomerKhata: true,
     enableInstallments: true,
     enableExpiryTracker: true,
     enableDealerKhata: true,
@@ -118,6 +119,7 @@ export default function SettingsHubPage() {
       }));
 
       setFeaturesState({
+        enableCustomerKhata: isFeatureEnabled('enableCustomerKhata'),
         enableInstallments: isFeatureEnabled('enableInstallments'),
         enableExpiryTracker: isFeatureEnabled('enableExpiryTracker'),
         enableDealerKhata: isFeatureEnabled('enableDealerKhata'),
@@ -731,7 +733,82 @@ export default function SettingsHubPage() {
                 </p>
               </div>
 
-              {/* 1. কিস্তি খাতা (Installments / EMI) */}
+              {/* 1. কাস্টমার বাকি খাতা (Customer Due Khata) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableCustomerKhata ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ffedd5', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      📒
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        বাকির হিসাব ও গ্রাহক খাতা (Khata)
+                        <span style={{ fontSize: '10px', background: '#ffedd5', color: '#ea580c', padding: '1px 6px', borderRadius: '4px' }}>মূল ফিচার</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        গ্রাহকদের বাকির খতিয়ান, দৈনিক বাকি ফিল্টার ও হোয়াটসঅ্যাপে সরাসরি বাকি তাগাদা রসিদ পাঠানো।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableCustomerKhata)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableCustomerKhata: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableCustomerKhata ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableCustomerKhata ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+                {featuresState.enableCustomerKhata && (
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/khata')}
+                      style={{
+                        background: '#4f46e5',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      📒 সরাসরি বাকি খাতায় যান ➔
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. কিস্তি খাতা (Installments / EMI) */}
               <div style={{
                 background: '#f8fafc',
                 border: featuresState.enableInstallments ? '1.5px solid #6366f1' : '1px solid #e2e8f0',

@@ -73,11 +73,11 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   const primaryTabs = [
     { href: '/', label: 'ড্যাশবোর্ড', icon: '🏠', show: true },
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
-    { href: '/khata', label: theme.khataLabel, icon: '📒', show: true },
+    { href: '/khata', label: theme.khataLabel, icon: '📒', show: isFeatureEnabled('enableCustomerKhata') },
+    { href: '/installments', label: 'কিস্তি খাতা', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
     { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/expenses', label: 'দোকান খরচ', icon: '💸', show: true },
-    { href: '/installments', label: 'কিস্তি খাতা', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: theme.dealerLabel, icon: '🚚', show: isFeatureEnabled('enableDealerKhata') },
     { href: '/day-end', label: 'ক্যাশ মিলানো', icon: '🌙', show: isFeatureEnabled('enableCashDrawer') },
     { href: '/reports', label: theme.reportsLabel, icon: '📊', show: true },
@@ -784,13 +784,15 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   const menuItems = [
     { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'হট' },
+    { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
+    { href: '/installments', label: 'কিস্তি খাতা (Installments / EMI)', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
-    { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'জরুরি' },
-    { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', iconBg: '#eef2ff', iconColor: '#4f46e5' },
+    { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
     { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
+    { href: '/day-end', label: 'ক্যাশ মিলানো ও ড্রয়ার', icon: '🌙', iconBg: '#f0fdf4', iconColor: '#16a34a', show: isFeatureEnabled('enableCashDrawer') },
     { href: '/staff', label: 'কর্মচারী ও পারমিশন (Staff)', icon: '👥', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'টিম' },
     { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableMultiBranch') },
-    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#eef2ff', iconColor: '#4f46e5', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
+    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#fee2e2', iconColor: '#b91c1c', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ' },
     { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
@@ -1049,7 +1051,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
    HISABPATI-STYLE BOTTOM ACTION SHEET (Slide-up Action Center matching Screenshot 3)
    ========================================================================== */
 function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { triggerHaptic } = useAuth();
+  const { triggerHaptic, isFeatureEnabled } = useAuth();
   const router = useRouter();
 
   if (!isOpen) return null;
@@ -1178,35 +1180,70 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             </button>
 
             {/* 3. বাকি আদায় */}
-            <button
-              onClick={() => handleAction('/khata')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                padding: '4px'
-              }}
-              className="clickable-card"
-            >
-              <div style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '16px',
-                background: '#fff7ed',
-                color: '#ea580c',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)'
-              }}>
-                🤲
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>বাকি আদায়</span>
-            </button>
+            {isFeatureEnabled('enableCustomerKhata') && (
+              <button
+                onClick={() => handleAction('/khata')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+                className="clickable-card"
+              >
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  background: '#fff7ed',
+                  color: '#ea580c',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '24px',
+                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)'
+                }}>
+                  🤲
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>বাকি আদায়</span>
+              </button>
+            )}
+
+            {/* 4. কিস্তি আদায় */}
+            {isFeatureEnabled('enableInstallments') && (
+              <button
+                onClick={() => handleAction('/installments')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+                className="clickable-card"
+              >
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  background: '#e0e7ff',
+                  color: '#4338ca',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '24px',
+                  boxShadow: '0 2px 8px rgba(67, 56, 202, 0.12)'
+                }}>
+                  📅
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>কিস্তি জমা</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1554,11 +1591,45 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
    SMART 5-TAB MOBILE BOTTOM DOCK (Clean SVG Icons & Crisp Contrast)
    ========================================================================== */
 function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void }) {
-  const { userRole, triggerHaptic, theme: authTheme } = useAuth();
+  const { userRole, triggerHaptic, theme: authTheme, isFeatureEnabled } = useAuth();
   const pathname = usePathname();
   if (userRole !== 'shopkeeper') return null;
 
   const isDark = authTheme === 'dark';
+  const showKhata = isFeatureEnabled('enableCustomerKhata');
+  const showInstallments = isFeatureEnabled('enableInstallments');
+
+  // Second Tab destination based on active modules
+  const tab2 = showKhata ? {
+    href: '/khata',
+    label: 'খাতা',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/khata' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    )
+  } : (showInstallments ? {
+    href: '/installments',
+    label: 'কিস্তি',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/installments' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    )
+  } : {
+    href: '/expenses',
+    label: 'খরচ',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/expenses' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    )
+  });
 
   return (
     <nav className="mobile-bottom-nav" style={{
@@ -1596,9 +1667,9 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
         <span style={{ fontSize: '11px', fontWeight: pathname === '/' ? '900' : '700' }}>হোম</span>
       </Link>
 
-      {/* 2. Khata */}
+      {/* 2. Khata or Installments */}
       <Link
-        href="/khata"
+        href={tab2.href}
         onClick={() => triggerHaptic('light')}
         style={{
           display: 'flex',
@@ -1607,14 +1678,11 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/khata' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
+          color: pathname === tab2.href ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/khata' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        </svg>
-        <span style={{ fontSize: '11px', fontWeight: pathname === '/khata' ? '900' : '700' }}>খাতা</span>
+        {tab2.icon}
+        <span style={{ fontSize: '11px', fontWeight: pathname === tab2.href ? '900' : '700' }}>{tab2.label}</span>
       </Link>
 
       {/* 3. Center Elevated Plus Button */}

@@ -9,7 +9,7 @@ import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 import { formatBDDateLong, formatBDDate, formatBDDateTime, formatBDTime } from '../lib/dateUtils';
 
 export default function ShopkeeperDashboard() {
-  const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction } = useAuth();
+  const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction, isFeatureEnabled } = useAuth();
   const router = useRouter();
   
   const activeIndustryId = tenant?.industryId || (tenant as any)?.industry_category_id || (tenant as any)?.industryCategoryId || (tenant as any)?.category_id;
@@ -752,12 +752,12 @@ export default function ShopkeeperDashboard() {
               </div>
             </div>
 
-            {/* ⚡ 1-TAP RAPID ACTION LAUNCHPAD */}
+            {/* ⚡ 4/5-Grid Fast Action Cockpit with Feature Toggle Intelligence */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '8px',
-              marginBottom: '20px'
+              gridTemplateColumns: `repeat(auto-fit, minmax(75px, 1fr))`,
+              gap: '10px',
+              marginBottom: '16px'
             }}>
               <Link
                 href="/pos"
@@ -780,27 +780,53 @@ export default function ShopkeeperDashboard() {
                 <span style={{ fontSize: '11.5px', fontWeight: '900' }}>নতুন মেমো</span>
               </Link>
 
-              <Link
-                href="/khata"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #fed7aa',
-                  color: '#ea580c',
-                  padding: '12px 6px',
-                  borderRadius: '16px',
-                  textAlign: 'center',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                className="clickable-card"
-              >
-                <span style={{ fontSize: '20px' }}>🎙️</span>
-                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির খাতা</span>
-              </Link>
+              {isFeatureEnabled('enableCustomerKhata') && (
+                <Link
+                  href="/khata"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #fed7aa',
+                    color: '#ea580c',
+                    padding: '12px 6px',
+                    borderRadius: '16px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  className="clickable-card"
+                >
+                  <span style={{ fontSize: '20px' }}>📒</span>
+                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির খাতা</span>
+                </Link>
+              )}
+
+              {isFeatureEnabled('enableInstallments') && (
+                <Link
+                  href="/installments"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #c7d2fe',
+                    color: '#4338ca',
+                    padding: '12px 6px',
+                    borderRadius: '16px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 8px rgba(67, 56, 202, 0.1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  className="clickable-card"
+                >
+                  <span style={{ fontSize: '20px' }}>📅</span>
+                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>কিস্তি খাতা</span>
+                </Link>
+              )}
 
               <Link
                 href="/stock"
@@ -821,7 +847,7 @@ export default function ShopkeeperDashboard() {
                 className="clickable-card"
               >
                 <span style={{ fontSize: '20px' }}>📦</span>
-                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>নতুন মাল/স্টক</span>
+                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>মাল/স্টক</span>
               </Link>
 
               <Link
@@ -847,109 +873,160 @@ export default function ShopkeeperDashboard() {
               </Link>
             </div>
 
-            {/* 📊 2x2 FLOATING-BADGE KPI METRIC CARDS (Industry Tailored) */}
+            {/* 📊 FLOATING-BADGE KPI METRIC CARDS (Industry & Feature Tailored) */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
               gap: '18px 14px',
               marginBottom: '20px',
               paddingTop: '6px'
             }}>
               {/* Card 1: কাস্টমার বাকি (Customer Due) */}
-              <Link
-                href="/khata"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #fed7aa',
-                  borderRadius: '20px',
-                  padding: '16px 14px 14px',
-                  position: 'relative',
-                  textDecoration: 'none',
-                  boxShadow: '0 4px 14px rgba(254, 215, 170, 0.25)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '88px',
-                  transition: 'transform 0.15s ease'
-                }}
-                className="clickable-card"
-              >
-                {/* Floating Round Badge at Top */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-14px',
-                  left: '18px',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#ffedd5',
-                  color: '#ea580c',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(234, 88, 12, 0.2)',
-                  border: '2px solid #ffffff'
-                }}>
-                  📒
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {theme.khataLabel || 'কাস্টমার বাকি'} <span style={{ fontSize: '10px' }}>ⓘ</span>
-                  </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#ea580c', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}</span>
-                    <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+              {isFeatureEnabled('enableCustomerKhata') && (
+                <Link
+                  href="/khata"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #fed7aa',
+                    borderRadius: '20px',
+                    padding: '16px 14px 14px',
+                    position: 'relative',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 14px rgba(254, 215, 170, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '88px',
+                    transition: 'transform 0.15s ease'
+                  }}
+                  className="clickable-card"
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: '-14px',
+                    left: '18px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#ffedd5',
+                    color: '#ea580c',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '15px',
+                    boxShadow: '0 2px 6px rgba(234, 88, 12, 0.2)',
+                    border: '2px solid #ffffff'
+                  }}>
+                    📒
                   </div>
-                </div>
-              </Link>
+                  <div style={{ marginTop: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {theme.khataLabel || 'কাস্টমার বাকি'} <span style={{ fontSize: '10px' }}>ⓘ</span>
+                    </span>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#ea580c', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                      <span>{privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}</span>
+                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Card 1.5: কিস্তি খাতা (Installments / EMI) */}
+              {isFeatureEnabled('enableInstallments') && (
+                <Link
+                  href="/installments"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #c7d2fe',
+                    borderRadius: '20px',
+                    padding: '16px 14px 14px',
+                    position: 'relative',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 14px rgba(199, 210, 254, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '88px',
+                    transition: 'transform 0.15s ease'
+                  }}
+                  className="clickable-card"
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: '-14px',
+                    left: '18px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#e0e7ff',
+                    color: '#4338ca',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '15px',
+                    boxShadow: '0 2px 6px rgba(67, 56, 202, 0.2)',
+                    border: '2px solid #ffffff'
+                  }}>
+                    📅
+                  </div>
+                  <div style={{ marginTop: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      কিস্তি হিসাব ও আদায় <span style={{ fontSize: '10px' }}>ⓘ</span>
+                    </span>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#4338ca', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                      <span>কিস্তি খাতা</span>
+                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                    </div>
+                  </div>
+                </Link>
+              )}
 
               {/* Card 2: ডিলার / মহাজন দেনা (Dealer Payable) */}
-              <Link
-                href="/dealers"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #bae6fd',
-                  borderRadius: '20px',
-                  padding: '16px 14px 14px',
-                  position: 'relative',
-                  textDecoration: 'none',
-                  boxShadow: '0 4px 14px rgba(186, 230, 253, 0.25)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '88px',
-                  transition: 'transform 0.15s ease'
-                }}
-                className="clickable-card"
-              >
-                {/* Floating Round Badge at Top */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-14px',
-                  left: '18px',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#e0f2fe',
-                  color: '#0284c7',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
-                  border: '2px solid #ffffff'
-                }}>
-                  🚚
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {theme.dealerLabel || 'ডিলার দেনা'} <span style={{ fontSize: '10px' }}>ⓘ</span>
-                  </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284c7', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}</span>
-                    <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+              {isFeatureEnabled('enableDealerKhata') && (
+                <Link
+                  href="/dealers"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #bae6fd',
+                    borderRadius: '20px',
+                    padding: '16px 14px 14px',
+                    position: 'relative',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 14px rgba(186, 230, 253, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: '88px',
+                    transition: 'transform 0.15s ease'
+                  }}
+                  className="clickable-card"
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: '-14px',
+                    left: '18px',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: '#e0f2fe',
+                    color: '#0284c7',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '15px',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
+                    border: '2px solid #ffffff'
+                  }}>
+                    🚚
                   </div>
-                </div>
-              </Link>
+                  <div style={{ marginTop: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {theme.dealerLabel || 'ডিলার দেনা'} <span style={{ fontSize: '10px' }}>ⓘ</span>
+                    </span>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284c7', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                      <span>{privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}</span>
+                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                    </div>
+                  </div>
+                </Link>
+              )}
 
               {/* Card 3: পণ্য ও স্টক (Products Count) */}
               <Link
