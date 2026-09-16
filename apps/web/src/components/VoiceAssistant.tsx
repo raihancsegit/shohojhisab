@@ -131,9 +131,7 @@ export default function VoiceAssistant() {
           isListeningRef.current = false;
         } else if (err.error === 'network' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
           setFeedbackType('listening');
-          setFeedbackText('🟢 অফলাইন মোড: নিচের বাটনে ট্যাপ করুন');
-          setIsListening(false);
-          isListeningRef.current = false;
+          setFeedbackText('🎙️ শুনছি... বলুন বা টাইপ করুন');
         } else if (err.error !== 'no-speech') {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -161,7 +159,7 @@ export default function VoiceAssistant() {
       setIsListening(false);
       isListeningRef.current = false;
       setFeedbackType('listening');
-      setFeedbackText('🟢 অফলাইন মোড: নিচের কুইক-কমান্ড ট্যাপ করুন');
+      setFeedbackText('🎙️ শুনছি... বলুন বা টাইপ করুন');
     }
   };
 
@@ -289,50 +287,7 @@ export default function VoiceAssistant() {
   if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: 9999,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-end',
-      gap: '8px'
-    }}>
-      {/* 🟢 Offline / Quick Action Pills */}
-      {feedbackType === 'listening' && (
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '6px',
-          justifyContent: 'flex-end',
-          maxWidth: '340px',
-          animation: 'fadeIn 0.2s ease'
-        }}>
-          {quickOfflineChips.map((chip, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => stopAndExecute(chip.cmd)}
-              style={{
-                background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
-                color: '#ecfdf5',
-                border: '1px solid rgba(129, 140, 248, 0.4)',
-                borderRadius: '16px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      )}
-
+    <div className="floating-voice-widget">
       {/* 💬 Live Transcript / Feedback Pop-up */}
       {feedbackType && (
         <div style={{
@@ -342,25 +297,26 @@ export default function VoiceAssistant() {
               ? 'linear-gradient(135deg, #065f46, #047857)'
               : 'linear-gradient(135deg, #1e1b4b, #312e81)',
           color: '#ffffff',
-          padding: '10px 16px',
+          padding: '12px 16px',
           borderRadius: '20px',
           fontSize: '13px',
           fontWeight: '700',
-          maxWidth: '320px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          maxWidth: '340px',
+          width: 'calc(100vw - 40px)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+          border: '1.5px solid rgba(255, 255, 255, 0.25)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px',
+          gap: '8px',
           animation: 'fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '15px' }}>
+              <span style={{ fontSize: '16px' }}>
                 {feedbackType === 'listening' ? '🎙️' : feedbackType === 'processing' ? '⚡' : feedbackType === 'success' ? '✅' : '⚠️'}
               </span>
-              <span>
-                {feedbackText || (isListening ? (liveTranscript || 'কথা বলুন...') : '')}
+              <span style={{ fontSize: '13px' }}>
+                {feedbackText || (isListening ? 'শুনছি... মুখে বলুন বা লিখুন' : '')}
               </span>
             </div>
             <button
@@ -370,13 +326,64 @@ export default function VoiceAssistant() {
                 border: 'none',
                 color: '#fff',
                 cursor: 'pointer',
-                opacity: 0.7,
-                fontSize: '11px'
+                opacity: 0.8,
+                fontSize: '12px',
+                padding: '2px 6px'
               }}
             >
               ✕
             </button>
           </div>
+
+          {/* Interactive Speech & Command Bar */}
+          {feedbackType === 'listening' && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = liveTranscript.trim() || latestTranscriptRef.current.trim();
+                if (q) stopAndExecute(q);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <input
+                type="text"
+                value={liveTranscript}
+                onChange={(e) => {
+                  setLiveTranscript(e.target.value);
+                  latestTranscriptRef.current = e.target.value;
+                }}
+                placeholder="যেমন: স্টক পেজে যাও / আজকের বিক্রি কত..."
+                autoFocus
+                style={{
+                  flex: 1,
+                  background: 'rgba(255, 255, 255, 0.18)',
+                  border: '1px solid rgba(255, 255, 255, 0.35)',
+                  borderRadius: '12px',
+                  padding: '7px 12px',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  outline: 'none',
+                  fontWeight: '600'
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  color: '#ffffff',
+                  borderRadius: '10px',
+                  padding: '7px 12px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                যাও →
+              </button>
+            </form>
+          )}
         </div>
       )}
 
@@ -385,14 +392,14 @@ export default function VoiceAssistant() {
         <div style={{
           display: 'flex',
           justifyContent: 'flex-end',
-          maxWidth: '320px',
+          maxWidth: '340px',
           animation: 'fadeInUp 0.15s ease'
         }}>
           <Link
             href="/voice-guide"
             onClick={cancelVoice}
             style={{
-              background: 'rgba(5, 150, 105, 0.92)',
+              background: 'rgba(5, 150, 105, 0.95)',
               color: '#ecfdf5',
               border: '1px solid rgba(110, 231, 183, 0.4)',
               borderRadius: '12px',

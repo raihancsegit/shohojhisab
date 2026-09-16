@@ -398,6 +398,25 @@ body {
   }
 }
 
+/* Floating Voice Assistant Responsive Positioning */
+.floating-voice-widget {
+  position: fixed;
+  bottom: 84px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+@media (min-width: 900px) {
+  .floating-voice-widget {
+    bottom: 24px;
+    right: 24px;
+  }
+}
+
 /* Responsive Visibility Helpers */
 .desktop-only {
   display: none !important;

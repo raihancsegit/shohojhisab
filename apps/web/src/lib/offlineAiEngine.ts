@@ -88,8 +88,8 @@ export function executeOfflineAiShopCommand(
   const todaySales = sales.filter((s: any) => (s.createdAt || s.created_at || '').startsWith(todayStr));
   const todayExpenses = expenses.filter((e: any) => (e.date || e.createdAt || '').startsWith(todayStr));
 
-  // 1. Navigation Commands
-  if (/পস|মেমো|বিক্রি|বিক্রয়|কাউন্টার/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+  // 1. Comprehensive Navigation Commands (মুখে বলা মাত্র সেই পেজে নিয়ে যাওয়া)
+  if (/^(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল)$/i.test(normalized) || /পস.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|কাউন্টার.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|মেমো.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|বিক্রি\s*পেজ/i.test(normalized)) {
     return {
       success: true,
       reply: 'বিক্রয় ও মেমো কাউন্টারে নিয়ে যাচ্ছি...',
@@ -100,7 +100,7 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  if (/বাকি|খাতা|কাস্টমার/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+  if (/^(খাতা|বাকি|বাকির খাতা|কাস্টমার|কাস্টমার খাতা)$/i.test(normalized) || /খাতা.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|বাকি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|কাস্টমার.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
     return {
       success: true,
       reply: 'বাকির খাতায় নিয়ে যাচ্ছি...',
@@ -111,24 +111,83 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  if (/স্টক|মাল|পণ্য/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+  if (/^(স্টক|মাল|পণ্য|ইনভেন্টরি|স্টক পেজ)$/i.test(normalized) || /স্টক.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|মাল.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|ইনভেন্টরি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    if (!/কত|যোগ|তোল|কম|শেষ/i.test(normalized)) {
+      return {
+        success: true,
+        reply: 'দোকানের স্টক ইনভেন্টরিতে নিয়ে যাচ্ছি...',
+        speech: 'স্টক পেজে নিয়ে যাচ্ছি।',
+        navigateTo: '/stock',
+        actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
+        isOffline: true
+      };
+    }
+  }
+
+  if (/^(খরচ|ব্যয়|খরচের খাতা|খরচ পেজ)$/i.test(normalized) || /খরচ.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|ব্যয়.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    if (!/টাকা|লেখো/i.test(normalized)) {
+      return {
+        success: true,
+        reply: 'দোকান খরচের খাতায় নিয়ে যাচ্ছি...',
+        speech: 'খরচ পেজ খুলছি।',
+        navigateTo: '/expenses',
+        actionLink: { text: 'খরচের খাতা খুলুন →', href: '/expenses' },
+        isOffline: true
+      };
+    }
+  }
+
+  if (/^(রিপোর্ট|হিসাব|আজকের হিসাব|রিপোর্ট পেজ)$/i.test(normalized) || /রিপোর্ট.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
     return {
       success: true,
-      reply: 'দোকানের স্টক ইনভেন্টরিতে নিয়ে যাচ্ছি...',
-      speech: 'স্টক পেজ খুলছি।',
-      navigateTo: '/stock',
-      actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
+      reply: 'আজকের রিপোর্ট ও হিসাব পেজে নিয়ে যাচ্ছি...',
+      speech: 'রিপোর্ট পেজ খুলছি।',
+      navigateTo: '/reports',
+      actionLink: { text: 'রিপোর্ট পেজ খুলুন →', href: '/reports' },
       isOffline: true
     };
   }
 
-  if (/খরচ|ব্যয়/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+  if (/^(কিস্তি|কিস্তির খাতা)$/i.test(normalized) || /কিস্তি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
     return {
       success: true,
-      reply: 'দোকান খরচের খাতায় নিয়ে যাচ্ছি...',
-      speech: 'খরচ পেজ খুলছি।',
-      navigateTo: '/expenses',
-      actionLink: { text: 'খরচের খাতা খুলুন →', href: '/expenses' },
+      reply: 'কিস্তির খাতায় নিয়ে যাচ্ছি...',
+      speech: 'কিস্তির খাতা খুলছি।',
+      navigateTo: '/installments',
+      actionLink: { text: 'কিস্তির খাতা খুলুন →', href: '/installments' },
+      isOffline: true
+    };
+  }
+
+  if (/^(ডিলার|মহাজন|সাপ্লায়ার)$/i.test(normalized) || /ডিলার.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|মহাজন.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'ডিলার ও মহাজন তালিকায় নিয়ে যাচ্ছি...',
+      speech: 'ডিলার পেজ খুলছি।',
+      navigateTo: '/dealers',
+      actionLink: { text: 'ডিলার তালিকা খুলুন →', href: '/dealers' },
+      isOffline: true
+    };
+  }
+
+  if (/^(সেটিংস|দোকান সেটিংস)$/i.test(normalized) || /সেটিংস.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'দোকান সেটিংসে নিয়ে যাচ্ছি...',
+      speech: 'সেটিংস পেজ খুলছি।',
+      navigateTo: '/settings',
+      actionLink: { text: 'সেটিংস খুলুন →', href: '/settings' },
+      isOffline: true
+    };
+  }
+
+  if (/^(স্টাফ|কর্মচারী)$/i.test(normalized) || /স্টাফ.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'কর্মচারী ও স্টাফ লিস্টে নিয়ে যাচ্ছি...',
+      speech: 'স্টাফ পেজ খুলছি।',
+      navigateTo: '/staff',
+      actionLink: { text: 'স্টাফ তালিকা খুলুন →', href: '/staff' },
       isOffline: true
     };
   }
