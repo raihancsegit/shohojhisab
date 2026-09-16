@@ -235,13 +235,57 @@ export default function SettingsScreen() {
 
       {/* ☁️ Cloud & Central Database Sync */}
       <View style={[styles.card, { backgroundColor: isDark ? '#131b2e' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }]}>
-        <Text style={[styles.cardTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>সেন্ট্রাল ডাটাবেজ সিঙ্ক</Text>
+        <Text style={[styles.cardTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>সেন্ট্রাল ডাটাবেজ সিঙ্ক ও API</Text>
         <Text style={styles.subText}>
-          PWA ওয়েব অ্যাপ এবং মোবাইল অ্যাপ উভয়ই একই ব্যাকএন্ড ডাটাবেজ (PostgreSQL / SQLite) এর সাথে সংযুক্ত থাকতে পারবে।
+          PWA ওয়েব অ্যাপ এবং মোবাইল অ্যাপ উভয়ই একই ব্যাকএন্ড ডাটাবেজ (:4005) এর সাথে সরাসরি সংযুক্ত থাকে।
         </Text>
 
+        <Text style={[styles.fieldLabel, { marginTop: 10 }]}>🔌 ব্যাকএন্ড API সার্ভার URL:</Text>
+        <TextInput
+          style={[styles.input, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#f8fafc' : '#0f172a' }]}
+          placeholder="http://192.168.0.100:4005"
+          placeholderTextColor="#94a3b8"
+          defaultValue="http://192.168.0.100:4005"
+          onChangeText={async (txt) => {
+            const { setServerUrl } = await import('../src/lib/cloudSyncEngine');
+            setServerUrl(txt);
+          }}
+        />
+
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+          {[
+            { label: '🏠 Wi-Fi LAN', url: 'http://192.168.0.100:4005' },
+            { label: '💻 Localhost', url: 'http://localhost:4005' },
+            { label: '🤖 Emulator', url: 'http://10.0.2.2:4005' }
+          ].map((preset, pIdx) => (
+            <TouchableOpacity
+              key={pIdx}
+              style={{
+                flex: 1,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                borderWidth: 1,
+                borderColor: isDark ? '#334155' : '#e2e8f0',
+                alignItems: 'center'
+              }}
+              onPress={async () => {
+                triggerHaptic('light');
+                const { setServerUrl } = await import('../src/lib/cloudSyncEngine');
+                await setServerUrl(preset.url);
+                speakNativeText(`${preset.label} সেট করা হয়েছে`);
+                Alert.alert('সার্ভার URL আপডেট', `সার্ভার URL সেট হয়েছে: ${preset.url}`);
+              }}
+            >
+              <Text style={{ fontSize: 10.5, fontWeight: '700', color: isDark ? '#cbd5e1' : '#334155' }}>
+                {preset.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <TouchableOpacity
-          style={[styles.syncBtn, { backgroundColor: primaryColor }]}
+          style={[styles.syncBtn, { backgroundColor: primaryColor, marginTop: 14 }]}
           onPress={async () => {
             triggerHaptic('medium');
             playNativeChime('beep');
@@ -251,7 +295,7 @@ export default function SettingsScreen() {
             if (res.success) {
               playNativeChime('cash');
               speakNativeText('ডাটাবেজ সিঙ্ক সফল হয়েছে');
-              Alert.alert('সিঙ্ক সফল', res.message);
+              Alert.alert('সিঙ্ক সফল', `${res.message}\n• পণ্য: ${res.syncedProducts}টি\n• মেমো: ${res.syncedSales}টি\n• কাস্টমার: ${res.syncedCustomers}জন`);
             } else {
               Alert.alert('অফলাইন মোড', res.message);
             }

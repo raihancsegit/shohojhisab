@@ -275,6 +275,19 @@ export async function hydrateLocalVault(tenantId: string, industryId = 'cat-groc
       const parsed = JSON.parse(raw);
       if (parsed.products && parsed.products.length > 0) {
         memoryVault[tid] = { ...parsed, tenantId: tid };
+        
+        // Background sync with database API
+        import('./cloudSyncEngine').then(({ fetchProductsFromApi, fetchCustomersFromApi }) => {
+          Promise.all([fetchProductsFromApi(tid), fetchCustomersFromApi(tid)]).then(([prods, custs]) => {
+            if (prods && prods.length > 0) {
+              saveLocalVaultSnapshot(tid, { products: prods });
+            }
+            if (custs && custs.length > 0) {
+              saveLocalVaultSnapshot(tid, { customers: custs });
+            }
+          }).catch(() => {});
+        }).catch(() => {});
+
         return memoryVault[tid];
       }
     }
@@ -283,6 +296,19 @@ export async function hydrateLocalVault(tenantId: string, industryId = 'cat-groc
   // Pre-seed default industry products
   const initial = getLocalVaultData(tid, industryId);
   await AsyncStorage.setItem(`${STORAGE_KEY_PREFIX}${tid}`, JSON.stringify(initial)).catch(() => {});
+  
+  // Try fetching live products from backend database
+  import('./cloudSyncEngine').then(({ fetchProductsFromApi, fetchCustomersFromApi }) => {
+    Promise.all([fetchProductsFromApi(tid), fetchCustomersFromApi(tid)]).then(([prods, custs]) => {
+      if (prods && prods.length > 0) {
+        saveLocalVaultSnapshot(tid, { products: prods });
+      }
+      if (custs && custs.length > 0) {
+        saveLocalVaultSnapshot(tid, { customers: custs });
+      }
+    }).catch(() => {});
+  }).catch(() => {});
+
   return initial;
 }
 
@@ -322,6 +348,11 @@ export function executePOSSale(tenantId: string, saleData: Omit<SaleRecord, 'id'
     customers: updatedCustomers,
     sales: updatedSales
   });
+
+  // 3. Post to central database API asynchronously in background
+  import('./cloudSyncEngine').then(({ postSaleToApi }) => {
+    postSaleToApi(tenantId, newSale).catch(() => {});
+  }).catch(() => {});
 
   return newSale;
 }
