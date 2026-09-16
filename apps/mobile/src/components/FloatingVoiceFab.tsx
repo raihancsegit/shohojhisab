@@ -58,13 +58,18 @@ export default function FloatingVoiceFab() {
     }
   ];
 
+  const inputRef = React.useRef<TextInput>(null);
+
   const handleOpenAssistant = () => {
     triggerHaptic('medium');
     playNativeChime('beep');
     setIsOpen(true);
     setIsListeningState(true);
-    setLastSpeech('শুনছি... মুখে বলুন অথবা নিচের কমান্ডে চাপুন');
+    setLastSpeech('শুনছি... মুখে বলুন অথবা নিচের বাটনে চাপুন');
     speakNativeText('জি বলুন, কী হিসাব করতে হবে?');
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 300);
   };
 
   const handleRunCommand = (textToRun: string) => {
@@ -155,23 +160,24 @@ export default function FloatingVoiceFab() {
               </Text>
             </View>
 
-            {/* Command Input Bar */}
-            <View style={styles.inputRow}>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  {
-                    backgroundColor: isDark ? '#0f172a' : '#f8fafc',
-                    color: isDark ? '#f8fafc' : '#0f172a',
-                    borderColor: isDark ? '#334155' : '#cbd5e1'
-                  }
-                ]}
-                placeholder="মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
-                placeholderTextColor="#94a3b8"
-                value={inputText}
-                onChangeText={setInputText}
-                onSubmitEditing={() => handleRunCommand(inputText)}
-              />
+              {/* Command Input Bar */}
+              <View style={styles.inputRow}>
+                <TextInput
+                  ref={inputRef}
+                  style={[
+                    styles.textInput,
+                    {
+                      backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                      color: isDark ? '#f8fafc' : '#0f172a',
+                      borderColor: isDark ? '#334155' : '#cbd5e1'
+                    }
+                  ]}
+                  placeholder="মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
+                  placeholderTextColor="#94a3b8"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  onSubmitEditing={() => handleRunCommand(inputText)}
+                />
               <TouchableOpacity
                 style={[styles.sendBtn, { backgroundColor: primaryColor }]}
                 onPress={() => handleRunCommand(inputText)}
