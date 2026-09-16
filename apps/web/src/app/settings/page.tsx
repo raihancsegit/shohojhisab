@@ -5,11 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import { downloadBackupFile } from '../../lib/dataVault';
 import { formatBDDateTime } from '../../lib/dateUtils';
 
-type SettingsTab = 'main' | 'general' | 'items' | 'parties' | 'transactions' | 'printing' | 'backup';
+type SettingsTab = 'main' | 'general' | 'features' | 'items' | 'parties' | 'transactions' | 'printing' | 'backup';
 
 export default function SettingsHubPage() {
   const router = useRouter();
-  const { tenant, updateActiveTenant, triggerHaptic, theme, setThemeMode, updateShopSettings } = useAuth();
+  const { tenant, updateActiveTenant, triggerHaptic, theme, setThemeMode, updateShopSettings, isFeatureEnabled, updateFeatures } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('main');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -92,6 +92,19 @@ export default function SettingsHubPage() {
     footerNote: 'আমাদের সাথে থাকার জন্য ধন্যবাদ! আবার আসবেন।'
   });
 
+  // 6. Modular Features & Toggles (কিস্তি খাতা, মেয়াদ রাডার, মহাজন খাতা ইত্যাদি)
+  const [featuresState, setFeaturesState] = useState({
+    enableInstallments: true,
+    enableExpiryTracker: true,
+    enableDealerKhata: true,
+    enableCashDrawer: true,
+    enableWholesale: false,
+    enableBarcodePrinter: true,
+    enableWhatsAppReceipts: true,
+    enableSoundbox: true,
+    enableWarrantyCard: true
+  });
+
   // Load saved settings per tenant
   useEffect(() => {
     if (tenant) {
@@ -103,6 +116,18 @@ export default function SettingsHubPage() {
         location: tenant.location || '',
         industryCategoryId: tenant.industryId || 'cat-grocery'
       }));
+
+      setFeaturesState({
+        enableInstallments: isFeatureEnabled('enableInstallments'),
+        enableExpiryTracker: isFeatureEnabled('enableExpiryTracker'),
+        enableDealerKhata: isFeatureEnabled('enableDealerKhata'),
+        enableCashDrawer: isFeatureEnabled('enableCashDrawer'),
+        enableWholesale: isFeatureEnabled('enableWholesale'),
+        enableBarcodePrinter: isFeatureEnabled('enableBarcodePrinter'),
+        enableWhatsAppReceipts: isFeatureEnabled('enableWhatsAppReceipts'),
+        enableSoundbox: isFeatureEnabled('enableSoundbox'),
+        enableWarrantyCard: isFeatureEnabled('enableWarrantyCard')
+      });
 
       const savedGeneral = localStorage.getItem(`sh_settings_general_${tenant.id}`);
       if (savedGeneral) try { setGeneralSettings(prev => ({ ...prev, ...JSON.parse(savedGeneral) })); } catch (e) {}
@@ -347,6 +372,7 @@ export default function SettingsHubPage() {
         <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '900', letterSpacing: '-0.2px' }}>
           {activeTab === 'main' && 'সেটিংস'}
           {activeTab === 'general' && 'সেটিংস (সাধারণ ও সিকিউরিটি)'}
+          {activeTab === 'features' && 'দোকানের ফিচার ও মডিউলসমূহ'}
           {activeTab === 'items' && 'আইটেম'}
           {activeTab === 'parties' && 'পার্টি'}
           {activeTab === 'transactions' && 'লেনদেন'}
@@ -426,6 +452,48 @@ export default function SettingsHubPage() {
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
                     দোকানের প্রোফাইল, সিকিউরিটি পিন ও থিম
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '18px', color: '#94a3b8', fontWeight: '900' }}>›</div>
+            </div>
+
+            {/* 1.5. Modular Features & Toggles (ফিচার ও মডিউলসমূহ) */}
+            <div
+              onClick={() => { setActiveTab('features'); triggerHaptic('light'); }}
+              role="button"
+              tabIndex={0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '18px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: '#fef3c7',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '22px'
+                }}>
+                  🧩
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ফিচার ও মডিউলসমূহ
+                    <span style={{ fontSize: '10px', background: '#4f46e5', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>কিস্তি খাতা</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    কিস্তি খাতা (EMI), মেয়াদ রাডার, মহাজন খাতা, ক্যাশ মিলানো চালু/বন্ধ
                   </div>
                 </div>
               </div>
@@ -637,6 +705,363 @@ export default function SettingsHubPage() {
               <div style={{ fontSize: '18px', color: '#94a3b8', fontWeight: '900' }}>›</div>
             </div>
 
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* VIEW: MODULAR FEATURE TOGGLES (কিস্তি খাতা ও অন্যান্য মডিউল) */}
+        {/* ------------------------------------------------------------- */}
+        {activeTab === 'features' && (
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              padding: '22px 20px',
+              border: '1.5px solid #e2e8f0',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              display: 'grid',
+              gap: '20px'
+            }}>
+              <div>
+                <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>
+                  🧩 দোকানের প্রয়োজনীয় মডিউল ও ফিচার
+                </h3>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                  আপনার ব্যবসার ধরণ অনুযায়ী যেসকল অপশন প্রয়োজন তা অন রাখুন, বাকিগুলো বন্ধ রাখতে পারেন।
+                </p>
+              </div>
+
+              {/* 1. কিস্তি খাতা (Installments / EMI) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableInstallments ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#e0e7ff', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      📅
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        কিস্তি খাতা (Installments / EMI)
+                        <span style={{ fontSize: '10px', background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>জনপ্রিয়</span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        ফ্রিজ, খাট, আসবাবপত্র, মোবাইল বা যেকোনো পণ্যের মাসিক কিস্তি, ডাউনপেমেন্ট ও জামিনদার হিসাব।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableInstallments)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableInstallments: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableInstallments ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableInstallments ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+                {featuresState.enableInstallments && (
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/installments')}
+                      style={{
+                        background: '#4f46e5',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      📅 সরাসরি কিস্তি খাতায় যান ➔
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. মেয়াদ রাডার ও এক্সপায়ারি ট্র্যাকার (Expiry Tracker) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableExpiryTracker ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      ⏳
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
+                        মেয়াদ রাডার (Expiry Tracker)
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        ফার্মেসি, বেকারি বা মুদি পণ্যের মেয়াদ উত্তীর্ণের তারিখ ও লাল এলার্ট রাডার।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableExpiryTracker)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableExpiryTracker: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableExpiryTracker ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableExpiryTracker ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. মহাজন / ডিলার খাতা (Dealer Khata) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableDealerKhata ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef3c7', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      🚚
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
+                        মহাজন ও ডিলার খাতা
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        কোম্পানি ও পাইকারি মহাজনদের চালানের দেনা-পাওনা, মাল ক্রয় ও পেমেন্ট হিসাব।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableDealerKhata)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableDealerKhata: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableDealerKhata ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableDealerKhata ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 4. ক্যাশ ড্রয়ার ও ডে-এন্ড মিলানো (Cash Drawer & Day-End) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableCashDrawer ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f0fdf4', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      🌙
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
+                        ক্যাশ ড্রয়ার ও দিন-শেষ হিসাব মিলানো
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        প্রতিদিন রাতে দোকান বন্ধের সময় ড্রয়ারের নগদ ক্যাশ নোট গুনে হিসাব ক্লোজ করুন।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableCashDrawer)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableCashDrawer: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableCashDrawer ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableCashDrawer ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 5. পাইকারি বিক্রয় রেট (Wholesale Pricing) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableWholesale ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fae8ff', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      🛒
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
+                        পাইকারি বিক্রয় মোড (Wholesale)
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        খুচরা ও পাইকারি মূল্যের আলাদা তালিকা এবং কাস্টমার ক্যাটাগরি রেট।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableWholesale)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableWholesale: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableWholesale ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableWholesale ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 6. বারকোড প্রিন্টার (Barcode Generator & Printer) */}
+              <div style={{
+                background: '#f8fafc',
+                border: featuresState.enableBarcodePrinter ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '16px',
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#e0f2fe', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                      🏷️
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
+                        বারকোড প্রিন্টার ও লেবেল স্টিকার
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                        পণ্যের জন্য নিজস্ব বারকোড জেনারেট এবং স্টিকার প্রিন্ট করার সুবিধা।
+                      </div>
+                    </div>
+                  </div>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(featuresState.enableBarcodePrinter)}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        const updated = { ...featuresState, enableBarcodePrinter: val };
+                        setFeaturesState(updated);
+                        updateFeatures(updated);
+                        triggerHaptic('success');
+                        setSaveSuccess(true);
+                        setTimeout(() => setSaveSuccess(false), 2500);
+                      }}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                      background: featuresState.enableBarcodePrinter ? '#6366f1' : '#cbd5e1',
+                      transition: '0.3s', borderRadius: '34px'
+                    }}>
+                      <span style={{
+                        position: 'absolute', content: '""', height: '20px', width: '20px', left: featuresState.enableBarcodePrinter ? '24px' : '3px',
+                        bottom: '3px', background: '#ffffff', transition: '0.3s', borderRadius: '50%'
+                      }} />
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
           </div>
         )}
 
