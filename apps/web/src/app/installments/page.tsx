@@ -1,18 +1,18 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import FeatureGate from '../../components/FeatureGate';
 import DataLoader from '../../components/DataLoader';
-import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
+import { parseBanglaNumber } from '../../lib/voiceFieldUtils';
+import { extractTranscriptFromEvent, cleanSpokenBengali } from '../../lib/banglaSpeechUtils';
+import { playMicStartSound, playSuccessChime, playMicStopSound } from '../../lib/audioFeedbackUtils';
 
 export default function InstallmentsPage() {
-  const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
+  const { tenant, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
 
   const [installments, setInstallments] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
@@ -24,6 +24,12 @@ export default function InstallmentsPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Active Voice Field Tracker
+  const [activeVoiceField, setActiveVoiceField] = useState<string | null>(null);
+  const [fieldVoiceStatus, setFieldVoiceStatus] = useState<string>('');
+  const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
 
   // New Installment Form
   const [form, setForm] = useState({
@@ -38,6 +44,110 @@ export default function InstallmentsPage() {
     totalMonths: '4',
     notes: ''
   });
+
+  const stopFieldVoice = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setActiveVoiceField(null);
+    setFieldVoiceStatus('');
+    playMicStopSound();
+  };
+
+  const startFieldVoice = (fieldKey: string, isNumeric = false, customLabel = '') => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('আপনার ব্রাউজারে বাংলা ভয়েস সাপোর্ট নেই। গুগল ক্রোম ব্রাউজার ব্যবহার করুন।');
+      return;
+    }
+
+    // Toggle off if already active on same field
+    if (activeVoiceField === fieldKey) {
+      stopFieldVoice();
+      return;
+    }
+
+    stopFieldVoice();
+
+    // Cancel active TTS output
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    try {
+      playMicStartSound();
+      triggerHaptic('medium');
+
+      const rec = new SpeechRecognition();
+      rec.lang = 'bn-BD';
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+
+      setActiveVoiceField(fieldKey);
+      setFieldVoiceStatus(`🎙️ ${customLabel || 'শুনছি... মুখে বলুন'}`);
+
+      rec.onstart = () => {
+        setActiveVoiceField(fieldKey);
+      };
+
+      rec.onresult = (event: any) => {
+        const { fullTranscript } = extractTranscriptFromEvent(event);
+        if (!fullTranscript) return;
+
+        let processed = cleanSpokenBengali(fullTranscript);
+        if (isNumeric) {
+          processed = parseBanglaNumber(processed);
+          if (fieldKey === 'customerPhone' || fieldKey === 'guarantorPhone') {
+            processed = processed.replace(/\D/g, '');
+          }
+        }
+
+        // Live populate field
+        if (fieldKey === 'paymentAmount') {
+          setPaymentAmount(processed);
+        } else {
+          setForm(prev => ({ ...prev, [fieldKey]: processed }));
+        }
+        setFieldVoiceStatus(`✓ "${processed}"`);
+
+        // Silence timer for auto-commit
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          playSuccessChime();
+          triggerHaptic('success');
+          stopFieldVoice();
+        }, 1100);
+      };
+
+      rec.onerror = (e: any) => {
+        if (e.error === 'no-speech') return;
+        console.warn('Field voice recognition error:', e.error);
+        stopFieldVoice();
+      };
+
+      rec.onend = () => {
+        setActiveVoiceField(null);
+        setFieldVoiceStatus('');
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      stopFieldVoice();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopFieldVoice();
+    };
+  }, []);
 
   const loadInstallments = async () => {
     if (!currentTenantId) {
@@ -54,21 +164,8 @@ export default function InstallmentsPage() {
     setLoading(false);
   };
 
-  const loadAuxData = async () => {
-    if (!currentTenantId) return;
-    try {
-      const [cRes, pRes] = await Promise.all([
-        fetch(`/api/customers?tenantId=${currentTenantId}`),
-        fetch(`/api/products?tenantId=${currentTenantId}`)
-      ]);
-      if (cRes.ok) setCustomers(await cRes.json());
-      if (pRes.ok) setProducts(await pRes.json());
-    } catch (e) {}
-  };
-
   useEffect(() => {
     loadInstallments();
-    loadAuxData();
   }, [currentTenantId]);
 
   // Handle Add Installment
@@ -76,6 +173,7 @@ export default function InstallmentsPage() {
     e.preventDefault();
     if (!form.customerName || !form.productName || !form.totalAmount || !currentTenantId) return;
     triggerHaptic('success');
+    stopFieldVoice();
 
     try {
       const res = await fetch('/api/installments', {
@@ -117,6 +215,7 @@ export default function InstallmentsPage() {
     e.preventDefault();
     if (!collectModalItem || !paymentAmount) return;
     triggerHaptic('success');
+    stopFieldVoice();
 
     const numAmount = Number(paymentAmount);
     try {
@@ -158,7 +257,7 @@ export default function InstallmentsPage() {
     window.open(url, '_blank');
   };
 
-  // Calculate stats
+  // Stats
   const activeItems = installments.filter(i => i.status === 'active');
   const completedItems = installments.filter(i => i.status === 'completed');
   const totalDueAmount = activeItems.reduce((acc, i) => acc + (Number(i.remaining_due) || 0), 0);
@@ -417,7 +516,7 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {/* NEW INSTALLMENT MODAL WITH FIELD-BY-FIELD VOICE */}
+      {/* NEW INSTALLMENT MODAL WITH DIRECT FIELD-BY-FIELD VOICE MIC */}
       {showAddModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -425,12 +524,41 @@ export default function InstallmentsPage() {
           zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
         }}>
           <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                ➕ নতুন কিস্তি বিক্রি যুক্ত করুন
-              </h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                  ➕ নতুন কিস্তি বিক্রি
+                </h3>
+                <span style={{ fontSize: '11.5px', color: '#64748b' }}>যেকোনো ফিল্ডের পাশে 🎙️ চেপে মুখে বলুন</span>
+              </div>
+              <button onClick={() => { setShowAddModal(false); stopFieldVoice(); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
             </div>
+
+            {/* Active Voice Live Floating Banner if listening */}
+            {activeVoiceField && (
+              <div style={{
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fef2f2 100%)',
+                border: '1.5px solid #f87171',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                marginBottom: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '10px', height: '10px', background: '#ef4444', borderRadius: '50%', animation: 'pulse 1s infinite' }} />
+                  <strong style={{ fontSize: '13px', color: '#991b1b' }}>{fieldVoiceStatus || '🎙️ শুনছি... মুখে বলুন'}</strong>
+                </div>
+                <button
+                  type="button"
+                  onClick={stopFieldVoice}
+                  style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  ⏹ বন্ধ করুন
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleAddSubmit} style={{ display: 'grid', gap: '12px' }}>
               
@@ -440,26 +568,23 @@ export default function InstallmentsPage() {
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>👤 গ্রাহকের নাম:</label>
                   <button
                     type="button"
-                    onClick={() => triggerFieldVoiceInput({
-                      label: 'গ্রাহকের নাম',
-                      isNumeric: false,
-                      onResult: (val) => setForm(prev => ({ ...prev, customerName: val }))
-                    })}
+                    onClick={() => startFieldVoice('customerName', false, 'গ্রাহকের নাম')}
                     style={{
-                      background: '#eef2ff',
-                      color: '#4f46e5',
-                      border: '1px solid #c7d2fe',
+                      background: activeVoiceField === 'customerName' ? '#ef4444' : '#eef2ff',
+                      color: activeVoiceField === 'customerName' ? '#fff' : '#4f46e5',
+                      border: activeVoiceField === 'customerName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                       borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '11px',
+                      padding: '3px 8px',
+                      fontSize: '11.5px',
                       fontWeight: '800',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      boxShadow: activeVoiceField === 'customerName' ? '0 0 0 3px rgba(239, 68, 68, 0.25)' : 'none'
                     }}
                   >
-                    <span>🎙️</span> মুখে বলুন
+                    <span>🎙️</span> {activeVoiceField === 'customerName' ? '⏹ শুনছি...' : 'মুখে বলুন'}
                   </button>
                 </div>
                 <input
@@ -468,7 +593,16 @@ export default function InstallmentsPage() {
                   value={form.customerName}
                   onChange={(e) => setForm({ ...form, customerName: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: activeVoiceField === 'customerName' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: activeVoiceField === 'customerName' ? '#fff5f5' : '#fff'
+                  }}
                 />
               </div>
 
@@ -476,29 +610,25 @@ export default function InstallmentsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📞 মোবাইল নম্বর:</label>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📞 মোবাইল:</label>
                     <button
                       type="button"
-                      onClick={() => triggerFieldVoiceInput({
-                        label: 'মোবাইল নম্বর',
-                        isNumeric: true,
-                        onResult: (val) => setForm(prev => ({ ...prev, customerPhone: val.replace(/\D/g, '') }))
-                      })}
+                      onClick={() => startFieldVoice('customerPhone', true, 'মোবাইল নম্বর')}
                       style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        border: '1px solid #c7d2fe',
+                        background: activeVoiceField === 'customerPhone' ? '#ef4444' : '#eef2ff',
+                        color: activeVoiceField === 'customerPhone' ? '#fff' : '#4f46e5',
+                        border: activeVoiceField === 'customerPhone' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                         borderRadius: '6px',
-                        padding: '2px 6px',
+                        padding: '3px 7px',
                         fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '2px'
+                        gap: '3px'
                       }}
                     >
-                      <span>🎙️</span>
+                      <span>🎙️</span> {activeVoiceField === 'customerPhone' ? 'শুনছি' : 'ভয়েস'}
                     </button>
                   </div>
                   <input
@@ -506,7 +636,16 @@ export default function InstallmentsPage() {
                     placeholder="017xxxxxxxx"
                     value={form.customerPhone}
                     onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'customerPhone' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'customerPhone' ? '#fff5f5' : '#fff'
+                    }}
                   />
                 </div>
 
@@ -515,34 +654,39 @@ export default function InstallmentsPage() {
                     <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📍 ঠিকানা:</label>
                     <button
                       type="button"
-                      onClick={() => triggerFieldVoiceInput({
-                        label: 'ঠিকানা বা গ্রাম',
-                        isNumeric: false,
-                        onResult: (val) => setForm(prev => ({ ...prev, customerAddress: val }))
-                      })}
+                      onClick={() => startFieldVoice('customerAddress', false, 'ঠিকানা')}
                       style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        border: '1px solid #c7d2fe',
+                        background: activeVoiceField === 'customerAddress' ? '#ef4444' : '#eef2ff',
+                        color: activeVoiceField === 'customerAddress' ? '#fff' : '#4f46e5',
+                        border: activeVoiceField === 'customerAddress' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                         borderRadius: '6px',
-                        padding: '2px 6px',
+                        padding: '3px 7px',
                         fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '2px'
+                        gap: '3px'
                       }}
                     >
-                      <span>🎙️</span>
+                      <span>🎙️</span> {activeVoiceField === 'customerAddress' ? 'শুনছি' : 'ভয়েস'}
                     </button>
                   </div>
                   <input
                     type="text"
-                    placeholder="ঠিকানা"
+                    placeholder="ঠিকানা / গ্রাম"
                     value={form.customerAddress}
                     onChange={(e) => setForm({ ...form, customerAddress: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'customerAddress' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'customerAddress' ? '#fff5f5' : '#fff'
+                    }}
                   />
                 </div>
               </div>
@@ -553,26 +697,23 @@ export default function InstallmentsPage() {
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📱 পণ্যের নাম / মডেল:</label>
                   <button
                     type="button"
-                    onClick={() => triggerFieldVoiceInput({
-                      label: 'পণ্যের বিবরণ ও মডেল',
-                      isNumeric: false,
-                      onResult: (val) => setForm(prev => ({ ...prev, productName: val }))
-                    })}
+                    onClick={() => startFieldVoice('productName', false, 'পণ্যের নাম ও মডেল')}
                     style={{
-                      background: '#eef2ff',
-                      color: '#4f46e5',
-                      border: '1px solid #c7d2fe',
+                      background: activeVoiceField === 'productName' ? '#ef4444' : '#eef2ff',
+                      color: activeVoiceField === 'productName' ? '#fff' : '#4f46e5',
+                      border: activeVoiceField === 'productName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                       borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '11px',
+                      padding: '3px 8px',
+                      fontSize: '11.5px',
                       fontWeight: '800',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      boxShadow: activeVoiceField === 'productName' ? '0 0 0 3px rgba(239, 68, 68, 0.25)' : 'none'
                     }}
                   >
-                    <span>🎙️</span> মুখে বলুন
+                    <span>🎙️</span> {activeVoiceField === 'productName' ? '⏹ শুনছি...' : 'মুখে বলুন'}
                   </button>
                 </div>
                 <input
@@ -581,7 +722,16 @@ export default function InstallmentsPage() {
                   value={form.productName}
                   onChange={(e) => setForm({ ...form, productName: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: activeVoiceField === 'productName' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: activeVoiceField === 'productName' ? '#fff5f5' : '#fff'
+                  }}
                 />
               </div>
 
@@ -592,26 +742,22 @@ export default function InstallmentsPage() {
                     <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>💰 মোট মূল্য (৳):</label>
                     <button
                       type="button"
-                      onClick={() => triggerFieldVoiceInput({
-                        label: 'মোট মূল্য (টাকা)',
-                        isNumeric: true,
-                        onResult: (val) => setForm(prev => ({ ...prev, totalAmount: val }))
-                      })}
+                      onClick={() => startFieldVoice('totalAmount', true, 'মোট মূল্য')}
                       style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        border: '1px solid #c7d2fe',
+                        background: activeVoiceField === 'totalAmount' ? '#ef4444' : '#eef2ff',
+                        color: activeVoiceField === 'totalAmount' ? '#fff' : '#4f46e5',
+                        border: activeVoiceField === 'totalAmount' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                         borderRadius: '6px',
-                        padding: '2px 6px',
+                        padding: '3px 7px',
                         fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '2px'
+                        gap: '3px'
                       }}
                     >
-                      <span>🎙️</span>
+                      <span>🎙️</span> {activeVoiceField === 'totalAmount' ? 'শুনছি' : 'ভয়েস'}
                     </button>
                   </div>
                   <input
@@ -621,7 +767,16 @@ export default function InstallmentsPage() {
                     onChange={(e) => setForm({ ...form, totalAmount: e.target.value })}
                     required
                     className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'totalAmount' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'totalAmount' ? '#fff5f5' : '#fff'
+                    }}
                   />
                 </div>
 
@@ -630,26 +785,22 @@ export default function InstallmentsPage() {
                     <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>💵 ডাউন পেমেন্ট (৳):</label>
                     <button
                       type="button"
-                      onClick={() => triggerFieldVoiceInput({
-                        label: 'ডাউন পেমেন্ট (টাকা)',
-                        isNumeric: true,
-                        onResult: (val) => setForm(prev => ({ ...prev, downPayment: val }))
-                      })}
+                      onClick={() => startFieldVoice('downPayment', true, 'ডাউন পেমেন্ট')}
                       style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        border: '1px solid #c7d2fe',
+                        background: activeVoiceField === 'downPayment' ? '#ef4444' : '#eef2ff',
+                        color: activeVoiceField === 'downPayment' ? '#fff' : '#4f46e5',
+                        border: activeVoiceField === 'downPayment' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                         borderRadius: '6px',
-                        padding: '2px 6px',
+                        padding: '3px 7px',
                         fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '2px'
+                        gap: '3px'
                       }}
                     >
-                      <span>🎙️</span>
+                      <span>🎙️</span> {activeVoiceField === 'downPayment' ? 'শুনছি' : 'ভয়েস'}
                     </button>
                   </div>
                   <input
@@ -658,7 +809,16 @@ export default function InstallmentsPage() {
                     value={form.downPayment}
                     onChange={(e) => setForm({ ...form, downPayment: e.target.value })}
                     className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'downPayment' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'downPayment' ? '#fff5f5' : '#fff'
+                    }}
                   />
                 </div>
               </div>
@@ -688,26 +848,22 @@ export default function InstallmentsPage() {
                     <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>🤝 জামিনদার:</label>
                     <button
                       type="button"
-                      onClick={() => triggerFieldVoiceInput({
-                        label: 'জামিনদারের নাম',
-                        isNumeric: false,
-                        onResult: (val) => setForm(prev => ({ ...prev, guarantorName: val }))
-                      })}
+                      onClick={() => startFieldVoice('guarantorName', false, 'জামিনদারের নাম')}
                       style={{
-                        background: '#eef2ff',
-                        color: '#4f46e5',
-                        border: '1px solid #c7d2fe',
+                        background: activeVoiceField === 'guarantorName' ? '#ef4444' : '#eef2ff',
+                        color: activeVoiceField === 'guarantorName' ? '#fff' : '#4f46e5',
+                        border: activeVoiceField === 'guarantorName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
                         borderRadius: '6px',
-                        padding: '2px 6px',
+                        padding: '3px 7px',
                         fontSize: '11px',
                         fontWeight: '800',
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '2px'
+                        gap: '3px'
                       }}
                     >
-                      <span>🎙️</span>
+                      <span>🎙️</span> {activeVoiceField === 'guarantorName' ? 'শুনছি' : 'ভয়েস'}
                     </button>
                   </div>
                   <input
@@ -715,7 +871,16 @@ export default function InstallmentsPage() {
                     placeholder="জামিনদারের নাম"
                     value={form.guarantorName}
                     onChange={(e) => setForm({ ...form, guarantorName: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: activeVoiceField === 'guarantorName' ? '2px solid #ef4444' : '1.5px solid #cbd5e1',
+                      fontSize: '13.5px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      background: activeVoiceField === 'guarantorName' ? '#fff5f5' : '#fff'
+                    }}
                   />
                 </div>
               </div>
@@ -768,7 +933,7 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {/* COLLECT PAYMENT MODAL WITH VOICE */}
+      {/* COLLECT PAYMENT MODAL WITH DIRECT VOICE */}
       {collectModalItem && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -780,7 +945,7 @@ export default function InstallmentsPage() {
               <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
                 💵 কিস্তির টাকা জমা গ্রহণ
               </h3>
-              <button onClick={() => setCollectModalItem(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setCollectModalItem(null); stopFieldVoice(); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', marginBottom: '14px', fontSize: '13px' }}>
@@ -795,18 +960,14 @@ export default function InstallmentsPage() {
                   <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>জমার পরিমাণ (৳):</label>
                   <button
                     type="button"
-                    onClick={() => triggerFieldVoiceInput({
-                      label: 'জমার পরিমাণ',
-                      isNumeric: true,
-                      onResult: (val) => setPaymentAmount(val)
-                    })}
+                    onClick={() => startFieldVoice('paymentAmount', true, 'জমার পরিমাণ')}
                     style={{
-                      background: '#ecfdf5',
-                      color: '#059669',
-                      border: '1px solid #a7f3d0',
+                      background: activeVoiceField === 'paymentAmount' ? '#ef4444' : '#ecfdf5',
+                      color: activeVoiceField === 'paymentAmount' ? '#fff' : '#059669',
+                      border: activeVoiceField === 'paymentAmount' ? '1px solid #dc2626' : '1px solid #a7f3d0',
                       borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '11px',
+                      padding: '3px 8px',
+                      fontSize: '11.5px',
                       fontWeight: '800',
                       cursor: 'pointer',
                       display: 'inline-flex',
@@ -814,7 +975,7 @@ export default function InstallmentsPage() {
                       gap: '4px'
                     }}
                   >
-                    <span>🎙️</span> মুখে বলুন
+                    <span>🎙️</span> {activeVoiceField === 'paymentAmount' ? '⏹ শুনছি...' : 'মুখে বলুন'}
                   </button>
                 </div>
                 <input
@@ -823,7 +984,17 @@ export default function InstallmentsPage() {
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   required
                   className="num-font"
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #10b981', fontSize: '18px', fontWeight: '900', outline: 'none', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: activeVoiceField === 'paymentAmount' ? '2px solid #ef4444' : '1.5px solid #10b981',
+                    fontSize: '18px',
+                    fontWeight: '900',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: activeVoiceField === 'paymentAmount' ? '#fff5f5' : '#fff'
+                  }}
                 />
               </div>
 

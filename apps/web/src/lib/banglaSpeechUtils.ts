@@ -53,11 +53,6 @@ export function isEchoedTTSResponse(text: string): boolean {
 export function extractTranscriptFromEvent(event: any): { fullTranscript: string; isFinal: boolean; isDistantNoise?: boolean } {
   if (!event || !event.results) return { fullTranscript: '', isFinal: false };
 
-  // If TTS is actively speaking, drop the microphone event immediately to prevent feedback loop
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis.speaking) {
-    return { fullTranscript: '', isFinal: false };
-  }
-
   let finalTranscript = '';
   let interimTranscript = '';
   let hasFinal = false;

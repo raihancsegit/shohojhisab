@@ -73,7 +73,6 @@ export default function VoiceFieldHUD() {
 
     try {
       playMicStartSound();
-      voiceProximityManager.start().catch((err) => console.warn('Proximity start warning:', err));
       const rec = new SpeechRecognition();
       rec.lang = 'bn-BD';
       rec.continuous = true;
@@ -146,7 +145,6 @@ export default function VoiceFieldHUD() {
   };
 
   const stopListening = () => {
-    voiceProximityManager.stop();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     isListeningRef.current = false;
     setIsListening(false);
