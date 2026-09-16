@@ -212,8 +212,8 @@ export default function VoiceAssistant() {
         console.log('[VoiceAssistant] Running offline fallback AI command...');
       }
 
-      // Offline Engine Fallback
-      if (!data) {
+      // Offline Engine Fallback if server failed or offline
+      if (!data || !data.success) {
         data = executeOfflineAiShopCommand(tenant?.id || 'tenant-1', query, savedAssistantName);
       }
 
@@ -384,99 +384,79 @@ export default function VoiceAssistant() {
               </button>
             </form>
           )}
+
+          {/* Quick Action Chips inside the opened modal */}
+          {feedbackType === 'listening' && (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '5px',
+              marginTop: '4px'
+            }}>
+              {quickOfflineChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => stopAndExecute(chip.cmd)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    color: '#e0e7ff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* 📖 Direct Link to Voice Guide */}
-      {feedbackType === 'listening' && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          maxWidth: '340px',
-          animation: 'fadeInUp 0.15s ease'
-        }}>
-          <Link
-            href="/voice-guide"
-            onClick={cancelVoice}
-            style={{
-              background: 'rgba(5, 150, 105, 0.95)',
-              color: '#ecfdf5',
-              border: '1px solid rgba(110, 231, 183, 0.4)',
-              borderRadius: '12px',
-              padding: '5px 12px',
-              fontSize: '11.5px',
-              fontWeight: '700',
-              textDecoration: 'none',
-              backdropFilter: 'blur(6px)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            📖 সকল ভয়েস কমান্ড গাইড →
-          </Link>
-        </div>
-      )}
-
-      {/* 🎙️ Floating Smart Voice Button */}
+      {/* 🎙️ Floating Circular FAB (Pure Round Button, No Text) */}
       <button
         type="button"
         onClick={() => {
-          if (isListening) {
-            if (latestTranscriptRef.current) {
-              stopAndExecute(latestTranscriptRef.current);
-            } else {
-              cancelVoice();
-            }
+          if (feedbackType) {
+            cancelVoice();
           } else {
             startListening();
           }
         }}
         style={{
-          height: '46px',
-          padding: isListening ? '0 18px' : '0 16px 0 12px',
-          borderRadius: '99px',
+          width: '54px',
+          height: '54px',
+          borderRadius: '50%',
           background: isListening
             ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-            : 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+            : 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
           color: '#ffffff',
-          border: '2px solid rgba(255, 255, 255, 0.35)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-          fontWeight: '900',
+          border: '2.5px solid rgba(255, 255, 255, 0.45)',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: '22px',
           cursor: 'pointer',
           boxShadow: isListening
-            ? '0 0 20px rgba(239, 68, 68, 0.6), 0 8px 24px rgba(239, 68, 68, 0.4)'
-            : '0 8px 24px rgba(79, 70, 229, 0.4)',
-          transition: 'all 0.2s ease',
-          transform: isListening ? 'scale(1.05)' : 'scale(1)'
+            ? '0 0 24px rgba(239, 68, 68, 0.75), 0 8px 24px rgba(0, 0, 0, 0.35)'
+            : '0 8px 24px rgba(79, 70, 229, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
+          transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          transform: isListening ? 'scale(1.08)' : 'scale(1)',
+          outline: 'none'
         }}
-        title="মুখের কথায় যেকোনো পেজে যান বা হিসাব জানুন"
+        title="স্মার্ট ডিজিটাল সহকারী"
+        aria-label="ভয়েস সহকারী"
       >
         <span style={{
-          fontSize: '18px',
           display: 'inline-block',
           animation: isListening ? 'bounce 0.8s infinite alternate' : 'none'
         }}>
-          {isListening ? '🎙️' : '🏪'}
+          🎙️
         </span>
-        <span>
-          {isListening ? 'শুনছি... (থামুন)' : 'হিসাব সহকারী'}
-        </span>
-        {!isListening && (
-          <span style={{
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '99px',
-            padding: '2px 8px',
-            fontSize: '11px',
-            fontWeight: '800'
-          }}>
-            🎙️ বলুন
-          </span>
-        )}
       </button>
     </div>
   );

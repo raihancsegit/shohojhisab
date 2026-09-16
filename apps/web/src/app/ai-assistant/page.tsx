@@ -76,8 +76,8 @@ export default function AiAssistantPage() {
         console.log('[AiAssistant] Offline mode active, running client-side AI engine...');
       }
 
-      // Offline Fallback Engine: 100% offline local processing
-      if (!data) {
+      // Offline Fallback Engine: 100% local processing if server is offline or fails
+      if (!data || !data.success) {
         data = executeOfflineAiShopCommand(currentTenantId || 'tenant-1', q, savedAssistantName);
       }
 
