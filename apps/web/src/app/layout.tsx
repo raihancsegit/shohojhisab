@@ -1212,7 +1212,40 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               </button>
             )}
 
-            {/* 4. কিস্তি আদায় */}
+            {/* 4. কিস্তি বিক্রি (ভয়েস) */}
+            {isFeatureEnabled('enableInstallments') && (
+              <button
+                onClick={() => handleAction('/installments?voice=1')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+                className="clickable-card"
+              >
+                <div style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+                  color: '#4338ca',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '24px',
+                  boxShadow: '0 2px 8px rgba(67, 56, 202, 0.18)'
+                }}>
+                  🎙️
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>কিস্তি বিক্রি</span>
+              </button>
+            )}
+
+            {/* 5. কিস্তি আদায় */}
             {isFeatureEnabled('enableInstallments') && (
               <button
                 onClick={() => handleAction('/installments')}

@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import FeatureGate from '../../components/FeatureGate';
 import DataLoader from '../../components/DataLoader';
+import VoiceInstallmentModal from '../../components/VoiceInstallmentModal';
 
 export default function InstallmentsPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
 
   const [installments, setInstallments] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
@@ -17,10 +20,21 @@ export default function InstallmentsPage() {
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [collectModalItem, setCollectModalItem] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Auto-trigger voice if ?voice=1
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('voice') === '1') {
+        setShowVoiceModal(true);
+      }
+    }
+  }, []);
 
   // New Installment Form
   const [form, setForm] = useState({
@@ -51,8 +65,21 @@ export default function InstallmentsPage() {
     setLoading(false);
   };
 
+  const loadAuxData = async () => {
+    if (!currentTenantId) return;
+    try {
+      const [cRes, pRes] = await Promise.all([
+        fetch(`/api/customers?tenantId=${currentTenantId}`),
+        fetch(`/api/products?tenantId=${currentTenantId}`)
+      ]);
+      if (cRes.ok) setCustomers(await cRes.json());
+      if (pRes.ok) setProducts(await pRes.json());
+    } catch (e) {}
+  };
+
   useEffect(() => {
     loadInstallments();
+    loadAuxData();
   }, [currentTenantId]);
 
   // Handle Add Installment
@@ -167,25 +194,47 @@ export default function InstallmentsPage() {
           </span>
         </div>
 
-        <button
-          onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
-          style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-            color: '#fff',
-            border: 'none',
-            padding: '7px 13px',
-            borderRadius: '10px',
-            fontWeight: '800',
-            fontSize: '12.5px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
-          }}
-        >
-          <span>➕</span> নতুন কিস্তি বিক্রি
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => { setShowVoiceModal(true); triggerHaptic('medium'); }}
+            style={{
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '7px 13px',
+              borderRadius: '10px',
+              fontWeight: '800',
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 10px rgba(239, 68, 68, 0.35)'
+            }}
+          >
+            <span style={{ fontSize: '15px' }}>🎙️</span> মুখে বলে কিস্তি এন্ট্রি
+          </button>
+
+          <button
+            onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '7px 13px',
+              borderRadius: '10px',
+              fontWeight: '800',
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+            }}
+          >
+            <span>➕</span> নতুন কিস্তি বিক্রি
+          </button>
+        </div>
       </div>
 
       {notice && (
@@ -411,6 +460,41 @@ export default function InstallmentsPage() {
               <button onClick={() => setShowAddModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
             </div>
 
+            {/* Quick Voice Auto-Fill Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+              border: '1.5px dashed #6366f1',
+              borderRadius: '14px',
+              padding: '10px 14px',
+              marginBottom: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <div>
+                <strong style={{ fontSize: '12px', color: '#312e81', display: 'block' }}>🎙️ মুখে বলে দ্রুত ফর্ম পূরণ করবেন?</strong>
+                <span style={{ fontSize: '11px', color: '#4338ca' }}>১টি বাক্যে সব তথ্য অটো ফিল হবে</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowAddModal(false); setShowVoiceModal(true); triggerHaptic('medium'); }}
+                style={{
+                  background: '#4f46e5',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontWeight: '800',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                ভয়েস চালু ➔
+              </button>
+            </div>
+
             <form onSubmit={handleAddSubmit} style={{ display: 'grid', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>গ্রাহকের নাম:</label>
@@ -606,6 +690,18 @@ export default function InstallmentsPage() {
           </div>
         </div>
       )}
+
+      {/* 🎙️ DEDICATED BENGALI VOICE INSTALLMENT MODAL */}
+      <VoiceInstallmentModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        currentTenantId={currentTenantId || ''}
+        existingCustomers={customers}
+        existingProducts={products}
+        onInstallmentCreated={loadInstallments}
+        speakAnnouncement={speakAnnouncement}
+        triggerHaptic={triggerHaptic}
+      />
 
     </div>
     </FeatureGate>

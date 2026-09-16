@@ -6466,10 +6466,11 @@ fastify.post('/api/installments', async (request, reply) => {
     notes
   } = body;
 
-  if (!tenantId || !customerName || !customerPhone || !productName || !totalAmount) {
-    return reply.status(400).send({ error: 'প্রয়োজনীয় তথ্য অনুপস্থিত' });
+  if (!tenantId || !customerName || !productName || !totalAmount) {
+    return reply.status(400).send({ error: 'গ্রাহকের নাম, পণ্যের নাম এবং মোট মূল্য আবশ্যক' });
   }
 
+  const finalCustomerPhone = (customerPhone && String(customerPhone).trim()) ? String(customerPhone).trim() : '01700000000';
   const id = 'inst-' + uuidv4().slice(0, 8);
   const numTotal = Number(totalAmount) || 0;
   const numDown = Number(downPayment) || 0;
@@ -6492,7 +6493,7 @@ fastify.post('/api/installments', async (request, reply) => {
         paid_months, start_date, next_due_date, status, notes, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      id, tenantId, customerName, customerPhone, customerAddress || '',
+      id, tenantId, customerName, finalCustomerPhone, customerAddress || '',
       guarantorName || '', guarantorPhone || '', productName, numTotal,
       numDown, remainingDue, monthlyInstallment, numMonths,
       0, startDate.toISOString().split('T')[0], nextDueDate.toISOString().split('T')[0],
