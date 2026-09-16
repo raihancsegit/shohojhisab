@@ -14,6 +14,7 @@ import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { getVaultData, saveVaultSnapshot } from '../../lib/dataVault';
+import { queueOfflineAction } from '../../lib/offlineDataLayer';
 
 export default function ProductsPage() {
   const { tenant, speakAnnouncement } = useAuth();
@@ -154,12 +155,7 @@ export default function ProductsPage() {
           setNotice(`✓ "${banglaName}" সফলভাবে আপডেট হয়েছে!`);
           setShowModal(false);
         } else {
-          const errData = await res.json().catch(() => ({}));
-          if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
-            alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
-          } else {
-            alert(errData.error || errData.message || 'পণ্য আপডেট করতে সমস্যা হয়েছে');
-          }
+          throw new Error('Server error');
         }
       } else {
         const res = await fetch('/api/products', {
@@ -170,19 +166,40 @@ export default function ProductsPage() {
         if (res.ok) {
           await loadProducts();
           setNotice(`✓ নতুন পণ্য "${banglaName}" সফলভাবে যুক্ত হয়েছে!`);
-          speakAnnouncement(`নতুন পণ্য ${banglaName} ${sellingPrice} টাকা যুক্ত হয়েছে`);
+          speakAnnouncement(`নতুন পণ্য ${banglaName} ${sellingPrice} টাকা যুক্ত হয়েছে`, undefined, true);
           setShowModal(false);
         } else {
-          const errData = await res.json().catch(() => ({}));
-          if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
-            alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
-          } else {
-            alert(errData.error || errData.message || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
-          }
+          throw new Error('Server error');
         }
       }
     } catch (e) {
-      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+      // 🟢 Offline Fallback
+      if (editingProd) {
+        queueOfflineAction({
+          type: 'update_product',
+          payload
+        });
+        setProducts(prev => {
+          const updated = prev.map(p => p.id === editingProd.id ? { ...p, ...payload } : p);
+          saveVaultSnapshot(currentTenantId, { products: updated });
+          return updated;
+        });
+        setNotice(`🟢 অফলাইন মোড: "${banglaName}" পণ্য আপডেট হয়েছে!`);
+        setShowModal(false);
+      } else {
+        queueOfflineAction({
+          type: 'add_product',
+          payload
+        });
+        setProducts(prev => {
+          const updated = [payload, ...prev];
+          saveVaultSnapshot(currentTenantId, { products: updated });
+          return updated;
+        });
+        setNotice(`🟢 অফলাইন মোড: নতুন পণ্য "${banglaName}" তালিকায় যুক্ত হয়েছে!`);
+        speakAnnouncement(`নতুন পণ্য ${banglaName} অফলাইনে যুক্ত হয়েছে`, undefined, true);
+        setShowModal(false);
+      }
     } finally {
       setSubmitting(false);
       setTimeout(() => setNotice(''), 4000);

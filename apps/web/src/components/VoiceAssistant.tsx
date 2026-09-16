@@ -129,6 +129,11 @@ export default function VoiceAssistant() {
           setFeedbackText('মাইক্রোফোন পারমিশন বন্ধ আছে। ব্রাউজার সেটিংসে গিয়ে অনুমতি দিন।');
           setIsListening(false);
           isListeningRef.current = false;
+        } else if (err.error === 'network' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+          setFeedbackType('listening');
+          setFeedbackText('🟢 অফলাইন মোড: নিচের বাটনে ট্যাপ করুন');
+          setIsListening(false);
+          isListeningRef.current = false;
         } else if (err.error !== 'no-speech') {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -155,7 +160,8 @@ export default function VoiceAssistant() {
       console.error('Failed to start speech recognition:', err);
       setIsListening(false);
       isListeningRef.current = false;
-      setFeedbackType(null);
+      setFeedbackType('listening');
+      setFeedbackText('🟢 অফলাইন মোড: নিচের কুইক-কমান্ড ট্যাপ করুন');
     }
   };
 
@@ -251,22 +257,19 @@ export default function VoiceAssistant() {
       } else {
         playWarningSound();
         setFeedbackType('error');
-        setFeedbackText(data?.speech || 'কথাটি বুঝতে পারিনি। আবার বলুন।');
-        if (data?.speech) {
-          speakAnnouncement(data.speech, undefined, true);
-        }
+        setFeedbackText(data?.reply || data?.speech || 'কমান্ড বুঝতে সমস্যা হয়েছে। আবার বলুন।');
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);
-        }, 3500);
+        }, 4000);
       }
     } catch (err) {
       setIsProcessing(false);
       playWarningSound();
       setFeedbackType('error');
-      setFeedbackText('সহকারী প্রসেসে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      setFeedbackText('সহকারী চালাতে সমস্যা হয়েছে।');
       autoDismissTimerRef.current = setTimeout(() => {
         setFeedbackType(null);
-      }, 3000);
+      }, 3500);
     }
   };
 
@@ -274,89 +277,100 @@ export default function VoiceAssistant() {
     stopListeningOnly();
     setFeedbackType(null);
     setLiveTranscript('');
-    setFeedbackText('');
   };
+
+  const quickOfflineChips = [
+    { label: '📊 বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
+    { label: '📦 মোট স্টক', cmd: 'আজকের স্টক কত' },
+    { label: '📖 বাজারে বাকি', cmd: 'বাজারে মোট বাকি কত' },
+    { label: '➕ নাপা ৫০ পাতা স্টক', cmd: 'নাপা ৫০ পাতা স্টক যোগ করো' }
+  ];
 
   if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
 
   return (
     <div style={{
       position: 'fixed',
-      bottom: pathname === '/pos' ? '180px' : '76px',
-      right: '14px',
-      zIndex: 90,
+      bottom: '24px',
+      right: '24px',
+      zIndex: 9999,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
-      gap: '8px',
-      pointerEvents: 'auto'
+      gap: '8px'
     }}>
-      {/* 🗣️ Non-blocking Floating Feedback Toast/Bubble */}
+      {/* 🟢 Offline / Quick Action Pills */}
+      {feedbackType === 'listening' && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '6px',
+          justifyContent: 'flex-end',
+          maxWidth: '340px',
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          {quickOfflineChips.map((chip, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => stopAndExecute(chip.cmd)}
+              style={{
+                background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                color: '#ecfdf5',
+                border: '1px solid rgba(129, 140, 248, 0.4)',
+                borderRadius: '16px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 💬 Live Transcript / Feedback Pop-up */}
       {feedbackType && (
         <div style={{
-          background: feedbackType === 'error' ? '#991b1b' : feedbackType === 'listening' ? '#0f172a' : '#1e1b4b',
+          background: feedbackType === 'error'
+            ? 'linear-gradient(135deg, #991b1b, #7f1d1d)'
+            : feedbackType === 'success'
+              ? 'linear-gradient(135deg, #065f46, #047857)'
+              : 'linear-gradient(135deg, #1e1b4b, #312e81)',
           color: '#ffffff',
-          borderRadius: '16px',
-          padding: '10px 14px',
-          maxWidth: '320px',
-          fontSize: '12.5px',
+          padding: '10px 16px',
+          borderRadius: '20px',
+          fontSize: '13px',
           fontWeight: '700',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.35)',
-          border: '1.5px solid rgba(255, 255, 255, 0.2)',
+          maxWidth: '320px',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          animation: 'fadeInUp 0.2s ease',
-          backdropFilter: 'blur(8px)'
+          flexDirection: 'column',
+          gap: '6px',
+          animation: 'fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {feedbackType === 'listening' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }} />
-                <span style={{ color: '#93c5fd', fontSize: '11px', fontWeight: '800' }}>শুনছি...</span>
-              </div>
-            )}
-            <div style={{ marginTop: '2px', wordBreak: 'break-word', color: '#f8fafc', fontSize: '12px' }}>
-              {feedbackType === 'listening'
-                ? (liveTranscript
-                    ? `"${liveTranscript}"`
-                    : 'মুখে বলুন (যেমন: "মেমো পেজে যাও", "আজকে বিক্রি কত")')
-                : feedbackText}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '15px' }}>
+                {feedbackType === 'listening' ? '🎙️' : feedbackType === 'processing' ? '⚡' : feedbackType === 'success' ? '✅' : '⚠️'}
+              </span>
+              <span>
+                {feedbackText || (isListening ? (liveTranscript || 'কথা বলুন...') : '')}
+              </span>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
-            {feedbackType === 'listening' && liveTranscript && (
-              <button
-                type="button"
-                onClick={() => stopAndExecute(liveTranscript)}
-                style={{
-                  background: '#10b981',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  cursor: 'pointer'
-                }}
-              >
-                ✓ সম্পন্ন
-              </button>
-            )}
             <button
-              type="button"
               onClick={cancelVoice}
               style={{
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
+                background: 'transparent',
                 border: 'none',
-                borderRadius: '8px',
-                width: '24px',
-                height: '24px',
-                display: 'grid',
-                placeItems: 'center',
+                color: '#fff',
                 cursor: 'pointer',
+                opacity: 0.7,
                 fontSize: '11px'
               }}
             >
@@ -366,8 +380,8 @@ export default function VoiceAssistant() {
         </div>
       )}
 
-      {/* 📖 Direct Link to Voice Guide (without old suggestion pills) */}
-      {feedbackType === 'listening' && !liveTranscript && (
+      {/* 📖 Direct Link to Voice Guide */}
+      {feedbackType === 'listening' && (
         <div style={{
           display: 'flex',
           justifyContent: 'flex-end',

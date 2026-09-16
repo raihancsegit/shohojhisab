@@ -623,26 +623,27 @@ export default function StockPage() {
     e.preventDefault();
     if (!editingProduct) return;
     triggerHaptic('success');
+    const effectiveTenantId = currentTenantId || 'tenant-1';
+
+    const updatePayload = {
+      banglaName: editForm.banglaName,
+      name: editForm.banglaName,
+      sellingPrice: Number(editForm.sellingPrice) || 0,
+      purchasePrice: Number(editForm.purchasePrice) || 0,
+      stock: Number(editForm.stock) || 0,
+      unit: editForm.unit,
+      subUnit: editForm.subUnit.trim() || null,
+      conversionRatio: Number(editForm.conversionRatio) || 1,
+      barcode: editForm.barcode,
+      genericName: editForm.genericName || null,
+      expiryDate: editForm.expiryDate || null,
+      size: editForm.size || null,
+      color: editForm.color || null,
+      brand: editForm.brand || null,
+      warranty: editForm.warranty || null
+    };
 
     try {
-      const updatePayload = {
-        banglaName: editForm.banglaName,
-        name: editForm.banglaName,
-        sellingPrice: Number(editForm.sellingPrice) || 0,
-        purchasePrice: Number(editForm.purchasePrice) || 0,
-        stock: Number(editForm.stock) || 0,
-        unit: editForm.unit,
-        subUnit: editForm.subUnit.trim() || null,
-        conversionRatio: Number(editForm.conversionRatio) || 1,
-        barcode: editForm.barcode,
-        genericName: editForm.genericName || null,
-        expiryDate: editForm.expiryDate || null,
-        size: editForm.size || null,
-        color: editForm.color || null,
-        brand: editForm.brand || null,
-        warranty: editForm.warranty || null
-      };
-
       let res = await fetch(`/api/products/${editingProduct.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -663,58 +664,69 @@ export default function StockPage() {
         await loadStock();
         setTimeout(() => setNotice(''), 3500);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
-          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
-        } else {
-          alert(errData.error || errData.message || 'পণ্য সংরক্ষণ করতে ব্যর্থ হয়েছে');
-        }
+        throw new Error('Server error');
       }
     } catch (e) {
-      alert('⚠️ সার্ভারে সমস্যা হয়েছে। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+      // 🟢 Offline Edit Fallback
+      queueOfflineAction({
+        type: 'update_product',
+        payload: { id: editingProduct.id, ...updatePayload }
+      });
+
+      setProducts(prev => {
+        const updated = prev.map(p => p.id === editingProduct.id ? { ...p, ...updatePayload } : p);
+        saveVaultSnapshot(effectiveTenantId, { products: updated });
+        return updated;
+      });
+
+      setNotice(`🟢 অফলাইন মোড: "${editForm.banglaName}" পণ্যের তথ্য আপডেট হয়েছে!`);
+      setEditingProduct(null);
+      setTimeout(() => setNotice(''), 3500);
     }
   };
 
   // Handle Add Product Submit
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.banglaName || !addForm.sellingPrice || !currentTenantId) return;
+    if (!addForm.banglaName || !addForm.sellingPrice) return;
     triggerHaptic('success');
+    const effectiveTenantId = currentTenantId || 'tenant-1';
 
     const newProdId = 'prod-' + Date.now().toString().slice(-6);
     const barcode = addForm.barcode || '894' + Math.floor(10000000 + Math.random() * 90000000);
+    const prodPayload = {
+      id: newProdId,
+      tenantId: effectiveTenantId,
+      categoryId: tenant?.industryId || 'cat-grocery',
+      banglaName: addForm.banglaName,
+      name: addForm.banglaName,
+      sellingPrice: Number(addForm.sellingPrice) || 0,
+      purchasePrice: Number(addForm.purchasePrice) || Math.round((Number(addForm.sellingPrice) || 0) * 0.8),
+      stock: Number(addForm.stock) || 0,
+      unit: addForm.unit,
+      subUnit: addForm.subUnit.trim() || null,
+      conversionRatio: Number(addForm.conversionRatio) || 1,
+      barcode,
+      genericName: addForm.genericName || null,
+      expiryDate: addForm.expiryDate || null,
+      size: addForm.size || null,
+      color: addForm.color || null,
+      brand: addForm.brand || null,
+      batchNumber: addForm.batchNumber || null,
+      warranty: addForm.warranty || null,
+      imageEmoji: '📦'
+    };
 
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: newProdId,
-          tenantId: currentTenantId,
-          categoryId: tenant?.industryId || 'cat-grocery',
-          banglaName: addForm.banglaName,
-          name: addForm.banglaName,
-          sellingPrice: Number(addForm.sellingPrice) || 0,
-          purchasePrice: Number(addForm.purchasePrice) || Math.round((Number(addForm.sellingPrice) || 0) * 0.8),
-          stock: Number(addForm.stock) || 0,
-          unit: addForm.unit,
-          subUnit: addForm.subUnit.trim() || null,
-          conversionRatio: Number(addForm.conversionRatio) || 1,
-          barcode,
-          genericName: addForm.genericName || null,
-          expiryDate: addForm.expiryDate || null,
-          size: addForm.size || null,
-          color: addForm.color || null,
-          brand: addForm.brand || null,
-          batchNumber: addForm.batchNumber || null,
-          warranty: addForm.warranty || null,
-          imageEmoji: '📦'
-        })
+        body: JSON.stringify(prodPayload)
       });
 
       if (res.ok) {
         setNotice(`✓ নতুন পণ্য "${addForm.banglaName}" সফলভাবে তালিকায় যুক্ত হয়েছে!`);
-        speakAnnouncement(`নতুন পণ্য ${addForm.banglaName} ${addForm.sellingPrice} টাকা স্টকে যুক্ত হয়েছে`);
+        speakAnnouncement(`নতুন পণ্য ${addForm.banglaName} ${addForm.sellingPrice} টাকা স্টকে যুক্ত হয়েছে`, undefined, true);
         setShowAddModal(false);
         setAddForm({
           banglaName: '',
@@ -736,15 +748,42 @@ export default function StockPage() {
         await loadStock();
         setTimeout(() => setNotice(''), 3500);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
-          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
-        } else {
-          alert(errData.error || errData.message || 'নতুন পণ্য যুক্ত করতে সমস্যা হয়েছে');
-        }
+        throw new Error('Server error');
       }
     } catch (e) {
-      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+      // 🟢 Offline Product Add Fallback
+      queueOfflineAction({
+        type: 'add_product',
+        payload: prodPayload
+      });
+
+      setProducts(prev => {
+        const updated = [prodPayload, ...prev];
+        saveVaultSnapshot(effectiveTenantId, { products: updated });
+        return updated;
+      });
+
+      setNotice(`🟢 অফলাইন মোড: "${addForm.banglaName}" পণ্য সংরক্ষিত হয়েছে (ইন্টারনেট পেলে সিঙ্ক হবে)!`);
+      speakAnnouncement(`নতুন পণ্য ${addForm.banglaName} অফলাইনে যুক্ত হয়েছে`, undefined, true);
+      setShowAddModal(false);
+      setAddForm({
+        banglaName: '',
+        sellingPrice: '',
+        purchasePrice: '',
+        stock: '50',
+        unit: indId === 'cat-pharmacy' ? 'পাতা' : indId === 'cat-hardware' ? 'ফুট' : indId === 'cat-shoes' ? 'জোড়া' : indId === 'cat-restaurant' ? 'প্লেট' : indId === 'cat-tea' ? 'কাপ' : indId === 'cat-grocery' ? 'কেজি' : 'পিস',
+        subUnit: '',
+        conversionRatio: '1',
+        barcode: '',
+        genericName: '',
+        expiryDate: '',
+        size: '',
+        color: '',
+        brand: '',
+        batchNumber: '',
+        warranty: ''
+      });
+      setTimeout(() => setNotice(''), 4500);
     }
   };
 

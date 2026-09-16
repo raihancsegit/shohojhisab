@@ -64,12 +64,25 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  const normalized = parseBengaliNumbers(text.toLowerCase());
+  // Clean emojis, punctuation and normalize
+  const cleanedText = text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}?？!।,:;]/gu, '').trim();
+  const normalized = parseBengaliNumbers(cleanedText.toLowerCase());
+
   const vault = getVaultData(tenantId) || { tenantId, updatedAt: new Date().toISOString() };
-  const products: any[] = vault.products || [];
-  const sales: any[] = vault.sales || [];
-  const customers: any[] = vault.customers || [];
-  const expenses: any[] = vault.expenses || [];
+  let products: any[] = vault.products || [];
+  let sales: any[] = vault.sales || [];
+  let customers: any[] = vault.customers || [];
+  let expenses: any[] = vault.expenses || [];
+
+  // If vault is completely empty, initialize default mock data so assistant works immediately
+  if (products.length === 0) {
+    products = [
+      { id: 'p-def-1', name: 'নাপা এক্সট্রা', banglaName: 'নাপা এক্সট্রা', sellingPrice: 30, purchasePrice: 24, stock: 45, unit: 'পাতা' },
+      { id: 'p-def-2', name: 'সয়াবিন তেল', banglaName: 'সয়াবিন তেল', sellingPrice: 180, purchasePrice: 165, stock: 12, unit: 'লিটার' },
+      { id: 'p-def-3', name: 'চিনি', banglaName: 'চিনি', sellingPrice: 135, purchasePrice: 120, stock: 30, unit: 'কেজি' }
+    ];
+    saveVaultSnapshot(tenantId, { products });
+  }
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todaySales = sales.filter((s: any) => (s.createdAt || s.created_at || '').startsWith(todayStr));
@@ -164,7 +177,22 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  // 4. Quick Stock Addition Command (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
+  // 4. Overall Stock Query (যেমন: "আজকের স্টক কত?" / "স্টক কত আছে")
+  if (/স্টক কত|মোট স্টক|স্টকের হিসাব|স্টক রিপোর্ট|মালের হিসাব|আজকের স্টক/i.test(normalized)) {
+    const totalStockCount = products.reduce((acc, p) => acc + Number(p.stock || 0), 0);
+    const lowItems = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || p.low_stock_threshold || 5));
+    const speech = `দোকানে সর্বমোট ${products.length}টি পণ্যের ${totalStockCount}টি আইটেম স্টকে আছে।${lowItems.length > 0 ? ` এর মধ্যে ${lowItems.length}টি পণ্যের স্টক কম।` : ''}`;
+    return {
+      success: true,
+      reply: `📦 **দোকানের মোট স্টক ইনভেন্টরি:**\n• মোট আইটেম সংখ্যা: ${totalStockCount}টি\n• ভিন্ন ভিন্ন পণ্য: ${products.length} প্রকার\n• লো-স্টক অ্যালার্ট: ${lowItems.length}টি পণ্য\n\n🟢 *অফলাইন ইনভেন্টরি ডাটা*`,
+      speech,
+      navigateTo: '/stock',
+      actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+      isOffline: true
+    };
+  }
+
+  // 5. Quick Stock Addition Command (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
   const stockAddMatch = normalized.match(/(.+?)\s+(\d+)\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বক্স|ডজন|টি)?\s*(স্টক যোগ|স্টকে তোল|স্টকে ঢুকা|মাল তোল|স্টক)/i);
   if (stockAddMatch) {
     const prodSearch = stockAddMatch[1].replace(/স্টক|মাল|যোগ|নতুন/g, '').trim();
@@ -172,35 +200,85 @@ export function executeOfflineAiShopCommand(
     const unit = stockAddMatch[3] || 'পিস';
 
     if (prodSearch && qty > 0) {
-      const matchedProd = products.find(p => (p.banglaName || p.name || '').toLowerCase().includes(prodSearch.toLowerCase()));
-      if (matchedProd) {
-        const oldStock = Number(matchedProd.stock || 0);
-        const newStock = oldStock + qty;
-        matchedProd.stock = newStock;
-
-        // Update local vault and queue outbox
-        saveVaultSnapshot(tenantId, { products });
-        queueOfflineAction({
-          type: 'update_product',
-          payload: { id: matchedProd.id, stock: newStock }
-        });
-
-        const reply = `✓ "${matchedProd.banglaName || matchedProd.name}" এর স্টকে ${qty} ${unit} যোগ হয়েছে! (নতুন স্টক: ${newStock} ${unit})`;
-        const speech = `${matchedProd.banglaName || matchedProd.name} এর স্টকে ${qty} ${unit} যোগ হয়েছে।`;
-        return {
-          success: true,
-          reply,
-          speech,
-          action: 'trigger_add_stock',
-          navigateTo: '/stock',
-          actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
-          isOffline: true
+      let matchedProd = products.find(p => (p.banglaName || p.name || '').toLowerCase().includes(prodSearch.toLowerCase()));
+      if (!matchedProd) {
+        matchedProd = {
+          id: `prod-off-${Date.now()}`,
+          tenantId,
+          name: prodSearch,
+          banglaName: prodSearch,
+          sellingPrice: 50,
+          purchasePrice: 40,
+          stock: qty,
+          unit
         };
+        products.push(matchedProd);
+      } else {
+        const oldStock = Number(matchedProd.stock || 0);
+        matchedProd.stock = oldStock + qty;
       }
+
+      // Update local vault and queue outbox
+      saveVaultSnapshot(tenantId, { products });
+      queueOfflineAction({
+        type: 'update_product',
+        payload: { id: matchedProd.id, stock: matchedProd.stock, reason: `অফলাইন স্টক যোগ: ${qty} ${unit}` }
+      });
+
+      const reply = `✓ "${matchedProd.banglaName || matchedProd.name}" এর স্টকে ${qty} ${unit} যোগ হয়েছে! (নতুন স্টক: ${matchedProd.stock} ${unit})`;
+      const speech = `${matchedProd.banglaName || matchedProd.name} এর স্টকে ${qty} ${unit} যোগ হয়েছে।`;
+      return {
+        success: true,
+        reply,
+        speech,
+        action: 'trigger_add_stock',
+        navigateTo: '/stock',
+        actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
+        isOffline: true
+      };
     }
   }
 
-  // 5. Customer Due Entry (যেমন: "রহিম ভাই ৫০০ টাকা বাকি নিল")
+  // 6. Customer Due Payment / জমা আদায় (যেমন: "রিয়ান ২০ টাকা জমা দিল")
+  const payMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(জমা দিল|পরিশোধ করল|দিল|জমা করলো|জমা)/i);
+  if (payMatch) {
+    const custName = payMatch[1].replace(/ভাই|চাচা|মামা|এর|কে/g, '').trim();
+    const amount = Number(payMatch[2]);
+
+    if (custName && amount > 0) {
+      let cust = customers.find(c => (c.name || '').toLowerCase().includes(custName.toLowerCase()));
+      if (!cust) {
+        cust = {
+          id: `cust-off-${Date.now()}`,
+          tenantId,
+          name: custName,
+          phone: '',
+          totalDue: 0
+        };
+        customers.push(cust);
+      } else {
+        cust.totalDue = Math.max(0, Number(cust.totalDue || 0) - amount);
+      }
+
+      saveVaultSnapshot(tenantId, { customers });
+      queueOfflineAction({
+        type: 'customer_payment',
+        payload: { customerId: cust.id, customerName: cust.name, amount, note: 'অফলাইন জমা গ্রহণ' }
+      });
+
+      const speech = `${cust.name} এর জমা ${amount} টাকা গ্রহণ করা হয়েছে। বর্তমান বকেয়া ${cust.totalDue} টাকা।`;
+      return {
+        success: true,
+        reply: `✓ **${cust.name}** ৳${amount} টাকা পরিশোধ করেছেন!\n(বর্তমান বকেয়া: ৳${cust.totalDue} টাকা)\n\n🟢 *অফলাইনে সংরক্ষিত হয়েছে*`,
+        speech,
+        navigateTo: '/khata',
+        actionLink: { text: 'বাকি খাতা দেখুন →', href: '/khata' },
+        isOffline: true
+      };
+    }
+  }
+
+  // 7. Customer Due Entry (যেমন: "রহিম ভাই ৫০০ টাকা বাকি নিল" / "রিয়ানের ২০ টাকা বাকি")
   const dueMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(বাকি নিল|বাকি লেখো|বাকি|বাকি দিলো)/i);
   if (dueMatch) {
     const custName = dueMatch[1].replace(/ভাই|চাচা|মামা|এর|কে/g, '').trim();
@@ -239,7 +317,7 @@ export function executeOfflineAiShopCommand(
     }
   }
 
-  // 6. Expense Entry (যেমন: "চা নাস্তা ৬০ টাকা খরচ লেখো")
+  // 8. Expense Entry (যেমন: "চা নাস্তা ৬০ টাকা খরচ লেখো")
   const expMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(খরচ লেখো|খরচ|ব্যয়)/i);
   if (expMatch) {
     const expTitle = expMatch[1].replace(/টাকা|খরচ|লেখো/g, '').trim() || 'দোকান খরচ';
@@ -275,8 +353,8 @@ export function executeOfflineAiShopCommand(
     }
   }
 
-  // 7. Market Total Due Query (বাজারে মোট বাকি কত)
-  if (/মোট বাকি|বাজারে কত বাকি|কাস্টমার বাকি/i.test(normalized)) {
+  // 9. Market Total Due Query (বাজারে মোট বাকি কত)
+  if (/মোট বাকি|বাজারে কত বাকি|কাস্টমার বাকি|বকেয়া/i.test(normalized)) {
     const totalDue = customers.reduce((acc, c) => acc + (Number(c.totalDue || c.total_due || 0)), 0);
     const speech = `বাজারে মোট বকেয়া বাকি আছে ৳${totalDue.toLocaleString('en-US')} টাকা।`;
     return {
@@ -292,7 +370,7 @@ export function executeOfflineAiShopCommand(
   // Default Fallback
   return {
     success: true,
-    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nআপনি বলতে পারেন:\n• "আজকের বিক্রি কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"\n• "কোন মালের স্টক কম"`,
+    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nআপনি বলতে পারেন:\n• "আজকের বিক্রি কত"\n• "আজকের স্টক কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"`,
     speech: 'দোকানের বিক্রি, বাকি, খরচ বা স্টকের হিসাব জানতে যেকোনো কিছু বলুন।',
     isOffline: true
   };

@@ -95,7 +95,7 @@ export default function AiAssistantPage() {
 
         // Speak reply out loud if speech provided
         if (data.speech) {
-          speakAnnouncement(data.speech);
+          speakAnnouncement(data.speech, undefined, true);
         }
 
         // Trigger real-time refresh event across open pages
@@ -193,6 +193,9 @@ export default function AiAssistantPage() {
 
       recognition.onerror = (err: any) => {
         console.warn('Speech recognition error:', err.error);
+        if (err.error === 'network') {
+          setLiveTranscript('⚠️ অফলাইনে ক্রোম মাইক কাজ না করলে নিচে যেকোনো বাটনে ট্যাপ করুন বা টাইপ করুন');
+        }
         if (err.error !== 'no-speech') {
           setIsListening(false);
         }

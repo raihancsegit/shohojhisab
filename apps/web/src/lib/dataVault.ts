@@ -19,12 +19,34 @@ export interface VaultPayload {
 
 const VAULT_PREFIX = 'shohoj_vault_';
 
-export function getVaultData(tenantId: string): VaultPayload | null {
-  if (typeof window === 'undefined' || !tenantId) return null;
+export function getVaultData(tenantId?: string): VaultPayload | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(VAULT_PREFIX + tenantId);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    if (tenantId) {
+      const raw = localStorage.getItem(VAULT_PREFIX + tenantId);
+      if (raw) return JSON.parse(raw);
+    }
+    // Fallback 1: check active tenant from localStorage
+    try {
+      const activeRaw = localStorage.getItem('lbos_active_tenant');
+      if (activeRaw) {
+        const t = JSON.parse(activeRaw);
+        if (t?.id) {
+          const raw = localStorage.getItem(VAULT_PREFIX + t.id);
+          if (raw) return JSON.parse(raw);
+        }
+      }
+    } catch (e) {}
+
+    // Fallback 2: search any shohoj_vault_ key in localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(VAULT_PREFIX)) {
+        const raw = localStorage.getItem(k);
+        if (raw) return JSON.parse(raw);
+      }
+    }
+    return null;
   } catch (e) {
     console.warn('[Vault] Failed to read vault from localStorage', e);
     return null;
