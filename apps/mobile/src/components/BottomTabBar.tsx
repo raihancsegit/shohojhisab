@@ -7,13 +7,20 @@ import {
   Platform
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useNav } from '../context/NavContext';
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   const { theme, themeMode, triggerHaptic } = useAuth();
   const { openActionSheet } = useNav();
   const isDark = themeMode === 'dark';
+
+  // Compute safe bottom padding based on device navigation bar (hardware/soft 3-button or gesture bar)
+  const bottomInset = insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 14 : 20);
+  const bottomPadding = bottomInset + (Platform.OS === 'android' ? 10 : 6);
+  const tabHeight = 58 + bottomPadding;
 
   // Tab configurations: index, khata, [CENTER PLUS], stock, pos
   const tabs = [
@@ -24,15 +31,19 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
     { name: 'pos', label: 'বিক্রি', icon: '🛒', routeIndex: 1 },
   ];
 
+  const primaryColor = theme.primaryColor || '#059669';
+
   return (
     <View style={[
       styles.tabContainer,
       {
         backgroundColor: isDark ? '#0f172a' : '#ffffff',
         borderTopColor: isDark ? '#1e293b' : '#e2e8f0',
+        height: tabHeight,
+        paddingBottom: bottomPadding,
       }
     ]}>
-      {tabs.map((tab, idx) => {
+      {tabs.map((tab) => {
         if (tab.isCenter) {
           return (
             <TouchableOpacity
@@ -40,7 +51,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               style={[
                 styles.centerButton,
                 {
-                  backgroundColor: theme.primaryColor || '#4f46e5',
+                  backgroundColor: primaryColor,
                   borderColor: isDark ? '#0f172a' : '#ffffff'
                 }
               ]}
@@ -71,7 +82,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           }
         };
 
-        const activeColor = theme.primaryColor || '#4f46e5';
+        const activeColor = primaryColor;
         const inactiveColor = isDark ? '#94a3b8' : '#64748b';
 
         return (
@@ -104,16 +115,14 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 88 : 72,
-    paddingBottom: Platform.OS === 'ios' ? 26 : 14,
     paddingTop: 8,
     alignItems: 'center',
     justifyContent: 'space-around',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
-    elevation: 12,
+    elevation: 16,
     zIndex: 40,
   },
   tabItem: {
@@ -139,13 +148,13 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -26,
+    marginTop: -34,
     borderWidth: 3.5,
-    shadowColor: '#4f46e5',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 10,
   },
   centerButtonText: {
     fontSize: 28,
@@ -154,3 +163,4 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
 });
+

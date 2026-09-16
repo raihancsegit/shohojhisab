@@ -37,9 +37,21 @@ export function speakNativeText(text: string, onDone?: () => void) {
     Speech.speak(clean, {
       language: 'bn-BD',
       pitch: 1.0,
-      rate: 1.0,
+      rate: 0.95,
       onDone,
-      onError: onDone
+      onError: () => {
+        try {
+          Speech.speak(clean, {
+            language: 'bn-IN',
+            pitch: 1.0,
+            rate: 0.95,
+            onDone,
+            onError: onDone
+          });
+        } catch (e) {
+          if (onDone) onDone();
+        }
+      }
     });
   } catch (e) {
     if (onDone) onDone();

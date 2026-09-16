@@ -1,68 +1,108 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { executeMobileAiCommand } from '../lib/offlineAiEngine';
 import { playNativeChime, speakNativeText } from '../lib/offlineAudioEngine';
 
+const { width } = Dimensions.get('window');
+
 export default function FloatingVoiceFab() {
   const router = useRouter();
-  const { tenant, theme, themeMode } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { tenant, theme, themeMode, triggerHaptic } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [lastSpeech, setLastSpeech] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const isDark = themeMode === 'dark';
 
-  const quickCommands = [
-    { label: '📊 আজকের বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
-    { label: '📦 মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
-    { label: '🛒 POS কাউন্টার', cmd: 'পস' },
-    { label: '📖 বাকির খাতা', cmd: 'খাতা' },
-    { label: '➕ নাপা ৫০ পাতা স্টক', cmd: 'নাপা ৫০ পাতা স্টক যোগ করো' },
-    { label: '☕ চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' }
+  const categorizedCommands = [
+    {
+      category: '🛒 বিক্রয় ও কুইক POS',
+      items: [
+        { label: 'তেল ১ লিটার বিক্রি করো', cmd: 'তেল ১ লিটার বিক্রি করো' },
+        { label: 'চিনি ২ কেজি বিক্রি করো', cmd: 'চিনি ২ কেজি বিক্রি করো' },
+        { label: 'নাপা ৫০ পাতা বিক্রি', cmd: 'নাপা ৫০ পাতা বিক্রি' }
+      ]
+    },
+    {
+      category: '📖 বাকির খাতা ও কালেকশন',
+      items: [
+        { label: 'রহিমের বাকিতে ৫০০ টাকা লেখো', cmd: 'রহিমের বাকিতে ৫০০ টাকা লেখো' },
+        { label: 'করিমের ২০০ টাকা জমা নাও', cmd: 'করিমের ২০০ টাকা জমা নাও' },
+        { label: 'মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো' }
+      ]
+    },
+    {
+      category: '📊 রিপোর্ট ও হিসাব চেক',
+      items: [
+        { label: 'আজকের বিক্রি ও লাভ কত?', cmd: 'আজকের বিক্রি ও লাভ কত' },
+        { label: 'দোকানের মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
+        { label: 'চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' }
+      ]
+    }
   ];
 
   const handleRunCommand = (textToRun: string) => {
     const q = textToRun.trim();
     if (!q) return;
 
-    setIsProcessing(true);
+    triggerHaptic('medium');
     setInputText('');
     playNativeChime('beep');
 
     const result = executeMobileAiCommand(tenant.id, q);
-    setLastSpeech(result.speech || result.reply);
+    const speechText = result.speech || result.reply;
+    setLastSpeech(speechText);
 
-    speakNativeText(result.speech);
+    speakNativeText(speechText);
 
     if (result.navigateTo) {
       setTimeout(() => {
         setIsOpen(false);
         router.push(result.navigateTo as any);
-      }, 900);
+      }, 1200);
     }
-    setIsProcessing(false);
   };
+
+  const primaryColor = theme.primaryColor || '#059669';
+  const bottomInset = insets.bottom > 0 ? insets.bottom : (Platform.OS === 'android' ? 14 : 20);
+  const fabBottom = 58 + bottomInset + 16;
 
   return (
     <>
-      {/* 🎙️ Circular Floating FAB */}
+      {/* 🎙️ Sleek Circular Floating Voice Button */}
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => {
           playNativeChime('beep');
+          triggerHaptic('light');
           setIsOpen(true);
         }}
         style={[
           styles.fab,
-          { backgroundColor: theme.primaryColor || '#4f46e5' }
+          {
+            backgroundColor: primaryColor,
+            bottom: fabBottom
+          }
         ]}
       >
         <Text style={styles.fabIcon}>🎙️</Text>
       </TouchableOpacity>
 
-      {/* 🤖 Assistant Modal Sheet */}
+
+      {/* 🤖 Universal AI Assistant Modal */}
       <Modal
         visible={isOpen}
         animationType="slide"
@@ -74,10 +114,12 @@ export default function FloatingVoiceFab() {
             {/* Header */}
             <View style={styles.sheetHeader}>
               <View style={styles.headerLeft}>
-                <Text style={styles.assistantAvatar}>🤖</Text>
+                <View style={[styles.avatarBox, { backgroundColor: isDark ? '#1e293b' : '#eef2ff' }]}>
+                  <Text style={styles.assistantAvatar}>🤖</Text>
+                </View>
                 <View>
                   <Text style={[styles.sheetTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>
-                    সহজ হিসাব সহকারী
+                    সহজ হিসাব এআই সহকারী
                   </Text>
                   <Text style={styles.sheetSub}>১০০% অফলাইন অন-ডিভাইস ভয়েস ইঞ্জিন</Text>
                 </View>
@@ -90,45 +132,64 @@ export default function FloatingVoiceFab() {
             {/* Speech Response Bubble */}
             {lastSpeech ? (
               <View style={[styles.speechBubble, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}>
-                <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>🗣️ {lastSpeech}</Text>
+                <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
+                  🗣️ {lastSpeech}
+                </Text>
               </View>
             ) : null}
 
             {/* Command Input Bar */}
             <View style={styles.inputRow}>
               <TextInput
-                style={[styles.textInput, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#f8fafc' : '#0f172a', borderColor: isDark ? '#334155' : '#cbd5e1' }]}
-                placeholder="মুখে বলুন বা লিখুন (যেমন: স্টক পেজে যাও)..."
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                    color: isDark ? '#f8fafc' : '#0f172a',
+                    borderColor: isDark ? '#334155' : '#cbd5e1'
+                  }
+                ]}
+                placeholder="মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
                 placeholderTextColor="#94a3b8"
                 value={inputText}
                 onChangeText={setInputText}
                 onSubmitEditing={() => handleRunCommand(inputText)}
               />
               <TouchableOpacity
-                style={[styles.sendBtn, { backgroundColor: theme.primaryColor || '#10b981' }]}
+                style={[styles.sendBtn, { backgroundColor: primaryColor }]}
                 onPress={() => handleRunCommand(inputText)}
               >
-                <Text style={styles.sendBtnText}>বলুন</Text>
+                <Text style={styles.sendBtnText}>বলুন ▶</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Quick Prompt Chips */}
-            <Text style={[styles.chipHeading, { color: isDark ? '#94a3b8' : '#64748b' }]}>
-              ⚡ কুইক ভয়েস শর্টকাট (১-ট্যাপ কমান্ড):
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.chipScroll}
-            >
-              {quickCommands.map((q, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[styles.chipBtn, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderColor: isDark ? '#334155' : '#e2e8f0' }]}
-                  onPress={() => handleRunCommand(q.cmd)}
-                >
-                  <Text style={[styles.chipText, { color: isDark ? '#e2e8f0' : '#334155' }]}>{q.label}</Text>
-                </TouchableOpacity>
+            {/* 1-Tap Voice Commands Directory */}
+            <ScrollView style={styles.commandScroll} showsVerticalScrollIndicator={false}>
+              {categorizedCommands.map((cat, idx) => (
+                <View key={idx} style={styles.catGroup}>
+                  <Text style={[styles.catGroupTitle, { color: isDark ? '#94a3b8' : '#64748b' }]}>
+                    {cat.category}
+                  </Text>
+                  <View style={styles.chipGrid}>
+                    {cat.items.map((item, iIdx) => (
+                      <TouchableOpacity
+                        key={iIdx}
+                        style={[
+                          styles.chipBtn,
+                          {
+                            backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                            borderColor: isDark ? '#334155' : '#e2e8f0'
+                          }
+                        ]}
+                        onPress={() => handleRunCommand(item.cmd)}
+                      >
+                        <Text style={[styles.chipText, { color: isDark ? '#f1f5f9' : '#1e293b' }]}>
+                          🗣️ "{item.label}"
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               ))}
             </ScrollView>
           </View>
@@ -143,15 +204,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 84,
     right: 14,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#4f46e5',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
     borderWidth: 2,
     borderColor: '#ffffff',
@@ -169,24 +230,32 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 18,
-    paddingBottom: 32
+    maxHeight: '80%',
+    paddingBottom: 28
   },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14
+    marginBottom: 12
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10
   },
+  avatarBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
   assistantAvatar: {
-    fontSize: 26
+    fontSize: 22
   },
   sheetTitle: {
-    fontSize: 16.5,
+    fontSize: 16,
     fontWeight: '800'
   },
   sheetSub: {
@@ -195,22 +264,28 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   closeBtn: {
-    padding: 6
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   closeBtnText: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#64748b',
-    fontWeight: '700'
+    fontWeight: 'bold'
   },
   speechBubble: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 10,
+    padding: 12,
     marginBottom: 12
   },
   speechText: {
     fontSize: 13,
-    fontWeight: '700'
+    fontWeight: '700',
+    lineHeight: 18
   },
   inputRow: {
     flexDirection: 'row',
@@ -237,23 +312,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13
   },
-  chipHeading: {
+  commandScroll: {
+    maxHeight: 280
+  },
+  catGroup: {
+    marginBottom: 14
+  },
+  catGroupTitle: {
     fontSize: 11.5,
     fontWeight: '800',
-    marginBottom: 8
+    marginBottom: 6,
+    textTransform: 'uppercase'
   },
-  chipScroll: {
-    flexDirection: 'row'
+  chipGrid: {
+    gap: 6
   },
   chipBtn: {
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginRight: 8
+    paddingHorizontal: 12,
+    paddingVertical: 8
   },
   chipText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700'
   }
 });
