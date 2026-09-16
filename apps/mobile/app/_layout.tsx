@@ -36,6 +36,11 @@ export default function RootLayout() {
               <Stack.Screen name="support" options={{ title: '🎧 হেল্প এন্ড সাপোর্ট' }} />
               <Stack.Screen name="tutorials" options={{ title: '🎬 টিউটোরিয়াল ভিডিও' }} />
               <Stack.Screen name="voice-guide" options={{ title: '🎙️ ভয়েস নির্দেশিকা' }} />
+              <Stack.Screen name="notifications" options={{ title: '🔔 বিজ্ঞপ্তি ও নোটিফিকেশন' }} />
+              <Stack.Screen name="marketing" options={{ title: '📢 এসএমএস ও বাকি তাগাদা' }} />
+              <Stack.Screen name="loyalty" options={{ title: '🎁 কাস্টমার লয়্যালটি পয়েন্ট' }} />
+              <Stack.Screen name="barcode-generator" options={{ title: '🏷️ বারকোড জেনারেটর' }} />
+              <Stack.Screen name="challan-ocr" options={{ title: '📸 চালান স্ক্যানার' }} />
               <Stack.Screen name="expenses" options={{ title: '💸 ব্যয় / দৈনিক খরচ' }} />
               <Stack.Screen name="reports" options={{ title: '📊 রিপোর্টস ও লাভ-ক্ষতি' }} />
               <Stack.Screen name="products" options={{ title: '📦 পণ্য তালিকা' }} />
