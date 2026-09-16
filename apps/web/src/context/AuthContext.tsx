@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiUrl } from '../lib/config';
+import { playSynthesizedChime } from '../lib/offlineAudioEngine';
 
 export interface ShopFeatures {
   enableCustomerKhata?: boolean;
@@ -237,14 +238,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Digital Bengali Voice Soundbox (Strictly opt-in for auto-events, always available for direct assistant)
   const speakAnnouncement = (text: string, onComplete?: () => void, forceSpeak = false) => {
     try {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (typeof window === 'undefined') {
         if (onComplete) onComplete();
         return;
       }
       // If soundbox is disabled and not forced by user voice action, cancel and do not speak
       if (!isSoundboxEnabled && !forceSpeak) {
-        window.speechSynthesis.cancel();
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
         (window as any).__IS_TTS_SPEAKING__ = false;
+        if (onComplete) onComplete();
+        return;
+      }
+
+      // Play instant offline synthesized audio chime
+      if (/টাকা|বিক্রি|মেমো|পরিশোধ|জমা|ক্যাশ/i.test(text || '')) {
+        playSynthesizedChime('cash');
+      } else if (/সফল|যুক্ত|হয়েছে|যোগ/i.test(text || '')) {
+        playSynthesizedChime('success');
+      } else {
+        playSynthesizedChime('beep');
+      }
+
+      if (!('speechSynthesis' in window)) {
         if (onComplete) onComplete();
         return;
       }
