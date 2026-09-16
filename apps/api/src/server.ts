@@ -5157,9 +5157,11 @@ fastify.get('/api/customers', async (request) => {
     let lastItemsSummary = '';
     let lastDateFormatted = '';
     let lastInvoiceNo = '';
+    let recentList: any[] = [];
     const recentTransactions: Array<{
       id: string;
       date: string;
+      createdAt?: string;
       type: 'due' | 'payment';
       items: string;
       amount: number;
@@ -5167,7 +5169,7 @@ fastify.get('/api/customers', async (request) => {
     }> = [];
 
     try {
-      const recentList = getRecentSales.all(r.id, r.name, tenantId) as any[];
+      recentList = (getRecentSales.all(r.id, r.name, tenantId) as any[]) || [];
       if (recentList && recentList.length > 0) {
         lastInvoiceNo = recentList[0].invoice_no || '';
         
@@ -5192,6 +5194,7 @@ fastify.get('/api/customers', async (request) => {
           recentTransactions.push({
             id: s.id,
             date: dateFmt || 'সম্প্রতি',
+            createdAt: s.created_at,
             type: isPay ? 'payment' : 'due',
             items: summary,
             amount: amt,
@@ -5210,6 +5213,8 @@ fastify.get('/api/customers', async (request) => {
       }
     } catch (e) {}
 
+    const mostRecentCreatedAt = (recentList && recentList.length > 0) ? recentList[0].created_at : (r.updated_at || r.created_at);
+
     return {
       id: r.id,
       tenantId: r.tenant_id,
@@ -5221,8 +5226,9 @@ fastify.get('/api/customers', async (request) => {
       avatar: r.avatar || '👤',
       promiseDate: r.promise_date || '',
       createdAt: r.created_at,
-      lastDate: lastDateFormatted,
-      lastDateRaw: recentTransactions.length > 0 ? recentTransactions[0].date : r.created_at,
+      updatedAt: r.updated_at || r.created_at,
+      lastDate: lastDateFormatted || formatBDDate(mostRecentCreatedAt),
+      lastDateRaw: mostRecentCreatedAt,
       lastItemsSummary: lastItemsSummary || (Number(r.total_due) > 0 ? 'পূর্বের বকেয়া খাতা' : 'কোনো বকেয়া নেই'),
       lastInvoiceNo,
       recentTransactions

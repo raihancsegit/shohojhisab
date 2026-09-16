@@ -729,39 +729,87 @@ export default function KhataPage() {
     setVoiceCustomerListening(false);
   };
 
-  // Date Check Helpers for Filtering
-  const isTodayDate = (dateStr?: string) => {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const today = new Date();
-    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  // Helper to get YYYY-MM-DD string in Asia/Dhaka timezone
+  const getBDDateString = (dateInput?: string | Date | null): string => {
+    if (!dateInput) return '';
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) return '';
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Dhaka',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(d);
+    } catch (e) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
   };
 
-  const isYesterdayDate = (dateStr?: string) => {
+  const isTodayDate = (dateStr?: string | Date | null) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
+    const target = getBDDateString(dateStr);
+    const today = getBDDateString(new Date());
+    return Boolean(target && target === today);
+  };
+
+  const isYesterdayDate = (dateStr?: string | Date | null) => {
+    if (!dateStr) return false;
+    const target = getBDDateString(dateStr);
     const y = new Date();
     y.setDate(y.getDate() - 1);
-    return d.getDate() === y.getDate() && d.getMonth() === y.getMonth() && d.getFullYear() === y.getFullYear();
+    const yesterday = getBDDateString(y);
+    return Boolean(target && target === yesterday);
   };
 
-  const isThisWeekDate = (dateStr?: string) => {
+  const isThisWeekDate = (dateStr?: string | Date | null) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
+    const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
     if (isNaN(d.getTime())) return false;
     const now = new Date();
-    const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
-    return diffDays >= 0 && diffDays <= 7;
+    const diffTime = now.getTime() - d.getTime();
+    const diffDays = diffTime / (1000 * 3600 * 24);
+    return diffDays >= -0.5 && diffDays <= 7.5;
   };
 
-  const isThisMonthDate = (dateStr?: string) => {
+  const isThisMonthDate = (dateStr?: string | Date | null) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    const target = getBDDateString(dateStr);
+    if (!target) return false;
+    const today = getBDDateString(new Date());
+    const [targetYear, targetMonth] = target.split('-');
+    const [todayYear, todayMonth] = today.split('-');
+    return targetYear === todayYear && targetMonth === todayMonth;
+  };
+
+  const customerMatchesDateFilter = (c: any, filterType: 'today' | 'yesterday' | 'week' | 'month'): boolean => {
+    const checkFunc = {
+      today: isTodayDate,
+      yesterday: isYesterdayDate,
+      week: isThisWeekDate,
+      month: isThisMonthDate
+    }[filterType];
+
+    // 1. Check lastDateRaw
+    if (checkFunc(c.lastDateRaw)) return true;
+
+    // 2. Check recentTransactions
+    if (Array.isArray(c.recentTransactions) && c.recentTransactions.length > 0) {
+      if (c.recentTransactions.some((t: any) => checkFunc(t.createdAt || t.created_at || t.date))) {
+        return true;
+      }
+    }
+
+    // 3. Check customer updatedAt
+    if (checkFunc(c.updatedAt || c.updated_at)) return true;
+
+    // 4. Check customer createdAt
+    if (checkFunc(c.createdAt || c.created_at)) return true;
+
+    return false;
   };
 
   const handleExportKhata = () => {
@@ -793,10 +841,10 @@ export default function KhataPage() {
   const dueCustomerCount = receivableCount;
 
   // Filter Counts
-  const countToday = customers.filter(c => isTodayDate(c.lastDateRaw || c.createdAt)).length;
-  const countYesterday = customers.filter(c => isYesterdayDate(c.lastDateRaw || c.createdAt)).length;
-  const countWeek = customers.filter(c => isThisWeekDate(c.lastDateRaw || c.createdAt)).length;
-  const countMonth = customers.filter(c => isThisMonthDate(c.lastDateRaw || c.createdAt)).length;
+  const countToday = customers.filter(c => customerMatchesDateFilter(c, 'today')).length;
+  const countYesterday = customers.filter(c => customerMatchesDateFilter(c, 'yesterday')).length;
+  const countWeek = customers.filter(c => customerMatchesDateFilter(c, 'week')).length;
+  const countMonth = customers.filter(c => customerMatchesDateFilter(c, 'month')).length;
   const countDue = customers.filter(c => (Number(c.totalDue || c.total_due || 0)) > 0).length;
   const countZero = customers.filter(c => (Number(c.totalDue || c.total_due || 0)) <= 0).length;
 
@@ -815,12 +863,11 @@ export default function KhataPage() {
     }
 
     const due = Number(c.totalDue || c.total_due || 0);
-    const dateRef = c.lastDateRaw || c.createdAt;
 
-    if (selectedFilter === 'today') return isTodayDate(dateRef);
-    if (selectedFilter === 'yesterday') return isYesterdayDate(dateRef);
-    if (selectedFilter === 'week') return isThisWeekDate(dateRef);
-    if (selectedFilter === 'month') return isThisMonthDate(dateRef);
+    if (selectedFilter === 'today') return customerMatchesDateFilter(c, 'today');
+    if (selectedFilter === 'yesterday') return customerMatchesDateFilter(c, 'yesterday');
+    if (selectedFilter === 'week') return customerMatchesDateFilter(c, 'week');
+    if (selectedFilter === 'month') return customerMatchesDateFilter(c, 'month');
     if (selectedFilter === 'due') return due > 0;
     if (selectedFilter === 'zero') return due <= 0;
     return true;
