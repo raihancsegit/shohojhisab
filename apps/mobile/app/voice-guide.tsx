@@ -44,13 +44,13 @@ const COMMAND_CATEGORIES = [
 ];
 
 export default function VoiceGuideScreen() {
-  const { theme, triggerHaptic, speakAnnouncement } = useAuth();
-  const router = useRouter();
-
-  const handleTestCommand = (commandText: string) => {
-    triggerHaptic('success');
-    speakAnnouncement(`কমান্ড গৃহীত হয়েছে: ${commandText}`);
-    const parsed = parseBengaliCommand(commandText);
+    const { tenant, theme, triggerHaptic, speakAnnouncement } = useAuth();
+    const router = useRouter();
+  
+    const handleTestCommand = (commandText: string) => {
+      triggerHaptic('success');
+      speakAnnouncement(`কমান্ড গৃহীত হয়েছে: ${commandText}`);
+      const parsed = parseBengaliCommand(tenant.id, commandText);
     if (parsed.action === 'sale') {
       setTimeout(() => router.push('/pos'), 1200);
     } else if (parsed.action === 'due_add' || parsed.action === 'due_payment') {

@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { playNativeChime, speakNativeText } from '../lib/offlineAudioEngine';
-import { getLocalVaultData, saveLocalVaultSnapshot } from '../lib/offlineDataVault';
+import { getLocalVaultData, executePOSSale } from '../lib/offlineDataVault';
 
 interface VoiceItem {
   id: string;
@@ -38,7 +38,7 @@ export default function VoicePOSCalculatorModal({
   onCompleteSale
 }: VoicePOSCalculatorModalProps) {
   const insets = useSafeAreaInsets();
-  const { tenant, theme, themeMode, triggerHaptic } = useAuth();
+  const { tenant, theme, themeMode, triggerHaptic, refreshVault } = useAuth();
   const isDark = themeMode === 'dark';
   const primaryColor = theme.primaryColor || '#059669';
 
@@ -53,7 +53,6 @@ export default function VoicePOSCalculatorModal({
       speakNativeText('আল্ট্রা ভয়েস মেমো চালু হয়েছে। মুখে বলুন বা সিলেক্ট করুন।');
     }
   }, [isOpen]);
-
 
   const vault = getLocalVaultData(tenant.id);
   const products = vault.products || [];
@@ -97,7 +96,7 @@ export default function VoicePOSCalculatorModal({
     }
 
     // Parse product items
-    let matchedProd = products.find(p => text.includes(p.name) || p.name.includes(text.split(' ')[0]));
+    let matchedProd = products.find(p => (p.name && text.includes(p.name)) || (p.name && p.name.includes(text.split(' ')[0])));
     let qty = 1;
     const numMatch = text.match(/(\d+)/);
     if (numMatch) {
@@ -107,7 +106,7 @@ export default function VoicePOSCalculatorModal({
     if (matchedProd) {
       const unitPrice = matchedProd.sellingPrice || matchedProd.price || 100;
       const newItem: VoiceItem = {
-        id: `vi-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: matchedProd.id,
         name: matchedProd.name,
         unit: matchedProd.unit || 'পিস',
         quantity: qty,
@@ -152,39 +151,33 @@ export default function VoicePOSCalculatorModal({
     playNativeChime('success');
 
     const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
-    const newSale = {
-      id: `sale-${Date.now()}`,
+    
+    // Execute POS sale with stock deduction
+    const finalizedSale = executePOSSale(tenant.id, {
       invoiceNo,
       customerName: customerName || 'নগদ ক্রেতা',
-      customerPhone: '',
       items: items.map(it => ({
         id: it.id,
         name: it.name,
         unit: it.unit,
         quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        totalPrice: it.totalPrice
+        price: it.unitPrice,
+        total: it.totalPrice
       })),
       subtotal,
       discount,
-      totalAmount,
+      total: totalAmount,
       paidAmount: totalAmount,
       dueAmount: 0,
-      paymentMethod: 'cash',
-      date: new Date().toISOString().slice(0, 10),
-      createdAt: new Date().toISOString()
-    };
-
-    // Save to offline vault
-    const existingSales = vault.sales || [];
-    saveLocalVaultSnapshot(tenant.id, {
-      sales: [newSale, ...existingSales]
+      paymentMethod: 'cash'
     });
+
+    refreshVault();
 
     const announcement = `আলহামদুলিল্লাহ! ${totalAmount} টাকার মেমো সফলভাবে সম্পন্ন হয়েছে।`;
     speakNativeText(announcement);
 
-    onCompleteSale(newSale);
+    onCompleteSale(finalizedSale);
     onClose();
   };
 

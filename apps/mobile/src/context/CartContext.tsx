@@ -15,6 +15,7 @@ interface CartContextType {
   subtotal: number;
   discount: number;
   totalAmount: number;
+  totalCount: number;
   paidAmount: number;
   dueAmount: number;
   customerName: string;
@@ -39,12 +40,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   const totalAmount = Math.max(0, subtotal - discount);
+  const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const dueAmount = Math.max(0, totalAmount - paidAmount);
 
   const addToCart = (product: any, qty = 1) => {
     setCart(prev => {
       const existing = prev.find(i => i.id === product.id);
-      const price = Number(product.sellingPrice || 0);
+      const price = Number(product.price || product.sellingPrice || 0);
       if (existing) {
         return prev.map(i => {
           if (i.id === product.id) {
@@ -108,6 +110,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         discount,
         totalAmount,
+        totalCount,
         paidAmount,
         dueAmount,
         customerName,

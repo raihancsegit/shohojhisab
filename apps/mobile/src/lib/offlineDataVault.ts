@@ -8,15 +8,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface ProductItem {
   id: string;
   name: string;
+  banglaName?: string;
   category: string;
   subCategory?: string;
   price: number;
   costPrice: number;
+  sellingPrice?: number;
+  purchasePrice?: number;
   stock: number;
   unit: string;
   icon: string;
   barcode?: string;
   minStockAlert?: number;
+  lowStockThreshold?: number;
 }
 
 export interface CustomerItem {
@@ -25,6 +29,20 @@ export interface CustomerItem {
   phone: string;
   address?: string;
   totalDue: number;
+  due?: number;
+  points?: number;
+  totalPurchases?: number;
+  lastPurchaseDate?: string;
+}
+
+export interface VaultDealer {
+  id: string;
+  name: string;
+  company: string;
+  phone: string;
+  totalDue: number;
+  due?: number;
+  lastOrderDate?: string;
   lastPurchaseDate?: string;
 }
 
@@ -44,7 +62,9 @@ export interface SaleRecord {
   subtotal: number;
   discount: number;
   total: number;
+  totalAmount?: number;
   paidAmount: number;
+  paid_amount?: number;
   dueAmount: number;
   paymentMethod: 'cash' | 'due' | 'bkash' | 'nagad';
   createdAt: string;
@@ -63,8 +83,10 @@ export interface ExpenseRecord {
 export interface VaultState {
   tenantId: string;
   industryId: string;
+  shopName?: string;
   products: ProductItem[];
   customers: CustomerItem[];
+  dealers?: VaultDealer[];
   sales: SaleRecord[];
   expenses: ExpenseRecord[];
   updatedAt: string;
@@ -185,13 +207,18 @@ export const DEMO_SHOPS = [
 let memoryVault: Record<string, VaultState> = {};
 const STORAGE_KEY_PREFIX = 'shohoj_mobile_vault_';
 
-export function getLocalVaultData(tenantId: string, industryId = 'cat-grocery'): VaultState {
+export function getLocalVaultData(tenantId?: string, industryId = 'cat-grocery'): VaultState {
   const tid = tenantId || 'tenant-1';
   if (!memoryVault[tid]) {
     const catalog = INDUSTRY_CATALOGS[industryId] || INDUSTRY_CATALOGS['cat-grocery'];
     memoryVault[tid] = {
       tenantId: tid,
       industryId,
+      shopName: 'বিসমিল্লাহ স্টোর',
+      dealers: [
+        { id: 'd-1', name: 'মেঘনা গ্রুপ ডিলার', company: 'ফ্রেশ', phone: '01711000111', totalDue: 15000, lastOrderDate: '২০২৬-০৯-১২' },
+        { id: 'd-2', name: 'সিটি গ্রুপ সাপ্লায়ার', company: 'তীর', phone: '01711000222', totalDue: 8500, lastOrderDate: '২০২৬-০৯-১০' }
+      ],
       products: [...catalog.products],
       customers: [...DEFAULT_CUSTOMERS],
       sales: [
@@ -219,7 +246,15 @@ export function getLocalVaultData(tenantId: string, industryId = 'cat-grocery'):
   return memoryVault[tid];
 }
 
-export function saveLocalVaultSnapshot(tenantId: string, partialData: Partial<VaultState>) {
+export function resetLocalVaultToSeed(tenantId = 'tenant-1', industryId = 'cat-grocery'): VaultState {
+  const tid = tenantId || 'tenant-1';
+  delete memoryVault[tid];
+  const fresh = getLocalVaultData(tid, industryId);
+  saveLocalVaultSnapshot(tid, fresh);
+  return fresh;
+}
+
+export function saveLocalVaultSnapshot(tenantId?: string, partialData: Partial<VaultState> = {}) {
   const tid = tenantId || 'tenant-1';
   const current = getLocalVaultData(tid, partialData.industryId);
   const updated: VaultState = {

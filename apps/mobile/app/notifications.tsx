@@ -20,7 +20,7 @@ export default function NotificationsScreen() {
   const notifications = [];
 
   // 1. Low stock alerts
-  const lowStock = (vault.products || []).filter(p => p.stock <= (p.lowStockThreshold || 5));
+  const lowStock = (vault.products || []).filter(p => p.stock <= Number(p.minStockAlert || p.lowStockThreshold || 5));
   lowStock.forEach(p => {
     notifications.push({
       id: `stock-${p.id}`,
@@ -35,13 +35,14 @@ export default function NotificationsScreen() {
   });
 
   // 2. Customer Due alerts
-  const dueCust = (vault.customers || []).filter(c => c.due > 0);
+  const dueCust = (vault.customers || []).filter(c => Number(c.totalDue || c.due || 0) > 0);
   dueCust.forEach(c => {
+    const custDue = Number(c.totalDue || c.due || 0);
     notifications.push({
       id: `due-${c.id}`,
       type: 'due',
       title: `বকেয়া তাগাদা: ${c.name}`,
-      desc: `বর্তমান বাকি ${formatPrice(c.due)}। ১-ক্লিকে হোয়াটসঅ্যাপ বা এসএমএস তাগাদা পাঠান।`,
+      desc: `বর্তমান বাকি ${formatPrice(custDue)}। ১-ক্লিকে হোয়াটসঅ্যাপ বা এসএমএস তাগাদা পাঠান।`,
       time: 'বকেয়া আছে',
       icon: '🔴',
       actionUrl: '/marketing',

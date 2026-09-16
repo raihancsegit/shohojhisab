@@ -80,15 +80,17 @@ export default function FloatingVoiceFab() {
     const speechText = result.speech || result.reply;
     setLastSpeech(speechText);
 
-    // Speak announcement loudly via TTS
+    // Speak announcement loudly via native TTS
     speakNativeText(speechText);
     refreshVault();
 
-    if (result.navigateTo) {
+    // Auto-navigate only if user explicitly asked for navigation
+    const isExplicitNav = /যাও|খোল|নিয়ে চল|পেজে|কাউন্টারে/i.test(q) || (result.reply && result.reply.includes('নিয়ে যাচ্ছি'));
+    if (result.navigateTo && isExplicitNav) {
       setTimeout(() => {
         setIsOpen(false);
         router.push(result.navigateTo as any);
-      }, 1400);
+      }, 1200);
     }
   };
 

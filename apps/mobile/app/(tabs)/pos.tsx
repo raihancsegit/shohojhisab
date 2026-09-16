@@ -61,30 +61,20 @@ export default function POSScreen() {
   const handleVoiceSubmit = () => {
     if (!voiceText.trim()) return;
     triggerHaptic('medium');
-    const parsed = parseBanglaVoiceInput(voiceText, vault);
-
-    if (parsed.intent === 'SALE' && parsed.items && parsed.items.length > 0) {
-      parsed.items.forEach(it => {
-        addToCart({
-          id: it.productId,
-          name: it.name,
-          price: it.price,
-          unit: it.unit
-        }, it.quantity);
-      });
-      speakAnnouncement(`${parsed.items[0].name} যোগ করা হয়েছে`);
+    
+    // Search matching product in vault
+    const match = vault.products.find(p => (p.banglaName || p.name || '').toLowerCase().includes(voiceText.trim().toLowerCase()));
+    if (match) {
+      addToCart({ id: match.id, name: match.name, price: match.price || match.sellingPrice || 0, unit: match.unit }, 1);
+      speakAnnouncement(`${match.name} কার্টে যোগ করা হয়েছে`);
       setVoiceText('');
-    } else {
-      // Search matching product
-      const match = vault.products.find(p => p.name.includes(voiceText.trim()));
-      if (match) {
-        addToCart({ id: match.id, name: match.name, price: match.price, unit: match.unit }, 1);
-        speakAnnouncement(`${match.name} যোগ করা হয়েছে`);
-        setVoiceText('');
-      } else {
-        Alert.alert('সহকারী', parsed.message || 'পণ্য পাওয়া যায়নি');
-      }
+      return;
     }
+
+    const res = parseBanglaVoiceInput(tenant.id, voiceText);
+    refreshVault();
+    speakAnnouncement(res.speech || res.reply);
+    setVoiceText('');
   };
 
   // Complete POS Sale
@@ -571,6 +561,11 @@ const styles = StyleSheet.create({
   receiptText: { fontSize: 11, color: '#334155' },
   receiptItemRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
   receiptItemName: { fontSize: 11.5, color: '#0f172a', fontWeight: '600' },
+  paymentMethodRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  methodBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  methodText: { fontSize: 11, fontWeight: '700' },
+  summaryBox: { borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1 },
+  receiptItemPrice: { fontSize: 11.5, color: '#0f172a', fontWeight: '800' },
   receiptFooter: { fontSize: 10.5, color: '#64748b', textAlign: 'center', marginTop: 10, fontStyle: 'italic' }
 });
 

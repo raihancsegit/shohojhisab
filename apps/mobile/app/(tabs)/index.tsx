@@ -34,11 +34,11 @@ export default function DashboardScreen() {
   }, [tenant.id, tenant.industryId, vaultVersion]);
 
   // Aggregate stats
-  const totalSalesAmount = vault.sales.reduce((acc, s) => acc + (s.total || 0), 0);
-  const totalCashCollected = vault.sales.filter(s => s.paymentMethod !== 'due').reduce((acc, s) => acc + (s.paidAmount || 0), 0);
-  const totalMarketDue = vault.customers.reduce((acc, c) => acc + (c.due || c.totalDue || 0), 0);
-  const totalStockCount = vault.products.reduce((acc, p) => acc + (p.stock || 0), 0);
-  const lowStockProducts = vault.products.filter(p => p.stock < (p.lowStockThreshold || 5));
+  const totalSalesAmount = vault.sales.reduce((acc, s: any) => acc + Number(s.total || s.totalAmount || s.netTotal || 0), 0);
+  const totalCashCollected = vault.sales.filter((s: any) => s.paymentMethod !== 'due').reduce((acc, s: any) => acc + Number(s.paidAmount !== undefined ? s.paidAmount : (s.paid_amount !== undefined ? s.paid_amount : (s.total || s.totalAmount || 0))), 0);
+  const totalMarketDue = vault.customers.reduce((acc, c: any) => acc + Number(c.due || c.totalDue || 0), 0);
+  const totalStockCount = vault.products.reduce((acc, p: any) => acc + Number(p.stock || 0), 0);
+  const lowStockProducts = vault.products.filter((p: any) => Number(p.stock || 0) < Number(p.lowStockThreshold || p.minStockAlert || 5));
 
   const handleShareInvoice = (sale: any) => {
     triggerHaptic('light');

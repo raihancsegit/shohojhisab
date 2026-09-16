@@ -35,7 +35,7 @@ export default function DealersScreen() {
     d.phone.includes(search)
   );
 
-  const totalPayable = dealers.reduce((sum, d) => sum + (d.due || 0), 0);
+  const totalPayable = dealers.reduce((sum, d) => sum + Number(d.totalDue || d.due || 0), 0);
 
   const handleAddDealer = () => {
     if (!name.trim()) return;
@@ -45,7 +45,9 @@ export default function DealersScreen() {
       name: name.trim(),
       company: company.trim() || 'সাধারণ সাপ্লায়ার',
       phone: phone.trim() || '01700000000',
+      totalDue: parseFloat(dueAmount) || 0,
       due: parseFloat(dueAmount) || 0,
+      lastOrderDate: new Date().toISOString().split('T')[0],
       lastPurchaseDate: new Date().toISOString().split('T')[0]
     };
     const updated = [newDealer, ...dealers];
@@ -67,7 +69,9 @@ export default function DealersScreen() {
     triggerHaptic('success');
     const updated = dealers.map(d => {
       if (d.id === selectedDealer.id) {
-        return { ...d, due: Math.max(0, d.due - amount) };
+        const curDue = Number(d.totalDue || d.due || 0);
+        const newDue = Math.max(0, curDue - amount);
+        return { ...d, totalDue: newDue, due: newDue };
       }
       return d;
     });
@@ -134,7 +138,7 @@ export default function DealersScreen() {
               </View>
               <View style={styles.dueBox}>
                 <Text style={styles.dueLabel}>বাকি পাওনা</Text>
-                <Text style={styles.dueValue}>{formatPrice(dealer.due)}</Text>
+                <Text style={styles.dueValue}>{formatPrice(dealer.totalDue || dealer.due || 0)}</Text>
               </View>
             </View>
 

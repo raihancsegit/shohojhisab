@@ -25,7 +25,7 @@ interface ChatMessage {
 export default function AiAssistantScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tenant, theme, themeMode, triggerHaptic } = useAuth();
+  const { tenant, theme, themeMode, triggerHaptic, refreshVault } = useAuth();
   const isDark = themeMode === 'dark';
   const primaryColor = theme.primaryColor || '#059669';
 
@@ -33,15 +33,18 @@ export default function AiAssistantScreen() {
     {
       id: '1',
       sender: 'ai',
-      text: `আসসালামু আলাইকুম! আমি ${tenant.shopName} এর ডিজিটাল এআই হিসাব সহকারী।\n\nআপনি মুখে যা বলবেন (যেমন: "আজকের লাভ কত", "রহিম ৫০০ টাকা বাকি নিল", "চা নাস্তা ৬০ টাকা খরচ", "কোন পণ্যের স্টক কম") আমি স্বয়ংক্রিয়ভাবে হিসাব রেখে সাউন্ডবক্সে ঘোষণা দেব।`,
+      text: `আসসালামু আলাইকুম! আমি ${tenant.shopName} এর ডিজিটাল এআই হিসাব সহকারী।\n\nআপনি মুখে যা বলবেন (যেমন: "তেল ১ লিটার বিক্রি করো", "আজকের লাভ কত", "রহিম ৫০০ টাকা বাকি নিল", "চা নাস্তা ৬০ টাকা খরচ", "কোন পণ্যের স্টক কম") আমি স্বয়ংক্রিয়ভাবে হিসাব রেখে সাউন্ডবক্সে ঘোষণা দেব।`,
       time: 'লাইভ'
     }
   ]);
   const [inputText, setInputText] = useState('');
 
   const presetChips = [
+    '🛒 তেল ১ লিটার বিক্রি করো',
+    '🛒 চিনি ২ কেজি বিক্রি করো',
     '📦 আজকের স্টক কত?',
     '📊 আজকের বিক্রি ও লাভ কত?',
+    '🏷️ তেলের দাম কত?',
     '➕ নাপা ৫০ পাতা স্টক যোগ করো',
     '📖 রহিমের ৫০০ টাকা বাকি',
     '💵 রহিমের ৫০০ টাকা জমা নাও',
@@ -75,12 +78,13 @@ export default function AiAssistantScreen() {
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: replyText,
+        text: res.reply || replyText,
         time: '🟢 অফলাইন এআই',
         navigateTo: res.navigateTo
       };
       setMessages(prev => [...prev, aiMsg]);
       speakNativeText(replyText);
+      refreshVault();
       playNativeChime('success');
       triggerHaptic('success');
     }, 400);

@@ -6,12 +6,23 @@ import {
   StyleSheet,
   Platform
 } from 'react-native';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useNav } from '../context/NavContext';
 
-export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export interface CustomBottomTabBarProps {
+  state: {
+    index: number;
+    routes: Array<{ key: string; name: string }>;
+  };
+  descriptors: Record<string, any>;
+  navigation: {
+    navigate: (name: string) => void;
+    emit: (event: any) => any;
+  };
+}
+
+export default function BottomTabBar({ state, descriptors, navigation }: CustomBottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { theme, themeMode, triggerHaptic } = useAuth();
   const { openActionSheet } = useNav();

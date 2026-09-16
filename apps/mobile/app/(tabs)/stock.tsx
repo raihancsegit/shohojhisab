@@ -402,6 +402,7 @@ const styles = StyleSheet.create({
   prodName: { fontSize: 13.5, fontWeight: '800' },
   prodPrice: { fontSize: 11.5, color: '#64748b', marginTop: 2 },
   stockBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  stockBadgeText: { fontSize: 10.5, fontWeight: '700' },
   stockOk: { backgroundColor: '#dcfce7' },
   stockOkText: { color: '#15803d', fontSize: 10.5, fontWeight: '700' },
   stockLow: { backgroundColor: '#fee2e2' },

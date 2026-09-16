@@ -314,6 +314,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 13.5, fontWeight: '800' },
   stockRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   stockBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  stockBadgeText: { fontSize: 10, fontWeight: '700' },
   stockOk: { backgroundColor: '#dcfce7' },
   stockOkText: { color: '#15803d', fontSize: 10, fontWeight: '700' },
   stockLow: { backgroundColor: '#fee2e2' },

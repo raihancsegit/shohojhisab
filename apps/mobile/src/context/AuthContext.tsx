@@ -19,6 +19,7 @@ export interface TenantInfo {
   industryId: string;
   industryName?: string;
   icon?: string;
+  location?: string;
 }
 
 interface AuthContextType {

@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   catName: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
   activeBadge: { fontSize: 11, fontWeight: '800', marginTop: 4 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 4 },
+  divider: { height: 1, marginVertical: 12 },
   settingLabel: { fontSize: 13.5, fontWeight: '800' },
   subText: { fontSize: 11, color: '#64748b', marginTop: 2 },
   syncBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 12 },

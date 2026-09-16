@@ -130,27 +130,180 @@ export function executeMobileAiCommand(
     };
   }
 
-  // 2. Sales & Profit Query (আজকের বিক্রি ও লাভ)
-  if (/আজকে|আজকের/i.test(normalized) && /বিক্রি|সেল|লাভ|টাকা/i.test(normalized) && !/খরচ|বাকি|স্টক/i.test(normalized)) {
-    const totalSold = todaySales.reduce((acc, s) => acc + Number(s.totalAmount || s.netTotal || 0), 0);
-    const totalCash = todaySales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
+  // 2. Voice Sale Execution with Real Stock Deduction (যেমন: "তেল ১ লিটার বিক্রি করো" / "২ কেজি চিনি বিক্রি" / "নাপা ৫০ পাতা বিক্রি")
+  const saleMatch = normalized.match(/(.+?)\s+(\d+)\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বক্স|ডজন|টি)?\s*(বিক্রি করো|বিক্রি|সেল|বেচলাম|বিক্রয়|মেমো করো)/i) ||
+                    normalized.match(/(\d+)\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বক্স|ডজন|টি)?\s*(.+?)\s*(বিক্রি করো|বিক্রি|সেল|বেচলাম|বিক্রয়|মেমো করো)/i);
+  if (saleMatch) {
+    let prodSearch = '';
+    let qty = 1;
+    let unit = 'পিস';
+
+    if (isNaN(Number(saleMatch[1]))) {
+      prodSearch = saleMatch[1].replace(/বিক্রি|সেল|করো|মেমো|আইটেম|এর|টা/g, '').trim();
+      qty = Number(saleMatch[2]) || 1;
+      unit = saleMatch[3] || 'পিস';
+    } else {
+      qty = Number(saleMatch[1]) || 1;
+      unit = saleMatch[2] || 'পিস';
+      prodSearch = saleMatch[3].replace(/বিক্রি|সেল|করো|মেমো|আইটেম|এর|টা/g, '').trim();
+    }
+
+    if (prodSearch && qty > 0) {
+      let matchedProd = products.find(p =>
+        (p.banglaName || p.name || '').toLowerCase().includes(prodSearch.toLowerCase()) ||
+        prodSearch.toLowerCase().includes((p.banglaName || p.name || '').toLowerCase())
+      );
+
+      const unitPrice = matchedProd ? (matchedProd.sellingPrice || matchedProd.price || 100) : 100;
+      const prodName = matchedProd ? (matchedProd.banglaName || matchedProd.name) : prodSearch;
+      const actualUnit = matchedProd?.unit || unit;
+      const lineTotal = unitPrice * qty;
+
+      // 1. Deduct Stock from matching product if found
+      let updatedProducts = products.map(p => {
+        if (matchedProd && p.id === matchedProd.id) {
+          return { ...p, stock: Math.max(0, Number(p.stock || 0) - qty) };
+        }
+        return p;
+      });
+
+      const newStock = matchedProd ? Math.max(0, Number(matchedProd.stock || 0) - qty) : 0;
+
+      // 2. Create Sale Record
+      const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+      const newSale = {
+        id: `sale-${Date.now()}`,
+        invoiceNo,
+        customerName: 'নগদ ক্রেতা',
+        customerPhone: '',
+        items: [{
+          id: matchedProd?.id || `item-${Date.now()}`,
+          name: prodName,
+          unit: actualUnit,
+          quantity: qty,
+          price: unitPrice,
+          unitPrice,
+          total: lineTotal,
+          totalPrice: lineTotal
+        }],
+        subtotal: lineTotal,
+        discount: 0,
+        total: lineTotal,
+        totalAmount: lineTotal,
+        paidAmount: lineTotal,
+        dueAmount: 0,
+        paymentMethod: 'cash' as const,
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedSales = [newSale, ...sales];
+      saveLocalVaultSnapshot(tenantId, {
+        products: updatedProducts,
+        sales: updatedSales
+      });
+
+      const speech = `${qty} ${actualUnit} ${prodName} বিক্রি হয়েছে। মোট ${lineTotal} টাকা।${matchedProd ? ` বর্তমান স্টক ${newStock} ${actualUnit}।` : ''}`;
+      return {
+        success: true,
+        reply: `🧾 **ভয়েস মেমো সফল #${invoiceNo}**\n• পণ্য: ${prodName}\n• পরিমাণ: ${qty} ${actualUnit}\n• মোট মূল্য: ৳${lineTotal} টাকা\n• নতুন স্টক: ${newStock} ${actualUnit}\n• পরিশোধ: নগদ (ক্যাশ)`,
+        speech,
+        navigateTo: '/pos',
+        isOffline: true
+      };
+    }
+  }
+
+  // 3. Quick Cash Memo (যেমন: "১০০ টাকার মেমো" / "৫০০ টাকার বিক্রি")
+  const quickMemoMatch = normalized.match(/(\d+)\s*টাকার?\s*(মেমো|বিক্রি|সেল|ক্যাশ)/i);
+  if (quickMemoMatch) {
+    const amount = Number(quickMemoMatch[1]);
+    if (amount > 0) {
+      const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+      const newSale = {
+        id: `sale-${Date.now()}`,
+        invoiceNo,
+        customerName: 'নগদ ক্রেতা',
+        customerPhone: '',
+        items: [{
+          id: `item-${Date.now()}`,
+          name: 'খুচরা পণ্য সামগ্রী',
+          unit: 'পিস',
+          quantity: 1,
+          price: amount,
+          unitPrice: amount,
+          total: amount,
+          totalPrice: amount
+        }],
+        subtotal: amount,
+        discount: 0,
+        total: amount,
+        totalAmount: amount,
+        paidAmount: amount,
+        dueAmount: 0,
+        paymentMethod: 'cash' as const,
+        createdAt: new Date().toISOString()
+      };
+
+      saveLocalVaultSnapshot(tenantId, {
+        sales: [newSale, ...sales]
+      });
+
+      const speech = `${amount} টাকার নগদ মেমো সম্পন্ন হয়েছে।`;
+      return {
+        success: true,
+        reply: `🧾 **নগদ মেমো #${invoiceNo}**\n• মোট আদায়: ৳${amount} টাকা\n• কাস্টমার: নগদ ক্রেতা`,
+        speech,
+        navigateTo: '/pos',
+        isOffline: true
+      };
+    }
+  }
+
+  // 4. Sales & Profit Query (আজকের বিক্রি ও লাভ)
+  if (/আজকে|আজকের/i.test(normalized) && /বিক্রি|সেল|লাভ|টাকা|আয়/i.test(normalized) && !/খরচ|বাকি|স্টক/i.test(normalized)) {
+    const totalSold = todaySales.reduce((acc, s) => acc + Number(s.totalAmount || s.total || s.netTotal || 0), 0);
+    const totalCash = todaySales.reduce((acc, s) => acc + Number(s.paidAmount || s.paid_amount || 0), 0);
     const totalExp = todayExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
     const estProfit = Math.round(totalSold * 0.2 - totalExp);
 
     const speech = `আজকে মোট বিক্রি ৳${totalSold.toLocaleString('en-US')} টাকা, ক্যাশ জমা ৳${totalCash.toLocaleString('en-US')} টাকা এবং আনুমানিক লাভ ৳${estProfit.toLocaleString('en-US')} টাকা।`;
     return {
       success: true,
-      reply: `📊 **আজকের বিক্রি ও লাভ রিপোর্ট:**\n• সর্বমোট বিক্রি: ৳${totalSold.toLocaleString('en-US')}\n• ক্যাশ কালেকশন: ৳${totalCash.toLocaleString('en-US')}\n• মোট খরচ: ৳${totalExp.toLocaleString('en-US')}\n• আনুমানিক লাভ: ৳${estProfit.toLocaleString('en-US')}\n• মোট মেমো: ${todaySales.length}টি`,
+      reply: `📊 **আজকের বিক্রি ও লাভ report:**\n• সর্বমোট বিক্রি: ৳${totalSold.toLocaleString('en-US')}\n• ক্যাশ কালেকশন: ৳${totalCash.toLocaleString('en-US')}\n• মোট খরচ: ৳${totalExp.toLocaleString('en-US')}\n• আনুমানিক লাভ: ৳${estProfit.toLocaleString('en-US')}\n• মোট মেমো: ${todaySales.length}টি`,
       speech,
       navigateTo: '/reports',
       isOffline: true
     };
   }
 
-  // 3. Stock Query (আজকের স্টক কত / মোট স্টক)
+  // 5. Low Stock / Stock Check (কোন মালের স্টক কম)
+  if (/স্টক কম|কোন মাল কম|মাল শেষ|কোন কোন মালের স্টক/i.test(normalized)) {
+    const lowItems = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || p.minStockAlert || 5));
+    if (lowItems.length === 0) {
+      return {
+        success: true,
+        reply: '✅ আলহামদুলিল্লাহ! আপনার দোকানে কোনো পণ্যের স্টক কম নেই।',
+        speech: 'দোকানে সব মালের স্টক পর্যাপ্ত আছে।',
+        navigateTo: '/stock',
+        isOffline: true
+      };
+    }
+
+    const top3 = lowItems.slice(0, 3).map(p => `• ${p.banglaName || p.name} (বাকি: ${p.stock} ${p.unit || 'পিস'})`).join('\n');
+    const speech = `দোকানে ${lowItems.length}টি পণ্যের স্টক কম রয়েছে। যেমন: ${lowItems.slice(0, 2).map(p => p.banglaName || p.name).join(' ও ')}।`;
+    return {
+      success: true,
+      reply: `⚠️ **স্টক অ্যালার্ট (${lowItems.length}টি পণ্যের স্টক কম):**\n${top3}`,
+      speech,
+      navigateTo: '/stock',
+      isOffline: true
+    };
+  }
+
+  // 6. Overall Stock Query (আজকের স্টক কত / মোট স্টক)
   if (/স্টক কত|মোট স্টক|স্টকের হিসাব|আজকের স্টক/i.test(normalized)) {
     const totalCount = products.reduce((acc, p) => acc + Number(p.stock || 0), 0);
-    const lowItems = products.filter(p => Number(p.stock || 0) <= 5);
+    const lowItems = products.filter(p => Number(p.stock || 0) <= Number(p.minStockAlert || 5));
     const speech = `দোকানে ${products.length} প্রকার পণ্যের মোট ${totalCount}টি আইটেম স্টকে আছে।${lowItems.length > 0 ? ` এর মধ্যে ${lowItems.length}টি পণ্যের স্টক কম।` : ''}`;
     return {
       success: true,
@@ -161,7 +314,28 @@ export function executeMobileAiCommand(
     };
   }
 
-  // 4. Quick Stock Add (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
+  // 7. Product Price Check (যেমন: "তেলের দাম কত" / "চিনির দাম কত")
+  const priceCheckMatch = normalized.match(/(.+?)\s*(এর দাম কত|দাম কত|কত টাকা|দর কত)/i);
+  if (priceCheckMatch) {
+    const prodSearch = priceCheckMatch[1].replace(/এর|দাম|কত|টাকা/g, '').trim();
+    if (prodSearch) {
+      const matched = products.find(p => (p.banglaName || p.name || '').toLowerCase().includes(prodSearch.toLowerCase()));
+      if (matched) {
+        const sellPrice = matched.sellingPrice || matched.price || 0;
+        const buyPrice = matched.purchasePrice || matched.costPrice || 0;
+        const speech = `${matched.banglaName || matched.name} এর বিক্রয় মূল্য ${sellPrice} টাকা, কেনা দাম ${buyPrice} টাকা। বর্তমান স্টক ${matched.stock} ${matched.unit || 'পিস'}।`;
+        return {
+          success: true,
+          reply: `🏷️ **${matched.banglaName || matched.name}**\n• বিক্রয় মূল্য: ৳${sellPrice} টাকা\n• ক্রয় মূল্য: ৳${buyPrice} টাকা\n• বর্তমান স্টক: ${matched.stock} ${matched.unit || 'পিস'}`,
+          speech,
+          navigateTo: '/products',
+          isOffline: true
+        };
+      }
+    }
+  }
+
+  // 8. Quick Stock Add (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
   const stockAddMatch = normalized.match(/(.+?)\s+(\d+)\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বক্স|ডজন|টি)?\s*(স্টক যোগ|স্টকে তোল|মাল তোল|স্টক)/i);
   if (stockAddMatch) {
     const prodSearch = stockAddMatch[1].replace(/স্টক|মাল|যোগ|নতুন/g, '').trim();
@@ -177,8 +351,12 @@ export function executeMobileAiCommand(
           banglaName: prodSearch,
           sellingPrice: 50,
           purchasePrice: 40,
+          price: 50,
+          costPrice: 40,
           stock: qty,
-          unit
+          unit,
+          category: 'সাধারণ',
+          icon: '📦'
         };
         products.push(matched);
       } else {
@@ -186,7 +364,7 @@ export function executeMobileAiCommand(
       }
 
       saveLocalVaultSnapshot(tenantId, { products });
-      const speech = `${matched.banglaName || matched.name} এর স্টকে ${qty} ${unit} যোগ হয়েছে।`;
+      const speech = `${matched.banglaName || matched.name} এর স্টকে ${qty} ${unit} যোগ হয়েছে। বর্তমান স্টক ${matched.stock} ${unit}।`;
       return {
         success: true,
         reply: `✓ "${matched.banglaName || matched.name}" এর স্টকে ${qty} ${unit} যোগ হয়েছে! (নতুন স্টক: ${matched.stock} ${unit})`,
@@ -197,8 +375,35 @@ export function executeMobileAiCommand(
     }
   }
 
-  // 5. Customer Due (যেমন: "রহিম ভাই ৫০০ টাকা বাকি নিল")
-  const dueMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(বাকি নিল|বাকি লেখো|বাকি)/i);
+  // 9. Customer Due Payment / জমা আদায় (যেমন: "রহিম ৫০০ টাকা জমা দিল" / "করিমের ২০০ টাকা জমা নাও")
+  const payMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(জমা দিল|পরিশোধ করল|দিল|জমা করলো|জমা নাও|জমা)/i);
+  if (payMatch) {
+    const custName = payMatch[1].replace(/ভাই|চাচা|মামা|এর|কে/g, '').trim();
+    const amount = Number(payMatch[2]);
+
+    if (custName && amount > 0) {
+      let cust = customers.find(c => (c.name || '').toLowerCase().includes(custName.toLowerCase()));
+      if (!cust) {
+        cust = { id: `c-off-${Date.now()}`, name: custName, phone: '', totalDue: 0 };
+        customers.push(cust);
+      } else {
+        cust.totalDue = Math.max(0, Number(cust.totalDue || 0) - amount);
+      }
+
+      saveLocalVaultSnapshot(tenantId, { customers });
+      const speech = `${cust.name} এর ${amount} টাকা জমা নেওয়া হয়েছে। বর্তমান বাকি ${cust.totalDue} টাকা।`;
+      return {
+        success: true,
+        reply: `✓ **${cust.name}** ৳${amount} টাকা পরিশোধ করেছেন!\n(বর্তমান বকেয়া: ৳${cust.totalDue} টাকা)`,
+        speech,
+        navigateTo: '/khata',
+        isOffline: true
+      };
+    }
+  }
+
+  // 10. Customer Due Entry (যেমন: "রহিম ভাই ৫০০ টাকা বাকি নিল")
+  const dueMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(বাকি নিল|বাকি লেখো|বাকি|বাকিতে)/i);
   if (dueMatch) {
     const custName = dueMatch[1].replace(/ভাই|চাচা|মামা|এর|কে/g, '').trim();
     const amount = Number(dueMatch[2]);
@@ -224,7 +429,7 @@ export function executeMobileAiCommand(
     }
   }
 
-  // 6. Expense Entry (যেমন: "চা নাস্তা ৬০ টাকা খরচ লেখো")
+  // 11. Expense Entry (যেমন: "চা নাস্তা ৬০ টাকা খরচ লেখো")
   const expMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(খরচ লেখো|খরচ|ব্যয়)/i);
   if (expMatch) {
     const expTitle = expMatch[1].replace(/টাকা|খরচ|লেখো/g, '').trim() || 'দোকান খরচ';
@@ -234,6 +439,7 @@ export function executeMobileAiCommand(
       expenses.push({
         id: `e-off-${Date.now()}`,
         title: expTitle,
+        category: 'সাধারণ',
         amount,
         date: todayStr,
         createdAt: new Date().toISOString()
@@ -251,11 +457,27 @@ export function executeMobileAiCommand(
     }
   }
 
+  // 12. Market Total Due Query (বাজারে মোট বাকি কত)
+  if (/মোট বাকি|বাজারে কত বাকি|কাস্টমার বাকি|বকেয়া/i.test(normalized)) {
+    const totalDue = customers.reduce((acc, c) => acc + Number(c.totalDue || c.due || 0), 0);
+    const speech = `বাজারে মোট বকেয়া বাকি আছে ৳${totalDue.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      reply: `📒 **বাজারে মোট বকেয়া বাকি:** ৳${totalDue.toLocaleString('en-US')} টাকা\nমোট বাকি কাস্টমার: ${customers.filter(c => Number(c.totalDue || 0) > 0).length} জন`,
+      speech,
+      navigateTo: '/khata',
+      isOffline: true
+    };
+  }
+
   // Default Fallback
   return {
     success: true,
-    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nবলুন:\n• "আজকের বিক্রি কত"\n• "আজকের স্টক কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"`,
+    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nবলুন:\n• "তেল ১ লিটার বিক্রি করো"\n• "আজকের বিক্রি কত"\n• "আজকের স্টক কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"`,
     speech: 'দোকানের বিক্রি, বাকি, খরচ বা স্টকের হিসাব জানতে যেকোনো কিছু বলুন।',
     isOffline: true
   };
 }
+
+export const parseBanglaVoiceInput = executeMobileAiCommand;
+export const parseBengaliCommand = executeMobileAiCommand;
