@@ -1,189 +1,228 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Modal,
+  Alert
+} from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import { getLocalVaultData, saveLocalVaultSnapshot } from '../../src/lib/offlineDataVault';
-import { playNativeChime, speakNativeText } from '../../src/lib/offlineAudioEngine';
+import {
+  getLocalVaultData,
+  recordCustomerPayment,
+  saveLocalVaultSnapshot,
+  CustomerItem
+} from '../../src/lib/offlineDataVault';
 
 export default function KhataScreen() {
-  const { tenant, theme, speakAnnouncement } = useAuth();
-  const vault = getLocalVaultData(tenant.id);
-  const customers = vault.customers || [];
+  const { tenant, theme, speakAnnouncement, triggerHaptic, formatPrice, refreshVault, vaultVersion } = useAuth();
 
-  const [search, setSearch] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showPayModal, setShowPayModal] = useState<any>(null);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [initialDue, setInitialDue] = useState('');
-  const [payAmount, setPayAmount] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerItem | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [showAddCustModal, setShowAddCustModal] = useState(false);
 
-  const filtered = customers.filter(c =>
-    (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.phone || '').includes(search)
-  );
+  // New Customer Form state
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [newDue, setNewDue] = useState('');
 
-  const totalDue = customers.reduce((acc: number, c: any) => acc + Number(c.totalDue || 0), 0);
+  const vault = useMemo(() => {
+    return getLocalVaultData(tenant.id, tenant.industryId);
+  }, [tenant.id, tenant.industryId, vaultVersion]);
 
-  const handleAddCustomer = () => {
-    if (!name.trim()) {
-      Alert.alert('সতর্কতা', 'কাস্টমারের নাম লিখুন!');
+  const totalMarketDue = vault.customers.reduce((sum, c) => sum + (c.totalDue || 0), 0);
+
+  const filteredCustomers = useMemo(() => {
+    return vault.customers.filter(c => {
+      const q = searchQuery.toLowerCase().trim();
+      return !q || c.name.toLowerCase().includes(q) || c.phone.includes(q);
+    });
+  }, [vault.customers, searchQuery]);
+
+  // Collect Payment
+  const handleCollectPayment = () => {
+    const amount = Number(paymentAmount);
+    if (!selectedCustomer || isNaN(amount) || amount <= 0) {
+      Alert.alert('ভুল', 'দয়া করে সঠিক জমার পরিমাণ লিখুন');
       return;
     }
 
-    const newCust = {
-      id: `cust-off-${Date.now()}`,
-      name: name.trim(),
-      phone: phone.trim(),
-      totalDue: Number(initialDue) || 0
+    triggerHaptic('success');
+    const updated = recordCustomerPayment(tenant.id, selectedCustomer.id, amount);
+    setShowPayModal(false);
+    setPaymentAmount('');
+    refreshVault();
+
+    // Voice Soundbox Announcement
+    speakAnnouncement(`${tenant.shopName}: ${selectedCustomer.name} এর নিকট হতে ${amount} টাকা জমা নেওয়া হয়েছে। বর্তমান বাকি ${updated ? updated.totalDue : 0} টাকা`);
+  };
+
+  // Add New Customer
+  const handleAddCustomer = () => {
+    if (!newName.trim()) {
+      Alert.alert('ভুল', 'কাস্টমারের নাম লিখুন');
+      return;
+    }
+
+    triggerHaptic('success');
+    const newCust: CustomerItem = {
+      id: 'cust-' + Date.now(),
+      name: newName.trim(),
+      phone: newPhone.trim() || '০১৭XXXXXXXX',
+      address: newAddress.trim() || 'লোকাল',
+      totalDue: Number(newDue) || 0,
+      lastPurchaseDate: new Date().toISOString().slice(0, 10)
     };
 
     saveLocalVaultSnapshot(tenant.id, {
-      customers: [newCust, ...customers]
+      customers: [newCust, ...vault.customers]
     });
 
-    playNativeChime('success');
-    speakAnnouncement(`${newCust.name} এর নতুন খাতা তৈরি হয়েছে`);
-    setShowAddModal(false);
-    setName('');
-    setPhone('');
-    setInitialDue('');
-  };
-
-  const handleCollectPayment = () => {
-    const amt = Number(payAmount);
-    if (!showPayModal || isNaN(amt) || amt <= 0) return;
-
-    const updated = customers.map(c => {
-      if (c.id === showPayModal.id) {
-        const remaining = Math.max(0, Number(c.totalDue || 0) - amt);
-        return { ...c, totalDue: remaining };
-      }
-      return c;
-    });
-
-    saveLocalVaultSnapshot(tenant.id, { customers: updated });
-    playNativeChime('cash');
-    speakAnnouncement(`${showPayModal.name} এর ৳${amt} টাকা জমা গ্রহণ করা হয়েছে`);
-    Alert.alert('সফল!', `✓ ৳${amt} টাকা জমা হয়েছে!`);
-    setShowPayModal(null);
-    setPayAmount('');
+    setNewName('');
+    setNewPhone('');
+    setNewAddress('');
+    setNewDue('');
+    setShowAddCustModal(false);
+    refreshVault();
+    speakAnnouncement(`নতুন কাস্টমার ${newCust.name} যুক্ত হয়েছে`);
   };
 
   return (
     <View style={styles.container}>
-      {/* 📊 Due Summary Card */}
-      <View style={[styles.summaryCard, { backgroundColor: theme.primaryColor }]}>
-        <View>
-          <Text style={styles.summaryLabel}>বাজারে মোট বাকি বকেয়া</Text>
-          <Text style={styles.summaryValue}>৳{totalDue.toLocaleString('en-US')}</Text>
-        </View>
+      {/* 📊 Top Due Summary Card */}
+      <View style={[styles.topSummaryCard, { backgroundColor: theme.primary }]}>
+        <Text style={styles.summarySub}>বাজারে মোট বাকি রয়েছে</Text>
+        <Text style={styles.summaryTotal}>{formatPrice(totalMarketDue)}</Text>
+        <Text style={styles.summaryCount}>মোট খাতা: {vault.customers.length} জন কাস্টমার</Text>
+      </View>
+
+      {/* 🔍 Search & Add Bar */}
+      <View style={styles.actionRow}>
+        <TextInput
+          style={styles.searchBar}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="🔍 কাস্টমারের নাম বা মোবাইল খুঁজুন..."
+          placeholderTextColor="#94a3b8"
+        />
         <TouchableOpacity
-          style={styles.addCustBtn}
-          onPress={() => setShowAddModal(true)}
+          style={[styles.addCustBtn, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            triggerHaptic('light');
+            setShowAddCustModal(true);
+          }}
         >
-          <Text style={styles.addCustBtnText}>+ নতুন খাতা</Text>
+          <Text style={styles.addCustBtnText}>+ নতুন</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 🔍 Search Input */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="🔍 কাস্টমারের নাম বা ফোন খুঁজুন..."
-        placeholderTextColor="#94a3b8"
-        value={search}
-        onChangeText={setSearch}
-      />
+      {/* 👥 Customer List */}
+      <FlatList
+        data={filteredCustomers}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
+        renderItem={({ item }) => (
+          <View style={styles.customerCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.custName}>{item.name}</Text>
+              <Text style={styles.custPhone}>📱 {item.phone} {item.address ? `• ${item.address}` : ''}</Text>
+              {item.lastPurchaseDate && (
+                <Text style={styles.custDate}>সর্বশেষ লেনদেন: {item.lastPurchaseDate}</Text>
+              )}
+            </View>
 
-      {/* 📖 Customer List */}
-      <ScrollView style={styles.list}>
-        {filtered.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📖</Text>
-            <Text style={styles.emptyText}>কোনো বাকি কাস্টমার পাওয়া যায়নি</Text>
-          </View>
-        ) : (
-          filtered.map(c => (
-            <View key={c.id} style={styles.custCard}>
-              <View>
-                <Text style={styles.custName}>{c.name}</Text>
-                <Text style={styles.custPhone}>{c.phone || 'ফোন নম্বর নেই'}</Text>
-              </View>
-              <View style={styles.rightAction}>
-                <Text style={styles.custDue}>৳{c.totalDue || 0}</Text>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Text style={[styles.custDue, item.totalDue > 0 ? { color: '#dc2626' } : { color: '#16a34a' }]}>
+                {formatPrice(item.totalDue)}
+              </Text>
+              {item.totalDue > 0 ? (
                 <TouchableOpacity
-                  style={styles.payBtn}
+                  style={[styles.payBtn, { backgroundColor: theme.primary }]}
                   onPress={() => {
-                    setShowPayModal(c);
-                    setPayAmount('');
+                    triggerHaptic('light');
+                    setSelectedCustomer(item);
+                    setShowPayModal(true);
                   }}
                 >
-                  <Text style={styles.payBtnText}>জমা নিন 💵</Text>
+                  <Text style={styles.payBtnText}>টাকা জমা</Text>
                 </TouchableOpacity>
-              </View>
+              ) : (
+                <View style={styles.clearedBadge}>
+                  <Text style={styles.clearedText}>পরিশোধিত ✓</Text>
+                </View>
+              )}
             </View>
-          ))
+          </View>
         )}
-      </ScrollView>
+      />
 
-      {/* ➕ Add Customer Modal */}
-      <Modal visible={showAddModal} transparent animationType="slide">
+      {/* 💵 Collect Payment Modal */}
+      <Modal visible={showPayModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>নতুন বাকির খাতা তৈরি</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="কাস্টমারের নাম..."
-              value={name}
-              onChangeText={setName}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="মোবাইল নম্বর (ঐচ্ছিক)..."
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="বর্তমান পূর্বের বাকি টাকা (৳)..."
-              keyboardType="numeric"
-              value={initialDue}
-              onChangeText={setInitialDue}
-            />
-            <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowAddModal(false)}>
-                <Text style={styles.modalCancelText}>বাতিল</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSave} onPress={handleAddCustomer}>
-                <Text style={styles.modalSaveText}>সংরক্ষণ করুন</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>টাকা জমা নিন</Text>
+              <TouchableOpacity onPress={() => setShowPayModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.payDetailsBox}>
+              <Text style={styles.payCustName}>{selectedCustomer?.name}</Text>
+              <Text style={styles.payCustDue}>বর্তমান মোট বাকি: {formatPrice(selectedCustomer?.totalDue || 0)}</Text>
+            </View>
+
+            <Text style={styles.inputLabel}>জমার পরিমাণ (টাকা):</Text>
+            <TextInput
+              style={styles.payInput}
+              keyboardType="numeric"
+              value={paymentAmount}
+              onChangeText={setPaymentAmount}
+              placeholder="যেমন: ৫০০"
+              placeholderTextColor="#94a3b8"
+            />
+
+            <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: theme.primary }]} onPress={handleCollectPayment}>
+              <Text style={styles.confirmBtnText}>✓ জমা নিশ্চিত ও সাউন্ডবক্স ঘোষণা</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* 💵 Payment Collect Modal */}
-      <Modal visible={!!showPayModal} transparent animationType="fade">
+      {/* ➕ Add New Customer Modal */}
+      <Modal visible={showAddCustModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>জমা গ্রহণ ({showPayModal?.name})</Text>
-            <Text style={styles.currentDueText}>বর্তমান বকেয়া: ৳{showPayModal?.totalDue || 0}</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="জমার পরিমাণ (৳)..."
-              keyboardType="numeric"
-              value={payAmount}
-              onChangeText={setPayAmount}
-              autoFocus
-            />
-            <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowPayModal(null)}>
-                <Text style={styles.modalCancelText}>বাতিল</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSave} onPress={handleCollectPayment}>
-                <Text style={styles.modalSaveText}>জমা নিন ✓</Text>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>নতুন কাস্টমার যোগ করুন</Text>
+              <TouchableOpacity onPress={() => setShowAddCustModal(false)}>
+                <Text style={styles.closeBtn}>✕</Text>
               </TouchableOpacity>
             </View>
+
+            <ScrollView style={{ marginBottom: 12 }}>
+              <Text style={styles.inputLabel}>কাস্টমারের নাম *:</Text>
+              <TextInput style={styles.formInput} value={newName} onChangeText={setNewName} placeholder="যেমন: রফিক সাহেব" />
+
+              <Text style={styles.inputLabel}>মোবাইল নাম্বার:</Text>
+              <TextInput style={styles.formInput} keyboardType="phone-pad" value={newPhone} onChangeText={setNewPhone} placeholder="01XXXXXXXXX" />
+
+              <Text style={styles.inputLabel}>ঠিকানা / এলাকা:</Text>
+              <TextInput style={styles.formInput} value={newAddress} onChangeText={setNewAddress} placeholder="যেমন: বাজার রোড" />
+
+              <Text style={styles.inputLabel}>পূর্বের বাকি (যদি থাকে):</Text>
+              <TextInput style={styles.formInput} keyboardType="numeric" value={newDue} onChangeText={setNewDue} placeholder="০" />
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: theme.primary }]} onPress={handleAddCustomer}>
+              <Text style={styles.confirmBtnText}>+ খাতা সংরক্ষণ করুন</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -192,168 +231,36 @@ export default function KhataScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    padding: 14,
-    paddingBottom: 90
-  },
-  summaryCard: {
-    borderRadius: 18,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14
-  },
-  summaryLabel: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    fontWeight: '700'
-  },
-  summaryValue: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
-    marginTop: 2
-  },
-  addCustBtn: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12
-  },
-  addCustBtnText: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 12.5
-  },
-  searchInput: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 13,
-    marginBottom: 12
-  },
-  list: {
-    flex: 1
-  },
-  custCard: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  custName: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#0f172a'
-  },
-  custPhone: {
-    fontSize: 11.5,
-    color: '#64748b',
-    marginTop: 2
-  },
-  rightAction: {
-    alignItems: 'flex-end'
-  },
-  custDue: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#dc2626',
-    marginBottom: 6
-  },
-  payBtn: {
-    backgroundColor: '#ecfdf5',
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10
-  },
-  payBtnText: {
-    color: '#065f46',
-    fontSize: 11.5,
-    fontWeight: '800'
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60
-  },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 10
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#94a3b8'
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'center',
-    padding: 20
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 14
-  },
-  currentDueText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#dc2626',
-    marginBottom: 10
-  },
-  modalInput: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 13.5,
-    marginBottom: 12
-  },
-  modalBtns: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 6
-  },
-  modalCancel: {
-    flex: 1,
-    backgroundColor: '#f1f5f9',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center'
-  },
-  modalCancelText: {
-    color: '#64748b',
-    fontWeight: '700'
-  },
-  modalSave: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center'
-  },
-  modalSaveText: {
-    color: '#ffffff',
-    fontWeight: '800'
-  }
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  topSummaryCard: { padding: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, elevation: 2 },
+  summarySub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '600' },
+  summaryTotal: { color: '#ffffff', fontSize: 26, fontWeight: '900', marginVertical: 2 },
+  summaryCount: { color: 'rgba(255,255,255,0.9)', fontSize: 11.5, fontWeight: '600' },
+  actionRow: { flexDirection: 'row', padding: 12, gap: 8 },
+  searchBar: { flex: 1, backgroundColor: '#ffffff', borderRadius: 12, paddingHorizontal: 12, height: 42, fontSize: 13, borderWidth: 1, borderColor: '#e2e8f0', color: '#0f172a' },
+  addCustBtn: { borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center' },
+  addCustBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 13 },
+  listContainer: { paddingHorizontal: 12, paddingBottom: 90 },
+  customerCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 14, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0', elevation: 1 },
+  custName: { fontSize: 14, fontWeight: '800', color: '#0f172a', marginBottom: 2 },
+  custPhone: { fontSize: 11.5, color: '#64748b' },
+  custDate: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
+  custDue: { fontSize: 15, fontWeight: '900' },
+  payBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+  payBtnText: { color: '#ffffff', fontSize: 11, fontWeight: '800' },
+  clearedBadge: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  clearedText: { color: '#15803d', fontSize: 10.5, fontWeight: '800' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalTitle: { fontSize: 17, fontWeight: '900', color: '#0f172a' },
+  closeBtn: { fontSize: 18, color: '#64748b', fontWeight: '800' },
+  payDetailsBox: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 12 },
+  payCustName: { fontSize: 15, fontWeight: '800', color: '#0f172a' },
+  payCustDue: { fontSize: 12.5, color: '#dc2626', fontWeight: '700', marginTop: 2 },
+  inputLabel: { fontSize: 12, fontWeight: '800', color: '#334155', marginBottom: 4 },
+  payInput: { backgroundColor: '#f8fafc', borderWidth: 1.5, borderColor: '#cbd5e1', borderRadius: 12, padding: 12, fontSize: 18, fontWeight: '900', color: '#0f172a', marginBottom: 16 },
+  formInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, padding: 10, fontSize: 13, color: '#0f172a', marginBottom: 10 },
+  confirmBtn: { paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  confirmBtnText: { color: '#ffffff', fontSize: 13.5, fontWeight: '900' }
 });
