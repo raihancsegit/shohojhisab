@@ -824,7 +824,7 @@ export default function ShopkeeperDashboard() {
                   className="clickable-card"
                 >
                   <span style={{ fontSize: '20px' }}>📅</span>
-                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>কিস্তি খাতা</span>
+                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির কিস্তি</span>
                 </Link>
               )}
 
@@ -972,7 +972,7 @@ export default function ShopkeeperDashboard() {
                       কিস্তি হিসাব ও আদায় <span style={{ fontSize: '10px' }}>ⓘ</span>
                     </span>
                     <div style={{ fontSize: '18px', fontWeight: '900', color: '#4338ca', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                      <span>কিস্তি খাতা</span>
+                      <span>বাকির কিস্তি</span>
                       <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
                     </div>
                   </div>

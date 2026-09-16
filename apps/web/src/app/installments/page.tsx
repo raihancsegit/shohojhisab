@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import FeatureGate from '../../components/FeatureGate';
 import DataLoader from '../../components/DataLoader';
-import VoiceInstallmentModal from '../../components/VoiceInstallmentModal';
+import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 
 export default function InstallmentsPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -20,21 +20,10 @@ export default function InstallmentsPage() {
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [collectModalItem, setCollectModalItem] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
-
-  // Auto-trigger voice if ?voice=1
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('voice') === '1') {
-        setShowVoiceModal(true);
-      }
-    }
-  }, []);
 
   // New Installment Form
   const [form, setForm] = useState({
@@ -85,7 +74,7 @@ export default function InstallmentsPage() {
   // Handle Add Installment
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.customerName || !form.customerPhone || !form.productName || !form.totalAmount || !currentTenantId) return;
+    if (!form.customerName || !form.productName || !form.totalAmount || !currentTenantId) return;
     triggerHaptic('success');
 
     try {
@@ -94,13 +83,16 @@ export default function InstallmentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenantId: currentTenantId,
-          ...form
+          ...form,
+          customerPhone: form.customerPhone || '01700000000'
         })
       });
 
       if (res.ok) {
         setNotice(`✓ "${form.customerName}"-এর নামে ${form.productName} কিস্তির হিসাব সফলভাবে তৈরি হয়েছে!`);
-        speakAnnouncement(`${form.customerName} এর কিস্তি হিসাব সফলভাবে সংরক্ষণ করা হয়েছে`);
+        if (speakAnnouncement) {
+          speakAnnouncement(`${form.customerName} এর কিস্তি হিসাব সফলভাবে সংরক্ষণ করা হয়েছে`);
+        }
         setShowAddModal(false);
         setForm({
           customerName: '',
@@ -141,7 +133,9 @@ export default function InstallmentsPage() {
       if (res.ok) {
         const data = await res.json();
         setNotice(`✓ ৳${numAmount} কিস্তির টাকা সফলভাবে জমা হয়েছে! নতুন বাকি: ৳${data.remainingDue}`);
-        speakAnnouncement(`${collectModalItem.customer_name} এর থেকে ${numAmount} টাকা কিস্তি জমা নেওয়া হয়েছে`);
+        if (speakAnnouncement) {
+          speakAnnouncement(`${collectModalItem.customer_name} এর থেকে ${numAmount} টাকা কিস্তি জমা নেওয়া হয়েছে`);
+        }
         setCollectModalItem(null);
         setPaymentAmount('');
         setPaymentNotes('');
@@ -180,61 +174,39 @@ export default function InstallmentsPage() {
   });
 
   return (
-    <FeatureGate featureKey="enableInstallments" requiredPlan="pro" title="কিস্তি খাতা (Installments / EMI) প্রো প্ল্যানে অন্তর্ভুক্ত">
+    <FeatureGate featureKey="enableInstallments" requiredPlan="pro" title="বাকির কিস্তি খাতা প্রো প্ল্যানে অন্তর্ভুক্ত">
     <div className="app-container" style={{ paddingBottom: '90px' }}>
       
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
           <h1 style={{ fontSize: 'clamp(18px, 4.5vw, 24px)', fontWeight: '900', color: '#0f172a', margin: '0 0 2px' }}>
-            📅 কিস্তি ও ইএমআই (EMI) খাতা
+            📅 বাকির কিস্তি
           </h1>
           <span style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', color: '#64748b' }}>
-            {tenant?.shopName} • মোবাইল, ফ্রিজ ও পণ্যের সহজ মাসিক কিস্তি
+            {tenant?.shopName} • মোবাইল, ফ্রিজ ও পণ্যের সহজ মাসিক কিস্তি হিসাব
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => { setShowVoiceModal(true); triggerHaptic('medium'); }}
-            style={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: '#fff',
-              border: 'none',
-              padding: '7px 13px',
-              borderRadius: '10px',
-              fontWeight: '800',
-              fontSize: '12.5px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 10px rgba(239, 68, 68, 0.35)'
-            }}
-          >
-            <span style={{ fontSize: '15px' }}>🎙️</span> মুখে বলে কিস্তি এন্ট্রি
-          </button>
-
-          <button
-            onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
-            style={{
-              background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-              color: '#fff',
-              border: 'none',
-              padding: '7px 13px',
-              borderRadius: '10px',
-              fontWeight: '800',
-              fontSize: '12.5px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
-            }}
-          >
-            <span>➕</span> নতুন কিস্তি বিক্রি
-          </button>
-        </div>
+        <button
+          onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            color: '#fff',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '10px',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
+          }}
+        >
+          <span>➕</span> নতুন কিস্তি বিক্রি
+        </button>
       </div>
 
       {notice && (
@@ -317,7 +289,7 @@ export default function InstallmentsPage() {
         <div style={{ background: '#fff', borderRadius: '18px', padding: '40px 20px', textAlign: 'center', border: '1px dashed #cbd5e1' }}>
           <span style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>📅</span>
           <h3 style={{ margin: '0 0 4px', fontSize: '16px', color: '#0f172a' }}>কোনো কিস্তির হিসাব পাওয়া যায়নি</h3>
-          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>নতুন কিস্তিতে পণ্য বিক্রি শুরু করতে "নতুন কিস্তি বিক্রি" বাটনে ক্লিক করুন।</p>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>নতুন কিস্তিতে পণ্য বিক্রি শুরু করতে &quot;নতুন কিস্তি বিক্রি&quot; বাটনে ক্লিক করুন।</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -445,7 +417,7 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {/* NEW INSTALLMENT MODAL */}
+      {/* NEW INSTALLMENT MODAL WITH FIELD-BY-FIELD VOICE */}
       {showAddModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -460,44 +432,36 @@ export default function InstallmentsPage() {
               <button onClick={() => setShowAddModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Quick Voice Auto-Fill Banner */}
-            <div style={{
-              background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-              border: '1.5px dashed #6366f1',
-              borderRadius: '14px',
-              padding: '10px 14px',
-              marginBottom: '14px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <div>
-                <strong style={{ fontSize: '12px', color: '#312e81', display: 'block' }}>🎙️ মুখে বলে দ্রুত ফর্ম পূরণ করবেন?</strong>
-                <span style={{ fontSize: '11px', color: '#4338ca' }}>১টি বাক্যে সব তথ্য অটো ফিল হবে</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowAddModal(false); setShowVoiceModal(true); triggerHaptic('medium'); }}
-                style={{
-                  background: '#4f46e5',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  fontWeight: '800',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                ভয়েস চালু ➔
-              </button>
-            </div>
-
             <form onSubmit={handleAddSubmit} style={{ display: 'grid', gap: '12px' }}>
+              
+              {/* Field 1: Customer Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>গ্রাহকের নাম:</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>👤 গ্রাহকের নাম:</label>
+                  <button
+                    type="button"
+                    onClick={() => triggerFieldVoiceInput({
+                      label: 'গ্রাহকের নাম',
+                      isNumeric: false,
+                      onResult: (val) => setForm(prev => ({ ...prev, customerName: val }))
+                    })}
+                    style={{
+                      background: '#eef2ff',
+                      color: '#4f46e5',
+                      border: '1px solid #c7d2fe',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>🎙️</span> মুখে বলুন
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="যেমন: মো: রহিম মিয়া"
@@ -508,21 +472,71 @@ export default function InstallmentsPage() {
                 />
               </div>
 
+              {/* Field 2 & 3: Mobile & Address */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>মোবাইল নম্বর:</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📞 মোবাইল নম্বর:</label>
+                    <button
+                      type="button"
+                      onClick={() => triggerFieldVoiceInput({
+                        label: 'মোবাইল নম্বর',
+                        isNumeric: true,
+                        onResult: (val) => setForm(prev => ({ ...prev, customerPhone: val.replace(/\D/g, '') }))
+                      })}
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4f46e5',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <span>🎙️</span>
+                    </button>
+                  </div>
                   <input
                     type="tel"
                     placeholder="017xxxxxxxx"
                     value={form.customerPhone}
                     onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-                    required
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>ঠিকানা / গ্রাম:</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📍 ঠিকানা:</label>
+                    <button
+                      type="button"
+                      onClick={() => triggerFieldVoiceInput({
+                        label: 'ঠিকানা বা গ্রাম',
+                        isNumeric: false,
+                        onResult: (val) => setForm(prev => ({ ...prev, customerAddress: val }))
+                      })}
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4f46e5',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <span>🎙️</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     placeholder="ঠিকানা"
@@ -533,11 +547,37 @@ export default function InstallmentsPage() {
                 </div>
               </div>
 
+              {/* Field 4: Product Name / Model */}
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>পণ্যের বিবরণ / মডেল:</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>📱 পণ্যের নাম / মডেল:</label>
+                  <button
+                    type="button"
+                    onClick={() => triggerFieldVoiceInput({
+                      label: 'পণ্যের বিবরণ ও মডেল',
+                      isNumeric: false,
+                      onResult: (val) => setForm(prev => ({ ...prev, productName: val }))
+                    })}
+                    style={{
+                      background: '#eef2ff',
+                      color: '#4f46e5',
+                      border: '1px solid #c7d2fe',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>🎙️</span> মুখে বলুন
+                  </button>
+                </div>
                 <input
                   type="text"
-                  placeholder="যেমন: Samsung Galaxy A15 (128GB)"
+                  placeholder="যেমন: Samsung Galaxy A15 (128GB) / Walton ফ্রিজ"
                   value={form.productName}
                   onChange={(e) => setForm({ ...form, productName: e.target.value })}
                   required
@@ -545,9 +585,35 @@ export default function InstallmentsPage() {
                 />
               </div>
 
+              {/* Field 5 & 6: Total Amount & Down Payment */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>মোট মূল্য (৳):</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>💰 মোট মূল্য (৳):</label>
+                    <button
+                      type="button"
+                      onClick={() => triggerFieldVoiceInput({
+                        label: 'মোট মূল্য (টাকা)',
+                        isNumeric: true,
+                        onResult: (val) => setForm(prev => ({ ...prev, totalAmount: val }))
+                      })}
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4f46e5',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <span>🎙️</span>
+                    </button>
+                  </div>
                   <input
                     type="number"
                     placeholder="যেমন: 22000"
@@ -560,7 +626,32 @@ export default function InstallmentsPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>ডাউন পেমেন্ট (৳):</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>💵 ডাউন পেমেন্ট (৳):</label>
+                    <button
+                      type="button"
+                      onClick={() => triggerFieldVoiceInput({
+                        label: 'ডাউন পেমেন্ট (টাকা)',
+                        isNumeric: true,
+                        onResult: (val) => setForm(prev => ({ ...prev, downPayment: val }))
+                      })}
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4f46e5',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <span>🎙️</span>
+                    </button>
+                  </div>
                   <input
                     type="number"
                     placeholder="যেমন: 6000"
@@ -572,13 +663,14 @@ export default function InstallmentsPage() {
                 </div>
               </div>
 
+              {/* Field 7 & 8: Duration (Months) & Guarantor */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>কিস্তির মেয়াদ (মাস):</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>📅 কিস্তির মেয়াদ (মাস):</label>
                   <select
                     value={form.totalMonths}
                     onChange={(e) => setForm({ ...form, totalMonths: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', background: '#fff' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
                   >
                     <option value="2">২ মাস</option>
                     <option value="3">৩ মাস</option>
@@ -586,20 +678,74 @@ export default function InstallmentsPage() {
                     <option value="6">৬ মাস</option>
                     <option value="9">৯ মাস</option>
                     <option value="12">১২ মাস (১ বছর)</option>
+                    <option value="18">১৮ মাস</option>
+                    <option value="24">২৪ মাস (২ বছর)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>জামিনদারের নাম:</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>🤝 জামিনদার:</label>
+                    <button
+                      type="button"
+                      onClick={() => triggerFieldVoiceInput({
+                        label: 'জামিনদারের নাম',
+                        isNumeric: false,
+                        onResult: (val) => setForm(prev => ({ ...prev, guarantorName: val }))
+                      })}
+                      style={{
+                        background: '#eef2ff',
+                        color: '#4f46e5',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <span>🎙️</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    placeholder="জামিনদার"
+                    placeholder="জামিনদারের নাম"
                     value={form.guarantorName}
                     onChange={(e) => setForm({ ...form, guarantorName: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
+
+              {/* Calculated Live Preview */}
+              {Number(form.totalAmount) > 0 && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '10px 12px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <span style={{ color: '#64748b' }}>বাকি কিস্তি: </span>
+                    <strong className="num-font" style={{ color: '#dc2626', fontSize: '13.5px' }}>
+                      ৳{(Math.max(0, (Number(form.totalAmount) || 0) - (Number(form.downPayment) || 0))).toLocaleString('en-US')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>প্রতি মাসে: </span>
+                    <strong className="num-font" style={{ color: '#4f46e5', fontSize: '13.5px' }}>
+                      ৳{(Math.round(Math.max(0, (Number(form.totalAmount) || 0) - (Number(form.downPayment) || 0)) / (Math.max(1, Number(form.totalMonths) || 1)))).toLocaleString('en-US')}
+                    </strong>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -622,7 +768,7 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {/* COLLECT PAYMENT MODAL */}
+      {/* COLLECT PAYMENT MODAL WITH VOICE */}
       {collectModalItem && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -645,7 +791,32 @@ export default function InstallmentsPage() {
 
             <form onSubmit={handleCollectSubmit} style={{ display: 'grid', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>জমার পরিমাণ (৳):</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569' }}>জমার পরিমাণ (৳):</label>
+                  <button
+                    type="button"
+                    onClick={() => triggerFieldVoiceInput({
+                      label: 'জমার পরিমাণ',
+                      isNumeric: true,
+                      onResult: (val) => setPaymentAmount(val)
+                    })}
+                    style={{
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      border: '1px solid #a7f3d0',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>🎙️</span> মুখে বলুন
+                  </button>
+                </div>
                 <input
                   type="number"
                   value={paymentAmount}
@@ -690,18 +861,6 @@ export default function InstallmentsPage() {
           </div>
         </div>
       )}
-
-      {/* 🎙️ DEDICATED BENGALI VOICE INSTALLMENT MODAL */}
-      <VoiceInstallmentModal
-        isOpen={showVoiceModal}
-        onClose={() => setShowVoiceModal(false)}
-        currentTenantId={currentTenantId || ''}
-        existingCustomers={customers}
-        existingProducts={products}
-        onInstallmentCreated={loadInstallments}
-        speakAnnouncement={speakAnnouncement}
-        triggerHaptic={triggerHaptic}
-      />
 
     </div>
     </FeatureGate>

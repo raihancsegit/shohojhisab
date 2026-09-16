@@ -74,7 +74,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
     { href: '/', label: 'ড্যাশবোর্ড', icon: '🏠', show: true },
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
     { href: '/khata', label: theme.khataLabel, icon: '📒', show: isFeatureEnabled('enableCustomerKhata') },
-    { href: '/installments', label: 'কিস্তি খাতা', icon: '📅', show: isFeatureEnabled('enableInstallments') },
+    { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
     { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/expenses', label: 'দোকান খরচ', icon: '💸', show: true },
@@ -785,7 +785,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const menuItems = [
     { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'হট' },
     { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
-    { href: '/installments', label: 'কিস্তি খাতা (Installments / EMI)', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
+    { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
     { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
     { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
@@ -1212,40 +1212,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               </button>
             )}
 
-            {/* 4. কিস্তি বিক্রি (ভয়েস) */}
-            {isFeatureEnabled('enableInstallments') && (
-              <button
-                onClick={() => handleAction('/installments?voice=1')}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-                className="clickable-card"
-              >
-                <div style={{
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
-                  color: '#4338ca',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '24px',
-                  boxShadow: '0 2px 8px rgba(67, 56, 202, 0.18)'
-                }}>
-                  🎙️
-                </div>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>কিস্তি বিক্রি</span>
-              </button>
-            )}
-
-            {/* 5. কিস্তি আদায় */}
+            {/* 4. কিস্তি আদায় */}
             {isFeatureEnabled('enableInstallments') && (
               <button
                 onClick={() => handleAction('/installments')}
@@ -1274,7 +1241,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 }}>
                   📅
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>কিস্তি জমা</span>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>বাকির কিস্তি</span>
               </button>
             )}
           </div>

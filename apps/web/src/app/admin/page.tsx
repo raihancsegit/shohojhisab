@@ -2241,7 +2241,7 @@ export default function SuperAdminPage() {
               {[
                 { key: 'enableMultiBranch', label: 'মাল্টি-ব্রাঞ্চ (Multi-Branch Support)' },
                 { key: 'enableChallanOcr', label: 'চালান ক্যামেরা স্ক্যানার (OCR Memo Reader)' },
-                { key: 'enableInstallments', label: 'কিস্তি খাতা (Installments / EMI)' },
+                { key: 'enableInstallments', label: 'বাকির কিস্তি' },
                 { key: 'enableExpiryTracker', label: 'মেয়াদ রাডার (Expiry Date Tracker)' },
                 { key: 'enableBarcodePrinter', label: 'বারকোড ও স্টিকার প্রিন্টার' },
                 { key: 'enableDealerKhata', label: 'ডিলার ও মহাজন খাতা' },

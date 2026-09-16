@@ -823,7 +823,7 @@ export default function SettingsHubPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        কিস্তি খাতা (Installments / EMI)
+                        বাকির কিস্তি
                         <span style={{ fontSize: '10px', background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>জনপ্রিয়</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
