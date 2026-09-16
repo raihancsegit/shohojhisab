@@ -5454,6 +5454,53 @@ fastify.delete('/api/customers/:id', handleDeleteCustomer);
 fastify.post('/api/customers/:id/delete', handleDeleteCustomer);
 fastify.post('/api/customers/delete', handleDeleteCustomer);
 
+// Update/Edit Customer Profile & Balance
+const handleUpdateCustomer = async (request: any, reply: any) => {
+  const rawId = (request.params as { id: string })?.id || (request.query as any)?.id || (request.body as any)?.id;
+  if (!rawId) return reply.status(400).send({ error: 'কাস্টমার আইডি প্রয়োজন' });
+  const decodedId = decodeURIComponent(String(rawId)).trim();
+  const body = request.body as any;
+
+  try {
+    let cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(decodedId) as any;
+    if (!cust) {
+      cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(rawId) as any;
+    }
+    if (!cust) {
+      return reply.status(404).send({ error: 'কাস্টমার খুঁজে পাওয়া যায়নি' });
+    }
+
+    const name = body.name !== undefined ? String(body.name).trim() : cust.name;
+    const phone = body.phone !== undefined ? String(body.phone).trim() : cust.phone;
+    const address = body.address !== undefined ? String(body.address).trim() : cust.address;
+    const creditLimit = body.creditLimit !== undefined ? (Number(body.creditLimit) || 0) : cust.credit_limit;
+    const promiseDate = body.promiseDate !== undefined ? String(body.promiseDate).trim() : cust.promise_date;
+    const totalDue = (body.totalDue !== undefined && body.totalDue !== '') ? (Number(body.totalDue) || 0) : cust.total_due;
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE customers 
+        SET name = ?, phone = ?, address = ?, credit_limit = ?, promise_date = ?, total_due = ?
+        WHERE id = ?
+      `).run(name, phone, address, creditLimit, promiseDate, totalDue, cust.id);
+
+      // If name changed, update customer name in sales records
+      if (name && name !== cust.name) {
+        db.prepare('UPDATE sales SET customer_name = ? WHERE customer_id = ?').run(name, cust.id);
+      }
+    })();
+
+    return { success: true, message: 'কাস্টমারের তথ্য সফলভাবে আপডেট হয়েছে' };
+  } catch (err: any) {
+    console.error('Error updating customer:', err);
+    return reply.status(400).send({ error: err.message || 'কাস্টমার আপডেট করতে সমস্যা হয়েছে' });
+  }
+};
+
+fastify.put('/api/customers/:id', handleUpdateCustomer);
+fastify.post('/api/customers/:id/update', handleUpdateCustomer);
+fastify.post('/api/customers/update', handleUpdateCustomer);
+
 // Direct Customer Specific Voice Entry (When inside customer profile / ledger)
 fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
   const { id } = request.params as { id: string };
@@ -5900,6 +5947,51 @@ fastify.post('/api/expenses', async (request, reply) => {
   }
 });
 
+const handleUpdateExpense = async (request: any, reply: any) => {
+  const { id } = request.params as { id: string };
+  const body = request.body as any;
+  if (!id) return reply.status(400).send({ error: 'খরচ আইডি প্রয়োজন' });
+
+  try {
+    const exp = db.prepare('SELECT * FROM expenses WHERE id = ?').get(id) as any;
+    if (!exp) return reply.status(404).send({ error: 'খরচের হিসাব পাওয়া যায়নি' });
+
+    const title = body.title !== undefined ? String(body.title).trim() : exp.title;
+    const amount = body.amount !== undefined ? (Number(body.amount) || 0) : exp.amount;
+    const category = body.category !== undefined ? String(body.category).trim() : exp.category;
+    const icon = body.icon || exp.icon || '💸';
+    const createdAt = body.createdAt || body.date || exp.created_at;
+
+    db.prepare(`
+      UPDATE expenses 
+      SET title = ?, amount = ?, category = ?, icon = ?, created_at = ?
+      WHERE id = ?
+    `).run(title, amount, category, icon, createdAt, id);
+
+    return { success: true, message: 'খরচ সফলভাবে আপডেট হয়েছে' };
+  } catch (err: any) {
+    return reply.status(400).send({ error: err.message });
+  }
+};
+
+fastify.put('/api/expenses/:id', handleUpdateExpense);
+fastify.post('/api/expenses/:id/update', handleUpdateExpense);
+fastify.post('/api/expenses/update', handleUpdateExpense);
+
+const handleDeleteExpense = async (request: any, reply: any) => {
+  const { id } = request.params as { id: string };
+  try {
+    db.prepare('DELETE FROM expenses WHERE id = ?').run(id);
+    return { success: true, message: 'খরচ সফলভাবে মুছে ফেলা হয়েছে' };
+  } catch (err: any) {
+    return reply.status(400).send({ error: err.message });
+  }
+};
+
+fastify.delete('/api/expenses/:id', handleDeleteExpense);
+fastify.post('/api/expenses/:id/delete', handleDeleteExpense);
+fastify.post('/api/expenses/delete', handleDeleteExpense);
+
 // Sales & POS
 fastify.get('/api/sales', async (request) => {
   const { tenantId, period, startDate, endDate } = request.query as any;
@@ -6217,6 +6309,124 @@ fastify.delete('/api/sales/:id', async (request, reply) => {
     return reply.status(400).send({ error: err.message || 'মুছে ফেলতে সমস্যা হয়েছে' });
   }
 });
+
+// Update/Edit Sale or Baki / Payment Ledger Entry
+const handleUpdateSale = async (request: any, reply: any) => {
+  const { id } = request.params as { id: string };
+  const body = request.body as any;
+  if (!id) return reply.status(400).send({ error: 'লেনদেন আইডি প্রয়োজন' });
+
+  try {
+    const sale = db.prepare('SELECT * FROM sales WHERE id = ?').get(id) as any;
+    if (!sale) {
+      return reply.status(404).send({ error: 'মেমো বা লেনদেন খুঁজে পাওয়া যায়নি' });
+    }
+
+    const isPayment = sale.payment_method === 'due_payment' || (Number(sale.due_amount) === 0 && Number(sale.paid_amount) > 0);
+    const hasAmount = body.amount !== undefined || body.paidAmount !== undefined || body.dueAmount !== undefined || body.totalAmount !== undefined;
+    const newAmount = Number(body.amount ?? (isPayment ? body.paidAmount : (body.dueAmount ?? body.totalAmount)));
+    const note = body.note !== undefined ? body.note : (body.itemsSummary !== undefined ? body.itemsSummary : undefined);
+    const createdAt = body.createdAt || body.date;
+
+    db.transaction(() => {
+      if (hasAmount && !isNaN(newAmount) && newAmount >= 0) {
+        if (isPayment) {
+          // Editing a payment:
+          const oldPaid = Number(sale.paid_amount) || Number(sale.total_amount) || 0;
+          const diff = newAmount - oldPaid;
+          // If customer paid MORE now (diff > 0), their due should DECREASE more.
+          // If customer paid LESS now (diff < 0), their due should INCREASE back.
+          if (sale.customer_id) {
+            db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(diff, sale.customer_id);
+          } else if (sale.customer_name && sale.customer_name !== 'নগদ কাস্টমার') {
+            const cust = db.prepare('SELECT id FROM customers WHERE tenant_id = ? AND name = ?').get(sale.tenant_id, sale.customer_name) as any;
+            if (cust) {
+              db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(diff, cust.id);
+            }
+          }
+
+          db.prepare(`
+            UPDATE sales 
+            SET total_amount = ?, paid_amount = ?, subtotal = ?, 
+                note = COALESCE(?, note), 
+                created_at = COALESCE(?, created_at)
+            WHERE id = ?
+          `).run(newAmount, newAmount, newAmount, note !== undefined ? note : null, createdAt || null, id);
+
+          // Update sale_items price
+          db.prepare(`
+            UPDATE sale_items 
+            SET selling_price = ?, total_price = ? 
+            WHERE sale_id = ?
+          `).run(newAmount, newAmount, id);
+        } else {
+          // Editing a due sale:
+          const oldDue = Number(sale.due_amount) || Number(sale.total_amount) || 0;
+          const diff = newAmount - oldDue;
+          // If new due is MORE (diff > 0), customer's total due INCREASES.
+          // If new due is LESS (diff < 0), customer's total due DECREASES.
+          if (sale.customer_id) {
+            db.prepare('UPDATE customers SET total_due = MAX(0, total_due + ?) WHERE id = ?').run(diff, sale.customer_id);
+          } else if (sale.customer_name && sale.customer_name !== 'নগদ কাস্টমার') {
+            const cust = db.prepare('SELECT id FROM customers WHERE tenant_id = ? AND name = ?').get(sale.tenant_id, sale.customer_name) as any;
+            if (cust) {
+              db.prepare('UPDATE customers SET total_due = MAX(0, total_due + ?) WHERE id = ?').run(diff, cust.id);
+            }
+          }
+
+          db.prepare(`
+            UPDATE sales 
+            SET total_amount = ?, due_amount = ?, subtotal = ?, 
+                note = COALESCE(?, note), 
+                created_at = COALESCE(?, created_at)
+            WHERE id = ?
+          `).run(newAmount, newAmount, newAmount, note !== undefined ? note : null, createdAt || null, id);
+
+          // Update sale_items
+          if (Array.isArray(body.items) && body.items.length > 0) {
+            db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(id);
+            for (const it of body.items) {
+              const itemId = 'sitem-' + uuidv4().slice(0, 8);
+              const name = it.name || it.productName || 'বাকি পণ্য';
+              const qty = Number(it.quantity) || 1;
+              const price = Number(it.price || it.sellingPrice || it.totalPrice) || 0;
+              const total = Number(it.totalPrice) || (price * qty);
+              const cost = Math.round(price * 0.8);
+              const profit = total - (cost * qty);
+              db.prepare(`
+                INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `).run(itemId, id, it.productId || ('prod-due-' + uuidv4().slice(0, 6)), name, qty, cost, price, total, profit);
+            }
+          } else if (note) {
+            db.prepare(`
+              UPDATE sale_items 
+              SET product_name = ?, selling_price = ?, total_price = ? 
+              WHERE sale_id = ?
+            `).run(note, newAmount, newAmount, id);
+          }
+        }
+      } else {
+        // Just note or date update
+        db.prepare(`
+          UPDATE sales 
+          SET note = COALESCE(?, note), 
+              created_at = COALESCE(?, created_at)
+          WHERE id = ?
+        `).run(note !== undefined ? note : null, createdAt || null, id);
+      }
+    })();
+
+    return { success: true, message: 'লেনদেন/বাকি এন্ট্রি সফলভাবে আপডেট হয়েছে' };
+  } catch (err: any) {
+    console.error('Error updating sale/baki entry:', err);
+    return reply.status(400).send({ error: err.message || 'আপডেট করতে সমস্যা হয়েছে' });
+  }
+};
+
+fastify.put('/api/sales/:id', handleUpdateSale);
+fastify.post('/api/sales/:id/update', handleUpdateSale);
+fastify.post('/api/sales/update', handleUpdateSale);
 
 // ==========================================
 // INSTALLMENTS / EMI MODULE

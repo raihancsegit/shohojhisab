@@ -21,6 +21,8 @@ export default function ExpensesPage() {
   const [category, setCategory] = useState('দোকান ভাড়া');
   const [notice, setNotice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const loadExpenses = async () => {
     if (!currentTenantId) {
@@ -75,6 +77,55 @@ export default function ExpensesPage() {
       }
     } catch (e) {}
     setSubmitting(false);
+  };
+
+  const handleEditExpenseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense?.id || !editingExpense.title || !editingExpense.amount) return;
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/expenses/${editingExpense.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingExpense.title,
+          amount: Number(editingExpense.amount) || 0,
+          category: editingExpense.category
+        })
+      });
+      if (res.ok) {
+        triggerHaptic('success');
+        setNotice(`✓ খরচ "${editingExpense.title}" আপডেট হয়েছে!`);
+        await loadExpenses();
+        setEditingExpense(null);
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'আপডেট ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleDeleteExpense = async (exp: any) => {
+    if (!confirm(`আপনি কি নিশ্চিত যে "${exp.title} (৳${exp.amount})" খরচটি মুছে ফেলতে চান?`)) return;
+    try {
+      const res = await fetch(`/api/expenses/${exp.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        triggerHaptic('success');
+        setNotice(`✓ "${exp.title}" খরচ মুছে ফেলা হয়েছে!`);
+        await loadExpenses();
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'মুছতে ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    }
   };
 
   const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false, label?: string) => {
@@ -170,12 +221,50 @@ export default function ExpensesPage() {
       ) : (
         <div style={{ display: 'grid', gap: '6px' }}>
           {paginatedExpenses.map(e => (
-            <div key={e.id} className="mobile-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderRadius: '12px' }}>
+            <div key={e.id} className="mobile-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '12px' }}>
               <div>
-                <strong style={{ fontSize: '13px', color: '#0f172a' }}>{e.title}</strong>
+                <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{e.title}</strong>
                 <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>{e.category}</span>
               </div>
-              <strong className="num-font" style={{ fontSize: '14.5px', color: '#dc2626' }}>৳{e.amount}</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <strong className="num-font" style={{ fontSize: '15px', color: '#dc2626' }}>৳{e.amount}</strong>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setEditingExpense({ ...e });
+                    }}
+                    style={{
+                      background: '#f1f5f9',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                    title="খরচ এডিট করুন"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteExpense(e)}
+                    style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '8px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      color: '#dc2626',
+                      cursor: 'pointer'
+                    }}
+                    title="খরচ মুছে ফেলুন"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -250,6 +339,63 @@ export default function ExpensesPage() {
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>বাতিল</button>
                 <button type="submit" disabled={submitting} style={{ flex: 2, padding: '12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>✓ খরচ সেভ করুন</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ✏️ EDIT EXPENSE MODAL */}
+      {editingExpense && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900' }}>✏️ খরচ সংশোধন</h3>
+              <button onClick={() => setEditingExpense(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: '800' }}>✕</button>
+            </div>
+            <form onSubmit={handleEditExpenseSubmit} style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>খরচের নাম / বিবরণ *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingExpense.title || ''}
+                  onChange={e => setEditingExpense({ ...editingExpense, title: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>টাকার পরিমাণ (৳) *</label>
+                <input
+                  type="number"
+                  required
+                  value={editingExpense.amount || ''}
+                  onChange={e => setEditingExpense({ ...editingExpense, amount: e.target.value })}
+                  className="num-font"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '18px', fontWeight: '900' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>খাত</label>
+                <select
+                  value={editingExpense.category || 'অন্যান্য'}
+                  onChange={e => setEditingExpense({ ...editingExpense, category: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                >
+                  <option value="দোকান ভাড়া">দোকান ভাড়া</option>
+                  <option value="বিদ্যুৎ বিল">বিদ্যুৎ বিল</option>
+                  <option value="কর্মচারী বেতন">কর্মচারী বেতন</option>
+                  <option value="চা-নাস্তা">চা-নাস্তা / মেহমানদারি</option>
+                  <option value="পরিবহন">পরিবহন / কুলি খরচ</option>
+                  <option value="অন্যান্য">অন্যান্য</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button type="button" onClick={() => setEditingExpense(null)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>বাতিল</button>
+                <button type="submit" disabled={editSubmitting} style={{ flex: 2, padding: '12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>✓ সংশোধন সংরক্ষণ করুন</button>
               </div>
             </form>
           </div>

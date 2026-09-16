@@ -36,6 +36,14 @@ export default function KhataPage() {
   const [customerToDelete, setCustomerToDelete] = useState<any | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  // Edit Customer state
+  const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
+  const [editCustomerSubmitting, setEditCustomerSubmitting] = useState(false);
+
+  // Edit Ledger Entry state (Sale Due / Payment)
+  const [editingEntry, setEditingEntry] = useState<any | null>(null);
+  const [editEntrySubmitting, setEditEntrySubmitting] = useState(false);
+
   // Direct Customer Voice Entry state (In-Card & In-Ledger)
   const [voiceCustomerModal, setVoiceCustomerModal] = useState<any | null>(null);
   const [voiceCustomerListening, setVoiceCustomerListening] = useState(false);
@@ -512,6 +520,93 @@ export default function KhataPage() {
       }
     } catch (e) {
       alert('সার্ভারে যোগাযোগ করা যায়নি');
+    }
+  };
+
+  // Edit Customer Profile Submit Handler
+  const handleEditCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer?.id || !editingCustomer.name) return;
+    setEditCustomerSubmitting(true);
+    try {
+      const res = await fetch(`/api/customers/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingCustomer.name,
+          phone: editingCustomer.phone,
+          address: editingCustomer.address,
+          creditLimit: Number(editingCustomer.creditLimit ?? editingCustomer.credit_limit) || 5000,
+          promiseDate: editingCustomer.promiseDate || '',
+          totalDue: editingCustomer.totalDue !== undefined ? Number(editingCustomer.totalDue) : undefined
+        })
+      });
+      if (res.ok) {
+        playCashSound();
+        triggerHaptic('success');
+        setNotice(`✓ কাস্টমার "${editingCustomer.name}"-এর তথ্য সফলভাবে আপডেট হয়েছে!`);
+        if (selectedLedger?.customer?.id === editingCustomer.id) {
+          setSelectedLedger((prev: any) => prev ? {
+            ...prev,
+            customer: {
+              ...prev.customer,
+              name: editingCustomer.name,
+              phone: editingCustomer.phone,
+              address: editingCustomer.address,
+              creditLimit: editingCustomer.creditLimit,
+              credit_limit: editingCustomer.creditLimit,
+              totalDue: editingCustomer.totalDue !== undefined ? editingCustomer.totalDue : prev.customer.totalDue
+            }
+          } : null);
+          await loadCustomerLedger(editingCustomer);
+        }
+        await loadCustomers();
+        setEditingCustomer(null);
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'কাস্টমার আপডেট করতে সমস্যা হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
+    } finally {
+      setEditCustomerSubmitting(false);
+    }
+  };
+
+  // Edit Ledger Transaction Entry Submit Handler
+  const handleEditEntrySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry?.id) return;
+    setEditEntrySubmitting(true);
+    try {
+      const res = await fetch(`/api/sales/${editingEntry.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(editingEntry.amount) || 0,
+          note: editingEntry.note || '',
+          createdAt: editingEntry.createdAt || undefined
+        })
+      });
+      if (res.ok) {
+        playCashSound();
+        triggerHaptic('success');
+        setNotice('✓ বাকি/জমা এন্ট্রি সফলভাবে সংশোধন করা হয়েছে!');
+        if (selectedLedger?.customer) {
+          await loadCustomerLedger(selectedLedger.customer);
+        }
+        await loadCustomers();
+        setEditingEntry(null);
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'এন্ট্রি আপডেট করতে ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setEditEntrySubmitting(false);
     }
   };
 
@@ -1307,6 +1402,22 @@ export default function KhataPage() {
                           📖
                         </Link>
                         <button
+                          onClick={() => setEditingCustomer(c)}
+                          style={{
+                            background: '#f0fdf4',
+                            color: '#166534',
+                            border: '1px solid #bbf7d0',
+                            padding: '5px 8px',
+                            borderRadius: '8px',
+                            fontSize: '11.5px',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                          title="কাস্টমার তথ্য এডিট করুন"
+                        >
+                          ✏️
+                        </button>
+                        <button
                           onClick={() => setCustomerToDelete(c)}
                           style={{
                             background: '#fef2f2',
@@ -1409,25 +1520,43 @@ export default function KhataPage() {
                       </div>
                     </div>
 
-                    {/* Delete Customer Button */}
-                    <button
-                      type="button"
-                      onClick={() => setCustomerToDelete(c)}
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                        padding: '4px 6px',
-                        fontSize: '12px',
-                        lineHeight: 1,
-                        flexShrink: 0
-                      }}
-                      title={`${c.name} এর খাতা মুছে ফেলুন`}
-                    >
-                      🗑️
-                    </button>
+                    {/* Action Buttons: Edit & Delete Customer */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setEditingCustomer(c)}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          color: '#475569',
+                          cursor: 'pointer',
+                          padding: '4px 6px',
+                          fontSize: '12px',
+                          lineHeight: 1
+                        }}
+                        title={`${c.name} এর তথ্য এডিট করুন`}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCustomerToDelete(c)}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          padding: '4px 6px',
+                          fontSize: '12px',
+                          lineHeight: 1
+                        }}
+                        title={`${c.name} এর খাতা মুছে ফেলুন`}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
                   {/* Due Amount Highlight Banner */}
@@ -2442,6 +2571,26 @@ export default function KhataPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setEditingCustomer(selectedLedger.customer)}
+                  style={{
+                    background: '#f0fdf4',
+                    color: '#166534',
+                    border: '1px solid #bbf7d0',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}
+                  title="এই গ্রাহকের তথ্য (নাম, নাম্বার, লিমিট) এডিট করুন"
+                >
+                  <span>✏️</span> এডিট
+                </button>
+                <button
+                  type="button"
                   onClick={() => setCustomerToDelete(selectedLedger.customer)}
                   style={{
                     background: '#ffffff',
@@ -2550,6 +2699,35 @@ export default function KhataPage() {
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingEntry({
+                                      id: entry.id,
+                                      isPayment,
+                                      amount: isPayment ? (entry.paidAmount || entry.totalAmount) : (entry.dueAmount || entry.totalAmount),
+                                      note: entry.note || (entry.items && entry.items.length > 0 ? entry.items.map((i: any) => `${i.name} (${i.quantity}টি)`).join(', ') : ''),
+                                      invoiceNo: entry.invoiceNo,
+                                      date: entry.date,
+                                      time: entry.time,
+                                      createdAt: entry.createdAt || entry.created_at || ''
+                                    })}
+                                    style={{
+                                      background: '#f0f9ff',
+                                      color: '#0369a1',
+                                      border: '1px solid #bae6fd',
+                                      padding: '3px 8px',
+                                      borderRadius: '6px',
+                                      fontSize: '10.5px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '3px'
+                                    }}
+                                    title="এই মেমো/জমার টাকার পরিমাণ বা বিবরণ সংশোধন করুন"
+                                  >
+                                    <span>✏️</span> এডিট
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => sendTransactionWhatsApp(selectedLedger.customer, entry)}
@@ -3033,6 +3211,249 @@ export default function KhataPage() {
             setTimeout(() => setNotice(''), 3000);
           }}
         />
+      )}
+
+      {/* ✏️ EDIT CUSTOMER PROFILE MODAL */}
+      {editingCustomer && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', padding: '24px',
+            width: '100%', maxWidth: '440px', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '22px' }}>✏️</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                    কাস্টমার তথ্য এডিট
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    নাম, মোবাইল নাম্বার, ঠিকানা বা বাকি লিমিট সংশোধন করুন
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCustomer(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleEditCustomerSubmit} style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  কাস্টমারের নাম *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingCustomer.name || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '14px', fontWeight: '700' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  মোবাইল নম্বর
+                </label>
+                <input
+                  type="tel"
+                  placeholder="০১৭xxxxxxxx"
+                  value={editingCustomer.phone || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                  className="num-font"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '14px', fontWeight: '700' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  ঠিকানা / এলাকা
+                </label>
+                <input
+                  type="text"
+                  placeholder="যেমন: বাজার গলি / গ্রাম"
+                  value={editingCustomer.address || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13.5px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    বাকি লিমিট (৳)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingCustomer.creditLimit ?? editingCustomer.credit_limit ?? 5000}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, creditLimit: e.target.value })}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '14px', fontWeight: '700' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                    বর্তমান বকেয়া (৳)
+                  </label>
+                  <input
+                    type="number"
+                    value={editingCustomer.totalDue ?? editingCustomer.total_due ?? 0}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, totalDue: e.target.value })}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '14px', fontWeight: '800', color: '#dc2626' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingCustomer(null)}
+                  style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '800', color: '#475569', cursor: 'pointer' }}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={editCustomerSubmitting}
+                  style={{
+                    flex: 1.5, padding: '12px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none', borderRadius: '12px', fontWeight: '900', color: '#ffffff',
+                    cursor: editCustomerSubmitting ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  {editCustomerSubmitting ? 'সংরক্ষণ হচ্ছে...' : '✓ তথ্য সংরক্ষণ করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ✏️ EDIT TRANSACTION / DUE / PAYMENT ENTRY MODAL */}
+      {editingEntry && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)',
+          zIndex: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px'
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '24px', padding: '24px',
+            width: '100%', maxWidth: '420px', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.35)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '22px' }}>{editingEntry.isPayment ? '🟢' : '🔴'}</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                    {editingEntry.isPayment ? 'জমা এন্ট্রি সংশোধন' : 'বাকি মেমো সংশোধন'}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    টাকার পরিমাণ বা বিবরণ ভুল হলে সংশোধন করুন
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingEntry(null)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Explanation card */}
+            <div style={{
+              background: editingEntry.isPayment ? '#f0fdf4' : '#fff1f2',
+              border: editingEntry.isPayment ? '1px solid #bbf7d0' : '1px solid #fecdd3',
+              borderRadius: '12px',
+              padding: '10px 12px',
+              marginBottom: '14px',
+              fontSize: '12px',
+              color: editingEntry.isPayment ? '#166534' : '#991b1b',
+              lineHeight: 1.4
+            }}>
+              💡 <strong>স্বয়ংক্রিয় হিসাব সমন্বয়:</strong> আপনি এখানে টাকার পরিমাণ পরিবর্তন করলে কাস্টমারের মোট বাকি ব্যালেন্স স্বয়ংক্রিয়ভাবে সমন্বয় হয়ে যাবে।
+            </div>
+
+            <form onSubmit={handleEditEntrySubmit} style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  {editingEntry.isPayment ? 'জমা দেওয়া টাকার পরিমাণ (৳) *' : 'বাকি নেওয়া টাকার পরিমাণ (৳) *'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={editingEntry.amount || ''}
+                  onChange={e => setEditingEntry({ ...editingEntry, amount: e.target.value })}
+                  className="num-font"
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    border: '2px solid #cbd5e1',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontSize: '20px',
+                    fontWeight: '900',
+                    color: editingEntry.isPayment ? '#166534' : '#dc2626'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  {editingEntry.isPayment ? 'জমার নোট / বিবরণ' : 'পণ্যের ফর্দ বা নোট'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={editingEntry.note || ''}
+                  onChange={e => setEditingEntry({ ...editingEntry, note: e.target.value })}
+                  placeholder={editingEntry.isPayment ? 'যেমন: নগদ বাকি আদায় বা বিকাশ' : 'যেমন: তেল ১ কেজি, চিনি ২ কেজি'}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', fontSize: '13px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingEntry(null)}
+                  style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '800', color: '#475569', cursor: 'pointer' }}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={editEntrySubmitting}
+                  style={{
+                    flex: 1.5,
+                    padding: '12px',
+                    background: editingEntry.isPayment ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    color: '#ffffff',
+                    cursor: editEntrySubmitting ? 'not-allowed' : 'pointer',
+                    boxShadow: editingEntry.isPayment ? '0 4px 12px rgba(16, 185, 129, 0.3)' : '0 4px 12px rgba(225, 29, 72, 0.3)'
+                  }}
+                >
+                  {editEntrySubmitting ? 'সংশোধন হচ্ছে...' : '✓ এন্ট্রি সংশোধন করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>
