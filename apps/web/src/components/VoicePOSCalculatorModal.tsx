@@ -37,7 +37,8 @@ export default function VoicePOSCalculatorModal({
   const [newCustPhone, setNewCustPhone] = useState<string>('');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
-  const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন...');
+  const [manualInputText, setManualInputText] = useState<string>('');
+  const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন বা লিখুন...');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
@@ -184,6 +185,8 @@ export default function VoicePOSCalculatorModal({
         if (event.error === 'not-allowed') {
           setIsListening(false);
           setLastActionMessage('⚠️ মাইক্রোফোন ব্যবহারের অনুমতি দিন');
+        } else if (event.error === 'network') {
+          setLastActionMessage('🎙️ শুনছি... মুখে বলুন বা ইনপুট বক্সে লিখে যোগ করুন');
         }
       };
 
@@ -802,6 +805,58 @@ export default function VoicePOSCalculatorModal({
             আইটেম: {items.length} টি
           </span>
         </div>
+
+        {/* 🟢 Interactive Voice / Text Entry Bar (Works 100% Online & Offline) */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (manualInputText.trim()) {
+              handleProcessVoiceInput(manualInputText.trim());
+              setManualInputText('');
+            }
+          }}
+          style={{
+            padding: '8px 14px',
+            background: '#ffffff',
+            borderBottom: '1.5px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0
+          }}
+        >
+          <input
+            type="text"
+            value={manualInputText}
+            onChange={(e) => setManualInputText(e.target.value)}
+            placeholder="মুখে বলুন বা লিখুন (যেমন: চিনি ১ কেজি, নাপা ২ পাতা, মোট ৫০০ পরিশোধ)..."
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: '1.5px solid #cbd5e1',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              outline: 'none'
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            যোগ করুন +
+          </button>
+        </form>
 
         {/* Main Live Calculation Board */}
         <div style={{
