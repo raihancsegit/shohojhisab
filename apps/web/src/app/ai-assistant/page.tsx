@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../../lib/audioFeedbackUtils';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
+import { executeOfflineAiShopCommand } from '../../lib/offlineAiEngine';
 
 export default function AiAssistantPage() {
   const router = useRouter();
@@ -56,24 +57,37 @@ export default function AiAssistantPage() {
 
     try {
       const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
-      const res = await fetch('/api/ai-assistant/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: currentTenantId || 'tenant-1',
-          query: q,
-          assistantName: savedAssistantName
-        })
-      });
+      
+      let data: any = null;
+      try {
+        const res = await fetch('/api/ai-assistant/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: currentTenantId || 'tenant-1',
+            query: q,
+            assistantName: savedAssistantName
+          })
+        });
+        if (res.ok) {
+          data = await res.json();
+        }
+      } catch (netErr) {
+        console.log('[AiAssistant] Offline mode active, running client-side AI engine...');
+      }
 
-      if (res.ok) {
-        const data = await res.json();
+      // Offline Fallback Engine: 100% offline local processing
+      if (!data) {
+        data = executeOfflineAiShopCommand(currentTenantId || 'tenant-1', q, savedAssistantName);
+      }
+
+      if (data) {
         playSuccessChime();
         const aiMsg = {
           id: String(Date.now() + 1),
           sender: 'ai',
           text: data.reply || data.speech,
-          time: 'এইমাত্র',
+          time: data.isOffline ? '🟢 অফলাইন মোড' : 'এইমাত্র',
           actionLink: data.actionLink
         };
         setMessages(prev => [...prev, aiMsg]);
@@ -95,22 +109,13 @@ export default function AiAssistantPage() {
             router.push(data.navigateTo);
           }, 1500);
         }
-      } else {
-        playWarningSound();
-        setMessages(prev => [...prev, {
-          id: String(Date.now() + 1),
-          sender: 'ai',
-          text: 'দুঃখিত, সার্ভার থেকে ডাটা লোড করা যায়নি। আবার চেষ্টা করুন।',
-          time: 'এইমাত্র',
-          actionLink: null
-        }]);
       }
     } catch (e) {
       playWarningSound();
       setMessages(prev => [...prev, {
         id: String(Date.now() + 1),
         sender: 'ai',
-        text: 'সার্ভার সংযোগ সমস্যা। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।',
+        text: 'সহকারী প্রসেস করতে সাময়িক সমস্যা হয়েছে। আবার বলুন।',
         time: 'এইমাত্র',
         actionLink: null
       }]);

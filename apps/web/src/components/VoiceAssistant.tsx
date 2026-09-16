@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { executeOfflineAiShopCommand } from '../lib/offlineAiEngine';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -193,74 +194,76 @@ export default function VoiceAssistant() {
 
     try {
       const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
-      const res = await fetch('/api/voice-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: tenant?.id || 'tenant-1', text: query, assistantName: savedAssistantName })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setIsProcessing(false);
-
-        if (data.success) {
-          playSuccessChime();
-          triggerHaptic?.('success');
-          setFeedbackType('success');
-          setFeedbackText(data.speech || 'কাজ সম্পন্ন হয়েছে।');
-
-          // Trigger live refresh event across active pages
-          window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
-
-          if (data.action === 'trigger_add_stock') {
-            window.dispatchEvent(new CustomEvent('voice-trigger-add-stock', { detail: data }));
-          }
-
-          // Directly speak out loud with forceSpeak = true
-          if (data.speech) {
-            speakAnnouncement(data.speech, undefined, true);
-          }
-
-          if (data.navigateTo) {
-            if (pathname !== data.navigateTo) {
-              router.push(data.navigateTo);
-            }
-          }
-
-          if (data.action === 'trigger_print') {
-            window.dispatchEvent(new CustomEvent('voice-trigger-print'));
-            setTimeout(() => window.print(), 600);
-          }
-
-          // Auto-dismiss feedback bubble after 4.5s
-          autoDismissTimerRef.current = setTimeout(() => {
-            setFeedbackType(null);
-          }, 4500);
-        } else {
-          playWarningSound();
-          setFeedbackType('error');
-          setFeedbackText(data.speech || 'কথাটি বুঝতে পারিনি। আবার বলুন।');
-          if (data.speech) {
-            speakAnnouncement(data.speech, undefined, true);
-          }
-          autoDismissTimerRef.current = setTimeout(() => {
-            setFeedbackType(null);
-          }, 3500);
+      let data: any = null;
+      try {
+        const res = await fetch('/api/voice-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenantId: tenant?.id || 'tenant-1', text: query, assistantName: savedAssistantName })
+        });
+        if (res.ok) {
+          data = await res.json();
         }
-      } else {
-        setIsProcessing(false);
-        playWarningSound();
-        setFeedbackType('error');
-        setFeedbackText('সার্ভার থেকে রেসপন্স পাওয়া যায়নি।');
+      } catch (e) {
+        console.log('[VoiceAssistant] Running offline fallback AI command...');
+      }
+
+      // Offline Engine Fallback
+      if (!data) {
+        data = executeOfflineAiShopCommand(tenant?.id || 'tenant-1', query, savedAssistantName);
+      }
+
+      setIsProcessing(false);
+
+      if (data && data.success) {
+        playSuccessChime();
+        triggerHaptic?.('success');
+        setFeedbackType('success');
+        setFeedbackText((data.speech || 'কাজ সম্পন্ন হয়েছে।') + (data.isOffline ? ' (🟢 অফলাইন)' : ''));
+
+        // Trigger live refresh event across active pages
+        window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
+
+        if (data.action === 'trigger_add_stock') {
+          window.dispatchEvent(new CustomEvent('voice-trigger-add-stock', { detail: data }));
+        }
+
+        // Directly speak out loud with forceSpeak = true
+        if (data.speech) {
+          speakAnnouncement(data.speech, undefined, true);
+        }
+
+        if (data.navigateTo) {
+          if (pathname !== data.navigateTo) {
+            router.push(data.navigateTo);
+          }
+        }
+
+        if (data.action === 'trigger_print') {
+          window.dispatchEvent(new CustomEvent('voice-trigger-print'));
+          setTimeout(() => window.print(), 600);
+        }
+
+        // Auto-dismiss feedback bubble after 4.5s
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);
-        }, 3000);
+        }, 4500);
+      } else {
+        playWarningSound();
+        setFeedbackType('error');
+        setFeedbackText(data?.speech || 'কথাটি বুঝতে পারিনি। আবার বলুন।');
+        if (data?.speech) {
+          speakAnnouncement(data.speech, undefined, true);
+        }
+        autoDismissTimerRef.current = setTimeout(() => {
+          setFeedbackType(null);
+        }, 3500);
       }
     } catch (err) {
       setIsProcessing(false);
       playWarningSound();
       setFeedbackType('error');
-      setFeedbackText('সার্ভার সংযোগে ত্রুটি। আবার চেষ্টা করুন।');
+      setFeedbackText('সহকারী প্রসেসে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
       autoDismissTimerRef.current = setTimeout(() => {
         setFeedbackType(null);
       }, 3000);

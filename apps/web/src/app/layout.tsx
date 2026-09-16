@@ -9,6 +9,7 @@ import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
 import VoiceFieldHUD from '../components/VoiceFieldHUD';
 import VoiceAssistant from '../components/VoiceAssistant';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
+import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme, updateActiveTenant } = useAuth();
@@ -21,6 +22,53 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   const [pinInput, setPinInput] = useState('');
   const [modeError, setModeError] = useState('');
   const [availableStaff, setAvailableStaff] = useState<any[]>([]);
+
+  // Offline network status and pending sync count
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsOnline(navigator.onLine);
+    setPendingSyncCount(getOfflineOutbox().length);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (tenant?.id) {
+        syncOfflineOutbox(tenant.id);
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+    const handleOutboxChange = (e: any) => {
+      setPendingSyncCount(e.detail?.count ?? getOfflineOutbox().length);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('offline-outbox-changed', handleOutboxChange);
+    window.addEventListener('offline-sync-success', () => setPendingSyncCount(0));
+
+    // Register Service Worker for offline PWA operation
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    // Periodic sync attempt every 30s
+    const syncInterval = setInterval(() => {
+      if (navigator.onLine && tenant?.id && getOfflineOutbox().length > 0) {
+        syncOfflineOutbox(tenant.id);
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('offline-outbox-changed', handleOutboxChange);
+      clearInterval(syncInterval);
+    };
+  }, [tenant?.id]);
 
   const activeIndustryId = tenant?.industryId || (tenant as any)?.industry_category_id || (tenant as any)?.industryCategoryId || (tenant as any)?.category_id;
   const theme = getIndustryTheme(activeIndustryId, tenant?.shopName);
@@ -96,6 +144,44 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
       zIndex: 50,
       boxShadow: authTheme === 'dark' ? '0 4px 20px -2px rgba(0, 0, 0, 0.6)' : '0 4px 20px -2px rgba(15, 23, 42, 0.25)'
     }}>
+      {/* Offline Status & Pending Sync Indicator */}
+      {(!isOnline || pendingSyncCount > 0) && (
+        <div style={{
+          background: !isOnline ? '#065f46' : 'linear-gradient(90deg, #1e1b4b 0%, #312e81 100%)',
+          color: '#ecfdf5',
+          padding: '4px 14px',
+          fontSize: '11px',
+          fontWeight: '800',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid rgba(255,255,255,0.15)',
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: !isOnline ? '#4ade80' : '#38bdf8' }} />
+            <span>{!isOnline ? '🟢 অফলাইন মোড সক্রিয় (ইন্টারনেট ছাড়াও ১০০% বিক্রয়, স্টক ও খাতা চলবে)' : '✓ অনলাইন মোড সক্রিয়'}</span>
+          </div>
+          {pendingSyncCount > 0 && (
+            <button
+              onClick={() => { if (tenant?.id) syncOfflineOutbox(tenant.id); }}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                border: 'none',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: '800',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 {pendingSyncCount}টি পেন্ডিং ডাটা সিঙ্ক করুন
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Main Bar */}
       <div style={{
         maxWidth: '1280px',

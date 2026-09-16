@@ -17,7 +17,8 @@ import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
-import { saveVaultSnapshot, autoRestoreIfWiped } from '../../lib/dataVault';
+import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
+import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
@@ -404,12 +405,23 @@ export default function PosPage() {
     } catch (e) {}
   };
 
-  // Load products, customers & running tabs strictly for active store
+  // Load products, customers & running tabs strictly for active store with instant 0ms hydration
   const loadData = async () => {
     if (!currentTenantId) {
       setLoading(false);
       return;
     }
+
+    // Instant 0ms Local Vault Hydration
+    const vault = getVaultData(currentTenantId);
+    if (vault?.products && vault.products.length > 0) {
+      setProducts(vault.products);
+      setLoading(false);
+    }
+    if (vault?.customers && vault.customers.length > 0) {
+      setCustomers(vault.customers);
+    }
+
     try {
       const prodRes = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (prodRes.ok) {
@@ -842,12 +854,93 @@ export default function PosPage() {
         setShowNumpadProductDropdown(false);
         setNumpadNewCustName('');
         setNumpadNewCustPhone('');
-        setNumpadCustomer('none');
       } else {
-        alert('বিক্রি সম্পন্ন হতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+        throw new Error('Server returned error');
       }
     } catch (e) {
-      alert('সার্ভার যোগাযোগে সমস্যা হয়েছে।');
+      // 🟢 Offline Sale Fallback for Numpad Calculator
+      const offlineInvoiceNo = 'INV-OFF-' + Date.now().toString().slice(-6);
+      const offlineOrder = {
+        id: 'sale-off-' + Date.now(),
+        tenantId: currentTenantId,
+        invoiceNo: offlineInvoiceNo,
+        totalAmount: totalAmt,
+        discount: 0,
+        paidAmount: paid,
+        dueAmount: due,
+        paymentMethod: method,
+        customerName: finalCustName || 'নগদ কাস্টমার',
+        customerPhone: finalCustPhone || '',
+        status: 'completed',
+        items: payload.items,
+        cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
+        createdAt: new Date().toISOString()
+      };
+
+      queueOfflineAction({
+        type: 'pos_sale',
+        payload: {
+          ...payload,
+          id: offlineOrder.id,
+          invoiceNo: offlineInvoiceNo
+        }
+      });
+
+      if (currentTenantId) {
+        saveVaultSnapshot(currentTenantId, {
+          sales: [offlineOrder]
+        });
+      }
+
+      playBeep(1200);
+      triggerHaptic('success');
+      speakAnnouncement(`${totalAmt} টাকা ${method === 'cash' ? 'নগদ' : `${finalCustName} এর বাকি`} অফলাইন বিক্রি সংরক্ষিত হয়েছে।`);
+
+      const indTheme = getIndustryTheme(tenant?.industryId);
+      setReceipt({
+        shopName: tenant?.shopName || 'আমার দোকান',
+        phone: tenant?.phone || '',
+        location: tenant?.location || 'বাজার',
+        industryId: tenant?.industryId || 'cat-grocery',
+        industrySubtitle: indTheme.receiptSubtitle,
+        terms: indTheme.terms,
+        invoiceNo: offlineInvoiceNo,
+        date: formatBDDateTime(new Date()),
+        cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
+        items: finalItems.map(i => {
+          const qty = i.quantity || 1;
+          const uPrice = i.unitPrice || (i.amount / qty);
+          return {
+            product: {
+              banglaName: i.note || 'ক্যালকুলেটর বিক্রি',
+              unit: i.unit || 'আইটেম',
+              sellingPrice: uPrice
+            },
+            quantity: qty,
+            unitPrice: uPrice,
+            totalPrice: i.amount
+          };
+        }),
+        subtotal: totalAmt,
+        discount: 0,
+        totalAmount: totalAmt,
+        paidAmount: paid,
+        dueAmount: due,
+        cashTendered: paid,
+        changeReturned: 0,
+        paymentMethod: method,
+        customerName: finalCustName || 'নগদ কাস্টমার',
+        customerPhone: finalCustPhone || ''
+      });
+
+      setNumpadItems([]);
+      setNumpadInput('');
+      setNumpadNote('');
+      setNumpadSelectedProduct(null);
+      setShowNumpadProductDropdown(false);
+      setNumpadNewCustName('');
+      setNumpadNewCustPhone('');
+      setNumpadCustomer('none');
     } finally {
       setNumpadSubmitting(false);
     }
@@ -1945,10 +2038,92 @@ export default function PosPage() {
         setShowNewCustFields(false);
         loadData();
       } else {
-        alert('বিক্রি সম্পন্ন হতে সমস্যা হয়েছে!');
+        throw new Error('Server returned error');
       }
     } catch (err) {
-      alert('সার্ভার কানেকশন এরর!');
+      // 🟢 Offline Sale Fallback: process sale locally & queue in outbox!
+      const offlineInvoiceNo = 'INV-OFF-' + Date.now().toString().slice(-6);
+      const offlineOrder = {
+        id: 'sale-off-' + Date.now(),
+        tenantId: currentTenantId,
+        invoiceNo: offlineInvoiceNo,
+        totalAmount: finalPayable,
+        discount: Number(discount) || 0,
+        paidAmount: paid,
+        dueAmount: due,
+        paymentMethod,
+        customerName: finalCustName || 'নগদ কাস্টমার',
+        customerPhone: finalCustPhone || '',
+        status: 'completed',
+        items: cart.map(i => ({
+          productId: i.product.id,
+          productName: i.product.banglaName || i.product.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice !== undefined ? i.unitPrice : i.product.sellingPrice,
+          totalPrice: i.totalPrice
+        })),
+        createdAt: new Date().toISOString()
+      };
+
+      // Queue in outbox
+      queueOfflineAction({
+        type: 'pos_sale',
+        payload: offlineOrder
+      });
+
+      // Deduct stock in memory & local vault
+      const updatedProducts = products.map(p => {
+        const inCart = cart.find(ci => ci.product.id === p.id);
+        if (inCart) {
+          return { ...p, stock: Math.max(0, (Number(p.stock) || 0) - inCart.quantity) };
+        }
+        return p;
+      });
+      setProducts(updatedProducts);
+      saveVaultSnapshot(currentTenantId, { products: updatedProducts, sales: [offlineOrder] });
+
+      playBeep(1200);
+      triggerHaptic('success');
+      speakAnnouncement(`অফলাইন বিক্রি সম্পন্ন। ৳${finalPayable} টাকা ডিভাইসে সংরক্ষিত হয়েছে।`);
+
+      const indTheme = getIndustryTheme(tenant?.industryId);
+      setReceipt({
+        shopName: tenant?.shopName || 'আমার দোকান',
+        phone: tenant?.phone || '',
+        location: tenant?.location || 'বাজার',
+        industryId: tenant?.industryId || 'cat-grocery',
+        industrySubtitle: indTheme.receiptSubtitle,
+        terms: indTheme.terms,
+        invoiceNo: offlineInvoiceNo,
+        date: formatBDDateTime(new Date()),
+        cashier: currentStaffUser?.name || tenant?.ownerName || 'দোকান মালিক',
+        items: [...cart],
+        subtotal: subtotalCart,
+        discount: Number(discount) || 0,
+        totalAmount: finalPayable,
+        paidAmount: paid,
+        dueAmount: due,
+        cashTendered: tenderedNum,
+        changeReturned: changeToReturn,
+        paymentMethod,
+        customerName: finalCustName || 'নগদ কাস্টমার',
+        customerPhone: finalCustPhone || '',
+        orderType,
+        tableNumber,
+        imei: imeiInput,
+        warranty: warrantyMonths,
+        deliveryAddress,
+        celebrationWish
+      });
+
+      setCart([]);
+      setShowCheckoutModal(false);
+      setCashTendered('');
+      setDiscount('0');
+      setSelectedCustomer('none');
+      setNewCustName('');
+      setNewCustPhone('');
+      setShowNewCustFields(false);
     }
     setSubmitting(false);
   };

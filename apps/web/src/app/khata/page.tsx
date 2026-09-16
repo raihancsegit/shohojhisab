@@ -10,6 +10,8 @@ import DataLoader from '../../components/DataLoader';
 import SmartVoiceConfirmationCard, { SmartVoiceActionData } from '../../components/SmartVoiceConfirmationCard';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playDeleteSound } from '../../lib/audioFeedbackUtils';
+import { getVaultData, saveVaultSnapshot } from '../../lib/dataVault';
+import { queueOfflineAction } from '../../lib/offlineDataLayer';
 
 export default function KhataPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -99,10 +101,16 @@ export default function KhataPage() {
   const loadProducts = async () => {
     if (!currentTenantId) return;
     try {
+      const vault = getVaultData(currentTenantId);
+      if (vault?.products?.length) {
+        setProducts(vault.products);
+      }
       const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) {
         const list = await res.json();
-        setProducts(Array.isArray(list) ? list : []);
+        const arr = Array.isArray(list) ? list : [];
+        setProducts(arr);
+        saveVaultSnapshot(currentTenantId, { products: arr });
       }
     } catch (e) {
       console.error('Failed to load products', e);
@@ -191,12 +199,49 @@ export default function KhataPage() {
         unit: i.unit
       }));
 
+      const addedAmount = Number(addDueAmount) || 0;
+
+      // Check if offline
+      if (!navigator.onLine) {
+        queueOfflineAction({
+          type: 'customer_due',
+          payload: {
+            tenantId: currentTenantId,
+            customerId: showAddDueModal.id,
+            amount: addedAmount,
+            itemsSummary: summary,
+            items: itemsPayload,
+            customerName: showAddDueModal.name
+          }
+        });
+
+        // Locally update customer due
+        setCustomers(prev => {
+          const updated = prev.map(c => c.id === showAddDueModal.id ? { ...c, totalDue: Number(c.totalDue || c.total_due || 0) + addedAmount, total_due: Number(c.totalDue || c.total_due || 0) + addedAmount } : c);
+          if (currentTenantId) {
+            saveVaultSnapshot(currentTenantId, { customers: updated });
+          }
+          return updated;
+        });
+
+        speakAnnouncement(`${showAddDueModal.name} এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ হয়েছে (অফলাইন মোড)`);
+        triggerHaptic('success');
+        setNotice(`✓ (অফলাইন সংরক্ষিত) "${showAddDueModal.name}" এর খাতায় ৳${addDueAmount} টাকা বাকি যোগ হয়েছে!`);
+        setShowAddDueModal(null);
+        setAddDueAmount('');
+        setAddDueItems('');
+        setSelectedDueProducts([]);
+        setProductSearch('');
+        setTimeout(() => setNotice(''), 4000);
+        return;
+      }
+
       const res = await fetch('/api/customers/add-due', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: showAddDueModal.id,
-          amount: Number(addDueAmount) || 0,
+          amount: addedAmount,
           itemsSummary: summary,
           items: itemsPayload
         })
@@ -213,12 +258,48 @@ export default function KhataPage() {
         setProductSearch('');
         setTimeout(() => setNotice(''), 4000);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         alert(err.error || 'বাকি যোগ করতে সমস্যা হয়েছে');
       }
     } catch (e: any) {
-      console.error('Failed to add due', e);
-      alert('বাকি যোগ করতে সমস্যা হয়েছে: ' + (e?.message || 'Error'));
+      const summary = addDueItems.trim() || (selectedDueProducts.length > 0 ? selectedDueProducts.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', ') : 'বাকি পণ্য সামগ্রী');
+      const itemsPayload = selectedDueProducts.map(i => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        price: i.price,
+        unit: i.unit
+      }));
+
+      queueOfflineAction({
+        type: 'add_customer_due',
+        payload: {
+          customerId: showAddDueModal.id,
+          customerName: showAddDueModal.name,
+          amount: dueAmt,
+          itemsSummary: summary,
+          items: itemsPayload
+        }
+      });
+
+      // Update local customers state & vault
+      setCustomers(prev => {
+        const updated = prev.map(c => c.id === showAddDueModal.id ? { ...c, totalDue: Number(c.totalDue || c.total_due || 0) + dueAmt, total_due: Number(c.totalDue || c.total_due || 0) + dueAmt } : c);
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { customers: updated });
+        }
+        return updated;
+      });
+
+      speakAnnouncement(`${showAddDueModal.name} এর খাতায় ৳${addDueAmount} টাকা অফলাইন বাকি যোগ হয়েছে।`);
+      triggerHaptic('success');
+      setNotice(`🟢 অফলাইন মোড: "${showAddDueModal.name}" এর খাতায় ৳${addDueAmount} টাকা বাকি সংরক্ষিত হয়েছে (ইন্টারনেট পেলে সিঙ্ক হবে)!`);
+      setShowAddDueModal(null);
+      setAddDueAmount('');
+      setAddDueItems('');
+      setSelectedDueProducts([]);
+      setProductSearch('');
+      setTimeout(() => setNotice(''), 5000);
     } finally {
       setAddDueSubmitting(false);
     }
@@ -331,10 +412,17 @@ export default function KhataPage() {
       return;
     }
     try {
+      const vault = getVaultData(currentTenantId);
+      if (vault?.customers?.length) {
+        setCustomers(vault.customers);
+        setLoading(false);
+      }
       const res = await fetch(`/api/customers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const list = await res.json();
-        setCustomers(Array.isArray(list) ? list : []);
+        const arr = Array.isArray(list) ? list : [];
+        setCustomers(arr);
+        saveVaultSnapshot(currentTenantId, { customers: arr });
       }
     } catch (e) {
       console.error('Failed to load customers', e);
@@ -349,10 +437,16 @@ export default function KhataPage() {
       return;
     }
     try {
+      const vault = getVaultData(currentTenantId);
+      if (vault?.dealers?.length) {
+        setDealers(vault.dealers);
+      }
       const res = await fetch(`/api/dealers?tenantId=${currentTenantId}`);
       if (res.ok) {
         const list = await res.json();
-        setDealers(Array.isArray(list) ? list : []);
+        const arr = Array.isArray(list) ? list : [];
+        setDealers(arr);
+        saveVaultSnapshot(currentTenantId, { dealers: arr });
       }
     } catch (e) {
       console.error('Failed to load dealers', e);
@@ -403,9 +497,47 @@ export default function KhataPage() {
         setInitialDue('0');
         setAddress('');
         setTimeout(() => setNotice(''), 4000);
+      } else {
+        throw new Error('Server returned error');
       }
-    } catch (e) {}
-    setSubmitting(false);
+    } catch (e) {
+      // 🟢 Offline Customer Addition Fallback
+      const newCust = {
+        id: `cust-off-${Date.now()}`,
+        tenantId: currentTenantId,
+        name,
+        phone: phone || 'ফোন নাম্বার নেই',
+        address: address || 'দোকানের পরিচিত',
+        totalDue: Number(initialDue) || 0,
+        total_due: Number(initialDue) || 0,
+        creditLimit: Number(creditLimit) || 5000,
+        createdAt: new Date().toISOString()
+      };
+
+      queueOfflineAction({
+        type: 'add_customer',
+        payload: newCust
+      });
+
+      setCustomers(prev => {
+        const updated = [newCust, ...prev];
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { customers: updated });
+        }
+        return updated;
+      });
+
+      triggerHaptic('success');
+      setNotice(`🟢 অফলাইন মোড: "${name}" কাস্টমার সংরক্ষিত হয়েছে (ইন্টারনেট পেলে সিঙ্ক হবে)!`);
+      setShowAddModal(false);
+      setName('');
+      setPhone('');
+      setInitialDue('0');
+      setAddress('');
+      setTimeout(() => setNotice(''), 5000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const startVoiceInputForField = (setter: (val: string) => void, isNumeric = false, label?: string) => {
@@ -416,13 +548,42 @@ export default function KhataPage() {
     e.preventDefault();
     if (!showPayModal || !payAmount) return;
 
+    const collectedAmt = Number(payAmount) || 0;
+
+    // Offline check
+    if (!navigator.onLine) {
+      queueOfflineAction({
+        type: 'customer_payment',
+        payload: {
+          tenantId: currentTenantId,
+          customerId: showPayModal.id,
+          amount: collectedAmt,
+          customerName: showPayModal.name
+        }
+      });
+      setCustomers(prev => {
+        const updated = prev.map(c => c.id === showPayModal.id ? { ...c, totalDue: Math.max(0, Number(c.totalDue || c.total_due || 0) - collectedAmt), total_due: Math.max(0, Number(c.totalDue || c.total_due || 0) - collectedAmt) } : c);
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { customers: updated });
+        }
+        return updated;
+      });
+      speakAnnouncement(`${showPayModal.name} ভাই ${payAmount} টাকা বাকি পরিশোধ করেছেন (অফলাইন মোড)`);
+      triggerHaptic('success');
+      setNotice(`✓ (অফলাইন সংরক্ষিত) ৳${payAmount} টাকা বাকি আদায় রেকর্ড হয়েছে!`);
+      setShowPayModal(null);
+      setPayAmount('');
+      setTimeout(() => setNotice(''), 4000);
+      return;
+    }
+
     try {
       const res = await fetch('/api/customers/due-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: showPayModal.id,
-          amount: Number(payAmount) || 0
+          amount: collectedAmt
         })
       });
       if (res.ok) {
@@ -434,7 +595,29 @@ export default function KhataPage() {
         setPayAmount('');
         setTimeout(() => setNotice(''), 4000);
       }
-    } catch (e) {}
+    } catch (e) {
+      queueOfflineAction({
+        type: 'customer_payment',
+        payload: {
+          tenantId: currentTenantId,
+          customerId: showPayModal.id,
+          amount: collectedAmt,
+          customerName: showPayModal.name
+        }
+      });
+      setCustomers(prev => {
+        const updated = prev.map(c => c.id === showPayModal.id ? { ...c, totalDue: Math.max(0, Number(c.totalDue || c.total_due || 0) - collectedAmt), total_due: Math.max(0, Number(c.totalDue || c.total_due || 0) - collectedAmt) } : c);
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { customers: updated });
+        }
+        return updated;
+      });
+      triggerHaptic('success');
+      setNotice(`✓ (অফলাইন সংরক্ষিত) ৳${payAmount} টাকা বাকি আদায় রেকর্ড হয়েছে!`);
+      setShowPayModal(null);
+      setPayAmount('');
+      setTimeout(() => setNotice(''), 4000);
+    }
   };
 
   const sendWhatsAppReminder = (customer: any) => {

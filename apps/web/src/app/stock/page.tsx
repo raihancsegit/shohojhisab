@@ -22,6 +22,8 @@ import IndustryUnitSelect, { MultiUnitBreakdownPreview } from '../../components/
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
+import { getVaultData, saveVaultSnapshot } from '../../lib/dataVault';
+import { queueOfflineAction } from '../../lib/offlineDataLayer';
 
 export default function StockPage() {
   const { tenant, activeRoleMode, triggerHaptic, speakAnnouncement } = useAuth();
@@ -364,11 +366,21 @@ export default function StockPage() {
       setLoading(false);
       return;
     }
+    // Instant cache hydration
+    const vault = getVaultData(currentTenantId);
+    if (vault?.products && vault.products.length > 0) {
+      setProducts(vault.products);
+      setLoading(false);
+    }
     try {
       const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
       if (res.ok) {
         const data = await res.json();
-        setProducts(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        setProducts(arr);
+        if (arr.length > 0) {
+          saveVaultSnapshot(currentTenantId, { products: arr });
+        }
       }
     } catch (e) {}
     setLoading(false);
@@ -560,15 +572,27 @@ export default function StockPage() {
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 404 && (errData.error === 'Not Found' || !errData.error)) {
-          alert('⚠️ ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে অথবা পাওয়া যাচ্ছে না! টার্মিনালে "npm run dev" বা "npm run dev:api" চালু রাখুন।');
-        } else {
-          alert(errData.error || errData.message || 'স্টক আপডেট ব্যর্থ হয়েছে');
-        }
+        throw new Error('Server returned error');
       }
     } catch (e) {
-      alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+      // 🟢 Offline Stock Update Fallback
+      queueOfflineAction({
+        type: 'update_product',
+        payload: { id: product.id, stock: newStock }
+      });
+
+      setProducts(prev => {
+        const updated = prev.map(p => p.id === product.id ? { ...p, stock: newStock } : p);
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { products: updated });
+        }
+        return updated;
+      });
+
+      const sign = deltaQty > 0 ? `+${deltaQty}` : `${deltaQty}`;
+      setNotice(`🟢 অফলাইন মোড: ${product.banglaName || product.name}-এ ${sign} ${product.unit} স্টক আপডেট হয়েছে (মোট: ${newStock})`);
+      speakAnnouncement(`${product.banglaName || product.name} এ ${sign} ${product.unit} স্টক আপডেট হয়েছে`);
+      setTimeout(() => setNotice(''), 4000);
     }
   };
 

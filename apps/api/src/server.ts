@@ -62,6 +62,26 @@ if ((!fs.existsSync(dbPath) || fs.statSync(dbPath).size < 4096) && cloudSync.isC
 console.log(`[DB] Using SQLite Database at: ${dbPath}`);
 export const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('cache_size = -64000'); // 64MB memory cache
+db.pragma('temp_store = MEMORY');
+db.pragma('mmap_size = 30000000000'); // Memory-mapped I/O
+
+// High-Speed Database Indexes for Sub-Millisecond Queries & Instant Data Load
+try {
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(tenant_id, barcode)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_products_name ON products(tenant_id, bangla_name)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_sales_tenant_created ON sales(tenant_id, created_at)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_dealers_tenant ON dealers(tenant_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_expenses_tenant ON expenses(tenant_id, date)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_installments_tenant ON installments(tenant_id)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_stock_logs_tenant ON stock_logs(tenant_id, created_at)').run();
+} catch (e) {
+  console.warn('[DB] Index creation notice:', e);
+}
 
 // Standardized Bangladesh (Asia/Dhaka) Date Helpers
 export function getBDDateStr(dateOrIso?: string | Date): string {
@@ -8052,6 +8072,198 @@ const handleGracefulShutdown = async (signal: string) => {
 };
 process.on('SIGTERM', () => handleGracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => handleGracefulShutdown('SIGINT'));
+
+// Batch Offline Outbox Sync Endpoint
+fastify.post('/api/tenant/sync-outbox', async (request, reply) => {
+  const { tenantId, actions } = request.body as { tenantId: string; actions: any[] };
+  if (!tenantId || !Array.isArray(actions) || actions.length === 0) {
+    return { success: true, processed: 0, message: 'কোনো পেন্ডিং অ্যাকশন নেই' };
+  }
+
+  let processedCount = 0;
+  const syncTx = db.transaction((actionList: any[]) => {
+    for (const act of actionList) {
+      try {
+        const { type, payload, id, timestamp } = act;
+        const now = timestamp || new Date().toISOString();
+
+        if (type === 'create_sale' || type === 'pos_sale') {
+          const saleId = payload.id || id || uuidv4();
+          // Check duplicate
+          const existing = db.prepare('SELECT id FROM sales WHERE id = ?').get(saleId);
+          if (!existing) {
+            db.prepare(`
+              INSERT INTO sales (id, tenant_id, invoice_no, total_amount, discount, net_total, paid_amount, due_amount, payment_method, customer_name, customer_phone, status, note, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              saleId,
+              tenantId,
+              payload.invoiceNo || Math.floor(100000 + Math.random() * 900000),
+              Number(payload.totalAmount) || 0,
+              Number(payload.discount) || 0,
+              Number(payload.netTotal ?? payload.totalAmount) || 0,
+              Number(payload.paidAmount) || 0,
+              Number(payload.dueAmount) || 0,
+              payload.paymentMethod || 'cash',
+              payload.customerName || 'খুচরা ক্রেতা',
+              payload.customerPhone || '',
+              'completed',
+              payload.note || 'অফলাইন বিক্রয়',
+              now
+            );
+
+            if (Array.isArray(payload.items)) {
+              const insertItem = db.prepare(`
+                INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, unit_price, total_price)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+              `);
+              for (const it of payload.items) {
+                insertItem.run(
+                  uuidv4(),
+                  saleId,
+                  it.productId || null,
+                  it.name || it.productName || 'পণ্য',
+                  Number(it.quantity) || 1,
+                  Number(it.unitPrice ?? it.price) || 0,
+                  Number(it.totalPrice ?? (it.quantity * (it.unitPrice ?? it.price))) || 0
+                );
+
+                if (it.productId) {
+                  db.prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?').run(Number(it.quantity) || 1, it.productId);
+                  db.prepare(`
+                    INSERT INTO stock_logs (id, tenant_id, product_id, change_qty, previous_stock, new_stock, reason, created_at)
+                    VALUES (?, ?, ?, ?, 0, 0, ?, ?)
+                  `).run(uuidv4(), tenantId, it.productId, -(Number(it.quantity) || 1), 'অফলাইন বিক্রয়', now);
+                }
+              }
+            }
+          }
+        } else if (type === 'add_customer_due') {
+          const custId = payload.customerId;
+          if (custId) {
+            db.prepare('UPDATE customers SET total_due = total_due + ? WHERE id = ?').run(Number(payload.amount) || 0, custId);
+            db.prepare(`
+              INSERT INTO sales (id, tenant_id, invoice_no, total_amount, paid_amount, due_amount, payment_method, customer_name, status, note, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              uuidv4(),
+              tenantId,
+              Math.floor(100000 + Math.random() * 900000),
+              Number(payload.amount) || 0,
+              0,
+              Number(payload.amount) || 0,
+              'due',
+              payload.customerName || 'বাকি গ্রাহক',
+              'completed',
+              payload.itemsSummary || 'অফলাইন বাকি এন্ট্রি',
+              now
+            );
+          }
+        } else if (type === 'add_expense') {
+          db.prepare(`
+            INSERT INTO expenses (id, tenant_id, title, category_id, category, amount, payment_method, note, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            payload.id || uuidv4(),
+            tenantId,
+            payload.title || 'দোকান খরচ',
+            payload.categoryId || 'cat-general',
+            payload.category || 'অন্যান্য',
+            Number(payload.amount) || 0,
+            payload.paymentMethod || 'cash',
+            payload.note || 'অফলাইন খরচ',
+            payload.date || now.slice(0, 10),
+            now
+          );
+        } else if (type === 'add_product') {
+          const prodId = payload.id || uuidv4();
+          const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(prodId);
+          if (!existing) {
+            db.prepare(`
+              INSERT INTO products (id, tenant_id, barcode, name, bangla_name, purchase_price, selling_price, stock, unit, category_id, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              prodId,
+              tenantId,
+              payload.barcode || null,
+              payload.name || payload.banglaName,
+              payload.banglaName || payload.name,
+              Number(payload.purchasePrice) || 0,
+              Number(payload.sellingPrice) || 0,
+              Number(payload.stock) || 0,
+              payload.unit || 'পিস',
+              payload.categoryId || 'cat-general',
+              now
+            );
+          }
+        } else if (type === 'update_product') {
+          const prodId = payload.id;
+          if (prodId) {
+            if (payload.stock !== undefined) {
+              db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(Number(payload.stock) || 0, prodId);
+              db.prepare(`
+                INSERT INTO stock_logs (id, tenant_id, product_id, change_qty, previous_stock, new_stock, reason, created_at)
+                VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+              `).run(uuidv4(), tenantId, prodId, Number(payload.changeQty || 0), Number(payload.stock) || 0, payload.reason || 'অফলাইন স্টক আপডেট', now);
+            }
+            if (payload.sellingPrice !== undefined) {
+              db.prepare('UPDATE products SET selling_price = ? WHERE id = ?').run(Number(payload.sellingPrice) || 0, prodId);
+            }
+            if (payload.purchasePrice !== undefined) {
+              db.prepare('UPDATE products SET purchase_price = ? WHERE id = ?').run(Number(payload.purchasePrice) || 0, prodId);
+            }
+          }
+        } else if (type === 'add_customer') {
+          const custId = payload.id || uuidv4();
+          const existing = db.prepare('SELECT id FROM customers WHERE id = ?').get(custId);
+          if (!existing) {
+            db.prepare(`
+              INSERT INTO customers (id, tenant_id, name, phone, address, total_due, credit_limit, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              custId,
+              tenantId,
+              payload.name || 'নতুন কাস্টমার',
+              payload.phone || 'ফোন নাম্বার নেই',
+              payload.address || 'দোকানের পরিচিত',
+              Number(payload.totalDue || payload.total_due || 0),
+              Number(payload.creditLimit || payload.credit_limit || 5000),
+              now
+            );
+          }
+        } else if (type === 'customer_payment' || type === 'due_payment') {
+          const custId = payload.customerId;
+          if (custId) {
+            const payAmt = Number(payload.amount) || 0;
+            db.prepare('UPDATE customers SET total_due = MAX(0, total_due - ?) WHERE id = ?').run(payAmt, custId);
+            db.prepare(`
+              INSERT INTO sales (id, tenant_id, invoice_no, total_amount, paid_amount, due_amount, payment_method, customer_name, status, note, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              uuidv4(),
+              tenantId,
+              Math.floor(100000 + Math.random() * 900000),
+              payAmt,
+              payAmt,
+              0,
+              'due_payment',
+              payload.customerName || 'গ্রাহক জমা',
+              'completed',
+              payload.note || 'অফলাইন বাকি আদায় জমা',
+              now
+            );
+          }
+        }
+        processedCount++;
+      } catch (e: any) {
+        console.warn('[SyncOutbox] Action item error:', e.message);
+      }
+    }
+  });
+
+  syncTx(actions);
+  return { success: true, processed: processedCount, message: `${processedCount}টি অফলাইন হিসাব সফলভাবে সার্ভারে সিঙ্ক হয়েছে!` };
+});
 
 // Root & Health Checks
 fastify.get('/', async () => ({ status: 'online', service: 'ShohojHisab API', message: 'ShohojHisab Dynamic API is running successfully!', timestamp: new Date().toISOString() }));

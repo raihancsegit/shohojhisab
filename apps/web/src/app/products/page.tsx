@@ -13,6 +13,7 @@ import {
 import VoiceProductEntryModal from '../../components/VoiceProductEntryModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
+import { getVaultData, saveVaultSnapshot } from '../../lib/dataVault';
 
 export default function ProductsPage() {
   const { tenant, speakAnnouncement } = useAuth();
@@ -47,8 +48,18 @@ export default function ProductsPage() {
 
   const loadProducts = async () => {
     try {
+      const vault = getVaultData(currentTenantId);
+      if (vault?.products?.length) {
+        setProducts(vault.products);
+        setLoading(false);
+      }
       const res = await fetch(`/api/products?tenantId=${currentTenantId}`);
-      if (res.ok) setProducts(await res.json());
+      if (res.ok) {
+        const list = await res.json();
+        const arr = Array.isArray(list) ? list : [];
+        setProducts(arr);
+        saveVaultSnapshot(currentTenantId, { products: arr });
+      }
     } catch (e) {
     } finally {
       setLoading(false);

@@ -1,0 +1,299 @@
+'use client';
+
+import { getVaultData, saveVaultSnapshot } from './dataVault';
+import { queueOfflineAction } from './offlineDataLayer';
+import { cleanSpokenBengali } from './banglaSpeechUtils';
+
+export interface OfflineAiResult {
+  success: boolean;
+  reply: string;
+  speech: string;
+  action?: string;
+  actionLink?: { text: string; href: string } | null;
+  navigateTo?: string;
+  data?: any;
+  isOffline: boolean;
+}
+
+/**
+ * Parse Spoken Bengali Numbers
+ */
+function parseBengaliNumbers(str: string): string {
+  let s = String(str || '');
+  s = s.replace(/দেড়শো|দেড়শ|দেড়শো|দেড়শ/g, '150');
+  s = s.replace(/আড়াইশো|আড়াইশ|আড়াইশো|আড়াইশ/g, '250');
+  s = s.replace(/সাড়ে তিনশো|সাড়ে তিনশ/g, '350');
+  s = s.replace(/সাড়ে চারশো|সাড়ে চারশ/g, '450');
+  s = s.replace(/একশত|একশো|একশ/g, '100');
+  s = s.replace(/দুইশত|দুইশো|দুইশ/g, '200');
+  s = s.replace(/তিনশত|তিনশো|তিনশ/g, '300');
+  s = s.replace(/চারশত|চারশো|চারশ/g, '400');
+  s = s.replace(/পাঁচশত|পাঁচশো|পাঁচশ/g, '500');
+  s = s.replace(/ছয়শো|ছয়শ/g, '600');
+  s = s.replace(/সাতশো|সাতশ/g, '700');
+  s = s.replace(/আটশো|আটশ/g, '800');
+  s = s.replace(/নয়শো|নয়শ/g, '900');
+  s = s.replace(/দেড় হাজার|দেড় হাজার/g, '1500');
+  s = s.replace(/আড়াই হাজার|আড়াই হাজার/g, '2500');
+  s = s.replace(/এক হাজার/g, '1000');
+
+  // Convert Bengali digits to English digits
+  const bnNums = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  for (let i = 0; i < 10; i++) {
+    s = s.replace(new RegExp(bnNums[i], 'g'), String(i));
+  }
+  return s;
+}
+
+/**
+ * High-Speed Client-Side Offline AI Assistant Engine
+ * Runs 100% in browser memory with zero internet required.
+ */
+export function executeOfflineAiShopCommand(
+  tenantId: string,
+  rawText: string,
+  assistantName = 'সহজহিসাব'
+): OfflineAiResult {
+  const text = cleanSpokenBengali(rawText);
+  if (!text) {
+    return {
+      success: false,
+      reply: 'দয়া করে কিছু মুখে বলুন বা লিখে জানান।',
+      speech: 'দয়া করে কিছু মুখে বলুন বা লিখে জানান।',
+      isOffline: true
+    };
+  }
+
+  const normalized = parseBengaliNumbers(text.toLowerCase());
+  const vault = getVaultData(tenantId) || { tenantId, updatedAt: new Date().toISOString() };
+  const products: any[] = vault.products || [];
+  const sales: any[] = vault.sales || [];
+  const customers: any[] = vault.customers || [];
+  const expenses: any[] = vault.expenses || [];
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todaySales = sales.filter((s: any) => (s.createdAt || s.created_at || '').startsWith(todayStr));
+  const todayExpenses = expenses.filter((e: any) => (e.date || e.createdAt || '').startsWith(todayStr));
+
+  // 1. Navigation Commands
+  if (/পস|মেমো|বিক্রি|বিক্রয়|কাউন্টার/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'বিক্রয় ও মেমো কাউন্টারে নিয়ে যাচ্ছি...',
+      speech: 'বিক্রয় কাউন্টারে যাচ্ছি।',
+      navigateTo: '/pos',
+      actionLink: { text: 'POS কাউন্টার খুলুন →', href: '/pos' },
+      isOffline: true
+    };
+  }
+
+  if (/বাকি|খাতা|কাস্টমার/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'বাকির খাতায় নিয়ে যাচ্ছি...',
+      speech: 'বাকি খাতা খুলছি।',
+      navigateTo: '/khata',
+      actionLink: { text: 'বাকি খাতা খুলুন →', href: '/khata' },
+      isOffline: true
+    };
+  }
+
+  if (/স্টক|মাল|পণ্য/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'দোকানের স্টক ইনভেন্টরিতে নিয়ে যাচ্ছি...',
+      speech: 'স্টক পেজ খুলছি।',
+      navigateTo: '/stock',
+      actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
+      isOffline: true
+    };
+  }
+
+  if (/খরচ|ব্যয়/i.test(normalized) && /যাও|খোল|নিয়ে চল/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'দোকান খরচের খাতায় নিয়ে যাচ্ছি...',
+      speech: 'খরচ পেজ খুলছি।',
+      navigateTo: '/expenses',
+      actionLink: { text: 'খরচের খাতা খুলুন →', href: '/expenses' },
+      isOffline: true
+    };
+  }
+
+  // 2. Today's Sales & Profit Query (আজকের বিক্রি ও লাভ)
+  if (/আজকে|আজকের/i.test(normalized) && /বিক্রি|সেল|লাভ|ইনকাম|আয়|টাকা/i.test(normalized) && !/খরচ|বাকি|স্টক/i.test(normalized)) {
+    const totalSold = todaySales.reduce((acc, s) => acc + (Number(s.totalAmount || s.netTotal || s.total_amount || 0)), 0);
+    const totalCash = todaySales.reduce((acc, s) => acc + (Number(s.paidAmount || s.paid_amount || 0)), 0);
+    const totalExp = todayExpenses.reduce((acc, e) => acc + (Number(e.amount || 0)), 0);
+    const estProfit = Math.round(totalSold * 0.2 - totalExp);
+
+    const speech = `আজকে সর্বমোট বিক্রি ৳${totalSold.toLocaleString('en-US')} টাকা, ক্যাশ জমা ৳${totalCash.toLocaleString('en-US')} টাকা এবং আনুমানিক নিট লাভ ৳${estProfit.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      reply: `📊 **আজকের অফলাইন বিক্রি ও লাভ রিপোর্ট:**\n• সর্বমোট বিক্রি: ৳${totalSold.toLocaleString('en-US')}\n• ক্যাশ কালেকশন: ৳${totalCash.toLocaleString('en-US')}\n• মোট খরচ: ৳${totalExp.toLocaleString('en-US')}\n• আনুমানিক নিট লাভ: ৳${estProfit.toLocaleString('en-US')}\n• মোট মেমো: ${todaySales.length}টি\n\n🟢 *অফলাইন মেমোরি থেকে তাৎক্ষণিক প্রস্তুত*`,
+      speech,
+      navigateTo: '/reports',
+      actionLink: { text: 'আজকের বিস্তারিত রিপোর্ট →', href: '/reports' },
+      isOffline: true
+    };
+  }
+
+  // 3. Low Stock / Stock Check (কোন মালের স্টক কম / স্টক কত)
+  if (/স্টক কম|কোন মাল কম|মাল শেষ|কোন কোন মালের স্টক/i.test(normalized)) {
+    const lowItems = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || p.low_stock_threshold || 5));
+    if (lowItems.length === 0) {
+      return {
+        success: true,
+        reply: '✅ আলহামদুলিল্লাহ! আপনার দোকানে কোনো পণ্যের স্টক কম নেই।',
+        speech: 'দোকানে সব মালের স্টক পর্যাপ্ত আছে।',
+        navigateTo: '/stock',
+        actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+        isOffline: true
+      };
+    }
+
+    const top3 = lowItems.slice(0, 3).map(p => `• ${p.banglaName || p.name} (বাকি: ${p.stock} ${p.unit || 'পিস'})`).join('\n');
+    const speech = `দোকানে ${lowItems.length}টি পণ্যের স্টক কম রয়েছে। যেমন: ${lowItems.slice(0, 2).map(p => p.banglaName || p.name).join(' ও ')}।`;
+    return {
+      success: true,
+      reply: `⚠️ **স্টক অ্যালার্ট (${lowItems.length}টি পণ্যের স্টক কম):**\n${top3}\n\n🟢 *অফলাইন ইনভেন্টরি রেকর্ড*`,
+      speech,
+      navigateTo: '/stock',
+      actionLink: { text: 'সকল লো-স্টক পণ্য দেখুন →', href: '/stock' },
+      isOffline: true
+    };
+  }
+
+  // 4. Quick Stock Addition Command (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
+  const stockAddMatch = normalized.match(/(.+?)\s+(\d+)\s*(পাতা|পিস|কেজি|লিটার|বোতল|প্যাকেট|বক্স|ডজন|টি)?\s*(স্টক যোগ|স্টকে তোল|স্টকে ঢুকা|মাল তোল|স্টক)/i);
+  if (stockAddMatch) {
+    const prodSearch = stockAddMatch[1].replace(/স্টক|মাল|যোগ|নতুন/g, '').trim();
+    const qty = Number(stockAddMatch[2]);
+    const unit = stockAddMatch[3] || 'পিস';
+
+    if (prodSearch && qty > 0) {
+      const matchedProd = products.find(p => (p.banglaName || p.name || '').toLowerCase().includes(prodSearch.toLowerCase()));
+      if (matchedProd) {
+        const oldStock = Number(matchedProd.stock || 0);
+        const newStock = oldStock + qty;
+        matchedProd.stock = newStock;
+
+        // Update local vault and queue outbox
+        saveVaultSnapshot(tenantId, { products });
+        queueOfflineAction({
+          type: 'update_product',
+          payload: { id: matchedProd.id, stock: newStock }
+        });
+
+        const reply = `✓ "${matchedProd.banglaName || matchedProd.name}" এর স্টকে ${qty} ${unit} যোগ হয়েছে! (নতুন স্টক: ${newStock} ${unit})`;
+        const speech = `${matchedProd.banglaName || matchedProd.name} এর স্টকে ${qty} ${unit} যোগ হয়েছে।`;
+        return {
+          success: true,
+          reply,
+          speech,
+          action: 'trigger_add_stock',
+          navigateTo: '/stock',
+          actionLink: { text: 'স্টক ইনভেন্টরি খুলুন →', href: '/stock' },
+          isOffline: true
+        };
+      }
+    }
+  }
+
+  // 5. Customer Due Entry (যেমন: "রহিম ভাই ৫০০ টাকা বাকি নিল")
+  const dueMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(বাকি নিল|বাকি লেখো|বাকি|বাকি দিলো)/i);
+  if (dueMatch) {
+    const custName = dueMatch[1].replace(/ভাই|চাচা|মামা|এর|কে/g, '').trim();
+    const amount = Number(dueMatch[2]);
+
+    if (custName && amount > 0) {
+      let cust = customers.find(c => (c.name || '').toLowerCase().includes(custName.toLowerCase()));
+      if (!cust) {
+        cust = {
+          id: `cust-off-${Date.now()}`,
+          tenantId,
+          name: custName,
+          phone: '',
+          totalDue: amount
+        };
+        customers.push(cust);
+      } else {
+        cust.totalDue = Number(cust.totalDue || 0) + amount;
+      }
+
+      saveVaultSnapshot(tenantId, { customers });
+      queueOfflineAction({
+        type: 'add_customer_due',
+        payload: { customerId: cust.id, customerName: cust.name, amount, itemsSummary: 'অফলাইন বাকি' }
+      });
+
+      const speech = `${cust.name} এর খাতায় ${amount} টাকা বাকি যোগ হয়েছে।`;
+      return {
+        success: true,
+        reply: `✓ **${cust.name}** এর খাতায় ৳${amount} টাকা বাকি রেকর্ড হয়েছে!\n(মোট বকেয়া: ৳${cust.totalDue} টাকা)\n\n🟢 *অফলাইন মেমোরিতে সংরক্ষিত (ইন্টারনেট পেলে সিঙ্ক হবে)*`,
+        speech,
+        navigateTo: '/khata',
+        actionLink: { text: 'বাকি খাতা দেখুন →', href: '/khata' },
+        isOffline: true
+      };
+    }
+  }
+
+  // 6. Expense Entry (যেমন: "চা নাস্তা ৬০ টাকা খরচ লেখো")
+  const expMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(খরচ লেখো|খরচ|ব্যয়)/i);
+  if (expMatch) {
+    const expTitle = expMatch[1].replace(/টাকা|খরচ|লেখো/g, '').trim() || 'দোকান খরচ';
+    const amount = Number(expMatch[2]);
+
+    if (amount > 0) {
+      const newExp = {
+        id: `exp-off-${Date.now()}`,
+        tenantId,
+        title: expTitle,
+        amount,
+        category: 'অন্যান্য',
+        date: todayStr,
+        createdAt: new Date().toISOString()
+      };
+      expenses.push(newExp);
+
+      saveVaultSnapshot(tenantId, { expenses });
+      queueOfflineAction({
+        type: 'add_expense',
+        payload: newExp
+      });
+
+      const speech = `${expTitle} ${amount} টাকা খরচ লেখা হয়েছে।`;
+      return {
+        success: true,
+        reply: `✓ **${expTitle}** ৳${amount} টাকা খরচ হিসেবে লিপিবদ্ধ হয়েছে!\n\n🟢 *অফলাইনে সংরক্ষিত হয়েছে*`,
+        speech,
+        navigateTo: '/expenses',
+        actionLink: { text: 'খরচের খাতা দেখুন →', href: '/expenses' },
+        isOffline: true
+      };
+    }
+  }
+
+  // 7. Market Total Due Query (বাজারে মোট বাকি কত)
+  if (/মোট বাকি|বাজারে কত বাকি|কাস্টমার বাকি/i.test(normalized)) {
+    const totalDue = customers.reduce((acc, c) => acc + (Number(c.totalDue || c.total_due || 0)), 0);
+    const speech = `বাজারে মোট বকেয়া বাকি আছে ৳${totalDue.toLocaleString('en-US')} টাকা।`;
+    return {
+      success: true,
+      reply: `📒 **বাজারে মোট বকেয়া বাকি:** ৳${totalDue.toLocaleString('en-US')} টাকা\nমোট বাকি কাস্টমার: ${customers.filter(c => Number(c.totalDue || c.total_due || 0) > 0).length} জন\n\n🟢 *অফলাইন ডেটাবেজ*`,
+      speech,
+      navigateTo: '/khata',
+      actionLink: { text: 'বাকি খাতা খুলুন →', href: '/khata' },
+      isOffline: true
+    };
+  }
+
+  // Default Fallback
+  return {
+    success: true,
+    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nআপনি বলতে পারেন:\n• "আজকের বিক্রি কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"\n• "কোন মালের স্টক কম"`,
+    speech: 'দোকানের বিক্রি, বাকি, খরচ বা স্টকের হিসাব জানতে যেকোনো কিছু বলুন।',
+    isOffline: true
+  };
+}

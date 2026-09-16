@@ -5,6 +5,8 @@ import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
 import { triggerFieldVoiceInput } from '../../lib/voiceFieldUtils';
 import VoiceExpenseModal from '../../components/VoiceExpenseModal';
+import { getVaultData, saveVaultSnapshot } from '../../lib/dataVault';
+import { queueOfflineAction } from '../../lib/offlineDataLayer';
 
 export default function ExpensesPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -29,9 +31,22 @@ export default function ExpensesPage() {
       setLoading(false);
       return;
     }
+    // Instant cache hydration
+    const vault = getVaultData(currentTenantId);
+    if (vault?.expenses && vault.expenses.length > 0) {
+      setExpenses(vault.expenses);
+      setLoading(false);
+    }
     try {
       const res = await fetch(`/api/expenses?tenantId=${currentTenantId}`);
-      if (res.ok) setExpenses(await res.json());
+      if (res.ok) {
+        const list = await res.json();
+        const arr = Array.isArray(list) ? list : [];
+        setExpenses(arr);
+        if (arr.length > 0) {
+          saveVaultSnapshot(currentTenantId, { expenses: arr });
+        }
+      }
     } catch (e) {
     } finally {
       setLoading(false);
@@ -56,16 +71,19 @@ export default function ExpensesPage() {
     if (!title || !amount || !currentTenantId) return;
     setSubmitting(true);
 
+    const expPayload = {
+      tenantId: currentTenantId,
+      title,
+      amount: Number(amount) || 0,
+      category,
+      date: new Date().toISOString().slice(0, 10)
+    };
+
     try {
       const res = await fetch('/api/expenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: currentTenantId,
-          title,
-          amount: Number(amount) || 0,
-          category
-        })
+        body: JSON.stringify(expPayload)
       });
       if (res.ok) {
         await loadExpenses();
@@ -74,9 +92,39 @@ export default function ExpensesPage() {
         setTitle('');
         setAmount('');
         setTimeout(() => setNotice(''), 4000);
+      } else {
+        throw new Error('Server error');
       }
-    } catch (e) {}
-    setSubmitting(false);
+    } catch (e) {
+      // 🟢 Offline Fallback
+      const newExp = {
+        id: `exp-off-${Date.now()}`,
+        ...expPayload,
+        createdAt: new Date().toISOString()
+      };
+
+      queueOfflineAction({
+        type: 'add_expense',
+        payload: newExp
+      });
+
+      setExpenses(prev => {
+        const updated = [newExp, ...prev];
+        if (currentTenantId) {
+          saveVaultSnapshot(currentTenantId, { expenses: updated });
+        }
+        return updated;
+      });
+
+      triggerHaptic('success');
+      setNotice(`🟢 অফলাইন মোড: খরচ "${title}" সংরক্ষিত হয়েছে (ইন্টারনেট পেলে সিঙ্ক হবে)!`);
+      setShowAddModal(false);
+      setTitle('');
+      setAmount('');
+      setTimeout(() => setNotice(''), 5000);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEditExpenseSubmit = async (e: React.FormEvent) => {
