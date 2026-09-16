@@ -72,6 +72,8 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
   }
 };
 
+export const INDUSTRY_THEMES = INDUSTRY_CATEGORIES;
+
 export function getIndustryTheme(id?: string): IndustryTheme {
   return INDUSTRY_CATEGORIES[id || 'cat-grocery'] || INDUSTRY_CATEGORIES['cat-grocery'];
 }

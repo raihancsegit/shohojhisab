@@ -11,11 +11,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useNav } from '../context/NavContext';
 import { DEMO_SHOPS } from '../lib/offlineDataVault';
-import { INDUSTRY_THEMES } from '../lib/industryConfig';
+import { INDUSTRY_CATEGORIES } from '../lib/industryConfig';
 
 export default function ShopSwitcherModal() {
   const { tenant, switchShop, setIndustryId, triggerHaptic } = useAuth();
   const { isShopModalOpen, closeShopModal } = useNav();
+
+  const themes = INDUSTRY_CATEGORIES || {};
 
   return (
     <Modal
@@ -40,8 +42,8 @@ export default function ShopSwitcherModal() {
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionHeader}>আমার দোকান শাখাসমূহ</Text>
-            {DEMO_SHOPS.map((shop) => {
-              const isSelected = tenant.id === shop.id;
+            {(DEMO_SHOPS || []).map((shop) => {
+              const isSelected = tenant?.id === shop.id;
               return (
                 <TouchableOpacity
                   key={shop.id}
@@ -58,7 +60,7 @@ export default function ShopSwitcherModal() {
                     <View style={styles.shopIconBox}>
                       <Text style={styles.shopIcon}>{shop.icon || '🏪'}</Text>
                     </View>
-                    <View>
+                    <View style={{ flex: 1 }}>
                       <Text style={[styles.shopItemTitle, isSelected && styles.shopItemTitleSelected]}>
                         {shop.shopName}
                       </Text>
@@ -78,8 +80,8 @@ export default function ShopSwitcherModal() {
 
             <Text style={[styles.sectionHeader, { marginTop: 16 }]}>ব্যবসার ক্যাটাগরি (ক্যাটালগ প্রিসেট)</Text>
             <View style={styles.industryGrid}>
-              {Object.entries(INDUSTRY_THEMES).map(([id, theme]) => {
-                const isCurrent = tenant.industryId === id;
+              {Object.entries(themes).map(([id, theme]) => {
+                const isCurrent = tenant?.industryId === id;
                 return (
                   <TouchableOpacity
                     key={id}

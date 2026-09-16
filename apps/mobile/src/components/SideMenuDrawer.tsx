@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   Dimensions,
-  Pressable
+  Pressable,
+  Platform,
+  StatusBar
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
@@ -44,6 +45,11 @@ export default function SideMenuDrawer() {
     { href: '/staff', label: 'কর্মচারী ও পারমিশন (Staff)', icon: '👥', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'টিম', badgeBg: '#eff6ff', badgeColor: '#2563eb' },
     { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#fee2e2', iconColor: '#b91c1c' },
+    { href: '/notifications', label: 'বিজ্ঞপ্তি ও নোটিফিকেশন', icon: '🔔', iconBg: '#eff6ff', iconColor: '#2563eb' },
+    { href: '/marketing', label: 'এসএমএস ও বাকি তাগাদা', icon: '📢', iconBg: '#fdf2f8', iconColor: '#db2777' },
+    { href: '/loyalty', label: 'লয়্যালটি ও ক্যাশব্যাক', icon: '🎁', iconBg: '#fef3c7', iconColor: '#d97706' },
+    { href: '/barcode-generator', label: 'বারকোড জেনারেটর', icon: '🏷️', iconBg: '#f1f5f9', iconColor: '#475569' },
+    { href: '/challan-ocr', label: 'চালান স্ক্যানার (OCR)', icon: '📸', iconBg: '#ecfdf5', iconColor: '#059669' },
     { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ', badgeBg: '#fef3c7', badgeColor: '#d97706' },
     { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
@@ -70,7 +76,7 @@ export default function SideMenuDrawer() {
         <Pressable style={styles.backdrop} onPress={closeDrawer} />
 
         {/* Drawer Content */}
-        <SafeAreaView style={styles.drawerContainer}>
+        <View style={styles.drawerContainer}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.closeBtn} onPress={closeDrawer}>
@@ -189,7 +195,7 @@ export default function SideMenuDrawer() {
               <Text style={styles.logoutBtnText}>🚪 লগআউট</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -215,6 +221,7 @@ const styles = StyleSheet.create({
     elevation: 20,
     display: 'flex',
     flexDirection: 'column',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 40,
   },
   header: {
     backgroundColor: '#1e1b4b',
@@ -426,7 +433,6 @@ const styles = StyleSheet.create({
   },
   appVersion: {
     fontSize: 11,
-    color: '#94a3b8',
   },
   logoutBtn: {
     backgroundColor: '#fee2e2',

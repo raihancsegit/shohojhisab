@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Platform
 } from 'react-native';
@@ -26,7 +25,7 @@ export default function HeaderNav({ title }: { title?: string }) {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.primaryColor || '#059669' }]}>
+    <View style={[styles.headerContainer, { backgroundColor: theme.primaryColor || '#059669' }]}>
       <View style={styles.headerRow}>
         {/* Left: Hamburger & Shop Info */}
         <View style={styles.leftGroup}>
@@ -98,7 +97,7 @@ export default function HeaderNav({ title }: { title?: string }) {
             style={styles.iconBtn}
             onPress={() => {
               triggerHaptic('light');
-              router.push('/reports');
+              router.push('/notifications');
             }}
           >
             <Text style={styles.bellIcon}>🔔</Text>
@@ -106,13 +105,13 @@ export default function HeaderNav({ title }: { title?: string }) {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  headerContainer: {
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
