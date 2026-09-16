@@ -284,6 +284,110 @@ export default function InstallmentsPage() {
     } catch (e) {}
   };
 
+  // Edit & Delete Confirmation Modals
+  const [editModalItem, setEditModalItem] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<any>({
+    customerName: '',
+    customerPhone: '',
+    customerAddress: '',
+    guarantorName: '',
+    guarantorPhone: '',
+    productName: '',
+    totalAmount: '',
+    downPayment: '',
+    remainingDue: '',
+    monthlyInstallment: '',
+    totalMonths: '4',
+    nextDueDate: '',
+    status: 'active',
+    notes: ''
+  });
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleOpenEdit = (inst: any) => {
+    setEditModalItem(inst);
+    setEditForm({
+      customerName: inst.customer_name || '',
+      customerPhone: inst.customer_phone || '',
+      customerAddress: inst.customer_address || '',
+      guarantorName: inst.guarantor_name || '',
+      guarantorPhone: inst.guarantor_phone || '',
+      productName: inst.product_name || '',
+      totalAmount: String(inst.total_amount || ''),
+      downPayment: String(inst.down_payment || ''),
+      remainingDue: String(inst.remaining_due || ''),
+      monthlyInstallment: String(inst.monthly_installment || ''),
+      totalMonths: String(inst.total_months || '4'),
+      nextDueDate: inst.next_due_date || '',
+      status: inst.status || 'active',
+      notes: inst.notes || ''
+    });
+    triggerHaptic('light');
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalItem) return;
+    setIsUpdating(true);
+    triggerHaptic('medium');
+
+    try {
+      const res = await fetch(`/api/installments/${editModalItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+
+      if (res.ok) {
+        setNotice(`✓ "${editForm.customerName}"-এর কিস্তির তথ্য সফলভাবে আপডেট হয়েছে!`);
+        if (speakAnnouncement) {
+          speakAnnouncement('কিস্তির তথ্য আপডেট সম্পন্ন হয়েছে');
+        }
+        setEditModalItem(null);
+        await loadInstallments();
+        setTimeout(() => setNotice(''), 3500);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'আপডেট করতে সমস্যা হয়েছে');
+      }
+    } catch (e: any) {
+      alert('সার্ভারে সমস্যা: ' + e.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!deleteConfirmItem) return;
+    setIsDeleting(true);
+    triggerHaptic('medium');
+
+    try {
+      const res = await fetch(`/api/installments/${deleteConfirmItem.id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        setNotice(`✓ "${deleteConfirmItem.customer_name}"-এর কিস্তির রেকর্ড সফলভাবে মুছে ফেলা হয়েছে!`);
+        if (speakAnnouncement) {
+          speakAnnouncement('কিস্তির রেকর্ড মুছে ফেলা হয়েছে');
+        }
+        setDeleteConfirmItem(null);
+        await loadInstallments();
+        setTimeout(() => setNotice(''), 3500);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'মুছতে সমস্যা হয়েছে');
+      }
+    } catch (e: any) {
+      alert('সার্ভারে সমস্যা: ' + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Send WhatsApp Reminder
   const sendWhatsAppReminder = (inst: any) => {
     triggerHaptic('medium');
@@ -507,48 +611,90 @@ export default function InstallmentsPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px', flexWrap: 'wrap' }}>
-                  {!isCompleted && (
-                    <>
-                      <button
-                        onClick={() => sendWhatsAppReminder(inst)}
-                        style={{
-                          background: '#25d366',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '7px 12px',
-                          borderRadius: '9px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <span>💬</span> WhatsApp তাগাদা
-                      </button>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => handleOpenEdit(inst)}
+                      style={{
+                        background: '#f8fafc',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>✏️</span> এডিট
+                    </button>
 
-                      <button
-                        onClick={() => { setCollectModalItem(inst); setPaymentAmount(String(inst.monthly_installment)); triggerHaptic('light'); }}
-                        style={{
-                          background: '#10b981',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '7px 14px',
-                          borderRadius: '9px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <span>💵</span> কিস্তির টাকা জমা নিন
-                      </button>
-                    </>
-                  )}
+                    <button
+                      onClick={() => { setDeleteConfirmItem(inst); triggerHaptic('medium'); }}
+                      style={{
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>🗑️</span> মুছুন
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {!isCompleted && (
+                      <>
+                        <button
+                          onClick={() => sendWhatsAppReminder(inst)}
+                          style={{
+                            background: '#25d366',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 12px',
+                            borderRadius: '9px',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>💬</span> WhatsApp তাগাদা
+                        </button>
+
+                        <button
+                          onClick={() => { setCollectModalItem(inst); setPaymentAmount(String(inst.monthly_installment)); triggerHaptic('light'); }}
+                          style={{
+                            background: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 14px',
+                            borderRadius: '9px',
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>💵</span> কিস্তির টাকা জমা নিন
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -1181,6 +1327,254 @@ export default function InstallmentsPage() {
                 ✓ টাকা জমা নিশ্চিত করুন
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT INSTALLMENT MODAL */}
+      {editModalItem && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                  ✏️ কিস্তির তথ্য এডিট করুন
+                </h3>
+                <span style={{ fontSize: '11.5px', color: '#64748b' }}>গ্রাহক ও কিস্তির হিসাব সংশোধন</span>
+              </div>
+              <button onClick={() => setEditModalItem(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>👤 গ্রাহকের নাম:</label>
+                <input
+                  type="text"
+                  value={editForm.customerName}
+                  onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>📞 মোবাইল:</label>
+                  <input
+                    type="tel"
+                    value={editForm.customerPhone}
+                    onChange={(e) => setEditForm({ ...editForm, customerPhone: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>📍 ঠিকানা:</label>
+                  <input
+                    type="text"
+                    value={editForm.customerAddress}
+                    onChange={(e) => setEditForm({ ...editForm, customerAddress: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>📱 পণ্যের নাম / মডেল:</label>
+                <input
+                  type="text"
+                  value={editForm.productName}
+                  onChange={(e) => setEditForm({ ...editForm, productName: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>💰 মোট মূল্য (৳):</label>
+                  <input
+                    type="number"
+                    value={editForm.totalAmount}
+                    onChange={(e) => {
+                      const tot = Number(e.target.value) || 0;
+                      const down = Number(editForm.downPayment) || 0;
+                      const due = Math.max(0, tot - down);
+                      const mth = Math.max(1, Number(editForm.totalMonths) || 1);
+                      setEditForm({ ...editForm, totalAmount: e.target.value, remainingDue: String(due), monthlyInstallment: String(Math.round(due / mth)) });
+                    }}
+                    required
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>💵 ডাউন পেমেন্ট (৳):</label>
+                  <input
+                    type="number"
+                    value={editForm.downPayment}
+                    onChange={(e) => {
+                      const tot = Number(editForm.totalAmount) || 0;
+                      const down = Number(e.target.value) || 0;
+                      const due = Math.max(0, tot - down);
+                      const mth = Math.max(1, Number(editForm.totalMonths) || 1);
+                      setEditForm({ ...editForm, downPayment: e.target.value, remainingDue: String(due), monthlyInstallment: String(Math.round(due / mth)) });
+                    }}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#dc2626', marginBottom: '4px' }}>বাকি কিস্তি (৳):</label>
+                  <input
+                    type="number"
+                    value={editForm.remainingDue}
+                    onChange={(e) => setEditForm({ ...editForm, remainingDue: e.target.value })}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #fca5a5', fontSize: '13.5px', fontWeight: '800', color: '#dc2626', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#4f46e5', marginBottom: '4px' }}>মাসিক কিস্তি (৳):</label>
+                  <input
+                    type="number"
+                    value={editForm.monthlyInstallment}
+                    onChange={(e) => setEditForm({ ...editForm, monthlyInstallment: e.target.value })}
+                    className="num-font"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #c7d2fe', fontSize: '13.5px', fontWeight: '800', color: '#4f46e5', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>📅 পরবর্তী কিস্তির তারিখ:</label>
+                  <input
+                    type="date"
+                    value={editForm.nextDueDate}
+                    onChange={(e) => setEditForm({ ...editForm, nextDueDate: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>স্ট্যাটাস:</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                  >
+                    <option value="active">চলমান কিস্তি</option>
+                    <option value="completed">পরিশোধিত</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>নোট / মন্তব্য:</label>
+                <input
+                  type="text"
+                  placeholder="নোট বা মন্তব্য"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditModalItem(null)}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: '800', cursor: 'pointer' }}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  style={{
+                    flex: 2,
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    fontSize: '14.5px',
+                    cursor: isUpdating ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isUpdating ? 'আপডেট হচ্ছে...' : '✓ আপডেট সংরক্ষণ করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SAFE DELETE CONFIRMATION MODAL */}
+      {deleteConfirmItem && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '26px 22px', width: '100%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 14px' }}>
+              🗑️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px' }}>
+              কিস্তির হিসাব মুছে ফেলতে চান?
+            </h3>
+            <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
+              আপনি কি নিশ্চিতভাবে <strong>"{deleteConfirmItem.customer_name}"</strong>-এর <strong>"{deleteConfirmItem.product_name}"</strong> কিস্তির হিসাব মুছে ফেলতে চান?
+            </p>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#991b1b', marginBottom: '20px', textAlign: 'left' }}>
+              ⚠️ <strong>সতর্কতা:</strong> এটি ডিলিট করলে এই কিস্তির সকল তথ্য ও পেমেন্ট হিস্ট্রি স্থায়ীভাবে মুছে যাবে। ভুলবশত কোনো ডাটা হারালে তা ফেরত পাওয়া যাবে না।
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmItem(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  background: '#fff',
+                  fontWeight: '800',
+                  fontSize: '13.5px',
+                  cursor: 'pointer'
+                }}
+              >
+                না, বাতিল করুন
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSubmit}
+                disabled={isDeleting}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#fff',
+                  fontWeight: '900',
+                  fontSize: '13.5px',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {isDeleting ? 'মুছে ফেলা হচ্ছে...' : 'হ্যাঁ, মুছে ফেলুন 🗑️'}
+              </button>
+            </div>
           </div>
         </div>
       )}

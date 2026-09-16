@@ -4702,24 +4702,83 @@ fastify.get('/api/products', async (request) => {
 
 fastify.post('/api/products', async (request, reply) => {
   const body = request.body as any;
-  const id = body.id || 'prod-' + uuidv4().slice(0, 8);
+  const tenantId = body.tenantId;
   const now = new Date().toISOString();
   const initialStock = Number(body.stock) || 0;
   const unit = body.unit || 'পিস';
   const subUnit = body.subUnit || null;
   const conversionRatio = Number(body.conversionRatio) || 1;
+  const banglaName = (body.banglaName || body.name || '').trim();
+  const name = (body.name || body.banglaName || '').trim();
+  const barcode = body.barcode ? String(body.barcode).trim() : '';
+
+  if (!tenantId || (!banglaName && !name)) {
+    return reply.status(400).send({ error: 'দোকান আইডি এবং পণ্যের নাম আবশ্যক' });
+  }
 
   try {
+    // 1. DUPLICATE CHECK: Check if product already exists with same name or barcode for this tenant
+    let existing: any = null;
+    if (barcode && barcode !== '') {
+      existing = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND barcode = ?').get(tenantId, barcode) as any;
+    }
+    if (!existing && banglaName) {
+      existing = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (LOWER(bangla_name) = LOWER(?) OR LOWER(name) = LOWER(?))').get(tenantId, banglaName, banglaName) as any;
+    }
+    if (!existing && name) {
+      existing = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (LOWER(bangla_name) = LOWER(?) OR LOWER(name) = LOWER(?))').get(tenantId, name, name) as any;
+    }
+
+    if (existing) {
+      // Intelligently merge stock & update prices
+      const currentStock = Number(existing.stock) || 0;
+      const newStock = currentStock + initialStock;
+      const pPrice = Number(body.purchasePrice) > 0 ? Number(body.purchasePrice) : Number(existing.purchase_price);
+      const sPrice = Number(body.sellingPrice) > 0 ? Number(body.sellingPrice) : Number(existing.selling_price);
+
+      db.prepare(`
+        UPDATE products SET
+          stock = ?,
+          purchase_price = ?,
+          selling_price = ?,
+          unit = COALESCE(?, unit),
+          sub_unit = COALESCE(?, sub_unit),
+          conversion_ratio = COALESCE(?, conversion_ratio),
+          expiry_date = COALESCE(?, expiry_date)
+        WHERE id = ?
+      `).run(newStock, pPrice, sPrice, unit, subUnit, conversionRatio, body.expiryDate || null, existing.id);
+
+      if (initialStock > 0) {
+        const logId = 'stklog-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+          VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'স্টক মার্জ/বৃদ্ধি', 'বিদ্যমান পণ্যের স্টক বৃদ্ধি করা হয়েছে', ?)
+        `).run(logId, tenantId, existing.id, existing.bangla_name || existing.name, initialStock, unit, initialStock, pPrice, now);
+      }
+
+      return {
+        success: true,
+        id: existing.id,
+        isMerged: true,
+        newStock,
+        message: `✓ "${existing.bangla_name || existing.name}" পণ্যটি আগে থেকেই ছিল। নতুন করে ${initialStock} ${unit} স্টক বাড়িয়ে মোট ${newStock} ${unit} করা হয়েছে!`
+      };
+    }
+
+    // 2. If new product, insert cleanly
+    const id = body.id || 'prod-' + uuidv4().slice(0, 8);
+    const finalBarcode = barcode || ('894' + Math.floor(10000000 + Math.random() * 90000000));
+
     const stmt = db.prepare(`
       INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, sub_unit, conversion_ratio, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id,
-      body.tenantId,
-      body.barcode || ('894' + Math.floor(10000000 + Math.random() * 90000000)),
-      body.name || body.banglaName,
-      body.banglaName || body.name,
+      tenantId,
+      finalBarcode,
+      name,
+      banglaName,
       body.categoryId || 'cat-grocery',
       Number(body.purchasePrice) || 0,
       Number(body.sellingPrice) || 0,
@@ -4737,7 +4796,6 @@ fastify.post('/api/products', async (request, reply) => {
       now
     );
 
-    // If initial stock was provided, log initial stock inflow
     if (initialStock > 0) {
       const logId = 'stklog-' + uuidv4().slice(0, 8);
       db.prepare(`
@@ -4745,9 +4803,9 @@ fastify.post('/api/products', async (request, reply) => {
         VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'নতুন পণ্য এন্ট্রি', 'প্রাথমিক স্টক এন্ট্রি', ?)
       `).run(
         logId,
-        body.tenantId,
+        tenantId,
         id,
-        body.banglaName || body.name,
+        banglaName,
         initialStock,
         unit,
         initialStock,
@@ -4756,7 +4814,7 @@ fastify.post('/api/products', async (request, reply) => {
       );
     }
 
-    return { success: true, id, message: 'পণ্য সফলভাবে যুক্ত হয়েছে' };
+    return { success: true, id, message: `✓ "${banglaName}" সফলভাবে স্টকে যুক্ত হয়েছে!` };
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
   }
@@ -6698,6 +6756,57 @@ fastify.post('/api/installments/:id/payments', async (request, reply) => {
       remainingDue: newRemainingDue,
       status: newStatus
     };
+  } catch (err: any) {
+    return reply.status(500).send({ error: err.message });
+  }
+});
+
+fastify.put('/api/installments/:id', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const body = request.body as any;
+  try {
+    const inst = db.prepare('SELECT * FROM installments WHERE id = ?').get(id) as any;
+    if (!inst) return reply.status(404).send({ error: 'কিস্তির রেকর্ড পাওয়া যায়নি' });
+
+    const customerName = body.customerName !== undefined ? body.customerName : inst.customer_name;
+    const customerPhone = body.customerPhone !== undefined ? body.customerPhone : inst.customer_phone;
+    const customerAddress = body.customerAddress !== undefined ? body.customerAddress : inst.customer_address;
+    const guarantorName = body.guarantorName !== undefined ? body.guarantorName : inst.guarantor_name;
+    const guarantorPhone = body.guarantorPhone !== undefined ? body.guarantorPhone : inst.guarantor_phone;
+    const productName = body.productName !== undefined ? body.productName : inst.product_name;
+    const totalAmount = body.totalAmount !== undefined ? Number(body.totalAmount) : inst.total_amount;
+    const downPayment = body.downPayment !== undefined ? Number(body.downPayment) : inst.down_payment;
+    const remainingDue = body.remainingDue !== undefined ? Number(body.remainingDue) : inst.remaining_due;
+    const monthlyInstallment = body.monthlyInstallment !== undefined ? Number(body.monthlyInstallment) : inst.monthly_installment;
+    const totalMonths = body.totalMonths !== undefined ? Number(body.totalMonths) : inst.total_months;
+    const nextDueDate = body.nextDueDate !== undefined ? body.nextDueDate : inst.next_due_date;
+    const status = body.status !== undefined ? body.status : inst.status;
+    const notes = body.notes !== undefined ? body.notes : inst.notes;
+
+    db.prepare(`
+      UPDATE installments SET
+        customer_name = ?,
+        customer_phone = ?,
+        customer_address = ?,
+        guarantor_name = ?,
+        guarantor_phone = ?,
+        product_name = ?,
+        total_amount = ?,
+        down_payment = ?,
+        remaining_due = ?,
+        monthly_installment = ?,
+        total_months = ?,
+        next_due_date = ?,
+        status = ?,
+        notes = ?
+      WHERE id = ?
+    `).run(
+      customerName, customerPhone, customerAddress, guarantorName, guarantorPhone,
+      productName, totalAmount, downPayment, remainingDue, monthlyInstallment,
+      totalMonths, nextDueDate, status, notes, id
+    );
+
+    return { success: true, message: 'কিস্তির তথ্য সফলভাবে আপডেট হয়েছে' };
   } catch (err: any) {
     return reply.status(500).send({ error: err.message });
   }
