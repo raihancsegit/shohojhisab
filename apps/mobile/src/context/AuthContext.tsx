@@ -144,22 +144,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginShop = async (phone: string, pin: string) => {
     triggerHaptic('medium');
-    const matched = DEMO_SHOPS.find(s => s.phone === phone.trim()) || defaultTenant;
-    setTenant(matched);
+    const cleanPhone = phone.trim();
+    const cleanPin = pin.trim();
+
+    let loggedTenant: TenantInfo | null = null;
+    let isOwner = true;
+
+    // 1. Try real database API login first
+    try {
+      const { getServerUrl } = await import('../lib/cloudSyncEngine');
+      const baseUrl = await getServerUrl();
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'shop', phone: cleanPhone, pin: cleanPin })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.tenant) {
+          loggedTenant = {
+            id: data.tenant.id,
+            shopName: data.tenant.shop_name || data.tenant.shopName || 'আমার দোকান',
+            ownerName: data.tenant.owner_name || data.tenant.ownerName || 'দোকানদার',
+            phone: data.tenant.phone || cleanPhone,
+            industryId: data.tenant.industry_category_id || data.tenant.industryId || 'cat-grocery'
+          };
+          isOwner = data.user?.isOwner !== false;
+        }
+      }
+    } catch (e) {
+      console.log('[Auth] Database API offline, falling back to local vault auth');
+    }
+
+    // 2. Fallback to local known/demo shop or create dynamic account for user
+    if (!loggedTenant) {
+      const matched = DEMO_SHOPS.find(s => s.phone === cleanPhone);
+      if (matched) {
+        loggedTenant = matched;
+      } else {
+        // Create / restore account for entered phone
+        loggedTenant = {
+          id: `tenant-${cleanPhone.slice(-6)}`,
+          shopName: 'বিসমিল্লাহ স্টোর',
+          ownerName: 'দোকান মালিক',
+          phone: cleanPhone,
+          industryId: 'cat-grocery'
+        };
+      }
+    }
+
+    setTenant(loggedTenant);
     setUserRole('shopkeeper');
-    setActiveRoleMode(pin === '2222' || pin === '4444' ? 'staff' : 'owner');
-    AsyncStorage.setItem('shohoj_tenant_info', JSON.stringify(matched));
-    await hydrateLocalVault(matched.id, matched.industryId);
+    setActiveRoleMode(isOwner ? 'owner' : 'staff');
+    await AsyncStorage.setItem('shohoj_tenant_info', JSON.stringify(loggedTenant));
+    await AsyncStorage.setItem('shohoj_user_role', 'shopkeeper');
+    await hydrateLocalVault(loggedTenant.id, loggedTenant.industryId);
     setVaultVersion(v => v + 1);
     triggerHaptic('success');
-    speakAnnouncement(`${matched.shopName} এ স্বাগতম`);
+    speakAnnouncement(`${loggedTenant.shopName} এ স্বাগতম`);
     return { success: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
     triggerHaptic('medium');
     setUserRole(null);
+    await AsyncStorage.removeItem('shohoj_user_role');
+    speakAnnouncement('লগআউট সম্পন্ন হয়েছে');
   };
+
 
   const toggleSoundbox = () => {
     const next = !isSoundboxEnabled;
