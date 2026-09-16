@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,19 +21,21 @@ const { width } = Dimensions.get('window');
 export default function FloatingVoiceFab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tenant, theme, themeMode, triggerHaptic } = useAuth();
+  const { tenant, theme, themeMode, triggerHaptic, refreshVault } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [lastSpeech, setLastSpeech] = useState('');
+  const [isListeningState, setIsListeningState] = useState(false);
   const isDark = themeMode === 'dark';
 
   const categorizedCommands = [
     {
-      category: '🛒 বিক্রয় ও কুইক POS',
+      category: '🛒 বিক্রয় ও কুইক POS মেমো',
       items: [
         { label: 'তেল ১ লিটার বিক্রি করো', cmd: 'তেল ১ লিটার বিক্রি করো' },
         { label: 'চিনি ২ কেজি বিক্রি করো', cmd: 'চিনি ২ কেজি বিক্রি করো' },
-        { label: 'নাপা ৫০ পাতা বিক্রি', cmd: 'নাপা ৫০ পাতা বিক্রি' }
+        { label: 'নাপা ৫০ পাতা বিক্রি', cmd: 'নাপা ৫০ পাতা বিক্রি' },
+        { label: 'পস কাউন্টারে যাও', cmd: 'পস পেজে যাও' }
       ]
     },
     {
@@ -41,18 +43,29 @@ export default function FloatingVoiceFab() {
       items: [
         { label: 'রহিমের বাকিতে ৫০০ টাকা লেখো', cmd: 'রহিমের বাকিতে ৫০০ টাকা লেখো' },
         { label: 'করিমের ২০০ টাকা জমা নাও', cmd: 'করিমের ২০০ টাকা জমা নাও' },
-        { label: 'মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো' }
+        { label: 'বাজারে মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো' },
+        { label: 'খাতা পেজে যাও', cmd: 'খাতায় যাও' }
       ]
     },
     {
-      category: '📊 রিপোর্ট ও হিসাব চেক',
+      category: '📊 হিসাব, লাভ ও খরচ রিপোর্ট',
       items: [
         { label: 'আজকের বিক্রি ও লাভ কত?', cmd: 'আজকের বিক্রি ও লাভ কত' },
         { label: 'দোকানের মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
-        { label: 'চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' }
+        { label: 'চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' },
+        { label: 'রিপোর্ট পেজে যাও', cmd: 'রিপোর্ট পেজে যাও' }
       ]
     }
   ];
+
+  const handleOpenAssistant = () => {
+    triggerHaptic('medium');
+    playNativeChime('beep');
+    setIsOpen(true);
+    setIsListeningState(true);
+    setLastSpeech('শুনছি... মুখে বলুন অথবা নিচের কমান্ডে চাপুন');
+    speakNativeText('জি বলুন, কী হিসাব করতে হবে?');
+  };
 
   const handleRunCommand = (textToRun: string) => {
     const q = textToRun.trim();
@@ -61,18 +74,21 @@ export default function FloatingVoiceFab() {
     triggerHaptic('medium');
     setInputText('');
     playNativeChime('beep');
+    setIsListeningState(false);
 
     const result = executeMobileAiCommand(tenant.id, q);
     const speechText = result.speech || result.reply;
     setLastSpeech(speechText);
 
+    // Speak announcement loudly via TTS
     speakNativeText(speechText);
+    refreshVault();
 
     if (result.navigateTo) {
       setTimeout(() => {
         setIsOpen(false);
         router.push(result.navigateTo as any);
-      }, 1200);
+      }, 1400);
     }
   };
 
@@ -82,14 +98,10 @@ export default function FloatingVoiceFab() {
 
   return (
     <>
-      {/* 🎙️ Sleek Circular Floating Voice Button */}
+      {/* 🎙️ Sleek Circular Floating Voice FAB */}
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => {
-          playNativeChime('beep');
-          triggerHaptic('light');
-          setIsOpen(true);
-        }}
+        onPress={handleOpenAssistant}
         style={[
           styles.fab,
           {
@@ -101,8 +113,7 @@ export default function FloatingVoiceFab() {
         <Text style={styles.fabIcon}>🎙️</Text>
       </TouchableOpacity>
 
-
-      {/* 🤖 Universal AI Assistant Modal */}
+      {/* 🤖 Universal AI Voice Assistant Modal */}
       <Modal
         visible={isOpen}
         animationType="slide"
@@ -110,7 +121,7 @@ export default function FloatingVoiceFab() {
         onRequestClose={() => setIsOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.sheetCard, { backgroundColor: isDark ? '#131b2e' : '#ffffff' }]}>
+          <View style={[styles.sheetCard, { backgroundColor: isDark ? '#131b2e' : '#ffffff', paddingBottom: insets.bottom + 20 }]}>
             {/* Header */}
             <View style={styles.sheetHeader}>
               <View style={styles.headerLeft}>
@@ -121,7 +132,7 @@ export default function FloatingVoiceFab() {
                   <Text style={[styles.sheetTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>
                     সহজ হিসাব এআই সহকারী
                   </Text>
-                  <Text style={styles.sheetSub}>১০০% অফলাইন অন-ডিভাইস ভয়েস ইঞ্জিন</Text>
+                  <Text style={styles.sheetSub}>১০০% অফলাইন বাংলা ভয়েস ইঞ্জিন</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeBtn}>
@@ -129,14 +140,18 @@ export default function FloatingVoiceFab() {
               </TouchableOpacity>
             </View>
 
-            {/* Speech Response Bubble */}
-            {lastSpeech ? (
-              <View style={[styles.speechBubble, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}>
-                <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
-                  🗣️ {lastSpeech}
-                </Text>
-              </View>
-            ) : null}
+            {/* 🎙️ Live Animated Speech Bubble */}
+            <View style={[
+              styles.speechBubble,
+              {
+                backgroundColor: isDark ? '#1e293b' : '#eff6ff',
+                borderColor: isDark ? '#334155' : '#bfdbfe'
+              }
+            ]}>
+              <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
+                🗣️ {lastSpeech || 'শুনছি... মুখে বলুন বা নিচের বাটনে চাপুন'}
+              </Text>
+            </View>
 
             {/* Command Input Bar */}
             <View style={styles.inputRow}>
@@ -184,7 +199,7 @@ export default function FloatingVoiceFab() {
                         onPress={() => handleRunCommand(item.cmd)}
                       >
                         <Text style={[styles.chipText, { color: isDark ? '#f1f5f9' : '#1e293b' }]}>
-                          🗣️ "{item.label}"
+                          🎙️ "{item.label}"
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -202,19 +217,18 @@ export default function FloatingVoiceFab() {
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 84,
     right: 14,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 6,
-    borderWidth: 2,
+    borderWidth: 2.5,
     borderColor: '#ffffff',
     zIndex: 999
   },
@@ -230,8 +244,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 18,
-    maxHeight: '80%',
-    paddingBottom: 28
+    maxHeight: '82%'
   },
   sheetHeader: {
     flexDirection: 'row',

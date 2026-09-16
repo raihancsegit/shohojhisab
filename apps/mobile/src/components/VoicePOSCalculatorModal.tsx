@@ -48,6 +48,13 @@ export default function VoicePOSCalculatorModal({
   const [inputText, setInputText] = useState<string>('');
   const [feedbackText, setFeedbackText] = useState<string>('মুখে বলুন (যেমন: ২ কেজি চিনি আর ১ লিটার তেল)...');
 
+  React.useEffect(() => {
+    if (isOpen) {
+      speakNativeText('আল্ট্রা ভয়েস মেমো চালু হয়েছে। মুখে বলুন বা সিলেক্ট করুন।');
+    }
+  }, [isOpen]);
+
+
   const vault = getLocalVaultData(tenant.id);
   const products = vault.products || [];
 
