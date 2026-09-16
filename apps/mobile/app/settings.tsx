@@ -233,6 +233,34 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* ☁️ Cloud & Central Database Sync */}
+      <View style={[styles.card, { backgroundColor: isDark ? '#131b2e' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }]}>
+        <Text style={[styles.cardTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>সেন্ট্রাল ডাটাবেজ সিঙ্ক</Text>
+        <Text style={styles.subText}>
+          PWA ওয়েব অ্যাপ এবং মোবাইল অ্যাপ উভয়ই একই ব্যাকএন্ড ডাটাবেজ (PostgreSQL / SQLite) এর সাথে সংযুক্ত থাকতে পারবে।
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.syncBtn, { backgroundColor: primaryColor }]}
+          onPress={async () => {
+            triggerHaptic('medium');
+            playNativeChime('beep');
+            const { syncWithDatabase } = await import('../src/lib/cloudSyncEngine');
+            const res = await syncWithDatabase(tenant.id);
+            refreshVault();
+            if (res.success) {
+              playNativeChime('cash');
+              speakNativeText('ডাটাবেজ সিঙ্ক সফল হয়েছে');
+              Alert.alert('সিঙ্ক সফল', res.message);
+            } else {
+              Alert.alert('অফলাইন মোড', res.message);
+            }
+          }}
+        >
+          <Text style={styles.syncBtnText}>🔄 সেন্ট্রাল ডাটাবেজে সিঙ্ক করুন</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* 💾 Storage & Data Vault Summary */}
       <View style={[styles.card, { backgroundColor: isDark ? '#131b2e' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0' }]}>
         <Text style={[styles.cardTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>লোকাল ডাটা ও ব্যাকআপ</Text>
@@ -250,6 +278,7 @@ export default function SettingsScreen() {
         <Text style={styles.logoutBtnText}>🚪 একাউন্ট থেকে লগআউট করুন</Text>
       </TouchableOpacity>
     </ScrollView>
+
   );
 }
 
@@ -274,9 +303,11 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 4 },
   settingLabel: { fontSize: 13.5, fontWeight: '800' },
   subText: { fontSize: 11, color: '#64748b', marginTop: 2 },
-  divider: { height: 1, marginVertical: 10 },
+  syncBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 12 },
+  syncBtnText: { color: '#ffffff', fontSize: 13.5, fontWeight: '900' },
   resetBtn: { backgroundColor: '#fee2e2', borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
   resetBtnText: { color: '#dc2626', fontWeight: '800', fontSize: 12 },
   logoutBtn: { backgroundColor: '#ef4444', borderRadius: 14, paddingVertical: 14, alignItems: 'center', elevation: 3 },
   logoutBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '900' }
 });
+
