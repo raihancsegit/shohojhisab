@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { executeMobileAiCommand } from '../lib/offlineAiEngine';
@@ -7,11 +7,12 @@ import { playNativeChime, speakNativeText } from '../lib/offlineAudioEngine';
 
 export default function FloatingVoiceFab() {
   const router = useRouter();
-  const { tenant } = useAuth();
+  const { tenant, theme, themeMode } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [lastSpeech, setLastSpeech] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const isDark = themeMode === 'dark';
 
   const quickCommands = [
     { label: '📊 আজকের বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
@@ -53,7 +54,10 @@ export default function FloatingVoiceFab() {
           playNativeChime('beep');
           setIsOpen(true);
         }}
-        style={styles.fab}
+        style={[
+          styles.fab,
+          { backgroundColor: theme.primaryColor || '#4f46e5' }
+        ]}
       >
         <Text style={styles.fabIcon}>🎙️</Text>
       </TouchableOpacity>
@@ -66,13 +70,15 @@ export default function FloatingVoiceFab() {
         onRequestClose={() => setIsOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.sheetCard}>
+          <View style={[styles.sheetCard, { backgroundColor: isDark ? '#131b2e' : '#ffffff' }]}>
             {/* Header */}
             <View style={styles.sheetHeader}>
               <View style={styles.headerLeft}>
                 <Text style={styles.assistantAvatar}>🤖</Text>
                 <View>
-                  <Text style={styles.sheetTitle}>সহজ হিসাব সহকারী</Text>
+                  <Text style={[styles.sheetTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>
+                    সহজ হিসাব সহকারী
+                  </Text>
                   <Text style={styles.sheetSub}>১০০% অফলাইন অন-ডিভাইস ভয়েস ইঞ্জিন</Text>
                 </View>
               </View>
@@ -83,15 +89,15 @@ export default function FloatingVoiceFab() {
 
             {/* Speech Response Bubble */}
             {lastSpeech ? (
-              <View style={styles.speechBubble}>
-                <Text style={styles.speechText}>🗣️ {lastSpeech}</Text>
+              <View style={[styles.speechBubble, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}>
+                <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>🗣️ {lastSpeech}</Text>
               </View>
             ) : null}
 
             {/* Command Input Bar */}
             <View style={styles.inputRow}>
               <TextInput
-                style={styles.textInput}
+                style={[styles.textInput, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: isDark ? '#f8fafc' : '#0f172a', borderColor: isDark ? '#334155' : '#cbd5e1' }]}
                 placeholder="মুখে বলুন বা লিখুন (যেমন: স্টক পেজে যাও)..."
                 placeholderTextColor="#94a3b8"
                 value={inputText}
@@ -99,23 +105,29 @@ export default function FloatingVoiceFab() {
                 onSubmitEditing={() => handleRunCommand(inputText)}
               />
               <TouchableOpacity
-                style={styles.sendBtn}
+                style={[styles.sendBtn, { backgroundColor: theme.primaryColor || '#10b981' }]}
                 onPress={() => handleRunCommand(inputText)}
               >
-                <Text style={styles.sendBtnText}>যাও →</Text>
+                <Text style={styles.sendBtnText}>বলুন</Text>
               </TouchableOpacity>
             </View>
 
-            {/* 1-Tap Quick Action Chips */}
-            <Text style={styles.chipHeading}>💡 দ্রুত কমান্ড নির্বাচন করুন:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-              {quickCommands.map((chip, idx) => (
+            {/* Quick Prompt Chips */}
+            <Text style={[styles.chipHeading, { color: isDark ? '#94a3b8' : '#64748b' }]}>
+              ⚡ কুইক ভয়েস শর্টকাট (১-ট্যাপ কমান্ড):
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipScroll}
+            >
+              {quickCommands.map((q, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={styles.chipBtn}
-                  onPress={() => handleRunCommand(chip.cmd)}
+                  style={[styles.chipBtn, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', borderColor: isDark ? '#334155' : '#e2e8f0' }]}
+                  onPress={() => handleRunCommand(q.cmd)}
                 >
-                  <Text style={styles.chipText}>{chip.label}</Text>
+                  <Text style={[styles.chipText, { color: isDark ? '#e2e8f0' : '#334155' }]}>{q.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -129,25 +141,24 @@ export default function FloatingVoiceFab() {
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 90,
-    right: 20,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#4f46e5',
+    bottom: 84,
+    right: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#4f46e5',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    borderWidth: 2.5,
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    borderWidth: 2,
     borderColor: '#ffffff',
     zIndex: 999
   },
   fabIcon: {
-    fontSize: 24
+    fontSize: 22
   },
   modalOverlay: {
     flex: 1,
@@ -155,17 +166,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   sheetCard: {
-    backgroundColor: '#ffffff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 36
+    padding: 18,
+    paddingBottom: 32
   },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16
+    marginBottom: 14
   },
   headerLeft: {
     flexDirection: 'row',
@@ -173,15 +183,14 @@ const styles = StyleSheet.create({
     gap: 10
   },
   assistantAvatar: {
-    fontSize: 28
+    fontSize: 26
   },
   sheetTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0f172a'
+    fontSize: 16.5,
+    fontWeight: '800'
   },
   sheetSub: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#059669',
     fontWeight: '700'
   },
@@ -194,68 +203,57 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   speechBubble: {
-    backgroundColor: '#eff6ff',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 14
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12
   },
   speechText: {
-    fontSize: 13.5,
-    color: '#1e40af',
+    fontSize: 13,
     fontWeight: '700'
   },
   inputRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16
+    marginBottom: 14
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#f8fafc',
     borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 13.5,
-    color: '#0f172a',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
     fontWeight: '600'
   },
   sendBtn: {
-    backgroundColor: '#10b981',
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingHorizontal: 14,
     justifyContent: 'center',
     alignItems: 'center'
   },
   sendBtnText: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 13.5
+    fontSize: 13
   },
   chipHeading: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
-    color: '#64748b',
     marginBottom: 8
   },
   chipScroll: {
     flexDirection: 'row'
   },
   chipBtn: {
-    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     marginRight: 8
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155'
+    fontSize: 11.5,
+    fontWeight: '700'
   }
 });

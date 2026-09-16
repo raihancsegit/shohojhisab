@@ -2,6 +2,7 @@ export interface IndustryTheme {
   id: string;
   name: string;
   primaryColor: string;
+  primary?: string;
   accentColor: string;
   icon: string;
   unit: string;
@@ -14,6 +15,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-grocery',
     name: 'মুদি ও ডিপার্টমেন্টাল',
     primaryColor: '#059669',
+    primary: '#059669',
     accentColor: '#10b981',
     icon: '🛒',
     unit: 'কেজি',
@@ -24,6 +26,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-pharmacy',
     name: 'ফার্মেসি ও ঔষধ',
     primaryColor: '#0284c7',
+    primary: '#0284c7',
     accentColor: '#38bdf8',
     icon: '💊',
     unit: 'পাতা',
@@ -34,6 +37,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-clothing',
     name: 'কাপড় ও ফ্যাশন',
     primaryColor: '#7c3aed',
+    primary: '#7c3aed',
     accentColor: '#a78bfa',
     icon: '👗',
     unit: 'পিস',
@@ -44,6 +48,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-electronics',
     name: 'ইলেকট্রনিক্স ও গ্যাজেট',
     primaryColor: '#ea580c',
+    primary: '#ea580c',
     accentColor: '#fb923c',
     icon: '📱',
     unit: 'পিস',
@@ -54,6 +59,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-hardware',
     name: 'হার্ডওয়্যার ও স্যানিটারি',
     primaryColor: '#d97706',
+    primary: '#d97706',
     accentColor: '#fbbf24',
     icon: '🔨',
     unit: 'ফুট',
@@ -64,6 +70,7 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
     id: 'cat-restaurant',
     name: 'রেস্তোরাঁ ও ক্যাফে',
     primaryColor: '#e11d48',
+    primary: '#e11d48',
     accentColor: '#fb7185',
     icon: '🍽️',
     unit: 'প্লেট',
@@ -75,5 +82,6 @@ export const INDUSTRY_CATEGORIES: Record<string, IndustryTheme> = {
 export const INDUSTRY_THEMES = INDUSTRY_CATEGORIES;
 
 export function getIndustryTheme(id?: string): IndustryTheme {
-  return INDUSTRY_CATEGORIES[id || 'cat-grocery'] || INDUSTRY_CATEGORIES['cat-grocery'];
+  const t = INDUSTRY_CATEGORIES[id || 'cat-grocery'] || INDUSTRY_CATEGORIES['cat-grocery'];
+  return { ...t, primary: t.primaryColor };
 }

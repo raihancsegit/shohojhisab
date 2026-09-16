@@ -11,10 +11,12 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useNav } from '../context/NavContext';
 
-export default function HeaderNav({ title }: { title?: string }) {
+export default function HeaderNav() {
   const {
     tenant,
     theme,
+    themeMode,
+    toggleThemeMode,
     activeRoleMode,
     isSoundboxEnabled,
     toggleSoundbox,
@@ -23,9 +25,13 @@ export default function HeaderNav({ title }: { title?: string }) {
 
   const { openDrawer, openShopModal, openStaffModal } = useNav();
   const router = useRouter();
+  const isDark = themeMode === 'dark';
 
   return (
-    <View style={[styles.headerContainer, { backgroundColor: theme.primaryColor || '#059669' }]}>
+    <View style={[
+      styles.headerContainer,
+      { backgroundColor: isDark ? '#0f172a' : (theme.primaryColor || '#059669') }
+    ]}>
       <View style={styles.headerRow}>
         {/* Left: Hamburger & Shop Info */}
         <View style={styles.leftGroup}>
@@ -66,7 +72,7 @@ export default function HeaderNav({ title }: { title?: string }) {
           </TouchableOpacity>
         </View>
 
-        {/* Right: Controls (Role, Soundbox, Bell) */}
+        {/* Right: Controls (Role, Soundbox, Theme Toggle, Bell) */}
         <View style={styles.rightGroup}>
           {/* Staff/Owner Mode Pill */}
           <TouchableOpacity
@@ -79,6 +85,17 @@ export default function HeaderNav({ title }: { title?: string }) {
             <Text style={styles.roleIcon}>{activeRoleMode === 'owner' ? '👑' : '👤'}</Text>
             <Text style={styles.roleText}>{activeRoleMode === 'owner' ? 'মালিক' : 'স্টাফ'}</Text>
             <Text style={styles.roleArrow}>▼</Text>
+          </TouchableOpacity>
+
+          {/* Dark / Light Mode Toggle */}
+          <TouchableOpacity
+            style={[
+              styles.iconBtn,
+              isDark && styles.themeBtnDark
+            ]}
+            onPress={toggleThemeMode}
+          >
+            <Text style={styles.themeIcon}>{isDark ? '☀️' : '🌙'}</Text>
           </TouchableOpacity>
 
           {/* Soundbox Master Switch */}
@@ -123,7 +140,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 10,
   },
   leftGroup: {
@@ -133,18 +150,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconBtn: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   hamburgerIcon: {
-    fontSize: 20,
+    fontSize: 19,
     color: '#ffffff',
     fontWeight: 'bold',
   },
@@ -171,17 +188,17 @@ const styles = StyleSheet.create({
   shopTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   shopName: {
     color: '#ffffff',
-    fontSize: 14.5,
+    fontSize: 13.5,
     fontWeight: '900',
-    maxWidth: 130,
+    maxWidth: 110,
   },
   shopDownArrow: {
     color: '#93c5fd',
-    fontSize: 9,
+    fontSize: 8.5,
   },
   shopMetaRow: {
     flexDirection: 'row',
@@ -189,59 +206,66 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   greenDot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
     backgroundColor: '#4ade80',
   },
   industryTag: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 10.5,
     fontWeight: '600',
   },
   rightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    paddingHorizontal: 7,
+    paddingVertical: 5,
     borderRadius: 8,
-    gap: 4,
+    gap: 3,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.28)',
   },
   roleIcon: {
-    fontSize: 12,
+    fontSize: 11.5,
   },
   roleText: {
     color: '#ffffff',
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '800',
   },
   roleArrow: {
     color: '#ffffff',
     fontSize: 8,
-    opacity: 0.7,
+    opacity: 0.8,
+  },
+  themeBtnDark: {
+    backgroundColor: 'rgba(253, 224, 71, 0.25)',
+    borderColor: 'rgba(253, 224, 71, 0.4)',
+  },
+  themeIcon: {
+    fontSize: 15,
   },
   soundboxActive: {
     backgroundColor: 'rgba(99, 102, 241, 0.45)',
     borderColor: 'rgba(165, 180, 252, 0.6)',
   },
   soundboxIcon: {
-    fontSize: 16,
+    fontSize: 15,
   },
   bellIcon: {
-    fontSize: 16,
+    fontSize: 15,
   },
   notifDot: {
     position: 'absolute',
-    top: 5,
-    right: 5,
+    top: 4,
+    right: 4,
     width: 6,
     height: 6,
     borderRadius: 3,

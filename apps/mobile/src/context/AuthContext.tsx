@@ -26,6 +26,8 @@ interface AuthContextType {
   userRole: 'admin' | 'shopkeeper' | null;
   activeRoleMode: 'owner' | 'staff';
   theme: IndustryTheme;
+  themeMode: 'light' | 'dark';
+  toggleThemeMode: () => void;
   isOnline: boolean;
   isSoundboxEnabled: boolean;
   setIndustryId: (id: string) => void;
@@ -48,6 +50,8 @@ const AuthContext = createContext<AuthContextType>({
   userRole: 'shopkeeper',
   activeRoleMode: 'owner',
   theme: getIndustryTheme('cat-grocery'),
+  themeMode: 'light',
+  toggleThemeMode: () => {},
   isOnline: true,
   isSoundboxEnabled: true,
   setIndustryId: () => {},
@@ -67,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<TenantInfo>(defaultTenant);
   const [userRole, setUserRole] = useState<'admin' | 'shopkeeper' | null>('shopkeeper');
   const [activeRoleMode, setActiveRoleMode] = useState<'owner' | 'staff'>('owner');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSoundboxEnabled, setIsSoundboxEnabled] = useState<boolean>(true);
   const [vaultVersion, setVaultVersion] = useState<number>(0);
@@ -92,6 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem('shohoj_role_mode').then(data => {
       if (data === 'staff' || data === 'owner') setActiveRoleMode(data);
     });
+
+    AsyncStorage.getItem('shohoj_theme_mode').then(data => {
+      if (data === 'dark' || data === 'light') setThemeMode(data);
+    });
   }, []);
 
   const triggerHaptic = (type: 'light' | 'medium' | 'success' | 'warning' = 'light') => {
@@ -101,6 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       else if (type === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       else if (type === 'warning') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (e) {}
+  };
+
+  const toggleThemeMode = () => {
+    const next = themeMode === 'dark' ? 'light' : 'dark';
+    setThemeMode(next);
+    AsyncStorage.setItem('shohoj_theme_mode', next);
+    triggerHaptic('light');
+    speakAnnouncement(next === 'dark' ? 'ডার্ক মোড সক্রিয়' : 'লাইট মোড সক্রিয়');
   };
 
   const switchShop = (shop: TenantInfo) => {
@@ -177,6 +194,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userRole,
         activeRoleMode,
         theme,
+        themeMode,
+        toggleThemeMode,
         isOnline,
         isSoundboxEnabled,
         setIndustryId,

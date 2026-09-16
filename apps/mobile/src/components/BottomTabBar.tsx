@@ -11,8 +11,9 @@ import { useAuth } from '../context/AuthContext';
 import { useNav } from '../context/NavContext';
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { theme, triggerHaptic } = useAuth();
+  const { theme, themeMode, triggerHaptic } = useAuth();
   const { openActionSheet } = useNav();
+  const isDark = themeMode === 'dark';
 
   // Tab configurations: index, khata, [CENTER PLUS], stock, pos
   const tabs = [
@@ -24,7 +25,13 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
   ];
 
   return (
-    <View style={styles.tabContainer}>
+    <View style={[
+      styles.tabContainer,
+      {
+        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+        borderTopColor: isDark ? '#1e293b' : '#e2e8f0',
+      }
+    ]}>
       {tabs.map((tab, idx) => {
         if (tab.isCenter) {
           return (
@@ -32,7 +39,10 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               key="center_plus"
               style={[
                 styles.centerButton,
-                { backgroundColor: theme.primaryColor || '#4f46e5' }
+                {
+                  backgroundColor: theme.primaryColor || '#4f46e5',
+                  borderColor: isDark ? '#0f172a' : '#ffffff'
+                }
               ]}
               onPress={() => {
                 triggerHaptic('medium');
@@ -61,6 +71,9 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           }
         };
 
+        const activeColor = theme.primaryColor || '#4f46e5';
+        const inactiveColor = isDark ? '#94a3b8' : '#64748b';
+
         return (
           <TouchableOpacity
             key={tab.name}
@@ -68,13 +81,13 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
             onPress={onPress}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabIcon, isFocused && { transform: [{ scale: 1.1 }] }]}>
+            <Text style={[styles.tabIcon, isFocused && { transform: [{ scale: 1.15 }] }]}>
               {tab.icon}
             </Text>
             <Text
               style={[
                 styles.tabLabel,
-                { color: isFocused ? (theme.primaryColor || '#4f46e5') : '#64748b' },
+                { color: isFocused ? activeColor : inactiveColor },
                 isFocused && styles.tabLabelFocused
               ]}
             >
@@ -90,19 +103,17 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
 const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    height: Platform.OS === 'ios' ? 82 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 6,
-    paddingTop: 6,
+    height: Platform.OS === 'ios' ? 88 : 72,
+    paddingBottom: Platform.OS === 'ios' ? 26 : 14,
+    paddingTop: 8,
     alignItems: 'center',
     justifyContent: 'space-around',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 10,
+    elevation: 12,
     zIndex: 40,
   },
   tabItem: {
@@ -112,8 +123,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tabIcon: {
-    fontSize: 20,
-    marginBottom: 2,
+    fontSize: 21,
+    marginBottom: 3,
   },
   tabLabel: {
     fontSize: 11,
@@ -128,12 +139,11 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
+    marginTop: -26,
     borderWidth: 3.5,
-    borderColor: '#ffffff',
     shadowColor: '#4f46e5',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 8,
   },
