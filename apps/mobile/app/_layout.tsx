@@ -15,15 +15,6 @@ import LoginScreen from './login';
 function RootNavigation() {
   const { userRole } = useAuth();
 
-  if (!userRole) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <LoginScreen />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -34,6 +25,7 @@ function RootNavigation() {
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="dealers" options={{ title: '🛍️ ক্রয় (ডিলার খাতা)' }} />
         <Stack.Screen name="day-end" options={{ title: '🌙 ক্যাশ ড্রয়ার ও দিন শেষ' }} />
@@ -59,12 +51,23 @@ function RootNavigation() {
         <Stack.Screen name="settings" options={{ title: '⚙️ দোকানের সেটিংস' }} />
       </Stack>
 
+      {/* Global Login Overlay if logged out */}
+      {!userRole && (
+        <View style={StyleSheet.absoluteFill}>
+          <LoginScreen />
+        </View>
+      )}
+
       {/* Global Modals & Navigation Overlays */}
-      <SideMenuDrawer />
-      <ActionSheetModal />
-      <ShopSwitcherModal />
-      <StaffShiftModal />
-      <FloatingVoiceFab />
+      {userRole && (
+        <>
+          <SideMenuDrawer />
+          <ActionSheetModal />
+          <ShopSwitcherModal />
+          <StaffShiftModal />
+          <FloatingVoiceFab />
+        </>
+      )}
     </View>
   );
 }
