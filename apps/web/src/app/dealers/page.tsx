@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../../components/Pagination';
 import DataLoader from '../../components/DataLoader';
+import { playDeleteSound, playSuccessChime } from '../../lib/audioFeedbackUtils';
 
 export default function DealersPage() {
   const { tenant, triggerHaptic } = useAuth();
@@ -25,6 +26,20 @@ export default function DealersPage() {
   const [notice, setNotice] = useState('');
   const [payModalDealer, setPayModalDealer] = useState<any | null>(null);
   const [payAmount, setPayAmount] = useState('');
+
+  // Edit Dealer Modal state
+  const [editModalDealer, setEditModalDealer] = useState<any | null>(null);
+  const [editCompanyName, setEditCompanyName] = useState('');
+  const [editRepName, setEditRepName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPayableDue, setEditPayableDue] = useState('0');
+  const [editOrderDay, setEditOrderDay] = useState('');
+  const [editDeliveryDay, setEditDeliveryDay] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Safe Delete Confirmation Modal state
+  const [deleteDealerConfirm, setDeleteDealerConfirm] = useState<any | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const loadDealers = async () => {
     if (!currentTenantId) {
@@ -82,6 +97,7 @@ export default function DealersPage() {
       });
       if (res.ok) {
         await loadDealers();
+        playSuccessChime();
         triggerHaptic('success');
         setNotice(`✓ ডিলার "${companyName}" সফলভাবে যুক্ত হয়েছে!`);
         setShowAddModal(false);
@@ -94,6 +110,84 @@ export default function DealersPage() {
       }
     } catch (e) {}
     setSubmitting(false);
+  };
+
+  const openEditDealer = (d: any) => {
+    triggerHaptic('light');
+    setEditModalDealer(d);
+    setEditCompanyName(d.companyName || d.company_name || '');
+    setEditRepName(d.representativeName || d.representative_name || '');
+    setEditPhone(d.phone || '');
+    setEditPayableDue(String(d.payableDue ?? d.payable_due ?? '0'));
+    setEditOrderDay(d.orderDay || d.order_day || 'প্রতি সোমবার');
+    setEditDeliveryDay(d.deliveryDay || d.delivery_day || 'প্রতি মঙ্গলবার');
+  };
+
+  const handleEditDealerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalDealer?.id || !editCompanyName || !editPhone) return;
+    setEditSubmitting(true);
+    triggerHaptic('medium');
+
+    try {
+      const res = await fetch(`/api/dealers/${editModalDealer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: editCompanyName,
+          representativeName: editRepName || editCompanyName,
+          phone: editPhone,
+          payableDue: Number(editPayableDue) || 0,
+          orderDay: editOrderDay,
+          deliveryDay: editDeliveryDay
+        })
+      });
+
+      if (res.ok) {
+        playSuccessChime();
+        triggerHaptic('success');
+        setNotice(`✓ ডিলার "${editCompanyName}"-এর তথ্য সফলভাবে আপডেট হয়েছে!`);
+        setEditModalDealer(null);
+        await loadDealers();
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'ডিলার আপডেট করতে সমস্যা হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleDeleteDealerSubmit = async () => {
+    if (!deleteDealerConfirm?.id) return;
+    setDeleteSubmitting(true);
+    triggerHaptic('heavy');
+
+    try {
+      const res = await fetch(`/api/dealers/${deleteDealerConfirm.id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        playDeleteSound();
+        triggerHaptic('success');
+        setNotice(`✓ ডিলার "${deleteDealerConfirm.companyName || deleteDealerConfirm.company_name}" সফলভাবে মুছে ফেলা হয়েছে!`);
+        setDealers(prev => prev.filter(d => d.id !== deleteDealerConfirm.id));
+        setDeleteDealerConfirm(null);
+        await loadDealers();
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'ডিলার মুছতে ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
   const handlePayDealer = async (e: React.FormEvent) => {
@@ -305,6 +399,43 @@ export default function DealersPage() {
                 >
                   <span>💬</span> WhatsApp
                 </button>
+
+                <button
+                  onClick={() => openEditDealer(d)}
+                  style={{
+                    background: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    padding: '5px 8px',
+                    borderRadius: '7px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                  title="ডিলার তথ্য পরিবর্তন"
+                >
+                  ✏️
+                </button>
+
+                <button
+                  onClick={() => {
+                    triggerHaptic('warning');
+                    setDeleteDealerConfirm(d);
+                  }}
+                  style={{
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    border: '1px solid #fecaca',
+                    padding: '5px 8px',
+                    borderRadius: '7px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                  title="ডিলার মুছে ফেলুন"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           ))}
@@ -466,6 +597,151 @@ export default function DealersPage() {
               ✕
             </button>
             <img src={previewPhoto} alt="Full Challan" style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: '12px', border: '2px solid #fff' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Dealer Modal */}
+      {editModalDealer && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px' }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>✏️ ডিলার তথ্য পরিবর্তন</h3>
+              <button onClick={() => setEditModalDealer(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleEditDealerSubmit} style={{ display: 'grid', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>কোম্পানির নাম *</label>
+                <input type="text" value={editCompanyName} onChange={e => setEditCompanyName(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>প্রতিনিধি / সেলসম্যানের নাম</label>
+                <input type="text" value={editRepName} onChange={e => setEditRepName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>মোবাইল নাম্বার *</label>
+                <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)} required style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>কোম্পানি দেনা (৳)</label>
+                <input type="number" value={editPayableDue} onChange={e => setEditPayableDue(e.target.value)} className="num-font" style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>অর্ডার নেওয়ার দিন</label>
+                <input type="text" value={editOrderDay} onChange={e => setEditOrderDay(e.target.value)} placeholder="যেমন: প্রতি সোমবার" style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>ডেলিভারির দিন</label>
+                <input type="text" value={editDeliveryDay} onChange={e => setEditDeliveryDay(e.target.value)} placeholder="যেমন: প্রতি মঙ্গলবার" style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setEditModalDealer(null)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>বাতিল</button>
+                <button type="submit" disabled={editSubmitting} style={{ flex: 2, padding: '12px', background: '#059669', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
+                  {editSubmitting ? 'আপডেট হচ্ছে...' : '✓ আপডেট সংরক্ষণ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Safe Delete Dealer Confirmation Modal */}
+      {deleteDealerConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(5px)',
+          zIndex: 140,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '20px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: '#fef2f2',
+              color: '#dc2626',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '26px',
+              margin: '0 auto 14px'
+            }}>
+              ⚠️
+            </div>
+
+            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+              ডিলার মুছে ফেলতে চান?
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              আপনি কি নিশ্চিত যে ডিলার <strong style={{ color: '#0f172a' }}>"{deleteDealerConfirm.companyName || deleteDealerConfirm.company_name}"</strong> মুছে ফেলতে চান?
+              {Number(deleteDealerConfirm.payableDue || deleteDealerConfirm.payable_due || 0) > 0 && (
+                <span style={{ display: 'block', color: '#dc2626', fontWeight: '800', marginTop: '4px' }}>
+                  ⚠️ এই ডিলারের কাছে ৳{Number(deleteDealerConfirm.payableDue || deleteDealerConfirm.payable_due).toLocaleString('en-US')} দেনা হিসাব রয়েছে!
+                </span>
+              )}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteDealerConfirm(null)}
+                disabled={deleteSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                না, বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteDealerSubmit}
+                disabled={deleteSubmitting}
+                style={{
+                  flex: 1.2,
+                  padding: '11px',
+                  background: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {deleteSubmitting ? 'মুছছে...' : '🗑️ হ্যাঁ, মুছুন'}
+              </button>
+            </div>
           </div>
         </div>
       )}

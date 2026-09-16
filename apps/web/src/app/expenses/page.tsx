@@ -110,13 +110,23 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleDeleteExpense = async (exp: any) => {
-    if (!confirm(`আপনি কি নিশ্চিত যে "${exp.title} (৳${exp.amount})" খরচটি মুছে ফেলতে চান?`)) return;
+  const [deleteExpenseConfirm, setDeleteExpenseConfirm] = useState<any | null>(null);
+  const [isDeletingExp, setIsDeletingExp] = useState(false);
+
+  const handleDeleteExpense = (exp: any) => {
+    setDeleteExpenseConfirm(exp);
+    triggerHaptic('medium');
+  };
+
+  const handleExecuteDeleteExpense = async () => {
+    if (!deleteExpenseConfirm) return;
+    setIsDeletingExp(true);
     try {
-      const res = await fetch(`/api/expenses/${exp.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/expenses/${deleteExpenseConfirm.id}`, { method: 'DELETE' });
       if (res.ok) {
         triggerHaptic('success');
-        setNotice(`✓ "${exp.title}" খরচ মুছে ফেলা হয়েছে!`);
+        setNotice(`✓ "${deleteExpenseConfirm.title}" খরচ সফলভাবে মুছে ফেলা হয়েছে!`);
+        setDeleteExpenseConfirm(null);
         await loadExpenses();
         setTimeout(() => setNotice(''), 4000);
       } else {
@@ -125,6 +135,8 @@ export default function ExpensesPage() {
       }
     } catch (e) {
       alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setIsDeletingExp(false);
     }
   };
 
@@ -412,6 +424,68 @@ export default function ExpensesPage() {
             loadExpenses();
           }}
         />
+      )}
+
+      {/* SAFE DELETE EXPENSE CONFIRMATION MODAL */}
+      {deleteExpenseConfirm && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
+          zIndex: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{ background: '#fff', borderRadius: '24px', padding: '26px 22px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 14px' }}>
+              🗑️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px' }}>
+              খরচের হিসাব মুছে ফেলতে চান?
+            </h3>
+            <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
+              আপনি কি নিশ্চিতভাবে <strong>"{deleteExpenseConfirm.title}"</strong> (৳{deleteExpenseConfirm.amount}) খরচের হিসাব মুছে ফেলতে চান?
+            </p>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#991b1b', marginBottom: '20px', textAlign: 'left' }}>
+              ⚠️ <strong>সতর্কতা:</strong> এটি ডিলিট করলে আজকের হিসাব ও ক্যাশ ড্রয়ার থেকে এই খরচ বাদ যাবে।
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteExpenseConfirm(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  background: '#fff',
+                  fontWeight: '800',
+                  fontSize: '13.5px',
+                  cursor: 'pointer'
+                }}
+              >
+                না, বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDeleteExpense}
+                disabled={isDeletingExp}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#fff',
+                  fontWeight: '900',
+                  fontSize: '13.5px',
+                  cursor: isDeletingExp ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {isDeletingExp ? 'মুছে ফেলা হচ্ছে...' : 'হ্যাঁ, মুছে ফেলুন 🗑️'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

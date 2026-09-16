@@ -44,6 +44,10 @@ export default function KhataPage() {
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
   const [editEntrySubmitting, setEditEntrySubmitting] = useState(false);
 
+  // Safe Delete Ledger Entry Confirmation state
+  const [entryToDeleteConfirm, setEntryToDeleteConfirm] = useState<any | null>(null);
+  const [deleteEntrySubmitting, setDeleteEntrySubmitting] = useState(false);
+
   // Direct Customer Voice Entry state (In-Card & In-Ledger)
   const [voiceCustomerModal, setVoiceCustomerModal] = useState<any | null>(null);
   const [voiceCustomerListening, setVoiceCustomerListening] = useState(false);
@@ -492,14 +496,19 @@ export default function KhataPage() {
     }
   };
 
-  // Individual Ledger Entry (Sale / Payment) Deletion Handler
-  const handleDeleteEntry = async (entry: any) => {
+  // Individual Ledger Entry (Sale / Payment) Deletion Trigger
+  const handleDeleteEntry = (entry: any) => {
+    triggerHaptic('warning');
+    setEntryToDeleteConfirm(entry);
+  };
+
+  const handleConfirmDeleteEntry = async () => {
+    if (!entryToDeleteConfirm?.id) return;
+    setDeleteEntrySubmitting(true);
+    triggerHaptic('heavy');
+    const entry = entryToDeleteConfirm;
     const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
     const entryLabel = isPayment ? `৳${entry.paidAmount} টাকার জমা এন্ট্রি` : `৳${entry.dueAmount || entry.totalAmount} টাকার বাকি মেমো #${entry.invoiceNo}`;
-
-    if (!confirm(`আপনি কি নিশ্চিত যে "${entryLabel}" মুছে ফেলতে চান?\nমুছে ফেললে কাস্টমারের মোট বাকি হিসাব স্বয়ংক্রিয়ভাবে সমন্বয় হবে।`)) {
-      return;
-    }
 
     try {
       const res = await fetch(`/api/sales/${entry.id}`, {
@@ -509,6 +518,7 @@ export default function KhataPage() {
         playDeleteSound();
         triggerHaptic('success');
         setNotice(`✓ "${entryLabel}" সফলভাবে মুছে ফেলা হয়েছে!`);
+        setEntryToDeleteConfirm(null);
         if (selectedLedger?.customer?.id) {
           await loadCustomerLedger(selectedLedger.customer);
         }
@@ -520,6 +530,8 @@ export default function KhataPage() {
       }
     } catch (e) {
       alert('সার্ভারে যোগাযোগ করা যায়নি');
+    } finally {
+      setDeleteEntrySubmitting(false);
     }
   };
 
@@ -3499,6 +3511,98 @@ export default function KhataPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Safe Delete Ledger Entry Confirmation Modal */}
+      {entryToDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(5px)',
+          zIndex: 150,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '20px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: '#fef2f2',
+              color: '#dc2626',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '26px',
+              margin: '0 auto 14px'
+            }}>
+              ⚠️
+            </div>
+
+            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+              এন্ট্রি মুছে ফেলতে চান?
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              আপনি কি নিশ্চিত যে {entryToDeleteConfirm.isPayment || entryToDeleteConfirm.paymentMethod === 'due_payment' || entryToDeleteConfirm.payment_method === 'due_payment' ? `৳${entryToDeleteConfirm.paidAmount} টাকার জমা এন্ট্রি` : `৳${entryToDeleteConfirm.dueAmount || entryToDeleteConfirm.totalAmount} টাকার বাকি মেমো`} মুছে ফেলতে চান?
+              <span style={{ display: 'block', color: '#059669', fontWeight: '800', marginTop: '6px' }}>
+                💡 মুছে ফেললে কাস্টমারের মোট বাকি হিসাব স্বয়ংক্রিয়ভাবে সমন্বয় হবে।
+              </span>
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setEntryToDeleteConfirm(null)}
+                disabled={deleteEntrySubmitting}
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                না, বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteEntry}
+                disabled={deleteEntrySubmitting}
+                style={{
+                  flex: 1.2,
+                  padding: '11px',
+                  background: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {deleteEntrySubmitting ? 'মুছছে...' : '🗑️ হ্যাঁ, মুছুন'}
+              </button>
+            </div>
           </div>
         </div>
       )}

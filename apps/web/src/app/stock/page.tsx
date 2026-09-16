@@ -118,6 +118,10 @@ export default function StockPage() {
     warranty: ''
   });
 
+  // Safe Delete Product Confirmation Modal state
+  const [deleteProdConfirm, setDeleteProdConfirm] = useState<any | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
   // Auto-sync default unit when tenant industry loads
   useEffect(() => {
     const defaultUnit = getDefaultIndustryUnit(indId);
@@ -720,11 +724,18 @@ export default function StockPage() {
     }
   };
 
-  // Delete Product
-  const handleDeleteProduct = async (p: any) => {
-    if (!confirm(`আপনি কি নিশ্চিতভাবে "${p.banglaName || p.name}" পণ্যটি তালিকা থেকে ডিলিট করতে চান?`)) return;
+  // Delete Product Trigger
+  const handleDeleteProduct = (p: any) => {
     triggerHaptic('warning');
+    setDeleteProdConfirm(p);
+  };
 
+  const handleConfirmDeleteProduct = async () => {
+    if (!deleteProdConfirm?.id) return;
+    setDeleteSubmitting(true);
+    triggerHaptic('heavy');
+
+    const p = deleteProdConfirm;
     try {
       let res = await fetch(`/api/products/${p.id}`, {
         method: 'DELETE'
@@ -736,6 +747,7 @@ export default function StockPage() {
       }
       if (res.ok) {
         setNotice(`✓ পণ্য "${p.banglaName || p.name}" মুছে ফেলা হয়েছে!`);
+        setDeleteProdConfirm(null);
         await loadStock();
         setTimeout(() => setNotice(''), 3000);
       } else {
@@ -748,6 +760,8 @@ export default function StockPage() {
       }
     } catch (e) {
       alert('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার (Port 4005) চালু আছে কিনা নিশ্চিত করুন।');
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -3688,6 +3702,100 @@ export default function StockPage() {
                 }}
               >
                 বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Safe Delete Product Confirmation Modal */}
+      {deleteProdConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(5px)',
+          zIndex: 150,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '20px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: '#fef2f2',
+              color: '#dc2626',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '26px',
+              margin: '0 auto 14px'
+            }}>
+              ⚠️
+            </div>
+
+            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+              পণ্য মুছে ফেলতে চান?
+            </h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              আপনি কি নিশ্চিত যে পণ্য <strong style={{ color: '#0f172a' }}>"{deleteProdConfirm.banglaName || deleteProdConfirm.name}"</strong> তালিকা থেকে ডিলিট করতে চান?
+              {Number(deleteProdConfirm.stock || 0) > 0 && (
+                <span style={{ display: 'block', color: '#dc2626', fontWeight: '800', marginTop: '4px' }}>
+                  ⚠️ বর্তমানে এর স্টকে {deleteProdConfirm.stock} {deleteProdConfirm.unit || 'পিস'} পণ্য রয়েছে!
+                </span>
+              )}
+            </p>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteProdConfirm(null)}
+                disabled={deleteSubmitting}
+                style={{
+                  flex: 1,
+                  padding: '11px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                না, বাতিল
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteProduct}
+                disabled={deleteSubmitting}
+                style={{
+                  flex: 1.2,
+                  padding: '11px',
+                  background: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                {deleteSubmitting ? 'মুছছে...' : '🗑️ হ্যাঁ, মুছুন'}
               </button>
             </div>
           </div>
