@@ -20,6 +20,8 @@ import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
+import { verifyCurrentVoice, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
+import { voiceProximityManager } from '../../lib/voiceProximityGate';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -1817,6 +1819,9 @@ export default function PosPage() {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
+    // Start proximity monitor for real-time RMS and F0 analysis
+    voiceProximityManager.start();
+
     setIsListening(true);
     setVoiceNotice('🎙️ শুনছি... বলুন: যেমন "চিনি ১ কেজি" বা "তেল ২ লিটার"');
     triggerHaptic('medium');
@@ -1849,7 +1854,25 @@ export default function PosPage() {
         setIsListening(false);
         const finalToParse = (posTranscriptBufferRef.current + ' ' + interim).trim();
         if (finalToParse) {
-          setVoiceNotice(`✓ মেমো হচ্ছে: "${finalToParse}"`);
+          const tenantKey = tenant?.id || 'default';
+          const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
+
+          if (!speakerCheck.isAuthorized) {
+            triggerHaptic('error');
+            if (speakerCheck.reason === 'background_noise_or_tv') {
+              setVoiceNotice('🛡️ টিভি / ব্যাকগ্রাউন্ড শব্দ ফিল্টার করা হয়েছে (বাতিল)');
+            } else {
+              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+            }
+            setTimeout(() => setVoiceNotice(''), 4000);
+            return;
+          }
+
+          if (speakerCheck.matchedSpeaker) {
+            setVoiceNotice(`✓ [${speakerCheck.matchedSpeaker.name}] মেমো হচ্ছে: "${finalToParse}"`);
+          } else {
+            setVoiceNotice(`✓ মেমো হচ্ছে: "${finalToParse}"`);
+          }
           parseVoiceCommand(finalToParse);
         }
         setTimeout(() => setVoiceNotice(''), 4000);

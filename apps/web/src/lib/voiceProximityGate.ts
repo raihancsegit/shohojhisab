@@ -63,6 +63,10 @@ class VoiceProximityManager {
     return this.THRESHOLDS[this.mode];
   }
 
+  public getAnalyser(): AnalyserNode | null {
+    return this.analyser;
+  }
+
   public getState(): ProximityState {
     return {
       isListening: this.isActive,

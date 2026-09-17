@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
 import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
+import { verifyCurrentVoice, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
+import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 interface VoicePOSCalculatorModalProps {
   isOpen: boolean;
@@ -117,6 +119,7 @@ export default function VoicePOSCalculatorModal({
       recognition.onstart = () => {
         if (isComponentMounted.current) {
           setIsListening(true);
+          voiceProximityManager.start();
         }
       };
 
@@ -172,6 +175,24 @@ export default function VoicePOSCalculatorModal({
             now - lastProcessedRef.current.time < 2500
           ) {
             return;
+          }
+
+          // Speaker Biometrics & TV Noise Verification
+          const tenantKey = currentTenantId || 'default';
+          const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
+
+          if (!speakerCheck.isAuthorized) {
+            triggerHaptic('error');
+            if (speakerCheck.reason === 'background_noise_or_tv') {
+              setLastActionMessage('🛡️ টিভি / ব্যাকগ্রাউন্ড নয়েজ ফিল্টার করা হয়েছে (বাতিল)');
+            } else {
+              setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+            }
+            return;
+          }
+
+          if (speakerCheck.matchedSpeaker) {
+            setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত`);
           }
 
           lastProcessedRef.current = { text: textToProcess, time: now };

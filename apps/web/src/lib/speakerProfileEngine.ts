@@ -1,0 +1,283 @@
+'use client';
+
+/**
+ * Multi-User Speaker Voice Biometrics & TV/Noise Shield Engine
+ * Analyzes human vocal pitch (F0), spectral centroid, and near-field energy (RMS)
+ * Allows shop owner and staff to register their voices so TV, background music,
+ * and customer crowd chatter are strictly ignored.
+ */
+
+export interface SpeakerVoiceProfile {
+  id: string; // 'owner' or staff id e.g. 'staff-123'
+  name: string; // 'দোকান মালিক' or 'রহিম'
+  role: 'owner' | 'staff';
+  enrolledAt: string;
+  pitchMin: number; // Hz (e.g. 90)
+  pitchMax: number; // Hz (e.g. 160)
+  pitchMean: number; // Hz (e.g. 125)
+  centroidMean: number; // Spectral timbre indicator
+  samplesCollected: number;
+}
+
+export interface SpeakerVerificationResult {
+  isAuthorized: boolean;
+  matchedSpeaker?: SpeakerVoiceProfile;
+  confidence: number;
+  reason?: 'authorized' | 'unauthorized_speaker' | 'background_noise_or_tv' | 'silence' | 'feature_disabled';
+  pitchDetected?: number;
+}
+
+const STORAGE_KEY_PREFIX = 'lbos_speaker_profiles_';
+const TOGGLE_KEY_PREFIX = 'lbos_speaker_lock_enabled_';
+
+/**
+ * Load all enrolled speaker voice profiles for this tenant
+ */
+export function getSpeakerVoiceProfiles(tenantId: string = 'default'): SpeakerVoiceProfile[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tenantId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Save or update a speaker voice profile
+ */
+export function saveSpeakerVoiceProfile(tenantId: string, profile: SpeakerVoiceProfile): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const existing = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profile.id);
+    existing.push(profile);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, JSON.stringify(existing));
+  } catch (e) {}
+}
+
+/**
+ * Remove a speaker voice profile
+ */
+export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const remaining = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profileId);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, JSON.stringify(remaining));
+  } catch (e) {}
+}
+
+/**
+ * Check if Speaker Lock is active
+ */
+export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const val = localStorage.getItem(`${TOGGLE_KEY_PREFIX}${tenantId}`);
+    return val === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Toggle Speaker Lock state
+ */
+export function setSpeakerLockEnabled(tenantId: string, enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${TOGGLE_KEY_PREFIX}${tenantId}`, enabled ? 'true' : 'false');
+  } catch (e) {}
+}
+
+/**
+ * Autocorrelation Algorithm to extract Fundamental Frequency (Pitch / F0 in Hz)
+ * Range: 75 Hz to 350 Hz (Standard human vocal range)
+ */
+export function extractPitchFromTimeDomain(
+  timeDomainData: Float32Array,
+  sampleRate: number
+): { pitch: number; clarity: number } | null {
+  const bufferSize = timeDomainData.length;
+
+  // 1. Calculate Root Mean Square (RMS) energy
+  let rms = 0;
+  for (let i = 0; i < bufferSize; i++) {
+    const val = timeDomainData[i];
+    rms += val * val;
+  }
+  rms = Math.sqrt(rms / bufferSize);
+
+  // If energy is too low (silence or faint background murmur), reject
+  if (rms < 0.02) {
+    return null;
+  }
+
+  // 2. Autocorrelation in human speech range (75 Hz to 350 Hz)
+  const minLag = Math.floor(sampleRate / 350); // ~350 Hz (highest pitch)
+  const maxLag = Math.floor(sampleRate / 75);  // ~75 Hz (deep bass voice)
+
+  let bestLag = -1;
+  let maxCorr = 0;
+
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let corr = 0;
+    for (let i = 0; i < bufferSize - lag; i++) {
+      corr += timeDomainData[i] * timeDomainData[i + lag];
+    }
+    if (corr > maxCorr) {
+      maxCorr = corr;
+      bestLag = lag;
+    }
+  }
+
+  if (bestLag > 0 && maxCorr > 0) {
+    const pitch = sampleRate / bestLag;
+    const clarity = maxCorr / (rms * bufferSize);
+    if (pitch >= 75 && pitch <= 350) {
+      return { pitch: Math.round(pitch), clarity: Math.min(1, clarity) };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculates Spectral Centroid (timbre / brightness indicator)
+ */
+export function extractSpectralCentroid(
+  frequencyData: Uint8Array,
+  sampleRate: number
+): number {
+  let numerator = 0;
+  let denominator = 0;
+  const binSize = (sampleRate / 2) / frequencyData.length;
+
+  for (let i = 0; i < frequencyData.length; i++) {
+    const magnitude = frequencyData[i];
+    const freq = i * binSize;
+    numerator += freq * magnitude;
+    denominator += magnitude;
+  }
+
+  if (denominator === 0) return 0;
+  return Math.round(numerator / denominator);
+}
+
+/**
+ * Core Live Verifier:
+ * Checks whether live audio belongs to enrolled shopkeeper/staff or is unwanted TV/customer chatter
+ */
+export function verifyLiveSpeaker(
+  analyserNode: AnalyserNode,
+  tenantId: string,
+  targetSpeakerId?: string
+): SpeakerVerificationResult {
+  if (!isSpeakerLockEnabled(tenantId)) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  const profiles = getSpeakerVoiceProfiles(tenantId);
+  if (profiles.length === 0) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  const sampleRate = analyserNode.context.sampleRate || 44100;
+  const fftSize = analyserNode.fftSize;
+
+  const timeData = new Float32Array(fftSize);
+  analyserNode.getFloatTimeDomainData(timeData);
+
+  const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+  analyserNode.getByteFrequencyData(freqData);
+
+  // 1. Check Energy Level
+  let rms = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    rms += timeData[i] * timeData[i];
+  }
+  rms = Math.sqrt(rms / timeData.length);
+
+  // Faint signal (like distant TV across the room, radio or outside market)
+  if (rms < 0.025) {
+    return {
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
+    };
+  }
+
+  // 2. Detect Fundamental Pitch (F0)
+  const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
+  if (!pitchRes) {
+    return {
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
+    };
+  }
+
+  const livePitch = pitchRes.pitch;
+  const centroid = extractSpectralCentroid(freqData, sampleRate);
+
+  // 3. Match against Enrolled Profiles
+  let candidateProfiles = profiles;
+  if (targetSpeakerId) {
+    const specific = profiles.find(p => p.id === targetSpeakerId);
+    if (specific) {
+      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
+    }
+  }
+
+  for (const profile of candidateProfiles) {
+    // Tolerant Pitch Window: profile.pitchMean ± 35 Hz
+    const lowerPitch = Math.max(70, profile.pitchMin - 15);
+    const upperPitch = profile.pitchMax + 20;
+
+    if (livePitch >= lowerPitch && livePitch <= upperPitch) {
+      const diff = Math.abs(livePitch - profile.pitchMean);
+      const confidence = Math.max(65, Math.round(100 - (diff * 1.2)));
+
+      return {
+        isAuthorized: true,
+        matchedSpeaker: profile,
+        confidence,
+        reason: 'authorized',
+        pitchDetected: livePitch
+      };
+    }
+  }
+
+  return {
+    isAuthorized: false,
+    confidence: 15,
+    reason: 'unauthorized_speaker',
+    pitchDetected: livePitch
+  };
+}
+
+/**
+ * Convenience helper that queries the global voiceProximityManager analyser
+ */
+export function verifyCurrentVoice(
+  tenantId: string = 'default',
+  targetSpeakerId?: string
+): SpeakerVerificationResult {
+  if (!isSpeakerLockEnabled(tenantId)) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  const profiles = getSpeakerVoiceProfiles(tenantId);
+  if (profiles.length === 0) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  // Import lazily/dynamically or use imported manager
+  const { voiceProximityManager } = require('./voiceProximityGate');
+  const analyser = voiceProximityManager?.getAnalyser();
+  if (!analyser) {
+    return { isAuthorized: true, confidence: 85, reason: 'feature_disabled' };
+  }
+
+  return verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+}
+

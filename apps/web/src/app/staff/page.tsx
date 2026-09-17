@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { getIndustryTheme } from '../../lib/industryConfig';
 import DataLoader from '../../components/DataLoader';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
+import SpeakerVoiceEnrollModal from '../../components/SpeakerVoiceEnrollModal';
+import { getSpeakerVoiceProfiles, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 
 interface StaffMember {
   id: string;
@@ -164,9 +166,23 @@ export default function StaffManagementPage() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Voice Biometrics State
+  const [showVoiceEnrollModal, setShowVoiceEnrollModal] = useState(false);
+  const [voiceEnrollStaffId, setVoiceEnrollStaffId] = useState<string | undefined>(undefined);
+  const [enrolledVoiceProfiles, setEnrolledVoiceProfiles] = useState<any[]>([]);
+  const [speakerLockActive, setSpeakerLockActive] = useState(false);
+
+  const loadVoiceProfiles = () => {
+    if (tenant?.id) {
+      setEnrolledVoiceProfiles(getSpeakerVoiceProfiles(tenant.id));
+      setSpeakerLockActive(isSpeakerLockEnabled(tenant.id));
+    }
+  };
+
   // Load All Data
   const loadData = async () => {
     if (!tenant?.id) return;
+    loadVoiceProfiles();
     try {
       setLoading(true);
       const [staffRes, branchRes, shiftActiveRes, shiftHistoryRes, attRes, salRes, advRes, auditRes] = await Promise.all([
@@ -558,6 +574,30 @@ export default function StaffManagementPage() {
             )}
 
             <button
+              onClick={() => {
+                triggerHaptic('light');
+                setVoiceEnrollStaffId(undefined);
+                setShowVoiceEnrollModal(true);
+              }}
+              style={{
+                background: speakerLockActive ? '#059669' : 'rgba(255, 255, 255, 0.18)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                padding: '7px 13px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              title="দোকানদার ও স্টাফ ভয়েস বায়োমেট্রিক ও টিভি শিল্ড"
+            >
+              <span>🎙️</span> {speakerLockActive ? '🛡️ ভয়েস লক অন' : '🎙️ ভয়েস বায়োমেট্রিক'}
+            </button>
+
+            <button
               onClick={handleOpenAdd}
               style={{
                 background: '#10b981',
@@ -846,6 +886,36 @@ export default function StaffManagementPage() {
                         {/* Actions */}
                         <td style={{ padding: '14px', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            {(() => {
+                              const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
+                              const matchedP = enrolledVoiceProfiles.find(p => p.id === staff.id);
+                              return (
+                                <button
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    setVoiceEnrollStaffId(staff.id);
+                                    setShowVoiceEnrollModal(true);
+                                  }}
+                                  style={{
+                                    background: hasVoice ? '#dcfce7' : '#f8fafc',
+                                    color: hasVoice ? '#15803d' : '#64748b',
+                                    border: hasVoice ? '1px solid #86efac' : '1px dashed #cbd5e1',
+                                    padding: '6px 9px',
+                                    borderRadius: '8px',
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title={hasVoice ? `ভয়েস এনরোলড (${matchedP?.pitchMean} Hz)` : 'কণ্ঠ রেজিস্টার করুন'}
+                                >
+                                  <span>🎙️</span>
+                                  <span>{hasVoice ? `${matchedP?.pitchMean}Hz` : 'ভয়েস'}</span>
+                                </button>
+                              );
+                            })()}
                             <button
                               onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
                               style={{ background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
@@ -1686,6 +1756,16 @@ export default function StaffManagementPage() {
           </div>
         </div>
       )}
+
+      {/* Modal 7: Speaker Voice Biometrics & TV Shield Modal */}
+      <SpeakerVoiceEnrollModal
+        isOpen={showVoiceEnrollModal}
+        onClose={() => setShowVoiceEnrollModal(false)}
+        tenantId={tenant?.id || 'default'}
+        staffList={staffList.map(s => ({ id: s.id, name: s.name, role: ROLE_DEFINITIONS[s.role]?.label || s.role }))}
+        preSelectedStaffId={voiceEnrollStaffId}
+        onProfileUpdated={loadVoiceProfiles}
+      />
     </div>
   );
 }

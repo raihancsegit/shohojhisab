@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { downloadBackupFile } from '../../lib/dataVault';
 import { formatBDDateTime } from '../../lib/dateUtils';
+import SpeakerVoiceEnrollModal from '../../components/SpeakerVoiceEnrollModal';
+import { getSpeakerVoiceProfiles, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 
 type SettingsTab = 'main' | 'general' | 'features' | 'items' | 'parties' | 'transactions' | 'printing' | 'backup';
 
@@ -14,6 +16,9 @@ export default function SettingsHubPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('main');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceProfilesCount, setVoiceProfilesCount] = useState(0);
+  const [isVoiceLockOn, setIsVoiceLockOn] = useState(false);
 
   // Cloud Sync state
   const [cloudSyncStatus, setCloudSyncStatus] = useState<any>(null);
@@ -145,6 +150,11 @@ export default function SettingsHubPage() {
 
       const savedPrint = localStorage.getItem(`sh_settings_print_${tenant.id}`);
       if (savedPrint) try { setPrintSettings(prev => ({ ...prev, ...JSON.parse(savedPrint) })); } catch (e) {}
+
+      // Refresh Voice Biometrics state
+      const vProfiles = getSpeakerVoiceProfiles(tenant.id);
+      setVoiceProfilesCount(vProfiles.length);
+      setIsVoiceLockOn(isSpeakerLockEnabled(tenant.id));
     }
   }, [tenant]);
 
@@ -496,6 +506,51 @@ export default function SettingsHubPage() {
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
                     কিস্তি খাতা (EMI), মেয়াদ রাডার, মহাজন খাতা, ক্যাশ মিলানো চালু/বন্ধ
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '18px', color: '#94a3b8', fontWeight: '900' }}>›</div>
+            </div>
+
+            {/* 1.6 Voice Biometrics & TV Shield */}
+            <div
+              onClick={() => { setShowVoiceModal(true); triggerHaptic('light'); }}
+              role="button"
+              tabIndex={0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '18px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                cursor: 'pointer',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: isVoiceLockOn ? '#dcfce7' : '#e0e7ff',
+                  color: isVoiceLockOn ? '#15803d' : '#4338ca',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '22px'
+                }}>
+                  🎙️
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ভয়েস বায়োমেট্রিক ও TV শিল্ড
+                    <span style={{ fontSize: '10px', background: isVoiceLockOn ? '#10b981' : '#64748b', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
+                      {isVoiceLockOn ? `${voiceProfilesCount} জন সক্রিয়` : 'বন্ধ'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    টিভি বা কাস্টমার ফিল্টার করে কেবল রেজিস্টার্ড দোকানদার ও স্টাফদের কণ্ঠে মেমো গ্রহণ
                   </div>
                 </div>
               </div>
@@ -2579,6 +2634,20 @@ export default function SettingsHubPage() {
           </div>
         </div>
       )}
+
+      {/* Voice Biometrics & TV Shield Modal */}
+      <SpeakerVoiceEnrollModal
+        isOpen={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        tenantId={tenant?.id || 'default'}
+        onProfileUpdated={() => {
+          if (tenant?.id) {
+            const vProfiles = getSpeakerVoiceProfiles(tenant.id);
+            setVoiceProfilesCount(vProfiles.length);
+            setIsVoiceLockOn(isSpeakerLockEnabled(tenant.id));
+          }
+        }}
+      />
 
     </div>
   );
