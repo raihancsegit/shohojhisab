@@ -202,23 +202,35 @@ export function speakOfflineText(
     } else if (inVoice) {
       utterance.voice = inVoice;
       utterance.lang = inVoice.lang;
+    } else if (voices.length > 0) {
+      const defVoice = voices.find(v => v.default) || voices[0];
+      if (defVoice) {
+        utterance.voice = defVoice;
+        utterance.lang = defVoice.lang;
+      }
     } else {
       utterance.lang = 'bn-BD';
     }
 
-    // Set flag for echo prevention
+    // Set flag for echo prevention and retain reference
     (window as any).__IS_TTS_SPEAKING__ = true;
+    (window as any).__CURRENT_OFFLINE_UTTERANCE__ = utterance;
 
     utterance.onend = () => {
       (window as any).__IS_TTS_SPEAKING__ = false;
+      (window as any).__CURRENT_OFFLINE_UTTERANCE__ = null;
       if (onDone) onDone();
     };
 
     utterance.onerror = () => {
       (window as any).__IS_TTS_SPEAKING__ = false;
+      (window as any).__CURRENT_OFFLINE_UTTERANCE__ = null;
       if (onDone) onDone();
     };
 
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     window.speechSynthesis.speak(utterance);
     return true;
   } catch (e) {

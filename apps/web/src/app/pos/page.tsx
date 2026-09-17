@@ -474,13 +474,19 @@ export default function PosPage() {
     loadData();
   }, [currentTenantId]);
 
-  // Handle Voice Query from Universal Voice Assistant
+  // Handle Voice Query & Launch Modes from URL (?voiceQuery=, ?voice=1, ?sleep=1)
   useEffect(() => {
-    if (products.length > 0 && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const vq = params.get('voiceQuery');
-      if (vq) {
+      if (vq && products.length > 0) {
         parseVoiceCommand(vq);
+        window.history.replaceState({}, '', '/pos');
+      } else if (params.get('sleep') === '1') {
+        handleToggleCounterSleep();
+        window.history.replaceState({}, '', '/pos');
+      } else if (params.get('voice') === '1') {
+        setShowVoiceCalculatorModal(true);
         window.history.replaceState({}, '', '/pos');
       }
     }
@@ -2433,11 +2439,11 @@ export default function PosPage() {
       setTimeout(() => setVoiceNotice(''), 2500);
     } else {
       triggerHaptic('success');
-      await counterSleepManager.enable();
+      await counterSleepManager.enable(true);
       setIsCounterSleepActive(true);
       startVoiceInput();
-      setVoiceNotice('🌙 কাউন্টার স্লিপ মোড সক্রিয়! ১২ সেকেন্ড পর স্ক্রিন কালো হলেও শুনবে।');
-      setTimeout(() => setVoiceNotice(''), 4500);
+      setVoiceNotice('🌙 কাউন্টার স্লিপ মোড সক্রিয়! স্ক্রিন কালো হলেও কথা শুনবে।');
+      setTimeout(() => setVoiceNotice(''), 3000);
     }
   };
 

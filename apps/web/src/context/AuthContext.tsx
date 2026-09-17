@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [activeRoleMode, setActiveRoleMode] = useState<'owner' | 'staff'>('owner');
   const [currentStaffUser, setCurrentStaffUser] = useState<StaffUser | null>(null);
   const [isScreenLocked, setIsScreenLocked] = useState<boolean>(false);
-  const [isSoundboxEnabled, setIsSoundboxEnabled] = useState<boolean>(false);
+  const [isSoundboxEnabled, setIsSoundboxEnabled] = useState<boolean>(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [cachedPin, setCachedPin] = useState<string>('1234');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -139,14 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Load soundbox preference from localStorage (defaults to false/disabled)
+  // Load soundbox preference from localStorage (defaults to true/active)
   useEffect(() => {
     try {
       const savedSoundbox = localStorage.getItem('lbos_soundbox');
-      if (savedSoundbox === 'true') {
-        setIsSoundboxEnabled(true);
-      } else {
+      if (savedSoundbox === 'false') {
         setIsSoundboxEnabled(false);
+      } else {
+        setIsSoundboxEnabled(true);
       }
     } catch (e) {}
   }, []);
@@ -263,7 +263,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (onComplete) onComplete();
         return;
       }
-      window.speechSynthesis.cancel();
+      try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.cancel();
+      } catch (e) {}
 
       // Convert English digits to Bengali digits and clean symbols
       const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -293,7 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'bn-BD';
-      utterance.rate = 0.95;
+      utterance.rate = 1.0;
       utterance.pitch = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -306,20 +311,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       if (bnVoice) {
         utterance.voice = bnVoice;
+        utterance.lang = bnVoice.lang;
+      } else {
+        // Fallback to Indian/Hindi or system default voice with matching lang
+        const inVoice = voices.find((v) =>
+          v.lang.includes('IN') ||
+          v.lang.includes('hi') ||
+          v.name.toLowerCase().includes('india')
+        );
+        if (inVoice) {
+          utterance.voice = inVoice;
+          utterance.lang = inVoice.lang;
+        } else if (voices.length > 0) {
+          const defVoice = voices.find((v) => v.default) || voices[0];
+          if (defVoice) {
+            utterance.voice = defVoice;
+            utterance.lang = defVoice.lang;
+          }
+        }
       }
 
+      // Prevent Chrome GC bug by pinning utterance to window
+      (window as any).__CURRENT_UTTERANCE__ = utterance;
+
+      let isFinished = false;
       const finishTTS = () => {
+        if (isFinished) return;
+        isFinished = true;
         // Keep lock for 800ms to allow room acoustic reverb to dissipate completely
         setTimeout(() => {
           (window as any).__IS_TTS_SPEAKING__ = false;
+          (window as any).__CURRENT_UTTERANCE__ = null;
           window.dispatchEvent(new CustomEvent('tts-speaking-state', { detail: { isSpeaking: false } }));
           if (onComplete) onComplete();
         }, 800);
       };
 
       utterance.onend = finishTTS;
-      utterance.onerror = finishTTS;
+      utterance.onerror = (err) => {
+        console.warn('TTS utterance error / finished:', err);
+        finishTTS();
+      };
 
+      // Ensure synthesizer is resumed before speaking
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.error('Speech synthesis error', e);

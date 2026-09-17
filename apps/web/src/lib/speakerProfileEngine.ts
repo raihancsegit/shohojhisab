@@ -100,28 +100,29 @@ export function extractPitchFromTimeDomain(
   const bufferSize = timeDomainData.length;
 
   // 1. Calculate Root Mean Square (RMS) energy
-  let rms = 0;
-  for (let i = 0; i < bufferSize; i++) {
+  let sum = 0;
+  for (let i = 0; i < bufferSize; i += 2) {
     const val = timeDomainData[i];
-    rms += val * val;
+    sum += val * val;
   }
-  rms = Math.sqrt(rms / bufferSize);
+  const rms = Math.sqrt(sum / (bufferSize / 2));
 
-  // If energy is too low (silence or faint background murmur), reject
-  if (rms < 0.02) {
+  // If energy is too low (silence), reject (lowered threshold to 0.007 for laptop/mobile mics)
+  if (rms < 0.007) {
     return null;
   }
 
-  // 2. Autocorrelation in human speech range (75 Hz to 350 Hz)
-  const minLag = Math.floor(sampleRate / 350); // ~350 Hz (highest pitch)
-  const maxLag = Math.floor(sampleRate / 75);  // ~75 Hz (deep bass voice)
+  // 2. Autocorrelation in human speech range (70 Hz to 380 Hz)
+  const minLag = Math.floor(sampleRate / 380); // ~380 Hz (female/child high pitch)
+  const maxLag = Math.floor(sampleRate / 70);  // ~70 Hz (deep male bass voice)
 
   let bestLag = -1;
   let maxCorr = 0;
 
-  for (let lag = minLag; lag <= maxLag; lag++) {
+  // Fast coarse pass (step of 2) to eliminate 75% of compute operations
+  for (let lag = minLag; lag <= maxLag; lag += 2) {
     let corr = 0;
-    for (let i = 0; i < bufferSize - lag; i++) {
+    for (let i = 0; i < bufferSize - lag; i += 2) {
       corr += timeDomainData[i] * timeDomainData[i + lag];
     }
     if (corr > maxCorr) {
@@ -130,11 +131,26 @@ export function extractPitchFromTimeDomain(
     }
   }
 
+  // Fine refinement pass around bestLag
+  if (bestLag > minLag && bestLag < maxLag) {
+    for (let lag = Math.max(minLag, bestLag - 2); lag <= Math.min(maxLag, bestLag + 2); lag++) {
+      let corr = 0;
+      for (let i = 0; i < bufferSize - lag; i += 2) {
+        corr += timeDomainData[i] * timeDomainData[i + lag];
+      }
+      if (corr > maxCorr) {
+        maxCorr = corr;
+        bestLag = lag;
+      }
+    }
+  }
+
   if (bestLag > 0 && maxCorr > 0) {
     const pitch = sampleRate / bestLag;
-    const clarity = maxCorr / (rms * bufferSize);
-    if (pitch >= 75 && pitch <= 350) {
-      return { pitch: Math.round(pitch), clarity: Math.min(1, clarity) };
+    const energy = sum;
+    const clarity = energy > 0 ? maxCorr / energy : 0.5;
+    if (pitch >= 65 && pitch <= 400) {
+      return { pitch: Math.round(pitch), clarity: Math.min(1, Math.max(0.1, clarity)) };
     }
   }
 
@@ -190,15 +206,15 @@ export function verifyLiveSpeaker(
   const freqData = new Uint8Array(analyserNode.frequencyBinCount);
   analyserNode.getByteFrequencyData(freqData);
 
-  // 1. Check Energy Level
+  // 1. Check Energy Level (Microphone silence threshold)
   let rms = 0;
   for (let i = 0; i < timeData.length; i++) {
     rms += timeData[i] * timeData[i];
   }
   rms = Math.sqrt(rms / timeData.length);
 
-  // Faint signal (like distant TV across the room, radio or outside market)
-  if (rms < 0.025) {
+  // Truly faint signal (far ambient room hum under 0.007)
+  if (rms < 0.007) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -209,6 +225,26 @@ export function verifyLiveSpeaker(
   // 2. Detect Fundamental Pitch (F0)
   const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
   if (!pitchRes) {
+    // If energy is present (rms > 0.015), try centroid fallback before rejecting
+    if (rms >= 0.012) {
+      const centroid = extractSpectralCentroid(freqData, sampleRate);
+      if (centroid > 0) {
+        const approxPitch = centroid > 1500 ? 195 : 125;
+        for (const profile of profiles) {
+          if (Math.abs(approxPitch - profile.pitchMean) <= 65) {
+            const fallbackVerified: SpeakerVerificationResult = {
+              isAuthorized: true,
+              matchedSpeaker: profile,
+              confidence: 78,
+              pitchDetected: approxPitch
+            };
+            lastVerifiedCache = { result: fallbackVerified, timestamp: Date.now() };
+            return fallbackVerified;
+          }
+        }
+      }
+    }
+
     return {
       isAuthorized: false,
       confidence: 0,
@@ -231,7 +267,7 @@ export function verifyLiveSpeaker(
   for (const profile of candidateProfiles) {
     // Natural human vocal range window: allow ±65Hz around pitchMean or min/max bounds
     // Accommodates natural pitch fluctuations between excited, relaxed, and morning/evening speech
-    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 35, profile.pitchMean - 65));
+    const lowerPitch = Math.max(50, Math.min(profile.pitchMin - 35, profile.pitchMean - 65));
     const upperPitch = Math.max(profile.pitchMax + 55, profile.pitchMean + 75);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
@@ -242,10 +278,10 @@ export function verifyLiveSpeaker(
         isAuthorized: true,
         matchedSpeaker: profile,
         confidence,
-        reason: 'authorized',
         pitchDetected: livePitch
       };
-      // Cache this positive match
+
+      // Only cache POSITIVE authorization so sentence-end pauses never wipe access
       lastVerifiedCache = {
         result: verifiedResult,
         timestamp: Date.now()
@@ -260,10 +296,14 @@ export function verifyLiveSpeaker(
     reason: 'unauthorized_speaker',
     pitchDetected: livePitch
   };
-  lastVerifiedCache = {
-    result: unauthResult,
-    timestamp: Date.now()
-  };
+  // Do NOT overwrite lastVerifiedCache with unauthResult if valid speech was heard recently!
+  const nowTime = Date.now();
+  if (!lastVerifiedCache || (nowTime - lastVerifiedCache.timestamp) >= 5500) {
+    lastVerifiedCache = {
+      result: unauthResult,
+      timestamp: nowTime
+    };
+  }
   return unauthResult;
 }
 

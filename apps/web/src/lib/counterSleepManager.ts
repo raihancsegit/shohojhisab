@@ -32,7 +32,7 @@ class CounterSleepManager {
   private isAsleep: boolean = false;
   private isListening: boolean = false;
   private idleTimer: any = null;
-  private idleTimeoutMs: number = 12000; // 12 seconds idle before turning pitch black
+  private idleTimeoutMs: number = 4000; // 4 seconds idle before turning pitch black
   private lastSpokenText: string = '';
   private lastResponseText: string = '';
   private listeners: Set<(state: CounterSleepState) => void> = new Set();
@@ -102,12 +102,16 @@ class CounterSleepManager {
   }
 
   /**
-   * Enable Counter Standby Mode
+   * Enable Counter Standby Mode (instantly or after idle)
    */
-  public async enable(): Promise<boolean> {
+  public async enable(instant: boolean = false): Promise<boolean> {
     this.isEnabled = true;
     await this.acquireWakeLock();
-    this.resetIdleTimer();
+    if (instant) {
+      this.sleepNow();
+    } else {
+      this.resetIdleTimer();
+    }
     this.notify();
     return true;
   }
@@ -137,6 +141,7 @@ class CounterSleepManager {
 
     if (wasAsleep) {
       playMicStartSound();
+      this.speakBengali('সহজ হিসাব সক্রিয়');
     }
   }
 
@@ -193,8 +198,14 @@ class CounterSleepManager {
     this.lastResponseText = text;
     this.notify();
 
+    // Play chime first
+    playSuccessChime();
+
     return new Promise((resolve) => {
       try {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
         window.speechSynthesis.cancel();
 
         // Mark global TTS active flag to prevent microphone echo loop
@@ -202,28 +213,49 @@ class CounterSleepManager {
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'bn-BD';
-        utterance.rate = 1.05; // Slightly brisk, natural retail cadence
+        utterance.rate = 1.0;
         utterance.pitch = 1.0;
 
-        // Try to pick Bengali voice if browser installed
+        // Try to pick Bengali voice or fallback to Indian/system voice
         const voices = window.speechSynthesis.getVoices();
         const bnVoice = voices.find(v => v.lang.startsWith('bn') || v.name.includes('Bangla') || v.name.includes('Bengali'));
         if (bnVoice) {
           utterance.voice = bnVoice;
+          utterance.lang = bnVoice.lang;
+        } else {
+          const inVoice = voices.find(v => v.lang.includes('IN') || v.lang.includes('hi') || v.name.includes('India'));
+          if (inVoice) {
+            utterance.voice = inVoice;
+            utterance.lang = inVoice.lang;
+          } else if (voices.length > 0) {
+            const defVoice = voices.find(v => v.default) || voices[0];
+            if (defVoice) {
+              utterance.voice = defVoice;
+              utterance.lang = defVoice.lang;
+            }
+          }
         }
+
+        // Prevent GC bug
+        (window as any).__SLEEP_TTS_UTTERANCE__ = utterance;
 
         utterance.onend = () => {
           setTimeout(() => {
             (window as any).__IS_TTS_SPEAKING__ = false;
+            (window as any).__SLEEP_TTS_UTTERANCE__ = null;
             resolve();
           }, 350);
         };
 
         utterance.onerror = () => {
           (window as any).__IS_TTS_SPEAKING__ = false;
+          (window as any).__SLEEP_TTS_UTTERANCE__ = null;
           resolve();
         };
 
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         (window as any).__IS_TTS_SPEAKING__ = false;

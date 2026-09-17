@@ -8,6 +8,7 @@ import DataLoader from '../components/DataLoader';
 import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 import { formatBDDateLong, formatBDDate, formatBDDateTime, formatBDTime } from '../lib/dateUtils';
+import { counterSleepManager } from '../lib/counterSleepManager';
 
 export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction, isFeatureEnabled } = useAuth();
@@ -522,20 +523,24 @@ export default function ShopkeeperDashboard() {
           </div>
         </button>
 
-        <Link
-          href="/pos?sleep=1"
-          onClick={() => triggerHaptic('light')}
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('success');
+            counterSleepManager.enable(true);
+          }}
           style={{
             background: '#0f172a',
             color: '#38bdf8',
             border: '1.5px solid #1e293b',
             borderRadius: '16px',
             padding: '11px 13px',
-            textDecoration: 'none',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            textAlign: 'left'
           }}
           className="clickable-card"
         >
@@ -544,7 +549,7 @@ export default function ShopkeeperDashboard() {
             <div style={{ fontWeight: '900', fontSize: '13px', color: '#ffffff' }}>কাউন্টার স্লিপ মোড</div>
             <div style={{ fontSize: '10px', color: '#38bdf8' }}>স্ক্রিন অফে শুনবে</div>
           </div>
-        </Link>
+        </button>
       </div>
 
       {/* ==========================================================================

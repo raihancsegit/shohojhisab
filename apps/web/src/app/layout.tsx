@@ -9,6 +9,7 @@ import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
 import VoiceFieldHUD from '../components/VoiceFieldHUD';
 import VoiceAssistant from '../components/VoiceAssistant';
 import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
+import CounterBlackSleepOverlay from '../components/CounterBlackSleepOverlay';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
 
@@ -2019,6 +2020,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlockAudio = () => {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const dummy = new AudioCtx();
+          if (dummy.state === 'suspended') dummy.resume().catch(() => {});
+        }
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.getVoices();
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('click', unlockAudio, { once: true, passive: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+  }, []);
+
   return (
     <html lang="bn">
       <head>
@@ -2046,6 +2066,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ActionSheetModal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} />
           <VoiceFieldHUD />
           <VoiceAssistant />
+          <CounterBlackSleepOverlay />
         </AuthProvider>
       </body>
     </html>
