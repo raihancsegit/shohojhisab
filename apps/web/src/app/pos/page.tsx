@@ -393,6 +393,13 @@ export default function PosPage() {
           setPosMode('numpad');
         }
       }
+
+      if (params.get('voice') === '1' || params.get('voice') === 'true') {
+        setShowVoiceCalculatorModal(true);
+      }
+      if (params.get('sleep') === '1' || params.get('sleep') === 'true') {
+        setIsCounterSleepActive(true);
+      }
     }
   }, []);
 

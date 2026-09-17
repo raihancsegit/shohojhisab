@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
 import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, setSpeakerLockEnabled } from '../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 interface VoicePOSCalculatorModalProps {
@@ -26,6 +26,7 @@ export default function VoicePOSCalculatorModal({
 }: VoicePOSCalculatorModalProps) {
   const { tenant, triggerHaptic, speakAnnouncement, isSoundboxEnabled, currentStaffUser } = useAuth();
   const currentTenantId = tenant?.id || (typeof window !== 'undefined' ? localStorage.getItem('lbos_tenant_id') : null) || 'tenant-1';
+  const tenantKey = currentTenantId || 'default';
   const voiceConfig = getIndustryVoiceConfig(tenant?.industryId);
 
   const [items, setItems] = useState<ParsedVoiceItem[]>([]);
@@ -43,6 +44,7 @@ export default function VoicePOSCalculatorModal({
   const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন বা লিখুন...');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(() => isSpeakerLockEnabled(tenantKey));
 
   const recognitionRef = useRef<any>(null);
   const isComponentMounted = useRef<boolean>(true);
@@ -762,6 +764,34 @@ export default function VoicePOSCalculatorModal({
           </div>
 
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+            {/* 🛡️ 1-Tap Voice Lock Biometrics Toggle */}
+            <button
+              onClick={() => {
+                const next = !isVoiceLockOn;
+                setIsVoiceLockOn(next);
+                setSpeakerLockEnabled(tenantKey, next);
+                triggerHaptic('medium');
+                setLastActionMessage(next ? '🛡️ ভয়েস লক চালু: শুধু নথিভুক্ত কণ্ঠ গ্রহণ করা হবে।' : '🔓 ভয়েস লক বন্ধ: সবার কথা গ্রহণ করা হবে।');
+              }}
+              style={{
+                background: isVoiceLockOn ? 'rgba(16, 185, 129, 0.22)' : 'rgba(148, 163, 184, 0.15)',
+                color: isVoiceLockOn ? '#34d399' : '#94a3b8',
+                border: isVoiceLockOn ? '1px solid #10b981' : '1px solid #475569',
+                padding: '7px 11px',
+                borderRadius: '10px',
+                fontSize: '11.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              title="ভয়েস লক অন বা অফ করুন"
+            >
+              <span>{isVoiceLockOn ? '🛡️ ভয়েস লক অন' : '🔓 ভয়েস লক অফ'}</span>
+            </button>
+
             <button
               onClick={toggleMute}
               style={{

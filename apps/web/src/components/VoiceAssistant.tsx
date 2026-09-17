@@ -296,7 +296,7 @@ export default function VoiceAssistant() {
     { label: '📊 সম্পূর্ণ রিপোর্ট', cmd: 'রিপোর্ট পেজে যাও' }
   ];
 
-  if (!isSupported || userRole === 'admin' || pathname === '/login') return null;
+  if (!isSupported || pathname === '/login') return null;
 
   return (
     <div className="floating-voice-widget">

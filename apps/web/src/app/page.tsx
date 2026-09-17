@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
+import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 import { formatBDDateLong, formatBDDate, formatBDDateTime, formatBDTime } from '../lib/dateUtils';
 
@@ -12,6 +13,7 @@ export default function ShopkeeperDashboard() {
   const { userRole, tenant, activeRoleMode, isLoading, isOnline, pendingSyncCount, triggerHaptic, speakAnnouncement, saveOfflineAction, isFeatureEnabled } = useAuth();
   const router = useRouter();
   
+  const [showVoiceEnrollModal, setShowVoiceEnrollModal] = useState(false);
   const activeIndustryId = tenant?.industryId || (tenant as any)?.industry_category_id || (tenant as any)?.industryCategoryId || (tenant as any)?.category_id;
   const theme = getIndustryTheme(activeIndustryId, tenant?.shopName);
 
@@ -369,14 +371,35 @@ export default function ShopkeeperDashboard() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <Link
-            href="/pos"
+            href="/calculator"
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#ffffff',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              fontWeight: '900',
+              fontSize: '12px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+              transition: 'transform 0.15s ease'
+            }}
+            className="clickable-card"
+          >
+            <span>🔢 ক্যালকুলেটর সেল</span>
+          </Link>
+
+          <Link
+            href="/pos?voice=1"
             style={{
               background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
               color: '#ffffff',
-              padding: '8px 14px',
+              padding: '8px 12px',
               borderRadius: '10px',
               fontWeight: '900',
-              fontSize: '12.5px',
+              fontSize: '12px',
               textDecoration: 'none',
               display: 'inline-flex',
               alignItems: 'center',
@@ -386,9 +409,142 @@ export default function ShopkeeperDashboard() {
             }}
             className="clickable-card"
           >
-            <span>⚡ POS বিক্রি</span>
+            <span>🎙️ ভয়েস মেমো</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setShowVoiceEnrollModal(true);
+            }}
+            style={{
+              background: '#ffffff',
+              color: '#059669',
+              border: '1.5px solid #10b981',
+              padding: '7px 11px',
+              borderRadius: '10px',
+              fontWeight: '800',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+            title="কণ্ঠ রেজিস্টার ও ভয়েস লক ফিল্টার"
+          >
+            <span>🛡️ ভয়েস লক</span>
+          </button>
         </div>
+      </div>
+
+      {/* 🚀 QUICK POWER TOOLS HUB: 1-TAP INSTANT ACCESS */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+        gap: '8px',
+        marginBottom: '14px'
+      }}>
+        <Link
+          href="/calculator"
+          onClick={() => triggerHaptic('light')}
+          style={{
+            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+            color: '#ffffff',
+            borderRadius: '16px',
+            padding: '11px 13px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.18)',
+            transition: 'transform 0.15s ease'
+          }}
+          className="clickable-card"
+        >
+          <span style={{ fontSize: '24px' }}>🔢</span>
+          <div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>ক্যালকুলেটর কুইক সেল</div>
+            <div style={{ fontSize: '10px', color: '#a7f3d0' }}>টাকা দিয়ে দ্রুত বিক্রি</div>
+          </div>
+        </Link>
+
+        <Link
+          href="/pos?voice=1"
+          onClick={() => triggerHaptic('light')}
+          style={{
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            color: '#ffffff',
+            borderRadius: '16px',
+            padding: '11px 13px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.18)',
+            transition: 'transform 0.15s ease'
+          }}
+          className="clickable-card"
+        >
+          <span style={{ fontSize: '24px' }}>🎙️</span>
+          <div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস মেমো ও বিলিং</div>
+            <div style={{ fontSize: '10px', color: '#c7d2fe' }}>মুখে বলে লাইভ মেমো</div>
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setShowVoiceEnrollModal(true);
+          }}
+          style={{
+            background: '#ffffff',
+            border: '1.5px solid #10b981',
+            color: '#065f46',
+            borderRadius: '16px',
+            padding: '11px 13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            textAlign: 'left'
+          }}
+          className="clickable-card"
+        >
+          <span style={{ fontSize: '24px' }}>🛡️</span>
+          <div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>কণ্ঠ রেজিস্টার ও লক</div>
+            <div style={{ fontSize: '10px', color: '#059669' }}>টিভি ও নয়েজ শিল্ড</div>
+          </div>
+        </button>
+
+        <Link
+          href="/pos?sleep=1"
+          onClick={() => triggerHaptic('light')}
+          style={{
+            background: '#0f172a',
+            color: '#38bdf8',
+            border: '1.5px solid #1e293b',
+            borderRadius: '16px',
+            padding: '11px 13px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
+          className="clickable-card"
+        >
+          <span style={{ fontSize: '24px' }}>🌙</span>
+          <div>
+            <div style={{ fontWeight: '900', fontSize: '13px', color: '#ffffff' }}>কাউন্টার স্লিপ মোড</div>
+            <div style={{ fontSize: '10px', color: '#38bdf8' }}>স্ক্রিন অফে শুনবে</div>
+          </div>
+        </Link>
       </div>
 
       {/* ==========================================================================
@@ -1521,6 +1677,14 @@ export default function ShopkeeperDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 🎙️ Voice Profile Enrollment & Biometrics Shield Modal */}
+      {showVoiceEnrollModal && (
+        <SpeakerVoiceEnrollModal
+          isOpen={showVoiceEnrollModal}
+          onClose={() => setShowVoiceEnrollModal(false)}
+        />
       )}
 
     </div>

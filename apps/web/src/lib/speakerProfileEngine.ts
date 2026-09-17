@@ -229,13 +229,14 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    // Natural human vocal range window: allow ±40Hz around pitchMean or min/max bounds
-    const lowerPitch = Math.max(65, Math.min(profile.pitchMin - 20, profile.pitchMean - 40));
-    const upperPitch = Math.max(profile.pitchMax + 35, profile.pitchMean + 45);
+    // Natural human vocal range window: allow ±65Hz around pitchMean or min/max bounds
+    // Accommodates natural pitch fluctuations between excited, relaxed, and morning/evening speech
+    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 35, profile.pitchMean - 65));
+    const upperPitch = Math.max(profile.pitchMax + 55, profile.pitchMean + 75);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      const confidence = Math.max(65, Math.round(100 - (diff * 1.1)));
+      const confidence = Math.max(65, Math.round(100 - (diff * 0.8)));
 
       const verifiedResult: SpeakerVerificationResult = {
         isAuthorized: true,
@@ -274,7 +275,7 @@ let lastVerifiedCache: {
 
 /**
  * Convenience helper that queries the global voiceProximityManager analyser.
- * Automatically falls back to the recent active speech cache (within last 3.5 seconds)
+ * Automatically falls back to the recent active speech cache (within last 5.5 seconds)
  * so that verification does not fail due to the pause at the end of a sentence.
  */
 export function verifyCurrentVoice(
@@ -290,9 +291,9 @@ export function verifyCurrentVoice(
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
   }
 
-  // Check if we verified speech within the last 3.5 seconds (during the phrase)
+  // Check if we verified speech within the last 5.5 seconds (during active dialogue)
   const now = Date.now();
-  if (lastVerifiedCache && (now - lastVerifiedCache.timestamp) < 3500) {
+  if (lastVerifiedCache && (now - lastVerifiedCache.timestamp) < 5500) {
     return lastVerifiedCache.result;
   }
 

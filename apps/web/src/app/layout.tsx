@@ -8,6 +8,7 @@ import PWAInstaller from '../components/PWAInstaller';
 import GlobalShortcutsModal from '../components/GlobalShortcutsModal';
 import VoiceFieldHUD from '../components/VoiceFieldHUD';
 import VoiceAssistant from '../components/VoiceAssistant';
+import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
 
@@ -18,6 +19,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
 
   const [showModeModal, setShowModeModal] = useState(false);
   const [showShopSwitchModal, setShowShopSwitchModal] = useState(false);
+  const [showVoiceEnrollModal, setShowVoiceEnrollModal] = useState(false);
   const [availableShops, setAvailableShops] = useState<any[]>([]);
   const [pinInput, setPinInput] = useState('');
   const [modeError, setModeError] = useState('');
@@ -120,7 +122,9 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
 
   const primaryTabs = [
     { href: '/', label: 'ড্যাশবোর্ড', icon: '🏠', show: true },
+    { href: '/calculator', label: 'ক্যালকুলেটর সেল', icon: '🔢', show: true },
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
+    { href: '/pos?voice=1', label: 'ভয়েস মেমো', icon: '🎙️', show: true },
     { href: '/khata', label: theme.khataLabel, icon: '📒', show: isFeatureEnabled('enableCustomerKhata') },
     { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
@@ -321,6 +325,24 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু (ভয়েস সক্রিয়)' : 'সাউন্ডবক্স বন্ধ'}
               >
                 {isSoundboxEnabled ? '🔊' : '🔈'}
+              </button>
+
+              {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowVoiceEnrollModal(true);
+                }}
+                className="header-icon-btn"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  border: '1px solid rgba(52, 211, 153, 0.5)',
+                  color: '#34d399'
+                }}
+                title="কণ্ঠ রেজিস্টার ও ভয়েস লক ফিল্টার"
+              >
+                🎙️
               </button>
 
               {/* Notification Bell */}
@@ -742,6 +764,14 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
           </div>
         </div>
       )}
+
+      {/* 🎙️ Global Speaker Voice Enroll & TV Noise Shield Modal */}
+      {showVoiceEnrollModal && (
+        <SpeakerVoiceEnrollModal
+          isOpen={showVoiceEnrollModal}
+          onClose={() => setShowVoiceEnrollModal(false)}
+        />
+      )}
     </header>
   );
 }
@@ -869,7 +899,9 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   if (!isOpen) return null;
 
   const menuItems = [
-    { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'হট' },
+    { href: '/calculator', label: 'ক্যালকুলেটর কুইক সেল', icon: '🔢', iconBg: '#ecfdf5', iconColor: '#059669', badge: 'হট' },
+    { href: '/pos?voice=1', label: 'ভয়েস মেমো ও বিলিং', icon: '🎙️', iconBg: '#eff6ff', iconColor: '#2563eb', badge: 'স্মার্ট' },
+    { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
     { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
@@ -1203,7 +1235,69 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
-            {/* 1. বিক্রয় */}
+            {/* 1. ক্যালকুলেটর সেল */}
+            <button
+              onClick={() => handleAction('/calculator')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+              className="clickable-card"
+            >
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '16px',
+                background: '#ecfdf5',
+                color: '#059669',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '24px',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.15)'
+              }}>
+                🔢
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ক্যালকুলেটর</span>
+            </button>
+
+            {/* 2. ভয়েস মেমো */}
+            <button
+              onClick={() => handleAction('/pos?voice=1')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+              className="clickable-card"
+            >
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '16px',
+                background: '#eff6ff',
+                color: '#4f46e5',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '24px',
+                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)'
+              }}>
+                🎙️
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ভয়েস মেমো</span>
+            </button>
+
+            {/* 3. ক্যাটালগ POS */}
             <button
               onClick={() => handleAction('/pos')}
               style={{
@@ -1222,7 +1316,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#eff6ff',
+                background: '#f8fafc',
                 color: '#3b82f6',
                 display: 'grid',
                 placeItems: 'center',
@@ -1231,7 +1325,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               }}>
                 📦
               </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>বিক্রয়</span>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ক্যাটালগ POS</span>
             </button>
 
             {/* 2. বিক্রি রিটার্ন */}
