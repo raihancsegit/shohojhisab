@@ -229,34 +229,53 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    // Tolerant Pitch Window: profile.pitchMean ± 35 Hz
-    const lowerPitch = Math.max(70, profile.pitchMin - 15);
-    const upperPitch = profile.pitchMax + 20;
+    // Natural human vocal range window: allow ±40Hz around pitchMean or min/max bounds
+    const lowerPitch = Math.max(65, Math.min(profile.pitchMin - 20, profile.pitchMean - 40));
+    const upperPitch = Math.max(profile.pitchMax + 35, profile.pitchMean + 45);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      const confidence = Math.max(65, Math.round(100 - (diff * 1.2)));
+      const confidence = Math.max(65, Math.round(100 - (diff * 1.1)));
 
-      return {
+      const verifiedResult: SpeakerVerificationResult = {
         isAuthorized: true,
         matchedSpeaker: profile,
         confidence,
         reason: 'authorized',
         pitchDetected: livePitch
       };
+      // Cache this positive match
+      lastVerifiedCache = {
+        result: verifiedResult,
+        timestamp: Date.now()
+      };
+      return verifiedResult;
     }
   }
 
-  return {
+  const unauthResult: SpeakerVerificationResult = {
     isAuthorized: false,
     confidence: 15,
     reason: 'unauthorized_speaker',
     pitchDetected: livePitch
   };
+  lastVerifiedCache = {
+    result: unauthResult,
+    timestamp: Date.now()
+  };
+  return unauthResult;
 }
 
+// Rolling cache of the most recent speech verification while user was actively talking
+let lastVerifiedCache: {
+  result: SpeakerVerificationResult;
+  timestamp: number;
+} | null = null;
+
 /**
- * Convenience helper that queries the global voiceProximityManager analyser
+ * Convenience helper that queries the global voiceProximityManager analyser.
+ * Automatically falls back to the recent active speech cache (within last 3.5 seconds)
+ * so that verification does not fail due to the pause at the end of a sentence.
  */
 export function verifyCurrentVoice(
   tenantId: string = 'default',
@@ -271,13 +290,37 @@ export function verifyCurrentVoice(
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
   }
 
-  // Import lazily/dynamically or use imported manager
-  const { voiceProximityManager } = require('./voiceProximityGate');
-  const analyser = voiceProximityManager?.getAnalyser();
-  if (!analyser) {
-    return { isAuthorized: true, confidence: 85, reason: 'feature_disabled' };
+  // Check if we verified speech within the last 3.5 seconds (during the phrase)
+  const now = Date.now();
+  if (lastVerifiedCache && (now - lastVerifiedCache.timestamp) < 3500) {
+    return lastVerifiedCache.result;
   }
 
-  return verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+  // Otherwise inspect live analyser if active
+  try {
+    const { voiceProximityManager } = require('./voiceProximityGate');
+    const analyser = voiceProximityManager?.getAnalyser();
+    if (!analyser) {
+      return { isAuthorized: true, confidence: 85, reason: 'feature_disabled' };
+    }
+    const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+    // If live frame was silence but lock is on and we didn't hear speech, check if fallback is warranted
+    return live;
+  } catch (e) {
+    return { isAuthorized: true, confidence: 80, reason: 'feature_disabled' };
+  }
+}
+
+/**
+ * Actively pings the analyser to maintain the rolling speech cache during recognition
+ */
+export function pingVoiceVerification(tenantId: string = 'default'): void {
+  try {
+    const { voiceProximityManager } = require('./voiceProximityGate');
+    const analyser = voiceProximityManager?.getAnalyser();
+    if (analyser) {
+      verifyLiveSpeaker(analyser, tenantId);
+    }
+  } catch (e) {}
 }
 

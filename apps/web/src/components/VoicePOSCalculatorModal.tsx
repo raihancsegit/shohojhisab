@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
 import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
-import { verifyCurrentVoice, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 interface VoicePOSCalculatorModalProps {
@@ -142,6 +142,9 @@ export default function VoicePOSCalculatorModal({
 
         const currentSaid = (finalChunk || interimText).trim();
         if (!currentSaid) return;
+
+        // Continuously evaluate and cache voice while user is actively speaking
+        pingVoiceVerification(currentTenantId || 'default');
 
         // Extra guard: Ignore if transcript is echo of confirmation keywords
         if (

@@ -109,18 +109,22 @@ class VoiceProximityManager {
         await this.audioContext.resume();
       }
 
-      // CRITICAL: Disable autoGainControl so distant sounds aren't amplified by the microphone hardware!
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: false
-        }
-      });
+      // Safe getUserMedia: Try disabling autoGainControl for near-field precision; fallback to standard if device rejects
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false
+          }
+        });
+      } catch (e) {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 512;
+      this.analyser.fftSize = 2048; // Required for pitch extraction (75-350Hz lag window)
       this.analyser.smoothingTimeConstant = 0.2;
       source.connect(this.analyser);
 

@@ -20,7 +20,7 @@ import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
-import { verifyCurrentVoice, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
@@ -1837,6 +1837,9 @@ export default function PosPage() {
           interim += event.results[i][0].transcript;
         }
       }
+
+      // Continuously evaluate and cache voice while user is actively speaking
+      pingVoiceVerification(tenant?.id || 'default');
 
       if (finalChunk) {
         posTranscriptBufferRef.current += finalChunk;

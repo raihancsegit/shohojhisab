@@ -583,18 +583,18 @@ export default function StaffManagementPage() {
                 background: speakerLockActive ? '#059669' : 'rgba(255, 255, 255, 0.18)',
                 color: '#ffffff',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
-                padding: '7px 13px',
+                padding: '7px 12px',
                 borderRadius: '10px',
                 fontSize: '12px',
-                fontWeight: '900',
+                fontWeight: '800',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px'
               }}
-              title="দোকানদার ও স্টাফ ভয়েস বায়োমেট্রিক ও টিভি শিল্ড"
+              title="টিভি ও নয়েজ শিল্ড"
             >
-              <span>🎙️</span> {speakerLockActive ? '🛡️ ভয়েস লক অন' : '🎙️ ভয়েস বায়োমেট্রিক'}
+              <span>🎙️</span> {speakerLockActive ? 'ভয়েস লক' : 'ভয়েস'}
             </button>
 
             <button
@@ -820,7 +820,35 @@ export default function StaffManagementPage() {
                             </div>
                             <div>
                               <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{staff.name}</div>
-                              <div style={{ fontSize: '11.5px', color: '#64748b' }}>🏢 {staff.branchName || 'প্রধান শাখা'}</div>
+                              <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                <span>🏢 {staff.branchName || 'প্রধান শাখা'}</span>
+                                {(() => {
+                                  const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        triggerHaptic('light');
+                                        setVoiceEnrollStaffId(staff.id);
+                                        setShowVoiceEnrollModal(true);
+                                      }}
+                                      style={{
+                                        background: hasVoice ? '#dcfce7' : '#f1f5f9',
+                                        color: hasVoice ? '#15803d' : '#64748b',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        padding: '1px 6px',
+                                        fontSize: '10.5px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer'
+                                      }}
+                                      title="ভয়েস প্রোফাইল"
+                                    >
+                                      {hasVoice ? '🎙️ ভয়েস' : '+ 🎙️'}
+                                    </button>
+                                  );
+                                })()}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -886,36 +914,6 @@ export default function StaffManagementPage() {
                         {/* Actions */}
                         <td style={{ padding: '14px', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
-                            {(() => {
-                              const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
-                              const matchedP = enrolledVoiceProfiles.find(p => p.id === staff.id);
-                              return (
-                                <button
-                                  onClick={() => {
-                                    triggerHaptic('light');
-                                    setVoiceEnrollStaffId(staff.id);
-                                    setShowVoiceEnrollModal(true);
-                                  }}
-                                  style={{
-                                    background: hasVoice ? '#dcfce7' : '#f8fafc',
-                                    color: hasVoice ? '#15803d' : '#64748b',
-                                    border: hasVoice ? '1px solid #86efac' : '1px dashed #cbd5e1',
-                                    padding: '6px 9px',
-                                    borderRadius: '8px',
-                                    fontSize: '11.5px',
-                                    fontWeight: '800',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px'
-                                  }}
-                                  title={hasVoice ? `ভয়েস এনরোলড (${matchedP?.pitchMean} Hz)` : 'কণ্ঠ রেজিস্টার করুন'}
-                                >
-                                  <span>🎙️</span>
-                                  <span>{hasVoice ? `${matchedP?.pitchMean}Hz` : 'ভয়েস'}</span>
-                                </button>
-                              );
-                            })()}
                             <button
                               onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
                               style={{ background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
