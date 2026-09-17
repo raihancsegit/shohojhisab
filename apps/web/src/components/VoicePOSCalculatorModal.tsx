@@ -126,8 +126,12 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onresult = (event: any) => {
-        // Echo Prevention: Do not capture speech while TTS is active or cooling down
-        if (isTTSActiveRef.current || (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__)) {
+        // Echo Prevention: Do not capture speech while real browser TTS is speaking
+        const isSpeakingReal = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
+        if (!isSpeakingReal && typeof window !== 'undefined') {
+          (window as any).__IS_TTS_SPEAKING__ = false;
+        }
+        if (isTTSActiveRef.current && isSpeakingReal) {
           return;
         }
 
@@ -164,9 +168,10 @@ export default function VoicePOSCalculatorModal({
           clearTimeout(debounceTimerRef.current);
         }
 
-        const waitMs = finalChunk ? 450 : 750;
+        const waitMs = finalChunk ? 400 : 700;
         debounceTimerRef.current = setTimeout(() => {
-          if (isTTSActiveRef.current || (typeof window !== 'undefined' && (window as any).__IS_TTS_SPEAKING__)) {
+          const isStillSpeaking = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
+          if (isTTSActiveRef.current && isStillSpeaking) {
             return;
           }
 
@@ -184,20 +189,21 @@ export default function VoicePOSCalculatorModal({
 
           // Speaker Biometrics & TV Noise Verification
           const tenantKey = currentTenantId || 'default';
-          const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
-
-          if (!speakerCheck.isAuthorized) {
-            triggerHaptic('error');
-            if (speakerCheck.reason === 'background_noise_or_tv') {
-              setLastActionMessage('🛡️ টিভি / ব্যাকগ্রাউন্ড নয়েজ ফিল্টার করা হয়েছে (বাতিল)');
-            } else {
-              setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+          const lockActive = isSpeakerLockEnabled(tenantKey);
+          if (lockActive) {
+            const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
+            if (!speakerCheck.isAuthorized) {
+              triggerHaptic('error');
+              if (speakerCheck.reason === 'background_noise_or_tv') {
+                setLastActionMessage('🛡️ টিভি / ব্যাকগ্রাউন্ড নয়েজ ফিল্টার করা হয়েছে (বাতিল)');
+              } else {
+                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+              }
+              return;
             }
-            return;
-          }
-
-          if (speakerCheck.matchedSpeaker) {
-            setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত`);
+            if (speakerCheck.matchedSpeaker) {
+              setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত`);
+            }
           }
 
           lastProcessedRef.current = { text: textToProcess, time: now };
@@ -288,16 +294,21 @@ export default function VoicePOSCalculatorModal({
         }
 
         if (!prod) {
-          notFoundNames.push(item.banglaName || item.name);
+          // If product not in catalog, still allow adding as a fast voice item so the sale never gets blocked!
+          validInStockItems.push({
+            ...item,
+            productId: undefined,
+            name: item.name || item.banglaName,
+            banglaName: item.banglaName || item.name,
+            unit: item.unit || 'পিস',
+            unitPrice: item.unitPrice || 0,
+            stock: 999,
+            isExistingProduct: false
+          });
           continue;
         }
 
         const currentStock = Number(prod.stock || 0);
-        if (currentStock <= 0) {
-          outOfStockNames.push(prod.banglaName || prod.name);
-          continue;
-        }
-
         validInStockItems.push({
           ...item,
           productId: prod.id,

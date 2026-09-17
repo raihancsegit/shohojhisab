@@ -358,6 +358,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.speechSynthesis.resume();
       }
       window.speechSynthesis.speak(utterance);
+
+      // Chrome GC bug safeguard: guarantee TTS lock is never stuck
+      setTimeout(() => {
+        if (!isFinished) {
+          finishTTS();
+        }
+      }, 4000);
     } catch (e) {
       console.error('Speech synthesis error', e);
       (window as any).__IS_TTS_SPEAKING__ = false;

@@ -82,14 +82,14 @@ function LoginFormContent() {
       }
       const res = await loginShop(phone, fullPin);
       if (res.success) {
-        router.push('/');
+        window.location.href = '/pos';
       } else {
         setError(res.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!');
       }
     } else {
       const res = await loginAdmin(adminPasscode);
       if (res.success) {
-        router.push('/admin');
+        window.location.href = '/admin';
       } else {
         setError(res.error || 'ভুল অ্যাডমিন পাসকোড!');
       }
@@ -97,11 +97,24 @@ function LoginFormContent() {
     setLoading(false);
   };
 
-  const fillDemoLogin = (demoPhone: string, demoPin: string[]) => {
-    triggerHaptic('light');
+  const handleQuickDemoLogin = async (demoPhone: string, demoPin: string[]) => {
+    triggerHaptic('medium');
     setPhone(demoPhone);
     setPinDigits(demoPin);
     setError('');
+    setLoading(true);
+    const pinStr = demoPin.join('');
+    const res = await loginShop(demoPhone, pinStr);
+    if (res.success) {
+      window.location.href = '/pos';
+    } else {
+      setError(res.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!');
+      setLoading(false);
+    }
+  };
+
+  const fillDemoLogin = (demoPhone: string, demoPin: string[]) => {
+    handleQuickDemoLogin(demoPhone, demoPin);
   };
 
   return (

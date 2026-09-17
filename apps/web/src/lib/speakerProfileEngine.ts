@@ -36,8 +36,32 @@ const TOGGLE_KEY_PREFIX = 'lbos_speaker_lock_enabled_';
 export function getSpeakerVoiceProfiles(tenantId: string = 'default'): SpeakerVoiceProfile[] {
   if (typeof window === 'undefined') return [];
   try {
+    // 1. Try specific tenant
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tenantId}`);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    // 2. Try default fallback
+    if (tenantId !== 'default') {
+      const defRaw = localStorage.getItem(`${STORAGE_KEY_PREFIX}default`);
+      if (defRaw) {
+        const parsed = JSON.parse(defRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    }
+    // 3. Scan any enrolled profile on this machine
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    }
+    return [];
   } catch (e) {
     return [];
   }
@@ -51,7 +75,9 @@ export function saveSpeakerVoiceProfile(tenantId: string, profile: SpeakerVoiceP
   try {
     const existing = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profile.id);
     existing.push(profile);
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, JSON.stringify(existing));
+    const serialized = JSON.stringify(existing);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, serialized);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}default`, serialized);
   } catch (e) {}
 }
 
@@ -62,7 +88,9 @@ export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): 
   if (typeof window === 'undefined') return;
   try {
     const remaining = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profileId);
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, JSON.stringify(remaining));
+    const serialized = JSON.stringify(remaining);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, serialized);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}default`, serialized);
   } catch (e) {}
 }
 
@@ -72,8 +100,15 @@ export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): 
 export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
   if (typeof window === 'undefined') return false;
   try {
+    // Only lock if at least one enrolled profile exists on this device
+    const profiles = getSpeakerVoiceProfiles(tenantId);
+    if (profiles.length === 0) return false;
+
     const val = localStorage.getItem(`${TOGGLE_KEY_PREFIX}${tenantId}`);
-    return val === 'true';
+    if (val !== null) return val === 'true';
+    const defVal = localStorage.getItem(`${TOGGLE_KEY_PREFIX}default`);
+    if (defVal !== null) return defVal === 'true';
+    return false;
   } catch (e) {
     return false;
   }
@@ -85,7 +120,9 @@ export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
 export function setSpeakerLockEnabled(tenantId: string, enabled: boolean): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(`${TOGGLE_KEY_PREFIX}${tenantId}`, enabled ? 'true' : 'false');
+    const val = enabled ? 'true' : 'false';
+    localStorage.setItem(`${TOGGLE_KEY_PREFIX}${tenantId}`, val);
+    localStorage.setItem(`${TOGGLE_KEY_PREFIX}default`, val);
   } catch (e) {}
 }
 
