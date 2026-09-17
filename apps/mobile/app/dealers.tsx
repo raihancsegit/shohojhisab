@@ -15,7 +15,7 @@ import { getLocalVaultData, saveLocalVaultSnapshot, VaultDealer } from '../src/l
 export default function DealersScreen() {
   const { tenant, theme, triggerHaptic, formatPrice, speakAnnouncement } = useAuth();
   const router = useRouter();
-  const vault = getLocalVaultData();
+  const vault = getLocalVaultData(tenant.id);
   const [dealers, setDealers] = useState<VaultDealer[]>(vault.dealers || []);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);

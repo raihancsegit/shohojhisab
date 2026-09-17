@@ -12,8 +12,8 @@ import { useAuth } from '../src/context/AuthContext';
 import { getLocalVaultData } from '../src/lib/offlineDataVault';
 
 export default function DayEndScreen() {
-  const { theme, triggerHaptic, formatPrice, speakAnnouncement } = useAuth();
-  const vault = getLocalVaultData();
+  const { tenant, theme, triggerHaptic, formatPrice, speakAnnouncement } = useAuth();
+  const vault = getLocalVaultData(tenant.id);
   const [openingCash, setOpeningCash] = useState('2000');
   const [actualCash, setActualCash] = useState('');
   const [notes, setNotes] = useState('');
