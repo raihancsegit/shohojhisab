@@ -27,11 +27,9 @@ export default function FloatingVoiceFab() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [lastSpeech, setLastSpeech] = useState('');
-  const [isListeningState, setIsListeningState] = useState(false);
   const isDark = themeMode === 'dark';
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const inputRef = useRef<TextInput>(null);
 
   // Pulse animation for mic
   useEffect(() => {
@@ -39,14 +37,14 @@ export default function FloatingVoiceFab() {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.25,
-            duration: 800,
+            toValue: 1.2,
+            duration: 700,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 800,
+            duration: 700,
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true
           })
@@ -57,32 +55,38 @@ export default function FloatingVoiceFab() {
     }
   }, [isOpen]);
 
+  // Voice Navigation & Action Categories (No keyboard needed, 100% voice command driven)
   const categorizedCommands = [
     {
-      category: '🛒 বিক্রয় ও কুইক POS মেমো',
+      category: '🚀 পেজে যাওয়া (১-ট্যাপ ভয়েস নেভিগেশন)',
       items: [
-        { label: 'তেল ১ লিটার বিক্রি করো', cmd: 'তেল ১ লিটার বিক্রি করো' },
-        { label: 'চিনি ২ কেজি বিক্রি করো', cmd: 'চিনি ২ কেজি বিক্রি করো' },
-        { label: 'নাপা ৫০ পাতা বিক্রি', cmd: 'নাপা ৫০ পাতা বিক্রি' },
-        { label: 'পস কাউন্টারে যাও', cmd: 'পস পেজে যাও' }
+        { label: 'খাতা পেজে যাও', cmd: 'খাতা পেজে যাও', icon: '📒' },
+        { label: 'স্টক পেজে যাও', cmd: 'স্টক পেজে যাও', icon: '📦' },
+        { label: 'পস কাউন্টারে যাও', cmd: 'পস পেজে যাও', icon: '🛒' },
+        { label: 'কিস্তি খাতা খোল', cmd: 'কিস্তি খাতা খোল', icon: '📅' },
+        { label: 'রিপোর্ট ও লাভ দেখো', cmd: 'রিপোর্ট পেজে যাও', icon: '📊' },
+        { label: 'ডিলার খাতা খোল', cmd: 'ডিলার খাতা খোল', icon: '🛍️' },
+        { label: 'খরচ পেজে যাও', cmd: 'খরচ পেজে যাও', icon: '💸' },
+        { label: 'দিন শেষ পেজে যাও', cmd: 'দিন শেষ পেজে যাও', icon: '🌙' }
       ]
     },
     {
-      category: '📖 বাকির খাতা ও কালেকশন',
+      category: '📊 হিসাব ও লাভ রিপোর্ট (লাইভ অডিও উত্তর)',
       items: [
-        { label: 'কালামের ৫০০ টাকা জমা নাও', cmd: 'কালামের ৫০০ টাকা জমা নাও' },
-        { label: 'রহিমের বাকিতে ৩০০ টাকা লেখো', cmd: 'রহিমের বাকিতে ৩০০ টাকা লেখো' },
-        { label: 'বাজারে মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো' },
-        { label: 'খাতা পেজে যাও', cmd: 'খাতায় যাও' }
+        { label: 'আজকের বিক্রি ও লাভ কত?', cmd: 'আজকের বিক্রি ও লাভ কত', icon: '💰' },
+        { label: 'দোকানে মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো', icon: '📖' },
+        { label: 'কোন পণ্যের স্টক কম?', cmd: 'কোন মালের স্টক কম', icon: '⚠️' },
+        { label: 'মোট কত স্টক আছে?', cmd: 'আজকের স্টক কত', icon: '📦' }
       ]
     },
     {
-      category: '📊 হিসাব, লাভ ও খরচ রিপোর্ট',
+      category: '⚡ দ্রুত হিসাব এন্ট্রি (কুইক অ্যাকশন)',
       items: [
-        { label: 'আজকের বিক্রি ও লাভ কত?', cmd: 'আজকের বিক্রি ও লাভ কত' },
-        { label: 'দোকানের মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
-        { label: 'চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' },
-        { label: 'রিপোর্ট পেজে যাও', cmd: 'রিপোর্ট পেজে যাও' }
+        { label: 'তেল ১ লিটার বিক্রি', cmd: 'তেল ১ লিটার বিক্রি করো', icon: '🛒' },
+        { label: 'চিনি ২ কেজি বিক্রি', cmd: 'চিনি ২ কেজি বিক্রি করো', icon: '🛒' },
+        { label: 'কালামের ৫০০ টাকা জমা', cmd: 'কালামের ৫০০ টাকা জমা নাও', icon: '💵' },
+        { label: 'রহিমের ৩০০ টাকা বাকি', cmd: 'রহিমের বাকিতে ৩০০ টাকা লেখো', icon: '📝' },
+        { label: 'চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো', icon: '☕' }
       ]
     }
   ];
@@ -91,12 +95,8 @@ export default function FloatingVoiceFab() {
     triggerHaptic('medium');
     playNativeChime('beep');
     setIsOpen(true);
-    setIsListeningState(true);
-    setLastSpeech('শুনছি... মুখে বলুন (যেমন: ২ কেজি চিনি বিক্রি)');
-    speakNativeText('জি বলুন, কী হিসাব করতে হবে?');
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 400);
+    setLastSpeech('শুনছি... নিচের যেকোনো কমান্ডে চাপুন বা কথা বলুন');
+    speakNativeText('জি বলুন, কী করতে হবে?');
   };
 
   const handleRunCommand = (textToRun: string) => {
@@ -106,7 +106,6 @@ export default function FloatingVoiceFab() {
     triggerHaptic('medium');
     setInputText('');
     playNativeChime('beep');
-    setIsListeningState(false);
 
     const result = executeMobileAiCommand(tenant.id, q);
     const speechText = result.speech || result.reply;
@@ -117,12 +116,11 @@ export default function FloatingVoiceFab() {
     refreshVault();
 
     // Auto-navigate if requested
-    const isExplicitNav = /যাও|খোল|নিয়ে চল|পেজে|কাউন্টারে/i.test(q) || (result.reply && result.reply.includes('নিয়ে যাচ্ছি'));
-    if (result.navigateTo && isExplicitNav) {
+    if (result.navigateTo) {
       setTimeout(() => {
         setIsOpen(false);
         router.push(result.navigateTo as any);
-      }, 1200);
+      }, 700);
     }
   };
 
@@ -164,9 +162,9 @@ export default function FloatingVoiceFab() {
                 </Animated.View>
                 <View>
                   <Text style={[styles.sheetTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>
-                    সহজ হিসাব এআই ভয়েস সহকারী
+                    সহজ হিসাব ভয়েস সহকারী
                   </Text>
-                  <Text style={styles.sheetSub}>১০০% অফলাইন বাংলা ভয়েস ও হিসাব ইঞ্জিন</Text>
+                  <Text style={styles.sheetSub}>মুখের কথা শুনে স্বয়ংক্রিয় পেজ নেভিগেশন ও হিসাব</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeBtn}>
@@ -183,14 +181,13 @@ export default function FloatingVoiceFab() {
               }
             ]}>
               <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
-                🗣️ {lastSpeech || 'শুনছি... মুখে বলুন বা নিচের কমান্ডে চাপুন'}
+                🗣️ {lastSpeech || 'শুনছি... নিচের যেকোনো কমান্ডে চাপুন'}
               </Text>
             </View>
 
-            {/* Voice Input Field */}
+            {/* Optional Text input for flexibility */}
             <View style={styles.inputRow}>
               <TextInput
-                ref={inputRef}
                 style={[
                   styles.textInput,
                   {
@@ -199,7 +196,7 @@ export default function FloatingVoiceFab() {
                     borderColor: isDark ? '#334155' : '#cbd5e1'
                   }
                 ]}
-                placeholder="🎙️ মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
+                placeholder="কমান্ড লিখুন বা মুখে বলুন..."
                 placeholderTextColor="#94a3b8"
                 value={inputText}
                 onChangeText={setInputText}
@@ -209,15 +206,8 @@ export default function FloatingVoiceFab() {
                 style={[styles.sendBtn, { backgroundColor: primaryColor }]}
                 onPress={() => handleRunCommand(inputText)}
               >
-                <Text style={styles.sendBtnText}>বলুন ▶</Text>
+                <Text style={styles.sendBtnText}>চালান ▶</Text>
               </TouchableOpacity>
-            </View>
-
-            {/* 💡 Keyboard Mic Helper Tip */}
-            <View style={styles.tipBox}>
-              <Text style={styles.tipText}>
-                💡 কিবোর্ডের মাইক্রোফোন (🎙️) চাপলে সরাসরি আপনার মুখের বাংলা কথা লেখা হয়ে যাবে।
-              </Text>
             </View>
 
             {/* 1-Tap Voice Commands Directory */}
@@ -241,7 +231,7 @@ export default function FloatingVoiceFab() {
                         onPress={() => handleRunCommand(item.cmd)}
                       >
                         <Text style={[styles.chipText, { color: isDark ? '#f1f5f9' : '#1e293b' }]}>
-                          🎙️ "{item.label}"
+                          {item.icon} {item.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -344,14 +334,14 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 8
+    marginBottom: 10
   },
   textInput: {
     flex: 1,
-    height: 44,
+    height: 42,
     borderRadius: 12,
     paddingHorizontal: 14,
-    fontSize: 13,
+    fontSize: 12.5,
     borderWidth: 1.5
   },
   sendBtn: {
@@ -363,22 +353,10 @@ const styles = StyleSheet.create({
   sendBtnText: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 13
-  },
-  tipBox: {
-    backgroundColor: '#fef3c7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    marginBottom: 10
-  },
-  tipText: {
-    fontSize: 10.5,
-    color: '#92400e',
-    fontWeight: '700'
+    fontSize: 12.5
   },
   commandScroll: {
-    maxHeight: 280
+    maxHeight: 300
   },
   catGroup: {
     marginBottom: 12

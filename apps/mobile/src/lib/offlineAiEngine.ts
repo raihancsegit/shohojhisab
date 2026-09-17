@@ -81,7 +81,7 @@ export function executeMobileAiCommand(
       success: true,
       reply: 'বিক্রয় ও মেমো কাউন্টারে নিয়ে যাচ্ছি...',
       speech: 'বিক্রয় কাউন্টারে যাচ্ছি।',
-      navigateTo: '/pos',
+      navigateTo: '/(tabs)/pos',
       isOffline: true
     };
   }
@@ -91,7 +91,7 @@ export function executeMobileAiCommand(
       success: true,
       reply: 'বাকির খাতায় নিয়ে যাচ্ছি...',
       speech: 'বাকি খাতা খুলছি।',
-      navigateTo: '/khata',
+      navigateTo: '/(tabs)/khata',
       isOffline: true
     };
   }
@@ -102,7 +102,7 @@ export function executeMobileAiCommand(
         success: true,
         reply: 'দোকানের স্টক ইনভেন্টরিতে নিয়ে যাচ্ছি...',
         speech: 'স্টক পেজে নিয়ে যাচ্ছি।',
-        navigateTo: '/stock',
+        navigateTo: '/(tabs)/stock',
         isOffline: true
       };
     }
@@ -123,9 +123,49 @@ export function executeMobileAiCommand(
   if (/^(রিপোর্ট|হিসাব|আজকের হিসাব)$/i.test(normalized) || /রিপোর্ট.*(যাও|খোল|নিয়ে|চল)/i.test(normalized)) {
     return {
       success: true,
-      reply: 'আজকের রিপোর্ট ও হিসাব পেজে নিয়ে যাচ্ছি...',
+      reply: 'আজকের রিপোর্ট ও লাভ-ক্ষতি পেজে নিয়ে যাচ্ছি...',
       speech: 'রিপোর্ট পেজ খুলছি।',
       navigateTo: '/reports',
+      isOffline: true
+    };
+  }
+
+  if (/কিস্তি.*(যাও|খোল|নিয়ে|চল)|কিস্তি\s*খাতা/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'বাকির কিস্তি খাতায় নিয়ে যাচ্ছি...',
+      speech: 'কিস্তি খাতা খুলছি।',
+      navigateTo: '/installments',
+      isOffline: true
+    };
+  }
+
+  if (/ডিলার.*(যাও|খোল|নিয়ে|চল)|সাপ্লায়ার.*(যাও|খোল|নিয়ে|চল)/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'ডিলার ও ক্রয় খাতায় নিয়ে যাচ্ছি...',
+      speech: 'ডিলার খাতা খুলছি।',
+      navigateTo: '/dealers',
+      isOffline: true
+    };
+  }
+
+  if (/দিন\s*শেষ|ক্যাশ\s*ড্রয়ার|ড্রয়ার/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'ক্যাশ ড্রয়ার ও দিন শেষ পেজে নিয়ে যাচ্ছি...',
+      speech: 'দিন শেষ পেজে যাচ্ছি।',
+      navigateTo: '/day-end',
+      isOffline: true
+    };
+  }
+
+  if (/সেটিংস|দোকানের\s*সেটিংস/i.test(normalized)) {
+    return {
+      success: true,
+      reply: 'দোকানের সেটিংস পেজে নিয়ে যাচ্ছি...',
+      speech: 'সেটিংস পেজ খুলছি।',
+      navigateTo: '/settings',
       isOffline: true
     };
   }
