@@ -22,6 +22,8 @@ import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
 import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
+import { counterSleepManager } from '../../lib/counterSleepManager';
+import CounterBlackSleepOverlay from '../../components/CounterBlackSleepOverlay';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -296,6 +298,7 @@ export default function PosPage() {
   const [numpadNewCustName, setNumpadNewCustName] = useState('');
   const [numpadNewCustPhone, setNumpadNewCustPhone] = useState('');
   const [numpadSubmitting, setNumpadSubmitting] = useState(false);
+  const [isCounterSleepActive, setIsCounterSleepActive] = useState(false);
 
   // Industry-Tailored Workflows
   const industryId = tenant?.industryId || 'cat-grocery';
@@ -1848,6 +1851,12 @@ export default function PosPage() {
       const fullSpoken = (posTranscriptBufferRef.current + ' ' + interim).trim();
       setVoiceNotice(`🎙️ শুনছি: "${fullSpoken}"`);
 
+      // Wake up from AMOLED black sleep if asleep or wake word is spoken
+      const { isWake, command: wakeCommand } = counterSleepManager.extractWakeWord(fullSpoken);
+      if (isWake || counterSleepManager.getState().isAsleep) {
+        counterSleepManager.wakeUp(fullSpoken);
+      }
+
       // 1.2-second silence timer before finishing command
       if (posSilenceTimerRef.current) clearTimeout(posSilenceTimerRef.current);
       posSilenceTimerRef.current = setTimeout(() => {
@@ -1855,8 +1864,20 @@ export default function PosPage() {
           recognition.stop();
         } catch (e) {}
         setIsListening(false);
-        const finalToParse = (posTranscriptBufferRef.current + ' ' + interim).trim();
+        let finalToParse = (posTranscriptBufferRef.current + ' ' + interim).trim();
         if (finalToParse) {
+          // Check for wake word and strip it
+          const wakeCheck = counterSleepManager.extractWakeWord(finalToParse);
+          if (wakeCheck.isWake) {
+            finalToParse = wakeCheck.command;
+            if (!finalToParse) {
+              counterSleepManager.speakBengali('হ্যাঁ ভাই, শুনছি বলুন...');
+              setVoiceNotice('🎙️ শুনছি, বলুন...');
+              counterSleepManager.resetIdleTimer();
+              return;
+            }
+          }
+
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
 
@@ -1877,6 +1898,7 @@ export default function PosPage() {
             setVoiceNotice(`✓ মেমো হচ্ছে: "${finalToParse}"`);
           }
           parseVoiceCommand(finalToParse);
+          counterSleepManager.resetIdleTimer();
         }
         setTimeout(() => setVoiceNotice(''), 4000);
       }, 1200);
@@ -1891,6 +1913,14 @@ export default function PosPage() {
 
     recognition.onend = () => {
       setIsListening(false);
+      if (counterSleepManager.getState().isEnabled) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+            setIsListening(true);
+          } catch (e) {}
+        }, 350);
+      }
     };
 
     recognition.start();
@@ -2388,76 +2418,121 @@ export default function PosPage() {
   const totalPosProducts = filteredProducts.length;
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const handleToggleCounterSleep = async () => {
+    if (isCounterSleepActive) {
+      counterSleepManager.disable();
+      setIsCounterSleepActive(false);
+      setVoiceNotice('কাউন্টার স্লিপ মোড বন্ধ হয়েছে।');
+      setTimeout(() => setVoiceNotice(''), 2500);
+    } else {
+      triggerHaptic('success');
+      await counterSleepManager.enable();
+      setIsCounterSleepActive(true);
+      startVoiceInput();
+      setVoiceNotice('🌙 কাউন্টার স্লিপ মোড সক্রিয়! ১২ সেকেন্ড পর স্ক্রিন কালো হলেও শুনবে।');
+      setTimeout(() => setVoiceNotice(''), 4500);
+    }
+  };
+
   return (
     <div className="app-container" style={{ paddingBottom: '160px' }}>
       
-      {/* 🎙️ ULTIMATE HANDS-FREE CONTINUOUS VOICE POS CALCULATOR BANNER */}
-      <div
-        onClick={() => {
-          triggerHaptic('medium');
-          setShowVoiceCalculatorModal(true);
-        }}
-        style={{
-          background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-          color: '#ffffff',
-          borderRadius: '16px',
-          padding: '11px 14px',
-          marginBottom: '12px',
-          cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(5, 150, 105, 0.22)',
-          transition: 'transform 0.15s ease'
-        }}
-        className="clickable-card"
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: '#ffffff',
-              color: '#059669',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: '16px',
-              flexShrink: 0,
-              boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.2)'
-            }}>
-              🎙️
+      {/* 🎙️ ULTIMATE HANDS-FREE VOICE POS & 🌙 COUNTER SLEEP BANNER */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'stretch' }}>
+        <div
+          onClick={() => {
+            triggerHaptic('medium');
+            setShowVoiceCalculatorModal(true);
+          }}
+          style={{
+            flex: 1,
+            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+            color: '#ffffff',
+            borderRadius: '16px',
+            padding: '11px 14px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(5, 150, 105, 0.22)',
+            transition: 'transform 0.15s ease'
+          }}
+          className="clickable-card"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: '#ffffff',
+                color: '#059669',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '16px',
+                flexShrink: 0,
+                boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.2)'
+              }}>
+                🎙️
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+                <strong style={{ fontSize: 'clamp(13px, 3.8vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
+                  ভয়েস মেমো ও বিলিং
+                </strong>
+                <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
+                  লাইভ মেমো
+                </span>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-              <strong style={{ fontSize: 'clamp(13px, 3.8vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
-                ভয়েস মেমো ও বিলিং
-              </strong>
-              <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
-                লাইভ মেমো
-              </span>
-            </div>
+
+            <span
+              style={{
+                background: '#ffffff',
+                color: '#047857',
+                padding: '5px 11px',
+                borderRadius: '8px',
+                fontWeight: '900',
+                fontSize: '11.5px',
+                flexShrink: 0,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              শুরু করুন ➔
+            </span>
           </div>
 
-          <span
-            style={{
-              background: '#ffffff',
-              color: '#047857',
-              padding: '5px 11px',
-              borderRadius: '8px',
-              fontWeight: '900',
-              fontSize: '11.5px',
-              flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            শুরু করুন ➔
-          </span>
+          <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
+            মুখে বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
+          </div>
         </div>
 
-        <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
-          মুখে বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
-        </div>
+        {/* 🌙 Counter Sleep AMOLED Standby Button */}
+        <button
+          type="button"
+          onClick={handleToggleCounterSleep}
+          style={{
+            background: isCounterSleepActive ? '#0f172a' : '#ffffff',
+            color: isCounterSleepActive ? '#38bdf8' : '#334155',
+            border: isCounterSleepActive ? '1.5px solid #38bdf8' : '1.5px solid #cbd5e1',
+            borderRadius: '16px',
+            padding: '8px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            minWidth: '82px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            transition: 'all 0.2s ease'
+          }}
+          title="কাউন্টার স্লিপ মোড (স্ক্রিন কালো হলেও শুনবে)"
+        >
+          <span style={{ fontSize: '20px' }}>{isCounterSleepActive ? '🌙' : '💤'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '900', marginTop: '3px', whiteSpace: 'nowrap' }}>
+            {isCounterSleepActive ? 'স্লিপ অন' : 'কাউন্টার স্লিপ'}
+          </span>
+        </button>
       </div>
 
       {/* 🎛️ POS Mode Switcher (Catalog & Express Sale vs. Clean Calculator Sale) */}
@@ -6446,6 +6521,9 @@ export default function PosPage() {
           }}
         />
       )}
+
+      {/* 🌙 Counter Black Sleep AMOLED Overlay */}
+      <CounterBlackSleepOverlay onExit={() => setIsCounterSleepActive(false)} />
 
     </div>
   );
