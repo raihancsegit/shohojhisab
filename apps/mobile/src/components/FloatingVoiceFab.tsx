@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  Platform
+  Platform,
+  Animated,
+  Easing
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +30,33 @@ export default function FloatingVoiceFab() {
   const [isListeningState, setIsListeningState] = useState(false);
   const isDark = themeMode === 'dark';
 
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const inputRef = useRef<TextInput>(null);
+
+  // Pulse animation for mic
+  useEffect(() => {
+    if (isOpen) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.25,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true
+          })
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isOpen]);
+
   const categorizedCommands = [
     {
       category: '🛒 বিক্রয় ও কুইক POS মেমো',
@@ -41,8 +70,8 @@ export default function FloatingVoiceFab() {
     {
       category: '📖 বাকির খাতা ও কালেকশন',
       items: [
-        { label: 'রহিমের বাকিতে ৫০০ টাকা লেখো', cmd: 'রহিমের বাকিতে ৫০০ টাকা লেখো' },
-        { label: 'করিমের ২০০ টাকা জমা নাও', cmd: 'করিমের ২০০ টাকা জমা নাও' },
+        { label: 'কালামের ৫০০ টাকা জমা নাও', cmd: 'কালামের ৫০০ টাকা জমা নাও' },
+        { label: 'রহিমের বাকিতে ৩০০ টাকা লেখো', cmd: 'রহিমের বাকিতে ৩০০ টাকা লেখো' },
         { label: 'বাজারে মোট বাকি কত আছে?', cmd: 'মোট বাকি কত আছে বলো' },
         { label: 'খাতা পেজে যাও', cmd: 'খাতায় যাও' }
       ]
@@ -58,18 +87,16 @@ export default function FloatingVoiceFab() {
     }
   ];
 
-  const inputRef = React.useRef<TextInput>(null);
-
   const handleOpenAssistant = () => {
     triggerHaptic('medium');
     playNativeChime('beep');
     setIsOpen(true);
     setIsListeningState(true);
-    setLastSpeech('শুনছি... মুখে বলুন অথবা নিচের বাটনে চাপুন');
+    setLastSpeech('শুনছি... মুখে বলুন (যেমন: ২ কেজি চিনি বিক্রি)');
     speakNativeText('জি বলুন, কী হিসাব করতে হবে?');
     setTimeout(() => {
       inputRef.current?.focus();
-    }, 300);
+    }, 400);
   };
 
   const handleRunCommand = (textToRun: string) => {
@@ -89,7 +116,7 @@ export default function FloatingVoiceFab() {
     speakNativeText(speechText);
     refreshVault();
 
-    // Auto-navigate only if user explicitly asked for navigation
+    // Auto-navigate if requested
     const isExplicitNav = /যাও|খোল|নিয়ে চল|পেজে|কাউন্টারে/i.test(q) || (result.reply && result.reply.includes('নিয়ে যাচ্ছি'));
     if (result.navigateTo && isExplicitNav) {
       setTimeout(() => {
@@ -132,14 +159,14 @@ export default function FloatingVoiceFab() {
             {/* Header */}
             <View style={styles.sheetHeader}>
               <View style={styles.headerLeft}>
-                <View style={[styles.avatarBox, { backgroundColor: isDark ? '#1e293b' : '#eef2ff' }]}>
-                  <Text style={styles.assistantAvatar}>🤖</Text>
-                </View>
+                <Animated.View style={[styles.avatarBox, { backgroundColor: isDark ? '#1e293b' : '#eef2ff', transform: [{ scale: pulseAnim }] }]}>
+                  <Text style={styles.assistantAvatar}>🎙️</Text>
+                </Animated.View>
                 <View>
                   <Text style={[styles.sheetTitle, { color: isDark ? '#f8fafc' : '#0f172a' }]}>
-                    সহজ হিসাব এআই সহকারী
+                    সহজ হিসাব এআই ভয়েস সহকারী
                   </Text>
-                  <Text style={styles.sheetSub}>১০০% অফলাইন বাংলা ভয়েস ইঞ্জিন</Text>
+                  <Text style={styles.sheetSub}>১০০% অফলাইন বাংলা ভয়েস ও হিসাব ইঞ্জিন</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeBtn}>
@@ -156,34 +183,41 @@ export default function FloatingVoiceFab() {
               }
             ]}>
               <Text style={[styles.speechText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
-                🗣️ {lastSpeech || 'শুনছি... মুখে বলুন বা নিচের বাটনে চাপুন'}
+                🗣️ {lastSpeech || 'শুনছি... মুখে বলুন বা নিচের কমান্ডে চাপুন'}
               </Text>
             </View>
 
-              {/* Command Input Bar */}
-              <View style={styles.inputRow}>
-                <TextInput
-                  ref={inputRef}
-                  style={[
-                    styles.textInput,
-                    {
-                      backgroundColor: isDark ? '#0f172a' : '#f8fafc',
-                      color: isDark ? '#f8fafc' : '#0f172a',
-                      borderColor: isDark ? '#334155' : '#cbd5e1'
-                    }
-                  ]}
-                  placeholder="মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
-                  placeholderTextColor="#94a3b8"
-                  value={inputText}
-                  onChangeText={setInputText}
-                  onSubmitEditing={() => handleRunCommand(inputText)}
-                />
+            {/* Voice Input Field */}
+            <View style={styles.inputRow}>
+              <TextInput
+                ref={inputRef}
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                    color: isDark ? '#f8fafc' : '#0f172a',
+                    borderColor: isDark ? '#334155' : '#cbd5e1'
+                  }
+                ]}
+                placeholder="🎙️ মুখে বলুন বা লিখুন (যেমন: ২ কেজি চিনি বিক্রি)..."
+                placeholderTextColor="#94a3b8"
+                value={inputText}
+                onChangeText={setInputText}
+                onSubmitEditing={() => handleRunCommand(inputText)}
+              />
               <TouchableOpacity
                 style={[styles.sendBtn, { backgroundColor: primaryColor }]}
                 onPress={() => handleRunCommand(inputText)}
               >
                 <Text style={styles.sendBtnText}>বলুন ▶</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* 💡 Keyboard Mic Helper Tip */}
+            <View style={styles.tipBox}>
+              <Text style={styles.tipText}>
+                💡 কিবোর্ডের মাইক্রোফোন (🎙️) চাপলে সরাসরি আপনার মুখের বাংলা কথা লেখা হয়ে যাবে।
+              </Text>
             </View>
 
             {/* 1-Tap Voice Commands Directory */}
@@ -226,9 +260,9 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 14,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 10,
@@ -241,7 +275,7 @@ const styles = StyleSheet.create({
     zIndex: 999
   },
   fabIcon: {
-    fontSize: 22
+    fontSize: 24
   },
   modalOverlay: {
     flex: 1,
@@ -251,8 +285,10 @@ const styles = StyleSheet.create({
   sheetCard: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 18,
-    maxHeight: '82%'
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    maxHeight: '85%',
+    elevation: 20
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -263,12 +299,13 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
+    gap: 10,
+    flex: 1
   },
   avatarBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -276,55 +313,50 @@ const styles = StyleSheet.create({
     fontSize: 22
   },
   sheetTitle: {
-    fontSize: 16,
-    fontWeight: '800'
+    fontSize: 15,
+    fontWeight: '900'
   },
   sheetSub: {
     fontSize: 11,
-    color: '#059669',
-    fontWeight: '700'
+    color: '#64748b'
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center'
+    padding: 6,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9'
   },
   closeBtnText: {
     fontSize: 14,
-    color: '#64748b',
-    fontWeight: 'bold'
+    fontWeight: '800',
+    color: '#64748b'
   },
   speechBubble: {
-    borderWidth: 1,
-    borderRadius: 12,
     padding: 12,
-    marginBottom: 12
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10
   },
   speechText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     lineHeight: 18
   },
   inputRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 14
+    marginBottom: 8
   },
   textInput: {
     flex: 1,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  sendBtn: {
+    height: 44,
     borderRadius: 12,
     paddingHorizontal: 14,
+    fontSize: 13,
+    borderWidth: 1.5
+  },
+  sendBtn: {
+    paddingHorizontal: 16,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -333,29 +365,42 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13
   },
+  tipBox: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginBottom: 10
+  },
+  tipText: {
+    fontSize: 10.5,
+    color: '#92400e',
+    fontWeight: '700'
+  },
   commandScroll: {
     maxHeight: 280
   },
   catGroup: {
-    marginBottom: 14
+    marginBottom: 12
   },
   catGroupTitle: {
     fontSize: 11.5,
     fontWeight: '800',
-    marginBottom: 6,
-    textTransform: 'uppercase'
+    marginBottom: 6
   },
   chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6
   },
   chipBtn: {
-    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8
+    borderWidth: 1
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700'
   }
 });
