@@ -547,14 +547,23 @@ export default function PosPage() {
       }
     };
 
+    const handleCounterSleepCommand = (e: any) => {
+      const text = e.detail?.text;
+      if (text) {
+        parseVoiceCommand(text);
+      }
+    };
+
     window.addEventListener('voice-add-to-cart', handleVoiceAddToCart);
     window.addEventListener('voice-multi-items-add', handleVoiceMultiItemsAdd);
     window.addEventListener('voice-checkout-cash', handleVoiceCheckout);
+    window.addEventListener('counter-sleep-sale-command', handleCounterSleepCommand);
 
     return () => {
       window.removeEventListener('voice-add-to-cart', handleVoiceAddToCart);
       window.removeEventListener('voice-multi-items-add', handleVoiceMultiItemsAdd);
       window.removeEventListener('voice-checkout-cash', handleVoiceCheckout);
+      window.removeEventListener('counter-sleep-sale-command', handleCounterSleepCommand);
     };
   }, [cart, currentTenantId, customers, selectedCustomer, discount, paymentMethod]);
 
@@ -1894,12 +1903,17 @@ export default function PosPage() {
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
 
-          if (!speakerCheck.isAuthorized) {
+          // Check if spoken command has explicit retail sale intent (product, unit, taka, quantity)
+          const hasRetailIntent = /(কেজি|লিটার|টাকা|পিস|পাতা|টা|গ্রাম|পোয়া|পোয়া|আধা|হাফ|দেড়|দেড়|হালি|বস্তা|প্যাকেট|বোতল|\d+|ক্যাশ|বাকি|বিক্রি|মেমো)/i.test(finalToParse) ||
+            products.some(p => (p.banglaName && finalToParse.includes(p.banglaName)) || (p.name && finalToParse.toLowerCase().includes(p.name.toLowerCase())));
+
+          // If speaker check failed BUT explicit retail intent is present, it's the shopkeeper speaking over background/laptop audio!
+          if (!speakerCheck.isAuthorized && !hasRetailIntent) {
             triggerHaptic('error');
             if (speakerCheck.reason === 'background_noise_or_tv') {
-              setVoiceNotice('🛡️ টিভি / ব্যাকগ্রাউন্ড শব্দ ফিল্টার করা হয়েছে (বাতিল)');
+              setVoiceNotice('🛡️ ব্যাকগ্রাউন্ড টিভি / অসংলগ্ন শব্দ ফিল্টার করা হয়েছে');
             } else {
-              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে');
             }
             setTimeout(() => setVoiceNotice(''), 4000);
             return;
