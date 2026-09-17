@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { playNativeChime, speakNativeText } from '../lib/offlineAudioEngine';
 import { getLocalVaultData, executePOSSale } from '../lib/offlineDataVault';
+import { parseVoicePOSCommand } from '../lib/voicePOSParser';
 
 interface VoiceItem {
   id: string;
@@ -74,28 +75,73 @@ export default function VoicePOSCalculatorModal({
     playNativeChime('beep');
     setInputText('');
 
-    // Check customer name command
-    if (text.includes('কাস্টমার') || text.includes('ক্রেতা')) {
-      const name = text.replace(/কাস্টমার|ক্রেতা|নাম/g, '').trim() || 'নগদ ক্রেতা';
-      setCustomerName(name);
-      setFeedbackText(`কাস্টমার: ${name}`);
-      speakNativeText(`কাস্টমার ${name} সেট করা হয়েছে`);
+    const parseResult = parseVoicePOSCommand(text, products);
+
+    // 1. Cash Checkout
+    if (parseResult.type === 'cash_checkout') {
+      if (items.length > 0) {
+        handleFinalizeSale();
+      } else {
+        setFeedbackText('মেমোতে আগে পণ্য যোগ করুন');
+        speakNativeText('মেমোতে আগে পণ্য যোগ করুন');
+      }
       return;
     }
 
-    // Check discount command
-    if (text.includes('ছাড়') || text.includes('ডিসকাউন্ট') || text.includes('কম')) {
-      const match = text.match(/(\d+)/);
-      if (match) {
-        const disc = parseInt(match[1], 10);
-        setDiscount(disc);
-        setFeedbackText(`ছাড়: ৳${disc}`);
-        speakNativeText(`${disc} টাকা ছাড় দেওয়া হয়েছে`);
-        return;
-      }
+    // 2. Due / Khata Checkout
+    if (parseResult.type === 'due_checkout') {
+      const cust = parseResult.customerName || customerName;
+      setCustomerName(cust);
+      setFeedbackText(`বাকি কাস্টমার: ${cust}`);
+      speakNativeText(`${cust} এর বাকি খাতায় হিসাব ধরা হয়েছে`);
+      return;
     }
 
-    // Parse product items
+    // 3. Discount
+    if (parseResult.type === 'discount' && parseResult.discountAmount) {
+      setDiscount(parseResult.discountAmount);
+      setFeedbackText(`ছাড়: ৳${parseResult.discountAmount}`);
+      speakNativeText(`৳${parseResult.discountAmount} টাকা ছাড় দেওয়া হয়েছে`);
+      return;
+    }
+
+    // 4. Remove Item
+    if (parseResult.type === 'remove_item' && parseResult.removeItemName) {
+      const nameLower = parseResult.removeItemName.toLowerCase();
+      setItems(prev => prev.filter(it => !it.name.toLowerCase().includes(nameLower)));
+      setFeedbackText(`বাদ দেওয়া হয়েছে: ${parseResult.removeItemName}`);
+      speakNativeText(`${parseResult.removeItemName} মেমো থেকে বাদ দেওয়া হয়েছে`);
+      return;
+    }
+
+    // 5. Clear Memo
+    if (parseResult.type === 'clear_memo') {
+      setItems([]);
+      setDiscount(0);
+      setFeedbackText('মেমো রিসেট করা হয়েছে');
+      speakNativeText('মেমো খালি করা হয়েছে');
+      return;
+    }
+
+    // 6. Add Items from stock matching
+    if (parseResult.type === 'add_items' && parseResult.items && parseResult.items.length > 0) {
+      const newVoiceItems: VoiceItem[] = parseResult.items.map(it => ({
+        id: it.productId || `vi-${Date.now()}-${Math.random().toString().slice(-4)}`,
+        name: it.banglaName || it.name,
+        unit: it.unit || 'পিস',
+        quantity: it.quantity || 1,
+        unitPrice: it.unitPrice || 50,
+        totalPrice: it.totalPrice || (it.unitPrice * it.quantity)
+      }));
+
+      setItems(prev => [...prev, ...newVoiceItems]);
+      const itemSummary = newVoiceItems.map(i => `${i.name} ${i.quantity} ${i.unit}`).join(', ');
+      setFeedbackText(`যোগ হয়েছে: ${itemSummary}`);
+      speakNativeText(`${newVoiceItems.length} টি পণ্য মেমোতে যোগ করা হয়েছে`);
+      return;
+    }
+
+    // Fallback single item matching
     let matchedProd = products.find(p => (p.name && text.includes(p.name)) || (p.name && p.name.includes(text.split(' ')[0])));
     let qty = 1;
     const numMatch = text.match(/(\d+)/);
@@ -117,7 +163,6 @@ export default function VoicePOSCalculatorModal({
       setFeedbackText(`যোগ হয়েছে: ${newItem.name} (${newItem.quantity} ${newItem.unit})`);
       speakNativeText(`${newItem.quantity} ${newItem.unit} ${newItem.name} যোগ করা হয়েছে`);
     } else {
-      // Fallback manual item
       const unitPrice = 100;
       const newItem: VoiceItem = {
         id: `vi-${Date.now()}`,
