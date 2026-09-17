@@ -128,13 +128,27 @@ export function normalizeSpokenNumbers(text: string): string {
   s = s.replace(/দেড় লিটার|দেড় লিটার/g, '1.5 লিটার');
   s = s.replace(/আড়াই লিটার|আড়াই লিটার/g, '2.5 লিটার');
   s = s.replace(/আধা লিটার|আধ লিটার|হাফ লিটার/g, '0.5 লিটার');
+  s = s.replace(/দেড় পোয়া|দেড় পোয়া/g, '0.375 কেজি');
+  s = s.replace(/(?:^|\s)(?:১০০|100)\s*গ্রাম(?=\s|$)/g, ' 0.1 কেজি ');
+  s = s.replace(/(?:^|\s)(?:২০০|200)\s*গ্রাম(?=\s|$)/g, ' 0.2 কেজি ');
+  s = s.replace(/(?:^|\s)(?:২৫০|250)\s*গ্রাম(?=\s|$)/g, ' 0.25 কেজি ');
+  s = s.replace(/(?:^|\s)(?:৫০০|500)\s*গ্রাম(?=\s|$)/g, ' 0.5 কেজি ');
+  s = s.replace(/(?:^|\s)(?:৭৫০|750)\s*গ্রাম(?=\s|$)/g, ' 0.75 কেজি ');
 
   // 3. Packaging / Counts
   s = s.replace(/এক হালি|১ হালি/g, '4 পিস');
   s = s.replace(/দুই হালি|২ হালি|দু হালি/g, '8 পিস');
   s = s.replace(/তিন হালি|৩ হালি/g, '12 পিস');
   s = s.replace(/এক ডজন|১ ডজন/g, '12 পিস');
+  s = s.replace(/আধা ডজন|আধ ডজন|হাফ ডজন/g, '6 পিস');
+  s = s.replace(/দেড় ডজন|দেড় ডজন/g, '18 পিস');
   s = s.replace(/দুই ডজন|২ ডজন|দু ডজন/g, '24 পিস');
+  s = s.replace(/আধা বস্তা|হাফ বস্তা/g, '0.5 বস্তা');
+  s = s.replace(/দেড় বস্তা|দেড় বস্তা/g, '1.5 বস্তা');
+  s = s.replace(/আধা পাতা|হাফ পাতা/g, '0.5 পাতা');
+  s = s.replace(/দেড় পাতা|দেড় পাতা/g, '1.5 পাতা');
+  s = s.replace(/আধা প্যাকেট|হাফ প্যাকেট/g, '0.5 প্যাকেট');
+  s = s.replace(/দেড় প্যাকেট|দেড় প্যাকেট/g, '1.5 প্যাকেট');
   s = s.replace(/এক জোড়া|১ জোড়া|১ জোड़ा/g, '2 পিস');
   s = s.replace(/দুই জোড়া|২ জোড়া|২ জোड़ा|দু জোড়া/g, '4 পিস');
   s = s.replace(/তিন জোড়া|৩ জোড়া|৩ জোড়া/g, '6 পিস');
@@ -282,16 +296,34 @@ export function detectProductCategory(name: string): { categoryId: string; defau
     return { categoryId: 'cat-restaurant', defaultUnit: /চা|কফি/.test(s) ? 'কাপ' : 'প্লেট' };
   }
 
-  // 5. Default Grocery / General Store (Explicitly check common staples)
-  if (/তেল|সয়াবিন|সরিষার\s*তেল|পানি|দুধ|ঘি|জুস/.test(s)) {
+  // 5. Cosmetics & Personal Care (লিপস্টিক, ক্রিম, লোশন, ফেসওয়াশ, নেইলপলিশ, পারফিউম)
+  if (/লিপস্টিক|লিপবাম|নেইলপলিশ|কাজল|আইলাইনার|মাশকারা|ব্লাশ|ফাউন্ডেশন|কনসিলার|মেকআপ|ফেসওয়াশ|ফেসপ্যাক|স্ক্রাব|সিরাম|লোশন|বডি\s*লোশন|ক্রিম|ময়েশ্চারাইজার|ভ্যাসলিন|পেট্রোলিয়াম|পারফিউম|বডি\s*স্প্রে|ডিওডোরেন্ট|আতর|পাউডার|ট্যাল্ক|মেহেদি|হেয়ার\s*কালার|হেয়ার\s*কালার|কসমেটিক|লিপলাইনার/.test(s)) {
+    if (/ফেসওয়াশ|স্ক্রাব|মেহেদি/.test(s)) {
+      return { categoryId: 'cat-cosmetics', defaultUnit: 'টিউব' };
+    }
+    if (/লোশন|বডি\s*স্প্রে|পারফিউম|আতর/.test(s)) {
+      return { categoryId: 'cat-cosmetics', defaultUnit: 'বোতল' };
+    }
+    if (/ক্রিম|পন্ডস|ভ্যাসলিন|প্যাক|জার/.test(s)) {
+      return { categoryId: 'cat-cosmetics', defaultUnit: 'জার' };
+    }
+    return { categoryId: 'cat-cosmetics', defaultUnit: 'পিস' };
+  }
+
+  // 6. Default Grocery / General Store (Explicitly check common staples)
+  if (/তেল|সয়াবিন|সরিষার\s*তেল|পানি|দুধ|ঘি|জুস|কোক|স্প্রাইট|ফান্টা/.test(s)) {
     return { categoryId: 'cat-grocery', defaultUnit: 'লিটার' };
   }
 
-  if (/লবণ|লবন/.test(s)) {
+  if (/ডিম|কলা/.test(s)) {
+    return { categoryId: 'cat-grocery', defaultUnit: 'হালি' };
+  }
+
+  if (/লবণ|লবন|নুডলস|চিপস|বিস্কুট|কেক|চানাচুর|ম্যাচ|কয়েল|ডিটারজেন্ট|সাবান|শ্যাম্পু|টুথপেস্ট/.test(s)) {
     return { categoryId: 'cat-grocery', defaultUnit: 'প্যাকেট' };
   }
 
-  if (/চাল|ডাল|মসুর|মুগ|চিনি|আটা|ময়দা|সুজি|আলু|পেঁয়াজ|রসুন|আদা|হলুদ|মরিচ|জিরা|ধনিয়া|ছোলা|মুড়ি|চিঁড়া|গুড়/.test(s)) {
+  if (/চাল|ডাল|মসুর|মুগ|চিনি|আটা|ময়দা|সুজি|আলু|পেঁয়াজ|রসুন|আদা|হলুদ|মরিচ|জিরা|ধনিয়া|ছোলা|মুড়ি|চিঁড়া|গুড়|লবণ/.test(s)) {
     return { categoryId: 'cat-grocery', defaultUnit: 'কেজি' };
   }
 
@@ -379,7 +411,7 @@ export function parseVoicePOSCommand(
   const normalized = normalizeSpokenNumbers(cleanRaw.toLowerCase());
 
   // A. Cash Checkout
-  if (/ক্যাশ\s*বিক্রি|নগদ\s*বিক্রি|বিল\s*করো|বিল\s*ফাইনাল|টাকা\s*পেয়েছি|ক্যাশ\s*পেমেন্ট|নগদ\s*আদায়/.test(cleanRaw)) {
+  if (/ক্যাশ\s*বিক্রি|নগদ\s*বিক্রি|বিল\s*করো|বিল\s*ফাইনাল|টাকা\s*পেয়েছি|ক্যাশ\s*পেমেন্ট|নগদ\s*আদায়|ক্যাশে\s*দাও|নগদে\s*বিক্রি|ক্যাশ\s*করো/.test(cleanRaw)) {
     return {
       type: 'cash_checkout',
       rawSpeech: cleanRaw,
@@ -411,20 +443,35 @@ export function parseVoicePOSCommand(
     };
   }
 
-  // D. Remove Item
-  const removeMatch = cleanRaw.match(/(.+?)\s*(?:বাদ\s*দাও|মুছে\s*ফেলো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)/);
-  if (removeMatch) {
-    const itemToRem = removeMatch[1].trim();
+  // D1. Remove Last Item ("শেষেরটা কাটো", "লাস্টেরটা বাদ দাও", "আগেরটা মুছো")
+  if (
+    /^(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|শেষের\s*আইটেম)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)?$/i.test(cleanRaw) ||
+    /(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট|কেটে\s*দাও)/i.test(cleanRaw)
+  ) {
     return {
       type: 'remove_item',
-      removeItemName: itemToRem,
+      removeItemName: '__last__',
       rawSpeech: cleanRaw,
-      explanation: `"${itemToRem}" পণ্যটি মেমো থেকে মুছে ফেলার কমান্ড`
+      explanation: 'সর্বশেষ যুক্ত করা আইটেমটি মেমো থেকে মুছে ফেলার কমান্ড'
     };
   }
 
+  // D2. Remove Named Item ("তেল বাদ দাও", "আলু কাটো", "নাপা ডিলিট করো")
+  const removeMatch = cleanRaw.match(/(.+?)\s*(?:বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|ডিলিট|কেটে\s*দাও|কাটো|বাতিল\s*করো|বাতিল)/);
+  if (removeMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
+    const itemToRem = removeMatch[1].trim();
+    if (itemToRem && itemToRem !== 'সব' && itemToRem !== 'মেমো' && itemToRem !== 'বিল') {
+      return {
+        type: 'remove_item',
+        removeItemName: itemToRem,
+        rawSpeech: cleanRaw,
+        explanation: `"${itemToRem}" পণ্যটি মেমো থেকে মুছে ফেলার কমান্ড`
+      };
+    }
+  }
+
   // E. Clear Memo
-  if (/নতুন\s*মেমো|সব\s*ক্লিয়ার|ক্লিয়ার\s*করো|রিসেট\s*করো|মেমো\s*মুছো/.test(cleanRaw)) {
+  if (/নতুন\s*মেমো|সব\s*ক্লিয়ার|ক্লিয়ার\s*করো|ক্লিয়ার|রিসেট\s*করো|মেমো\s*মুছো|সব\s*মুছো|সব\s*কাটো|মেমো\s*ক্লিয়ার|বিল\s*ক্লিয়ার|মেমো\s*রিসেট/.test(cleanRaw)) {
     return {
       type: 'clear_memo',
       rawSpeech: cleanRaw,

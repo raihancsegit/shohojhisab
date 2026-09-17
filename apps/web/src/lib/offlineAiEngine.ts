@@ -88,8 +88,14 @@ export function executeOfflineAiShopCommand(
   const todaySales = sales.filter((s: any) => (s.createdAt || s.created_at || '').startsWith(todayStr));
   const todayExpenses = expenses.filter((e: any) => (e.date || e.createdAt || '').startsWith(todayStr));
 
-  // 1. Comprehensive Navigation Commands (মুখে বলা মাত্র সেই পেজে নিয়ে যাওয়া)
-  if (/^(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল)$/i.test(normalized) || /পস.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|কাউন্টার.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|মেমো.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|বিক্রি\s*পেজ/i.test(normalized)) {
+  // 1. Comprehensive Navigation Commands (মুখে বলা মাত্র নির্ভুলভাবে সঠিক পেজে নিয়ে যাওয়া)
+  // A. POS / বিক্রি / মেমো / কাউন্টার পেজ
+  if (
+    /^(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos)$/i.test(normalized) ||
+    /(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos|counter|memo|sell|bikri).*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন|করো|পেজ|পাতা|স্ক্রিন)/i.test(normalized) ||
+    /(যাও|খোল|নিয়ে|চল|দেখা|ওপেন).*(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos)/i.test(normalized) ||
+    /^(বিক্রি পেজ|বিক্রির পেজ|পস পেজ|মেমো পেজ|বিক্রি কাউন্টার|ক্যাশ কাউন্টার|বিক্রিতে যাও|বিক্রি পেজে যাও)$/i.test(normalized)
+  ) {
     return {
       success: true,
       reply: 'বিক্রয় ও মেমো কাউন্টারে নিয়ে যাচ্ছি...',
@@ -100,19 +106,32 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  if (/^(খাতা|বাকি|বাকির খাতা|কাস্টমার|কাস্টমার খাতা)$/i.test(normalized) || /খাতা.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|বাকি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|কাস্টমার.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
-    return {
-      success: true,
-      reply: 'বাকির খাতায় নিয়ে যাচ্ছি...',
-      speech: 'বাকি খাতা খুলছি।',
-      navigateTo: '/khata',
-      actionLink: { text: 'বাকি খাতা খুলুন →', href: '/khata' },
-      isOffline: true
-    };
+  // B. বাকি / খাতা পেজ
+  if (
+    /^(খাতা|বাকি|বাকির খাতা|কাস্টমার|কাস্টমার খাতা|বাকির পেজ)$/i.test(normalized) ||
+    /(খাতা|বাকি|কাস্টমার|দেনাদার).*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন|পেজ)/i.test(normalized) ||
+    /(যাও|খোল|নিয়ে|চল|দেখা|ওপেন).*(খাতা|বাকি|কাস্টমার)/i.test(normalized)
+  ) {
+    if (!/টাকা|জমা|নিল|দিল|কত|লেখো/i.test(normalized)) {
+      return {
+        success: true,
+        reply: 'বাকির খাতায় নিয়ে যাচ্ছি...',
+        speech: 'বাকি খাতা খুলছি।',
+        navigateTo: '/khata',
+        actionLink: { text: 'বাকি খাতা খুলুন →', href: '/khata' },
+        isOffline: true
+      };
+    }
   }
 
-  if (/^(স্টক|মাল|পণ্য|ইনভেন্টরি|স্টক পেজ)$/i.test(normalized) || /স্টক.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|মাল.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|ইনভেন্টরি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
-    if (!/কত|যোগ|তোল|কম|শেষ/i.test(normalized)) {
+  // C. স্টক / ইনভেন্টরি পেজ (বিক্রি সংক্রান্ত কথা না থাকলে তবেই যাবে)
+  if (
+    !/বিক্রি|সেল|কাউন্টার|মেমো/i.test(normalized) &&
+    (/^(স্টক|মাল|পণ্য|ইনভেন্টরি|স্টক পেজ)$/i.test(normalized) ||
+     /(স্টক|মাল|পণ্য|ইনভেন্টরি).*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন|পেজ)/i.test(normalized) ||
+     /(যাও|খোল|নিয়ে|চল|দেখা|ওপেন).*(স্টক|ইনভেন্টরি)/i.test(normalized))
+  ) {
+    if (!/কত|যোগ|তোল|কম|শেষ|কয়টা|কয়টা/i.test(normalized)) {
       return {
         success: true,
         reply: 'দোকানের স্টক ইনভেন্টরিতে নিয়ে যাচ্ছি...',
@@ -124,8 +143,13 @@ export function executeOfflineAiShopCommand(
     }
   }
 
-  if (/^(খরচ|ব্যয়|খরচের খাতা|খরচ পেজ)$/i.test(normalized) || /খরচ.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)|ব্যয়.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
-    if (!/টাকা|লেখো/i.test(normalized)) {
+  // D. খরচ পেজ
+  if (
+    /^(খরচ|ব্যয়|খরচের খাতা|খরচ পেজ)$/i.test(normalized) ||
+    /(খরচ|ব্যয়).*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন|পেজ)/i.test(normalized) ||
+    /(যাও|খোল|নিয়ে|চল|দেখা|ওপেন).*(খরচ|ব্যয়)/i.test(normalized)
+  ) {
+    if (!/টাকা|লেখো|কত/i.test(normalized)) {
       return {
         success: true,
         reply: 'দোকান খরচের খাতায় নিয়ে যাচ্ছি...',
@@ -137,15 +161,22 @@ export function executeOfflineAiShopCommand(
     }
   }
 
-  if (/^(রিপোর্ট|হিসাব|আজকের হিসাব|রিপোর্ট পেজ)$/i.test(normalized) || /রিপোর্ট.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
-    return {
-      success: true,
-      reply: 'আজকের রিপোর্ট ও হিসাব পেজে নিয়ে যাচ্ছি...',
-      speech: 'রিপোর্ট পেজ খুলছি।',
-      navigateTo: '/reports',
-      actionLink: { text: 'রিপোর্ট পেজ খুলুন →', href: '/reports' },
-      isOffline: true
-    };
+  // E. রিপোর্ট পেজ
+  if (
+    /^(রিপোর্ট|হিসাব|আজকের হিসাব|রিপোর্ট পেজ)$/i.test(normalized) ||
+    /(রিপোর্ট|হিসাব).*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন|পেজ)/i.test(normalized) ||
+    /(যাও|খোল|নিয়ে|চল|দেখা|ওপেন).*(রিপোর্ট|হিসাব)/i.test(normalized)
+  ) {
+    if (!/কত|লাভ|বিক্রি/i.test(normalized)) {
+      return {
+        success: true,
+        reply: 'আজকের রিপোর্ট ও হিসাব পেজে নিয়ে যাচ্ছি...',
+        speech: 'রিপোর্ট পেজ খুলছি।',
+        navigateTo: '/reports',
+        actionLink: { text: 'রিপোর্ট পেজ খুলুন →', href: '/reports' },
+        isOffline: true
+      };
+    }
   }
 
   if (/^(কিস্তি|কিস্তির খাতা)$/i.test(normalized) || /কিস্তি.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
@@ -249,6 +280,31 @@ export function executeOfflineAiShopCommand(
       actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
       isOffline: true
     };
+  }
+
+  // 4b. Specific Product Stock Query (যেমন: "নাপা কয়টা আছে?", "তেল কত লিটার আছে?", "চাল কতটুকু আছে?")
+  const specificStockMatch = normalized.match(/(.+?)\s*(?:কয়টা|কয়টা|কতটুকু|কত\s*কেজি|কত\s*লিটার|কত\s*পাতা|কত\s*পিস|কত|কয়|কয়)\s*(?:কেজি|লিটার|পাতা|পিস|প্যাকেট|বোতল)?\s*(?:আছে|স্টক আছে|স্টকে আছে|মজুদ আছে|বাকি আছে)/i);
+  if (specificStockMatch && !/আজকে|মোট|খরচ|বাকি|টাকা/i.test(normalized)) {
+    const searchName = specificStockMatch[1].replace(/দোকানে|স্টকে|আমাদের|বর্তমান|ভাই|মাল/g, '').trim();
+    if (searchName && searchName.length >= 2) {
+      const p = products.find(prod => {
+        const b = (prod.banglaName || prod.name || '').toLowerCase();
+        return b.includes(searchName) || searchName.includes(b);
+      });
+      if (p) {
+        const stockAmt = Number(p.stock || 0);
+        const unit = p.unit || 'পিস';
+        const speech = `${p.banglaName || p.name} বর্তমানে ${stockAmt} ${unit} স্টকে আছে। বিক্রয় মূল্য ${p.sellingPrice} টাকা।`;
+        return {
+          success: true,
+          reply: `📦 **পণ্য স্টক অনুসন্ধান:**\n• পণ্য: **${p.banglaName || p.name}**\n• বর্তমান স্টক: **${stockAmt} ${unit}**\n• বিক্রয় মূল্য: ৳${p.sellingPrice}\n• কেনা মূল্য: ৳${p.purchasePrice || Math.round(Number(p.sellingPrice) * 0.85)}\n\n🟢 *অফলাইন ইনভেন্টরি রেকর্ড*`,
+          speech,
+          navigateTo: '/stock',
+          actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+          isOffline: true
+        };
+      }
+    }
   }
 
   // 5. Quick Stock Addition Command (যেমন: "নাপা ৫০ পাতা স্টক যোগ করো")
