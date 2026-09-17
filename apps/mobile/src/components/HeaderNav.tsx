@@ -46,14 +46,8 @@ export default function HeaderNav() {
             <Text style={styles.hamburgerIcon}>☰</Text>
           </TouchableOpacity>
 
-          {/* Shop Selector */}
-          <TouchableOpacity
-            style={styles.shopSelector}
-            onPress={() => {
-              triggerHaptic('light');
-              openShopModal();
-            }}
-          >
+          {/* Shop Profile Brand (Fixed to logged-in tenant) */}
+          <View style={styles.shopSelector}>
             <View style={styles.shopAvatar}>
               <Text style={styles.shopAvatarText}>{theme.icon || '🏪'}</Text>
             </View>
@@ -62,14 +56,13 @@ export default function HeaderNav() {
                 <Text style={styles.shopName} numberOfLines={1}>
                   {tenant?.shopName || 'সহজ হিসাব'}
                 </Text>
-                <Text style={styles.shopDownArrow}>▼</Text>
               </View>
               <View style={styles.shopMetaRow}>
                 <View style={styles.greenDot} />
                 <Text style={styles.industryTag}>{theme.name || 'মুদি দোকান'}</Text>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Right: Controls (Role, Soundbox, Theme Toggle, Bell) */}

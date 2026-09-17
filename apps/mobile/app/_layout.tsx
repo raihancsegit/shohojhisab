@@ -7,7 +7,6 @@ import { CartProvider } from '../src/context/CartContext';
 import { NavProvider } from '../src/context/NavContext';
 import SideMenuDrawer from '../src/components/SideMenuDrawer';
 import ActionSheetModal from '../src/components/ActionSheetModal';
-import ShopSwitcherModal from '../src/components/ShopSwitcherModal';
 import StaffShiftModal from '../src/components/StaffShiftModal';
 import FloatingVoiceFab from '../src/components/FloatingVoiceFab';
 import LoginScreen from './login';
@@ -63,7 +62,6 @@ function RootNavigation() {
         <>
           <SideMenuDrawer />
           <ActionSheetModal />
-          <ShopSwitcherModal />
           <StaffShiftModal />
           <FloatingVoiceFab />
         </>
