@@ -30,6 +30,8 @@ export interface CustomerItem {
   address?: string;
   totalDue: number;
   due?: number;
+  creditLimit?: number;
+  notes?: string;
   points?: number;
   totalPurchases?: number;
   lastPurchaseDate?: string;
