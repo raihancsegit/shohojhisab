@@ -23,7 +23,6 @@ import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtil
 import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { counterSleepManager } from '../../lib/counterSleepManager';
-import CounterBlackSleepOverlay from '../../components/CounterBlackSleepOverlay';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -550,7 +549,10 @@ export default function PosPage() {
     const handleCounterSleepCommand = (e: any) => {
       const text = e.detail?.text;
       if (text) {
+        setIsCounterSleepActive(false);
+        setVoiceNotice(`✓ [স্লিপ মোড থেকে মেমো]: "${text}"`);
         parseVoiceCommand(text);
+        setTimeout(() => setVoiceNotice(''), 4000);
       }
     };
 
@@ -1903,24 +1905,21 @@ export default function PosPage() {
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
 
-          // Check if spoken command has explicit retail sale intent (product, unit, taka, quantity)
-          const hasRetailIntent = /(কেজি|লিটার|টাকা|পিস|পাতা|টা|গ্রাম|পোয়া|পোয়া|আধা|হাফ|দেড়|দেড়|হালি|বস্তা|প্যাকেট|বোতল|\d+|ক্যাশ|বাকি|বিক্রি|মেমো)/i.test(finalToParse) ||
-            products.some(p => (p.banglaName && finalToParse.includes(p.banglaName)) || (p.name && finalToParse.toLowerCase().includes(p.name.toLowerCase())));
-
-          // If speaker check failed BUT explicit retail intent is present, it's the shopkeeper speaking over background/laptop audio!
-          if (!speakerCheck.isAuthorized && !hasRetailIntent) {
+          // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff
+          if (isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
             triggerHaptic('error');
+            playWarningSound();
             if (speakerCheck.reason === 'background_noise_or_tv') {
-              setVoiceNotice('🛡️ ব্যাকগ্রাউন্ড টিভি / অসংলগ্ন শব্দ ফিল্টার করা হয়েছে');
+              setVoiceNotice('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
             } else {
-              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে');
+              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - কেবল মালিকের কণ্ঠ গ্রহণযোগ্য)');
             }
-            setTimeout(() => setVoiceNotice(''), 4000);
+            setTimeout(() => setVoiceNotice(''), 4500);
             return;
           }
 
           if (speakerCheck.matchedSpeaker) {
-            setVoiceNotice(`✓ [${speakerCheck.matchedSpeaker.name}] মেমো হচ্ছে: "${finalToParse}"`);
+            setVoiceNotice(`✓ [${speakerCheck.matchedSpeaker.name}] অনুমোদিত কণ্ঠ শনাক্ত: "${finalToParse}"`);
           } else {
             setVoiceNotice(`✓ মেমো হচ্ছে: "${finalToParse}"`);
           }
@@ -2455,7 +2454,6 @@ export default function PosPage() {
       triggerHaptic('success');
       await counterSleepManager.enable(true);
       setIsCounterSleepActive(true);
-      startVoiceInput();
       setVoiceNotice('🌙 কাউন্টার স্লিপ মোড সক্রিয়! স্ক্রিন কালো হলেও কথা শুনবে।');
       setTimeout(() => setVoiceNotice(''), 3000);
     }
@@ -6548,9 +6546,6 @@ export default function PosPage() {
           }}
         />
       )}
-
-      {/* 🌙 Counter Black Sleep AMOLED Overlay */}
-      <CounterBlackSleepOverlay onExit={() => setIsCounterSleepActive(false)} />
 
     </div>
   );

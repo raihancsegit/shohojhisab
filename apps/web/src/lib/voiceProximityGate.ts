@@ -22,6 +22,7 @@ class VoiceProximityManager {
   private dataArray: Uint8Array | null = null;
   private animationFrameId: number | null = null;
   private listeners: Set<(state: ProximityState) => void> = new Set();
+  private frameListeners: Array<(analyser: AnalyserNode, sampleRate: number) => void> = [];
 
   private mode: ProximityDistanceMode = 'near';
   private currentVolume: number = 0;
@@ -82,6 +83,13 @@ class VoiceProximityManager {
     this.listeners.add(callback);
     callback(this.getState());
     return () => this.listeners.delete(callback);
+  }
+
+  public onFrame(listener: (analyser: AnalyserNode, sampleRate: number) => void): () => void {
+    this.frameListeners.push(listener);
+    return () => {
+      this.frameListeners = this.frameListeners.filter(l => l !== listener);
+    };
   }
 
   private notify() {
@@ -155,6 +163,14 @@ class VoiceProximityManager {
           // Gate holds open for 650ms after near speech to catch trailing syllables
           if (now - this.lastNearSpeechTime > 650) {
             this.isGateOpen = false;
+          }
+        }
+
+        // Feed external vocal biometric analyzers (speakerProfileEngine)
+        if (this.frameListeners.length > 0 && this.audioContext) {
+          const sRate = this.audioContext.sampleRate || 44100;
+          for (let i = 0; i < this.frameListeners.length; i++) {
+            try { this.frameListeners[i](this.analyser, sRate); } catch (e) {}
           }
         }
 

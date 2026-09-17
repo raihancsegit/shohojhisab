@@ -57,6 +57,7 @@ export default function SpeakerVoiceEnrollModal({
   const [collectedPitches, setCollectedPitches] = useState<number[][]>([[], [], []]);
   const [collectedCentroids, setCollectedCentroids] = useState<number[][]>([[], [], []]);
   const [enrollSuccess, setEnrollSuccess] = useState<boolean>(false);
+  const [lastSavedStats, setLastSavedStats] = useState<{ pitchMean: number; pitchMin: number; pitchMax: number } | null>(null);
 
   // Live Test State
   const [isTesting, setIsTesting] = useState<boolean>(false);
@@ -158,6 +159,92 @@ export default function SpeakerVoiceEnrollModal({
     } catch (e) {
       // Fallback for devices that reject autoGainControl: false
       return await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+  };
+
+  // ⚡ Fast 1-Tap 4-Second Voice Enrollment
+  const startQuickEnrollment = async () => {
+    stopAudio();
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx || !navigator.mediaDevices?.getUserMedia) {
+        alert('আপনার ব্রাউজারে ভয়েস রেকর্ডার সাপোর্ট নেই।');
+        return;
+      }
+
+      const stream = await getMicrophoneStream();
+      mediaStreamRef.current = stream;
+
+      const audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      audioContextRef.current = audioCtx;
+
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.2;
+      analyserRef.current = analyser;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      setIsRecording(true);
+      setCountdown(4);
+
+      const recordedPitches: number[] = [];
+      const recordedCentroids: number[] = [];
+      const sampleRate = audioCtx.sampleRate || 44100;
+      const timeData = new Float32Array(analyser.fftSize);
+      const freqData = new Uint8Array(analyser.frequencyBinCount);
+      let lastCheck = 0;
+
+      const loop = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getFloatTimeDomainData(timeData);
+        analyserRef.current.getByteFrequencyData(freqData);
+
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i += 4) {
+          sum += timeData[i] * timeData[i];
+        }
+        const rms = Math.sqrt(sum / (timeData.length / 4)) * 100;
+        setLiveVolume(Math.min(100, Math.round(rms * 6)));
+
+        const now = performance.now();
+        if (now - lastCheck > 50) {
+          lastCheck = now;
+          const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
+          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 380) {
+            setLivePitch(pitchRes.pitch);
+            recordedPitches.push(pitchRes.pitch);
+            const centroid = extractSpectralCentroid(freqData, sampleRate);
+            if (centroid > 0) recordedCentroids.push(centroid);
+          }
+        }
+        animFrameRef.current = requestAnimationFrame(loop);
+      };
+
+      animFrameRef.current = requestAnimationFrame(loop);
+
+      let remaining = 4;
+      timerRef.current = setInterval(() => {
+        remaining -= 1;
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          stopAudio();
+
+          if (recordedPitches.length === 0) {
+            alert('মাইক্রোফোনে কোনো স্পষ্ট কণ্ঠ পাওয়া যায়নি। দয়া করে মাইক্রোফোনের কাছে এসে স্বাভাবিক স্বরে বলুন।');
+            return;
+          }
+
+          finalizeEnrollment([recordedPitches], [recordedCentroids.length > 0 ? recordedCentroids : [1200]]);
+        }
+      }, 1000);
+    } catch (err: any) {
+      console.warn('Microphone error:', err);
+      alert('মাইক্রোফোন চালু করা যায়নি: ' + (err.message || 'অনুমতি নিশ্চিত করুন'));
     }
   };
 
@@ -315,6 +402,7 @@ export default function SpeakerVoiceEnrollModal({
 
     const updated = getSpeakerVoiceProfiles(tenantId);
     setProfiles(updated);
+    setLastSavedStats({ pitchMean, pitchMin, pitchMax });
     setEnrollSuccess(true);
     if (onProfileUpdated) onProfileUpdated();
   };
@@ -547,11 +635,29 @@ export default function SpeakerVoiceEnrollModal({
                     ✓
                   </div>
                   <h4 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
-                    কণ্ঠ সফলভাবে রেজিস্টার হয়েছে!
+                    কণ্ঠ সফলভাবে রেজিস্টার ও লক হয়েছে!
                   </h4>
-                  <p style={{ margin: '0 0 16px', fontSize: '12.5px', color: '#64748b', lineHeight: 1.4 }}>
-                    <strong>{speakerName}</strong> এর কণ্ঠস্বরের ফ্রিকোয়েন্সি সংরক্ষিত হয়েছে। এখন থেকে এই ব্যক্তির কণ্ঠ ছাড়া ব্যাকগ্রাউন্ড টিভি বা বাইরের শব্দে মেমো তৈরি হবে না।
+                  <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: '#64748b', lineHeight: 1.4 }}>
+                    <strong>{speakerName}</strong> এর কণ্ঠস্বরের ফ্রিকোয়েন্সি বায়োমেট্রিকভাবে সংরক্ষিত হয়েছে। এখন থেকে এই ব্যক্তির কণ্ঠ ছাড়া অন্য কোনো মানুষ বা ল্যাপটপ/টিভির ব্যাকগ্রাউন্ড সাউন্ডে মেমো তৈরি হবে না।
                   </p>
+
+                  {lastSavedStats && (
+                    <div style={{
+                      background: '#f0fdf4',
+                      border: '1.5px solid #86efac',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      marginBottom: '16px',
+                      fontSize: '12px',
+                      color: '#166534',
+                      display: 'flex',
+                      justifyContent: 'space-around',
+                      fontWeight: '700'
+                    }}>
+                      <div>গড় পিচ: <strong>{lastSavedStats.pitchMean} Hz</strong></div>
+                      <div>ফ্রিকোয়েন্সি সীমা: <strong>{lastSavedStats.pitchMin} - {lastSavedStats.pitchMax} Hz</strong></div>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                     <button
                       onClick={() => {
@@ -716,55 +822,57 @@ export default function SpeakerVoiceEnrollModal({
                     )}
                   </div>
 
-                  {/* Single Clean Record Button & 1-Tap Quick Save */}
+                  {/* Clean Voice Record Buttons */}
                   <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                     <button
                       type="button"
                       disabled={isRecording}
-                      onClick={startRecordingStep}
+                      onClick={startQuickEnrollment}
                       style={{
-                        background: isRecording ? '#dc2626' : '#4f46e5',
+                        background: isRecording ? '#dc2626' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        padding: '11px 26px',
-                        borderRadius: '12px',
-                        fontSize: '13.5px',
-                        fontWeight: '800',
+                        padding: '14px 28px',
+                        borderRadius: '14px',
+                        fontSize: '14px',
+                        fontWeight: '900',
                         cursor: isRecording ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 10px rgba(79, 70, 229, 0.25)',
-                        transition: 'all 0.15s ease'
+                        gap: '8px',
+                        boxShadow: '0 4px 14px rgba(5, 150, 105, 0.35)',
+                        transition: 'all 0.15s ease',
+                        width: '100%',
+                        justifyContent: 'center'
                       }}
                     >
-                      <span>{isRecording ? '⏳ শুনছি...' : '🎙️ মুখে বলে রেকর্ড করুন (৩ সেকেন্ড)'}</span>
+                      <span>{isRecording ? `⏳ কণ্ঠ শুনছি ও মাপছি (${countdown}s)...` : '⚡ ৪ সেকেন্ডে দ্রুত রেকর্ড ও ভয়েস লক'}</span>
                     </button>
 
                     <button
                       type="button"
                       disabled={isRecording}
-                      onClick={() => {
-                        const defaultP = [[125, 135, 145], [130, 140], []];
-                        finalizeEnrollment(defaultP, [[1200]]);
-                      }}
+                      onClick={startRecordingStep}
                       style={{
-                        background: '#f0fdf4',
-                        color: '#15803d',
-                        border: '1px solid #86efac',
-                        padding: '7px 16px',
+                        background: '#f1f5f9',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        padding: '8px 16px',
                         borderRadius: '10px',
-                        fontSize: '11.5px',
-                        fontWeight: '800',
-                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: isRecording ? 'not-allowed' : 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '5px'
+                        gap: '6px'
                       }}
-                      title="তাৎক্ষণিক ভয়েস লক চালু করতে এটি চাপুন"
                     >
-                      <span>⚡ ১-ট্যাপে তাৎক্ষণিক ভয়েস লক সক্রিয় করুন</span>
+                      <span>🎙️ ৩-ধাপের বিস্তারিত উইজার্ড (ধাপ {currentStepIndex + 1}/৩)</span>
                     </button>
+
+                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>
+                      স্বাভাবিক স্বরে উপরের বাক্যটি পড়ুন। আপনার কণ্ঠের নিখুঁত ফ্রিকোয়েন্সি রেকর্ড হবে।
+                    </p>
                   </div>
                 </div>
               )}

@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { counterSleepManager, CounterSleepState } from '../lib/counterSleepManager';
 import { playMicStartSound, playSuccessChime } from '../lib/audioFeedbackUtils';
+import { voiceProximityManager } from '../lib/voiceProximityGate';
+import { verifyCurrentVoice, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
 
 interface CounterBlackSleepOverlayProps {
   onExit?: () => void;
@@ -71,6 +73,9 @@ export default function CounterBlackSleepOverlay({ onExit }: CounterBlackSleepOv
     stopSleepListener();
 
     try {
+      // Start microphone audio analyser for real-time speaker biometrics during sleep mode
+      voiceProximityManager.start().catch(() => {});
+
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
       recognition.continuous = true;
@@ -101,6 +106,20 @@ export default function CounterBlackSleepOverlay({ onExit }: CounterBlackSleepOv
         const hasRetailIntent = /(কেজি|লিটার|টাকা|পিস|পাতা|টা|গ্রাম|পোয়া|পোয়া|আধা|হাফ|দেড়|দেড়|হালি|বস্তা|প্যাকেট|বোতল|\d+|ক্যাশ|বাকি|বিক্রি|মেমো)/i.test(spoken);
 
         if (isWake || hasRetailIntent) {
+          // If speaker lock is enabled, verify that speech belongs to the shopkeeper (reject laptop/TV/strangers)
+          const tenantKey = 'default';
+          if (isSpeakerLockEnabled(tenantKey)) {
+            const speakerCheck = verifyCurrentVoice(tenantKey);
+            if (!speakerCheck.isAuthorized) {
+              console.log('[SleepOverlay] Ignored unauthorized voice (TV/laptop/stranger):', spoken);
+              setLiveHeardText(`🛡️ ফিল্টার: "${spoken}" (অননুমোদিত কণ্ঠ)`);
+              setTimeout(() => {
+                setLiveHeardText('');
+              }, 2500);
+              return;
+            }
+          }
+
           const actionText = (command || spoken).trim();
           triggerWakeAndExecute(actionText, isWake, hasRetailIntent);
         }

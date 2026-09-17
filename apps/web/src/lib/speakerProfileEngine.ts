@@ -107,26 +107,33 @@ export function extractPitchFromTimeDomain(
   }
   const rms = Math.sqrt(sum / (bufferSize / 2));
 
-  // If energy is too low (silence), reject (lowered threshold to 0.007 for laptop/mobile mics)
-  if (rms < 0.007) {
+  // If energy is too low (distant TV / faint background noise), reject
+  if (rms < 0.009) {
     return null;
   }
 
-  // 2. Autocorrelation in human speech range (70 Hz to 380 Hz)
-  const minLag = Math.floor(sampleRate / 380); // ~380 Hz (female/child high pitch)
-  const maxLag = Math.floor(sampleRate / 70);  // ~70 Hz (deep male bass voice)
+  // 2. Normalized Autocorrelation (human vocal pitch: 65 Hz to 360 Hz)
+  const minLag = Math.floor(sampleRate / 360);
+  const maxLag = Math.floor(sampleRate / 65);
 
   let bestLag = -1;
-  let maxCorr = 0;
+  let maxNormCorr = -1;
 
-  // Fast coarse pass (step of 2) to eliminate 75% of compute operations
   for (let lag = minLag; lag <= maxLag; lag += 2) {
     let corr = 0;
-    for (let i = 0; i < bufferSize - lag; i += 2) {
-      corr += timeDomainData[i] * timeDomainData[i + lag];
+    let normX = 0;
+    let normY = 0;
+    for (let i = 0; i < bufferSize - lag; i += 4) {
+      const x = timeDomainData[i];
+      const y = timeDomainData[i + lag];
+      corr += x * y;
+      normX += x * x;
+      normY += y * y;
     }
-    if (corr > maxCorr) {
-      maxCorr = corr;
+    const denom = Math.sqrt(normX * normY);
+    const score = denom > 0.0001 ? corr / denom : 0;
+    if (score > maxNormCorr) {
+      maxNormCorr = score;
       bestLag = lag;
     }
   }
@@ -135,22 +142,30 @@ export function extractPitchFromTimeDomain(
   if (bestLag > minLag && bestLag < maxLag) {
     for (let lag = Math.max(minLag, bestLag - 2); lag <= Math.min(maxLag, bestLag + 2); lag++) {
       let corr = 0;
+      let normX = 0;
+      let normY = 0;
       for (let i = 0; i < bufferSize - lag; i += 2) {
-        corr += timeDomainData[i] * timeDomainData[i + lag];
+        const x = timeDomainData[i];
+        const y = timeDomainData[i + lag];
+        corr += x * y;
+        normX += x * x;
+        normY += y * y;
       }
-      if (corr > maxCorr) {
-        maxCorr = corr;
+      const denom = Math.sqrt(normX * normY);
+      const score = denom > 0.0001 ? corr / denom : 0;
+      if (score > maxNormCorr) {
+        maxNormCorr = score;
         bestLag = lag;
       }
     }
   }
 
-  if (bestLag > 0 && maxCorr > 0) {
+  // A genuine human vocal fold has high normalized harmonic periodicity (>= 0.28)
+  // Ambient diffuse noise, synthesizer music, or distant laptop audio lacks this periodic peak
+  if (bestLag > 0 && maxNormCorr >= 0.26) {
     const pitch = sampleRate / bestLag;
-    const energy = sum;
-    const clarity = energy > 0 ? maxCorr / energy : 0.5;
-    if (pitch >= 65 && pitch <= 400) {
-      return { pitch: Math.round(pitch), clarity: Math.min(1, Math.max(0.1, clarity)) };
+    if (pitch >= 65 && pitch <= 360) {
+      return { pitch: Math.round(pitch), clarity: Math.min(1, Math.max(0.1, maxNormCorr)) };
     }
   }
 
@@ -181,7 +196,180 @@ export function extractSpectralCentroid(
 
 /**
  * Core Live Verifier:
- * Checks whether live audio belongs to enrolled shopkeeper/staff or is unwanted TV/customer chatter
+ * Checks whether live audio strictly belongs to enrolled shopkeeper/staff
+ * Rejects laptop audio, TV dialogue, music, and other people speaking.
+ */
+export interface VoicedFrame {
+  pitch: number;
+  clarity: number;
+  rms: number;
+  centroid: number;
+  timestamp: number;
+}
+
+// Circular buffer of voiced frames collected continuously during live microphone audio
+const rollingVoicedFrames: VoicedFrame[] = [];
+const BUFFER_WINDOW_MS = 4200; // keep frames from the last 4.2 seconds
+let lastPitchFrameTime = 0;
+
+/**
+ * Record a vocal frame continuously from the microphone analyser
+ * Called from voiceProximityManager loop every 40-50ms (~22 times per second)
+ */
+export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: number): void {
+  const now = performance.now();
+  if (now - lastPitchFrameTime < 40) return;
+  lastPitchFrameTime = now;
+
+  try {
+    const fftSize = analyserNode.fftSize;
+    const timeData = new Float32Array(fftSize);
+    analyserNode.getFloatTimeDomainData(timeData);
+
+    // Compute RMS
+    let sum = 0;
+    for (let i = 0; i < timeData.length; i += 4) {
+      sum += timeData[i] * timeData[i];
+    }
+    const rms = Math.sqrt(sum / (timeData.length / 4));
+
+    // Reject low ambient hum / silence
+    if (rms < 0.008) return;
+
+    // Detect pitch
+    const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
+    if (!pitchRes || pitchRes.pitch < 60 || pitchRes.pitch > 380) return;
+
+    const freqData = new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteFrequencyData(freqData);
+    const centroid = extractSpectralCentroid(freqData, sampleRate);
+
+    const nowEpoch = Date.now();
+    rollingVoicedFrames.push({
+      pitch: pitchRes.pitch,
+      clarity: pitchRes.clarity,
+      rms,
+      centroid,
+      timestamp: nowEpoch
+    });
+
+    // Prune old frames beyond buffer window
+    const cutoff = nowEpoch - BUFFER_WINDOW_MS;
+    while (rollingVoicedFrames.length > 0 && rollingVoicedFrames[0].timestamp < cutoff) {
+      rollingVoicedFrames.shift();
+    }
+  } catch (e) {}
+}
+
+// Automatically subscribe to voiceProximityManager frames on load
+if (typeof window !== 'undefined') {
+  try {
+    const { voiceProximityManager } = require('./voiceProximityGate');
+    voiceProximityManager?.onFrame?.((analyser: AnalyserNode, sRate: number) => {
+      recordLiveVocalFrame(analyser, sRate);
+    });
+  } catch (e) {}
+}
+
+/**
+ * Evaluate the entire recent speech utterance against enrolled biometric profiles.
+ * Analyzes all pitch frames recorded during the speech window (last ~3.5 seconds).
+ * Strictly filters laptop videos, TV news/natok, and other customers' voices.
+ */
+export function evaluateUtteranceSpeaker(
+  tenantId: string = 'default',
+  targetSpeakerId?: string,
+  lookbackMs: number = 3600
+): SpeakerVerificationResult {
+  if (!isSpeakerLockEnabled(tenantId)) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  const profiles = getSpeakerVoiceProfiles(tenantId);
+  if (profiles.length === 0) {
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+  }
+
+  const now = Date.now();
+  const cutoff = now - lookbackMs;
+  const recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= cutoff);
+
+  // If no harmonic vocal frames were detected:
+  // Diffuse noise, fan, traffic, or distant TV with no clear human vocal fold periodicity
+  if (recentFrames.length === 0) {
+    return {
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
+    };
+  }
+
+  let candidateProfiles = profiles;
+  if (targetSpeakerId) {
+    const specific = profiles.find(p => p.id === targetSpeakerId);
+    if (specific) {
+      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
+    }
+  }
+
+  // Find profile with the best match across the entire utterance
+  let bestMatch: {
+    profile: SpeakerVoiceProfile;
+    matchingCount: number;
+    matchRatio: number;
+    avgPitch: number;
+    confidence: number;
+  } | null = null;
+
+  for (const profile of candidateProfiles) {
+    // Exact pitch tolerance: ±28 Hz around mean, or between min-16 and max+20
+    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 16, profile.pitchMean - 28));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 20, profile.pitchMean + 28));
+
+    const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
+    const count = matched.length;
+    const ratio = count / recentFrames.length;
+
+    if (count > 0) {
+      const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
+      const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
+      const conf = Math.max(50, Math.min(100, Math.round((ratio * 60) + (40 - diffFromMean))));
+
+      if (!bestMatch || ratio > bestMatch.matchRatio || (ratio === bestMatch.matchRatio && count > bestMatch.matchingCount)) {
+        bestMatch = {
+          profile,
+          matchingCount: count,
+          matchRatio: ratio,
+          avgPitch,
+          confidence: conf
+        };
+      }
+    }
+  }
+
+  // Strict Authorization Rule:
+  // Must have at least 2 voiced samples, and at least 45% of recent vocal samples must match
+  if (bestMatch && bestMatch.matchingCount >= 2 && bestMatch.matchRatio >= 0.45) {
+    return {
+      isAuthorized: true,
+      matchedSpeaker: bestMatch.profile,
+      confidence: bestMatch.confidence,
+      pitchDetected: Math.round(bestMatch.avgPitch)
+    };
+  }
+
+  // Unauthorized: stranger, laptop video, or TV audio!
+  const overallAvgPitch = Math.round(recentFrames.reduce((sum, f) => sum + f.pitch, 0) / recentFrames.length);
+  return {
+    isAuthorized: false,
+    confidence: Math.round((bestMatch?.matchRatio || 0) * 100),
+    reason: 'unauthorized_speaker',
+    pitchDetected: overallAvgPitch
+  };
+}
+
+/**
+ * Core Live Verifier for an instantaneous audio snapshot (e.g. during live test)
  */
 export function verifyLiveSpeaker(
   analyserNode: AnalyserNode,
@@ -203,18 +391,14 @@ export function verifyLiveSpeaker(
   const timeData = new Float32Array(fftSize);
   analyserNode.getFloatTimeDomainData(timeData);
 
-  const freqData = new Uint8Array(analyserNode.frequencyBinCount);
-  analyserNode.getByteFrequencyData(freqData);
-
-  // 1. Check Energy Level (Microphone silence threshold)
-  let rms = 0;
-  for (let i = 0; i < timeData.length; i++) {
-    rms += timeData[i] * timeData[i];
+  // 1. Check Energy Level
+  let sum = 0;
+  for (let i = 0; i < timeData.length; i += 4) {
+    sum += timeData[i] * timeData[i];
   }
-  rms = Math.sqrt(rms / timeData.length);
+  const rms = Math.sqrt(sum / (timeData.length / 4));
 
-  // Truly faint signal (far ambient room hum under 0.007)
-  if (rms < 0.007) {
+  if (rms < 0.009) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -222,29 +406,9 @@ export function verifyLiveSpeaker(
     };
   }
 
-  // 2. Detect Fundamental Pitch (F0)
+  // 2. Detect Pitch
   const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
   if (!pitchRes) {
-    // If energy is present (rms > 0.015), try centroid fallback before rejecting
-    if (rms >= 0.012) {
-      const centroid = extractSpectralCentroid(freqData, sampleRate);
-      if (centroid > 0) {
-        const approxPitch = centroid > 1500 ? 195 : 125;
-        for (const profile of profiles) {
-          if (Math.abs(approxPitch - profile.pitchMean) <= 65) {
-            const fallbackVerified: SpeakerVerificationResult = {
-              isAuthorized: true,
-              matchedSpeaker: profile,
-              confidence: 78,
-              pitchDetected: approxPitch
-            };
-            lastVerifiedCache = { result: fallbackVerified, timestamp: Date.now() };
-            return fallbackVerified;
-          }
-        }
-      }
-    }
-
     return {
       isAuthorized: false,
       confidence: 0,
@@ -253,9 +417,7 @@ export function verifyLiveSpeaker(
   }
 
   const livePitch = pitchRes.pitch;
-  const centroid = extractSpectralCentroid(freqData, sampleRate);
 
-  // 3. Match against Enrolled Profiles
   let candidateProfiles = profiles;
   if (targetSpeakerId) {
     const specific = profiles.find(p => p.id === targetSpeakerId);
@@ -265,58 +427,34 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    // Natural human vocal range window: allow ±65Hz around pitchMean or min/max bounds
-    // Accommodates natural pitch fluctuations between excited, relaxed, and morning/evening speech
-    const lowerPitch = Math.max(50, Math.min(profile.pitchMin - 35, profile.pitchMean - 65));
-    const upperPitch = Math.max(profile.pitchMax + 55, profile.pitchMean + 75);
+    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 16, profile.pitchMean - 28));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 20, profile.pitchMean + 28));
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      const confidence = Math.max(65, Math.round(100 - (diff * 0.8)));
+      const confidence = Math.max(70, Math.round(100 - (diff * 1.2)));
 
-      const verifiedResult: SpeakerVerificationResult = {
+      return {
         isAuthorized: true,
         matchedSpeaker: profile,
         confidence,
         pitchDetected: livePitch
       };
-
-      // Only cache POSITIVE authorization so sentence-end pauses never wipe access
-      lastVerifiedCache = {
-        result: verifiedResult,
-        timestamp: Date.now()
-      };
-      return verifiedResult;
     }
   }
 
-  const unauthResult: SpeakerVerificationResult = {
+  return {
     isAuthorized: false,
-    confidence: 15,
+    confidence: 10,
     reason: 'unauthorized_speaker',
     pitchDetected: livePitch
   };
-  // Do NOT overwrite lastVerifiedCache with unauthResult if valid speech was heard recently!
-  const nowTime = Date.now();
-  if (!lastVerifiedCache || (nowTime - lastVerifiedCache.timestamp) >= 5500) {
-    lastVerifiedCache = {
-      result: unauthResult,
-      timestamp: nowTime
-    };
-  }
-  return unauthResult;
 }
 
-// Rolling cache of the most recent speech verification while user was actively talking
-let lastVerifiedCache: {
-  result: SpeakerVerificationResult;
-  timestamp: number;
-} | null = null;
-
 /**
- * Convenience helper that queries the global voiceProximityManager analyser.
- * Automatically falls back to the recent active speech cache (within last 5.5 seconds)
- * so that verification does not fail due to the pause at the end of a sentence.
+ * Convenience helper that verifies the speech command against enrolled biometric profile.
+ * Prioritizes the rolling utterance history (collected while the speaker spoke),
+ * falling back to the current live analyser.
  */
 export function verifyCurrentVoice(
   tenantId: string = 'default',
@@ -331,36 +469,38 @@ export function verifyCurrentVoice(
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
   }
 
-  // Check if we verified speech within the last 5.5 seconds (during active dialogue)
-  const now = Date.now();
-  if (lastVerifiedCache && (now - lastVerifiedCache.timestamp) < 5500) {
-    return lastVerifiedCache.result;
+  // 1. First check the rolling utterance buffer (evaluates the speech sentence just spoken)
+  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 3600);
+  if (utteranceResult.isAuthorized) {
+    return utteranceResult;
   }
 
-  // Otherwise inspect live analyser if active
+  // 2. If utterance didn't authorize, check if live frame matches right now
   try {
     const { voiceProximityManager } = require('./voiceProximityGate');
     const analyser = voiceProximityManager?.getAnalyser();
-    if (!analyser) {
-      return { isAuthorized: true, confidence: 85, reason: 'feature_disabled' };
+    if (analyser) {
+      const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+      if (live.isAuthorized) {
+        return live;
+      }
     }
-    const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
-    // If live frame was silence but lock is on and we didn't hear speech, check if fallback is warranted
-    return live;
-  } catch (e) {
-    return { isAuthorized: true, confidence: 80, reason: 'feature_disabled' };
-  }
+  } catch (e) {}
+
+  // Strict Rejection: If lock is enabled, TV/laptop/strangers are STRICTLY REJECTED!
+  return utteranceResult;
 }
 
 /**
- * Actively pings the analyser to maintain the rolling speech cache during recognition
+ * Actively pings the analyser to feed the rolling speech buffer
  */
 export function pingVoiceVerification(tenantId: string = 'default'): void {
   try {
     const { voiceProximityManager } = require('./voiceProximityGate');
     const analyser = voiceProximityManager?.getAnalyser();
     if (analyser) {
-      verifyLiveSpeaker(analyser, tenantId);
+      const sampleRate = analyser.context.sampleRate || 44100;
+      recordLiveVocalFrame(analyser, sampleRate);
     }
   } catch (e) {}
 }
