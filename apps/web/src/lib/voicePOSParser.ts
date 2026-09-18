@@ -235,14 +235,17 @@ const COMMON_GROCERY_DEFAULTS: Record<string, { price: number; unit: string }> =
 
 // Background noise & TTS echo prevention
 const NON_COMMERCIAL_PATTERNS = [
-  /কেমন\s*আছেন|কেমন\s*আছো|ভালো\s*আছেন|ভালো\s*আছো/,
-  /বাইরে\s*অনেক\s*গরম|বৃষ্টি\s*আসবে|বৃষ্টি\s*হচ্ছে/,
-  /ভাংতি\s*নাই|ভাঙতি\s*নাই|খুচরা\s*নাই/,
-  /টেবিলের\s*উপর|কোথায়\s*রাখব|ওখানে\s*রাখো/,
-  /কখন\s*আসলেন|দেরি\s*হলো|যান\s*গা/,
-  /হ্যালো\s*হ্যালো|শোনা\s*যায়|মাইক\s*টেস্টিং|চেক\s*চেক/,
-  /এই\s*শুনুন|এই\s*যে|কিরে|আরে\s*ভাই|দোকানদার\s*ভাই|শুনছেন|আচ্ছা\s*শুনেন/,
-  /কোথায়\s*গেলা|কোথায়\s*আছো|পরে\s*কথা\s*বলি|ফোন\s*ধরো/,
+  /কেমন\s*আছেন|কেমন\s*আছো|ভালো\s*আছেন|ভালো\s*আছো|ভালো\s*থাকেন/,
+  /বাইরে\s*অনেক\s*গরম|বৃষ্টি\s*আসবে|বৃষ্টি\s*হচ্ছে|রোদে\s*পুড়ে\s*গেলাম/,
+  /ভাংতি\s*নাই|ভাঙতি\s*নাই|খুচরা\s*নাই|খুচরা\s*টাকা|ভাংতি\s*দেন|ভাঙতি\s*দেন/,
+  /টেবিলের\s*উপর|কোথায়\s*রাখব|ওখানে\s*রাখো|নিচে\s*রাখুন/,
+  /কখন\s*আসলেন|দেরি\s*হলো|যান\s*গা|চলে\s*যান|পরে\s*আসেন/,
+  /হ্যালো\s*হ্যালো|শোনা\s*যায়|মাইক\s*টেস্টিং|চেক\s*চেক|শুনতে\s*পাচ্ছেন/,
+  /এই\s*শুনুন|এই\s*যে|এই\s*ভাই|ভাই\s*শুনেন|ভাই\s*শুনুন|কিরে|আরে\s*ভাই|দোকানদার\s*ভাই|শুনছেন|আচ্ছা\s*শুনেন|মামা\s*শোনেন|মামা\s*শুনছেন|কাকা\s*শুনেন/,
+  /কোথায়\s*গেলা|কোথায়\s*আছো|পরে\s*কথা\s*বলি|ফোন\s*ধরো|মোবাইলে\s*কথা|রিং\s*হচ্ছে/,
+  /দাম\s*বেশি|কম\s*রাখেন|কম\s*রাখা\s*যায়\s*না|একদাম|এক\s*টাকাও\s*কম\s*হবে\s*না/,
+  /চা\s*খাবেন|চা\s*খাব|পানি\s*খাব|পানি\s*খান|বসেন\s*একটু|একটু\s*দাঁড়ান|দাঁড়ান\s*ভাই/,
+  /গাড়ি\s*আসতেছে|রিকশা\s*ডাকো|রাস্তায়\s*যানজট|যানজট\s*লেগে\s*আছে/,
   /যোগ\s*হয়েছে|যোগ\s*করা\s*হয়েছে|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে|ক্যালকুলেটর\s*চালু|স্বাগতম|চালু\s*হয়েছে|মোট\s*\d+\s*টাকা/
 ];
 
@@ -250,18 +253,19 @@ export function isBackgroundNoise(text: string): boolean {
   const clean = text.trim();
   if (!clean || clean.length < 2) return true;
 
-  // Single filler words without numbers or units are noise
-  if (/^(হ্যাঁ|হাঁ|না|আচ্ছা|ওকে|থ্যাংক\s*ইউ|ধন্যবাদ|হ্যালো|শুনো|দেখি|দাঁড়াও|দাঁড়ান|একটু)$/i.test(clean)) {
+  // Single filler words or conversational noise without numbers/units are noise
+  if (/^(হ্যাঁ|হাঁ|না|আচ্ছা|ওকে|থ্যাংক\s*ইউ|ধন্যবাদ|হ্যালো|শুনো|দেখি|দাঁড়াও|দাঁড়ান|একটু|হুম|হুঁ|আচ্ছা\s*ভাই|ঠিক\s*আছে|বাই\s*বাই)$/i.test(clean)) {
     return true;
   }
 
   // Detect TTS echo (system announcing its own messages)
-  if (/যোগ\s*হয়েছে|টাকা\s*যোগ|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে/.test(clean)) {
+  if (/যোগ\s*হয়েছে|টাকা\s*যোগ|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে|পণ্যটির\s*স্টক\s*শেষ|দোকানে\s*স্টকে\s*নেই/.test(clean)) {
     return true;
   }
 
   for (const pattern of NON_COMMERCIAL_PATTERNS) {
     if (pattern.test(clean)) {
+      // Only permit if it has a strict commercial number + unit / rate
       if (!/\d+\s*(টাকা|tk|টাকার|কেজি|লিটার|পিস|পাতা|জোড়া|হালি|বক্স|বস্তা|প্যাকেট)|\b\d+\s+\d+\b/.test(clean)) {
         return true;
       }
@@ -511,33 +515,16 @@ export function parseVoicePOSCommand(
  * Accurately scores catalog items against spoken names and units
  */
 export function scoreCatalogCandidate(prod: any, queryName: string, requestedUnit?: string): number {
-  let score = 0;
   const bName = (prod.banglaName || prod.name || '').toLowerCase().trim();
   const pName = (prod.name || '').toLowerCase().trim();
   const gName = (prod.genericName || '').toLowerCase().trim();
   const brand = (prod.brand || '').toLowerCase().trim();
   const qName = queryName.toLowerCase().trim();
 
-  // Severely penalize corrupted or composite entries (sentences, comma separated junk)
-  if (bName.includes(',') || bName.length > 35) score -= 500;
-  if (/[০-৯0-9]/.test(bName) && !bName.includes('কেজি') && !bName.includes('লিটার') && !bName.includes('মি.গ্রা.') && !bName.includes('ট্যাবলেট') && !bName.includes('গ্রাম')) {
-    score -= 200;
-  }
-
   // Exact Match
   if (bName === qName || pName === qName) return 10000;
 
-  // In-stock availability bonus
-  if (Number(prod.stock || 0) > 0) score += 200;
-
-  // Unit compatibility
-  if (requestedUnit && prod.unit) {
-    if (prod.unit.toLowerCase() === requestedUnit.toLowerCase()) {
-      score += 300;
-    } else if (requestedUnit === 'কেজি' && prod.unit === 'বস্তা') {
-      score += 60;
-    }
-  }
+  let nameMatchScore = 0;
 
   // Word token overlap
   const pWords = (bName + ' ' + pName + ' ' + gName)
@@ -552,23 +539,42 @@ export function scoreCatalogCandidate(prod: any, queryName: string, requestedUni
   for (const qw of qWords) {
     if (qw.length < 2) continue;
     if (pWords.includes(qw)) {
-      score += 250;
+      nameMatchScore += 300;
     } else if (pWords.some(pw => pw.includes(qw) || qw.includes(pw))) {
-      score += 100;
+      nameMatchScore += 120;
     }
   }
 
   // Substring inclusion
-  if (bName.includes(qName)) {
-    score += 150;
+  if (bName.includes(qName) && qName.length >= 2) {
+    nameMatchScore += 200;
     const ratio = qName.length / Math.max(bName.length, 1);
-    score += Math.round(ratio * 100);
-  } else if (qName.includes(bName)) {
-    score += 100;
+    nameMatchScore += Math.round(ratio * 100);
+  } else if (qName.includes(bName) && bName.length >= 2) {
+    nameMatchScore += 150;
   }
 
   if (brand && (brand.includes(qName) || qName.includes(brand))) {
-    score += 80;
+    nameMatchScore += 100;
+  }
+
+  // If there is ZERO similarity in product name, this candidate is NOT a match!
+  if (nameMatchScore === 0) {
+    return 0;
+  }
+
+  let score = nameMatchScore;
+
+  // In-stock availability preference
+  if (Number(prod.stock || 0) > 0) score += 150;
+
+  // Unit compatibility
+  if (requestedUnit && prod.unit) {
+    if (prod.unit.toLowerCase() === requestedUnit.toLowerCase()) {
+      score += 150;
+    } else if (requestedUnit === 'কেজি' && prod.unit === 'বস্তা') {
+      score += 40;
+    }
   }
 
   return score;
@@ -678,7 +684,7 @@ function parseSingleVoiceItem(
           prod: p,
           score: scoreCatalogCandidate(p, qName, unitMatched ? unit : undefined)
         }))
-        .filter(c => c.score > 120);
+        .filter(c => c.score > 60);
 
       if (scoredCandidates.length > 0) {
         scoredCandidates.sort((a, b) => b.score - a.score);
@@ -686,19 +692,31 @@ function parseSingleVoiceItem(
       }
     }
 
-    // If not found in shop's existing products and no explicit price provided,
-    // do NOT silently swallow valid commercial item names (e.g. "বিস্কুট একটা").
-    // Return with isExistingProduct: false and isOutOfStock: true so Voice POS & AI can alert the shopkeeper!
+    // Tier 3: Substring Inclusion (e.g. "চিনি" matches "সাদা চিনি", "তেল" matches "সয়াবিন তেল")
+    if (!matchedProd) {
+      matchedProd = existingProducts.find(p => {
+        const b = (p.banglaName || p.name || '').toLowerCase().trim();
+        return (b.length >= 2 && qName.includes(b)) || (qName.length >= 2 && b.includes(qName));
+      });
+    }
+
+    // If not found in shop's existing products and no explicit price provided:
+    // Strictly require a genuine commercial unit (e.g. "১ বোতল হরলিক্স", "২ কেজি চাল")
+    // or known retail catalog item. DO NOT convert random conversation ("এই ভাই", "মামা") into products!
     if (!matchedProd && (!extractedPrice || extractedPrice <= 0)) {
-      if (cleanedName && cleanedName.length >= 2 && !isBackgroundNoise(cleanedName)) {
+      const isKnownStaple = COMMON_GROCERY_DEFAULTS[qName] !== undefined;
+      const hasCommercialUnit = unitMatched && ['কেজি', 'লিটার', 'গ্রাম', 'পিস', 'পাতা', 'প্যাকেট', 'বস্তা', 'জোড়া', 'হালি', 'বোতল', 'বক্স'].includes(unit);
+
+      if ((hasCommercialUnit || isKnownStaple) && cleanedName && cleanedName.length >= 2 && !isBackgroundNoise(cleanedName)) {
         const detected = detectProductCategory(cleanedName);
+        const fallbackPrice = isKnownStaple ? COMMON_GROCERY_DEFAULTS[qName].price : 0;
         return {
           name: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
           banglaName: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
           quantity,
           unit: unitMatched ? unit : detected.defaultUnit,
-          unitPrice: 0,
-          totalPrice: 0,
+          unitPrice: fallbackPrice,
+          totalPrice: Math.round(fallbackPrice * quantity * 100) / 100,
           isExistingProduct: false,
           productId: undefined,
           stock: 0,

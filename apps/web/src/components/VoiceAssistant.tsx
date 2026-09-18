@@ -266,10 +266,8 @@ export default function VoiceAssistant() {
       return;
     }
 
-    // On mobile devices, bypass desktop acoustic centroid check so SpeechRecognition always executes!
-    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
     const tenantKey = tenant?.id || 'default';
-    if (!isMobile && isSpeakerLockEnabled(tenantKey)) {
+    if (isSpeakerLockEnabled(tenantKey)) {
       const speakerCheck = verifyCurrentVoice(tenantKey);
       if (!speakerCheck.isAuthorized) {
         triggerHaptic?.('warning');
@@ -278,7 +276,7 @@ export default function VoiceAssistant() {
         if (speakerCheck.reason === 'background_noise_or_tv') {
           setFeedbackText('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু মালিকের কণ্ঠ)');
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু নিবন্ধিত কণ্ঠ)');
         }
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);

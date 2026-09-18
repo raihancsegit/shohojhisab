@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult, scoreCatalogCandidate } from '../lib/voicePOSParser';
-import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
+import { isEchoedTTSResponse, extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, setSpeakerLockEnabled } from '../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, setSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 interface VoicePOSCalculatorModalProps {
@@ -48,6 +48,12 @@ export default function VoicePOSCalculatorModal({
   const [activeCatalog, setActiveCatalog] = useState<any[]>(products || []);
 
   useEffect(() => {
+    if (isOpen) {
+      ensureBiometricMonitoring().catch(() => {});
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (products && products.length > 0) {
       setActiveCatalog(products);
     } else {
@@ -73,7 +79,7 @@ export default function VoicePOSCalculatorModal({
           .catch(() => {});
       }
     }
-  }, [products, currentTenantId]);
+  }, [products, currentTenantId, isOpen]);
 
   const recognitionRef = useRef<any>(null);
   const isComponentMounted = useRef<boolean>(true);
@@ -175,18 +181,8 @@ export default function VoicePOSCalculatorModal({
         }
         if (isTTSActiveRef.current && isSpeakingReal) return;
 
-        let interimText = '';
-        let finalChunk = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalChunk += event.results[i][0].transcript + ' ';
-          } else {
-            interimText += event.results[i][0].transcript;
-          }
-        }
-
-        const currentSaid = (finalChunk || interimText).trim();
+        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        const currentSaid = fullTranscript.trim();
         if (!currentSaid) return;
 
         // Extra guard: Ignore if transcript is echo of confirmation keywords
@@ -201,7 +197,7 @@ export default function VoicePOSCalculatorModal({
         accumulatedTranscriptRef.current = currentSaid;
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-        const waitMs = finalChunk ? (isMobile ? 350 : 300) : (isMobile ? 900 : 650);
+        const waitMs = isFinal ? (isMobile ? 380 : 320) : (isMobile ? 950 : 700);
 
         debounceTimerRef.current = setTimeout(() => {
           const isStillSpeaking = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
@@ -215,9 +211,9 @@ export default function VoicePOSCalculatorModal({
             return;
           }
 
-          // Biometrics verification on desktop only (mobile bypasses centroid to never drop speech)
+          // Biometrics verification with enrolled speaker profile
           const tenantKey = currentTenantId || 'default';
-          if (!isMobile && isSpeakerLockEnabled(tenantKey)) {
+          if (isSpeakerLockEnabled(tenantKey)) {
             const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
@@ -225,7 +221,7 @@ export default function VoicePOSCalculatorModal({
               if (speakerCheck.reason === 'background_noise_or_tv') {
                 setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
               } else {
-                setLastActionMessage('🛡️ অননুমোদিত কণ্ঠ ফিল্টার করা হয়েছে (বাতিল - শুধু মালিকের কণ্ঠ)');
+                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (শুধু নিবন্ধিত কণ্ঠ)');
               }
               return;
             }

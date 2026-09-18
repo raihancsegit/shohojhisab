@@ -1908,8 +1908,8 @@ export default function PosPage() {
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
 
-          // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff (desktop only)
-          if (!isMobile && isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
+          // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff
+          if (isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
             triggerHaptic('warning');
             playWarningSound();
             if (speakerCheck.reason === 'background_noise_or_tv') {

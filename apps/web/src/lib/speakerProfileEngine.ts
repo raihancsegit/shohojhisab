@@ -145,14 +145,14 @@ export function extractPitchFromTimeDomain(
   }
   const rms = Math.sqrt(sum / (bufferSize / 2));
 
-  // If energy is too low (distant TV / faint background noise), reject
-  if (rms < 0.009) {
+  // If energy is too low (distant TV / faint background hum), reject
+  if (rms < 0.0035) {
     return null;
   }
 
-  // 2. Normalized Autocorrelation (human vocal pitch: 65 Hz to 360 Hz)
-  const minLag = Math.floor(sampleRate / 360);
-  const maxLag = Math.floor(sampleRate / 65);
+  // 2. Normalized Autocorrelation (human vocal pitch: 60 Hz to 380 Hz)
+  const minLag = Math.floor(sampleRate / 380);
+  const maxLag = Math.floor(sampleRate / 60);
 
   let bestLag = -1;
   let maxNormCorr = -1;
@@ -198,11 +198,35 @@ export function extractPitchFromTimeDomain(
     }
   }
 
-  // A genuine human vocal fold has high normalized harmonic periodicity (>= 0.28)
-  // Ambient diffuse noise, synthesizer music, or distant laptop audio lacks this periodic peak
-  if (bestLag > 0 && maxNormCorr >= 0.26) {
+  // Octave Subharmonic Correction:
+  // Multiples of the fundamental period (e.g. 2*Lag, 3*Lag) produce strong autocorrelation peaks.
+  // Check if submultiples (fundamental) also have a strong peak to prevent octave-halving errors.
+  if (bestLag > 0 && maxNormCorr >= 0.20) {
+    for (const div of [4, 3, 2]) {
+      const subLag = Math.round(bestLag / div);
+      if (subLag >= minLag) {
+        let corr = 0;
+        let normX = 0;
+        let normY = 0;
+        for (let i = 0; i < bufferSize - subLag; i += 2) {
+          const x = timeDomainData[i];
+          const y = timeDomainData[i + subLag];
+          corr += x * y;
+          normX += x * x;
+          normY += y * y;
+        }
+        const denom = Math.sqrt(normX * normY);
+        const subScore = denom > 0.0001 ? corr / denom : 0;
+        if (subScore >= maxNormCorr * 0.72 && subScore >= 0.18) {
+          bestLag = subLag;
+          maxNormCorr = subScore;
+          break;
+        }
+      }
+    }
+
     const pitch = sampleRate / bestLag;
-    if (pitch >= 65 && pitch <= 360) {
+    if (pitch >= 60 && pitch <= 380) {
       return { pitch: Math.round(pitch), clarity: Math.min(1, Math.max(0.1, maxNormCorr)) };
     }
   }
@@ -272,7 +296,7 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
     const rms = Math.sqrt(sum / (timeData.length / 4));
 
     // Reject low ambient hum / silence
-    if (rms < 0.008) return;
+    if (rms < 0.0035) return;
 
     // Detect pitch
     const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
@@ -305,10 +329,6 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
  */
 export async function ensureBiometricMonitoring(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  // On mobile Android/iOS, running getUserMedia simultaneously with Web Speech API
-  // locks the audio hardware and causes SpeechRecognition to receive 0 bytes!
-  const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-  if (isMobile) return false;
   try {
     const { voiceProximityManager } = require('./voiceProximityGate');
     if (voiceProximityManager) {
@@ -330,13 +350,13 @@ if (typeof window !== 'undefined') {
 
 /**
  * Evaluate the entire recent speech utterance against enrolled biometric profiles.
- * Analyzes all pitch frames recorded during the speech window (last ~3.5 seconds).
+ * Analyzes all pitch frames recorded during the speech window (last ~3.8 seconds).
  * Strictly filters laptop videos, TV news/natok, and other customers' voices.
  */
 export function evaluateUtteranceSpeaker(
   tenantId: string = 'default',
   targetSpeakerId?: string,
-  lookbackMs: number = 3600
+  lookbackMs: number = 3800
 ): SpeakerVerificationResult {
   if (!isSpeakerLockEnabled(tenantId)) {
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
@@ -363,10 +383,10 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Energy & Near-Field Acoustic Check:
-  // Legitimate mouth-to-microphone speech produces average RMS >= 0.009.
+  // Legitimate mouth-to-microphone speech produces average RMS >= 0.0035.
   // Distant TV on the wall, background chatter, or laptop speakers produce low diffuse RMS.
   const avgRMS = recentFrames.reduce((s, f) => s + (f.rms || 0), 0) / recentFrames.length;
-  if (avgRMS < 0.009) {
+  if (avgRMS < 0.0035) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -392,10 +412,10 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
-    // Pitch window for speaker identity:
-    // Natural human inflection during spoken Bengali varies ±24 Hz around mean
-    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 12, profile.pitchMean - 24));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 16, profile.pitchMean + 24));
+    // Calibrated Pitch window for human speaker identity:
+    // Natural human speech inflection during spoken Bengali varies +-45 Hz around mean
+    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 20, profile.pitchMean - 45));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 25, profile.pitchMean + 45));
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
@@ -405,10 +425,10 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Timbre check: if spectral centroid differs by > 850 Hz, it's a loudspeaker/TV or another person!
+      // Timbre check: if spectral centroid differs by > 1100 Hz, it's a loudspeaker/TV or another person!
       if (profile.centroidMean && profile.centroidMean > 0) {
         const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 850) {
+        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1100) {
           continue;
         }
       }
@@ -428,8 +448,8 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Strict Authorization Rule:
-  // Must have at least 2 voiced samples, and at least 45% of recent vocal samples must match
-  if (bestMatch && bestMatch.matchingCount >= 2 && bestMatch.matchRatio >= 0.45) {
+  // Must have at least 2 voiced samples, and at least 28% of recent vocal samples must match
+  if (bestMatch && bestMatch.matchingCount >= 2 && bestMatch.matchRatio >= 0.28) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -478,7 +498,7 @@ export function verifyLiveSpeaker(
   }
   const rms = Math.sqrt(sum / (timeData.length / 4));
 
-  if (rms < 0.012) {
+  if (rms < 0.0035) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -507,8 +527,8 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 8, profile.pitchMean - 16));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 12, profile.pitchMean + 16));
+    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 20, profile.pitchMean - 45));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 25, profile.pitchMean + 45));
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
@@ -540,13 +560,6 @@ export function verifyCurrentVoice(
   tenantId: string = 'default',
   targetSpeakerId?: string
 ): SpeakerVerificationResult {
-  if (typeof window !== 'undefined') {
-    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (isMobile) {
-      return { isAuthorized: true, confidence: 100, reason: 'authorized' };
-    }
-  }
-
   if (!isSpeakerLockEnabled(tenantId)) {
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
   }
@@ -557,7 +570,7 @@ export function verifyCurrentVoice(
   }
 
   // 1. First check the rolling utterance buffer (evaluates the speech sentence just spoken)
-  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 3600);
+  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 3800);
   if (utteranceResult.isAuthorized) {
     return utteranceResult;
   }
@@ -574,7 +587,15 @@ export function verifyCurrentVoice(
     }
   } catch (e) {}
 
-  // Strict Rejection: If lock is enabled, TV/laptop/strangers are STRICTLY REJECTED!
+  // 3. Graceful fallback if mobile Android exclusive hardware mic lock prevented audio analyser frames
+  if (typeof window !== 'undefined') {
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile && rollingVoicedFrames.length < 2) {
+      return { isAuthorized: true, confidence: 85, reason: 'authorized' };
+    }
+  }
+
+  // Strict Rejection: If lock is enabled, strangers / mismatched voices are STRICTLY REJECTED!
   return utteranceResult;
 }
 
