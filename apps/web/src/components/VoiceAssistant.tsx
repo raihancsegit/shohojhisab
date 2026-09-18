@@ -22,6 +22,21 @@ export default function VoiceAssistant() {
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackType, setFeedbackType] = useState<'listening' | 'processing' | 'success' | 'error' | null>(null);
   const [isSupported, setIsSupported] = useState(true);
+  const [showTypeInput, setShowTypeInput] = useState(false);
+  const [manualText, setManualText] = useState('');
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
@@ -74,6 +89,8 @@ export default function VoiceAssistant() {
 
     latestTranscriptRef.current = '';
     setLiveTranscript('');
+    setShowTypeInput(false);
+    setManualText('');
     setFeedbackType('listening');
     setFeedbackText('');
     isListeningRef.current = true;
@@ -230,12 +247,20 @@ export default function VoiceAssistant() {
 
     try {
       const savedAssistantName = typeof window !== 'undefined' ? localStorage.getItem('lbos_assistant_name') || 'সহজহিসাব' : 'সহজহিসাব';
+      const effectiveTenantId = tenant?.id || (() => {
+        try {
+          const raw = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
+          if (raw) return JSON.parse(raw)?.id;
+        } catch (e) {}
+        return 'tenant-1';
+      })();
+
       let data: any = null;
       try {
         const res = await fetch('/api/voice-action', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenantId: tenant?.id || 'tenant-1', text: query, assistantName: savedAssistantName })
+          body: JSON.stringify({ tenantId: effectiveTenantId, text: query, assistantName: savedAssistantName })
         });
         if (res.ok) {
           data = await res.json();
@@ -246,7 +271,7 @@ export default function VoiceAssistant() {
 
       // Offline Engine Fallback if server failed or offline
       if (!data || !data.success) {
-        data = executeOfflineAiShopCommand(tenant?.id || 'tenant-1', query, savedAssistantName);
+        data = executeOfflineAiShopCommand(effectiveTenantId, query, savedAssistantName);
       }
 
       setIsProcessing(false);
@@ -352,7 +377,7 @@ export default function VoiceAssistant() {
                 {feedbackType === 'listening' ? '🎙️' : feedbackType === 'processing' ? '⚡' : feedbackType === 'success' ? '✅' : '⚠️'}
               </span>
               <span style={{ fontSize: '13px' }}>
-                {feedbackText || (isListening ? 'শুনছি... মুখে বলুন বা লিখুন' : '')}
+                {feedbackText || (isListening ? 'শুনছি... মুখে বলুন' : '')}
               </span>
             </div>
             <button
@@ -371,64 +396,129 @@ export default function VoiceAssistant() {
             </button>
           </div>
 
-          {/* Interactive Speech & Command Bar */}
+          {/* Voice-First Live Heard Display (No autoFocus input = No unwanted mobile keyboard) */}
           {feedbackType === 'listening' && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const q = liveTranscript.trim() || latestTranscriptRef.current.trim();
-                if (q) stopAndExecute(q);
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <input
-                type="text"
-                value={liveTranscript}
-                onChange={(e) => {
-                  setLiveTranscript(e.target.value);
-                  latestTranscriptRef.current = e.target.value;
-                }}
-                placeholder="যেমন: স্টক পেজে যাও / আজকের বিক্রি কত..."
-                autoFocus
-                style={{
-                  flex: 1,
-                  background: 'rgba(255, 255, 255, 0.18)',
-                  border: '1px solid rgba(255, 255, 255, 0.35)',
-                  borderRadius: '12px',
-                  padding: '7px 12px',
-                  color: '#ffffff',
-                  fontSize: '12.5px',
-                  outline: 'none',
-                  fontWeight: '600'
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  border: 'none',
-                  color: '#ffffff',
-                  borderRadius: '10px',
-                  padding: '7px 12px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                যাও →
-              </button>
-            </form>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                borderRadius: '14px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <span style={{ fontSize: '20px', animation: isListening ? 'pulse 1s infinite' : 'none' }}>
+                  🎙️
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700' }}>
+                    {isListening ? 'শুনছি, মুখে বলুন...' : 'কথা শেষে স্বয়ংক্রিয় প্রসেস হবে'}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: '800', marginTop: '2px', wordBreak: 'break-word' }}>
+                    {liveTranscript || latestTranscriptRef.current || 'যেমন: "২ কেজি চিনি বিক্রি" বা "ব্যবসা কেমন চলছে"'}
+                  </div>
+                </div>
+                {(liveTranscript || latestTranscriptRef.current) && (
+                  <button
+                    type="button"
+                    onClick={() => stopAndExecute(liveTranscript || latestTranscriptRef.current)}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: 'none',
+                      color: '#ffffff',
+                      borderRadius: '10px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    যাও →
+                  </button>
+                )}
+              </div>
+
+              {/* Optional Manual Typing input (NO autoFocus so keyboard never opens automatically) */}
+              {showTypeInput ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const q = manualText.trim();
+                    if (q) stopAndExecute(q);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <input
+                    type="text"
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                    placeholder="হিসাব বা কমান্ড লিখে জানান..."
+                    style={{
+                      flex: 1,
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.35)',
+                      borderRadius: '10px',
+                      padding: '7px 12px',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      outline: 'none',
+                      fontWeight: '600'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: 'none',
+                      color: '#ffffff',
+                      borderRadius: '8px',
+                      padding: '7px 12px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    পাঠান
+                  </button>
+                </form>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowTypeInput(true)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#cbd5e1',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      padding: '2px 4px',
+                      opacity: 0.85
+                    }}
+                  >
+                    ⌨️ লিখে জানাতে চাপুন
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
-          {/* Quick Action Chips inside the opened modal */}
-          {feedbackType === 'listening' && (
+          {/* Quick Action Chips ONLY when offline */}
+          {feedbackType === 'listening' && !isOnline && (
             <div style={{
               display: 'flex',
               flexWrap: 'wrap',
               gap: '5px',
-              marginTop: '4px'
+              marginTop: '6px',
+              paddingTop: '6px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.15)'
             }}>
+              <div style={{ width: '100%', fontSize: '10.5px', color: '#93c5fd', fontWeight: '700' }}>
+                🟢 অফলাইন কমান্ডের তালিকা:
+              </div>
               {quickOfflineChips.map((chip, idx) => (
                 <button
                   key={idx}

@@ -11,8 +11,14 @@ import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from 
 
 export default function AiAssistantPage() {
   const router = useRouter();
-  const { tenant, triggerHaptic, speakAnnouncement } = useAuth();
-  const currentTenantId = tenant?.id;
+  const { tenant, triggerHaptic, speakAnnouncement, isOnline } = useAuth();
+  const currentTenantId = tenant?.id || (() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
+      if (raw) return JSON.parse(raw)?.id;
+    } catch (e) {}
+    return 'tenant-1';
+  })();
 
   const [messages, setMessages] = useState<any[]>([
     {
@@ -304,30 +310,37 @@ export default function AiAssistantPage() {
         </div>
       )}
 
-      {/* Preset Suggestions */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '16px' }}>
-        {presetQuestions.map((q, idx) => (
-          <button
-            key={idx}
-            onClick={() => handleAsk(q)}
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '99px',
-              padding: '8px 14px',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              color: '#475569',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {/* Preset Suggestions (Only shown in Offline Mode when server cannot be reached) */}
+      {!isOnline && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
+            🟢 অফলাইন মোডে দ্রুত ব্যবহারের জন্য উদাহরণ:
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+            {presetQuestions.map((q, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAsk(q)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '99px',
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Chat Messages Container */}
       <div className="glass-card" style={{ padding: '20px', minHeight: '360px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '18px' }}>
