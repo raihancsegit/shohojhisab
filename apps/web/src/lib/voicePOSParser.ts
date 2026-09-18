@@ -24,11 +24,15 @@ export interface ParsedVoiceItem {
 }
 
 export interface VoicePOSParseResult {
-  type: 'add_items' | 'cash_checkout' | 'due_checkout' | 'discount' | 'remove_item' | 'clear_memo' | 'noise_ignored';
+  type: 'add_items' | 'cash_checkout' | 'due_checkout' | 'discount' | 'remove_item' | 'clear_memo' | 'undo_last_item' | 'update_last_item' | 'noise_ignored';
   items?: ParsedVoiceItem[];
   customerName?: string;
+  dueAmount?: number;
   discountAmount?: number;
   removeItemName?: string;
+  updateQuantity?: number;
+  updateUnit?: string;
+  updatePrice?: number;
   rawSpeech: string;
   explanation: string;
 }
@@ -424,6 +428,20 @@ export function parseVoicePOSCommand(
   }
 
   // B. Due / Khata Checkout
+  const dueWithAmtMatch = normalized.match(/(?:(.+?)(?:\s*ভাইয়ের|\s*চাচার|\s*কাকুর|\s*এর)?\s*)?(?:বাকি\s*খাতায়|বাকিতে)\s*(?:লেখো\s*)?(\d+)\s*(?:টাকা)?/i);
+  if (dueWithAmtMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(cleanRaw)) {
+    const custRaw = dueWithAmtMatch[1] || '';
+    const custName = custRaw.replace(/খাতায়|এর|ভাইয়ের|চাচার|কাকুর|বাকি|বিক্রি/g, '').trim();
+    const dueAmt = Number(dueWithAmtMatch[2]);
+    return {
+      type: 'due_checkout',
+      customerName: custName || undefined,
+      dueAmount: dueAmt > 0 ? dueAmt : undefined,
+      rawSpeech: cleanRaw,
+      explanation: `${custName ? `"${custName}" এর ` : ''}বাকি খাতায়${dueAmt ? ` ৳${dueAmt} টাকা` : ''} যোগ করার কমান্ড`
+    };
+  }
+
   const dueMatch = cleanRaw.match(/(.+?)(?:\s*ভাইয়ের|\s*চাচার|\s*কাকুর|\s*এর)?\s*(?:খাতায়)?\s*বাকি(?:\s*লেখো|\s*নিল|\s*দাও|\s*বিক্রি)?/);
   if (dueMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(cleanRaw)) {
     const custName = dueMatch[1].replace(/খাতায়|এর|ভাইয়ের|চাচার|কাকুর|বাকি|বিক্রি/g, '').trim();
@@ -447,20 +465,36 @@ export function parseVoicePOSCommand(
     };
   }
 
-  // D1. Remove Last Item ("শেষেরটা কাটো", "লাস্টেরটা বাদ দাও", "আগেরটা মুছো")
+  // D1. Quick Undo / Remove Last Item ("আগেরটা কাটো", "ভুল হইছে", "লাস্টেরটা বাদ", "কেটে দাও")
   if (
-    /^(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|শেষের\s*আইটেম)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)?$/i.test(cleanRaw) ||
-    /(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট|কেটে\s*দাও)/i.test(cleanRaw)
+    /^(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|শেষের\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে|এটা\s*ভুল)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)?$/i.test(cleanRaw) ||
+    /(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট|কেটে\s*দাও)/i.test(cleanRaw)
   ) {
     return {
-      type: 'remove_item',
+      type: 'undo_last_item',
       removeItemName: '__last__',
       rawSpeech: cleanRaw,
-      explanation: 'সর্বশেষ যুক্ত করা আইটেমটি মেমো থেকে মুছে ফেলার কমান্ড'
+      explanation: 'সর্বশেষ যুক্ত করা আইটেমটি মেমো থেকে মুছে ফেলার (Undo) কমান্ড'
     };
   }
 
-  // D2. Remove Named Item ("তেল বাদ দাও", "আলু কাটো", "নাপা ডিলিট করো")
+  // D2. Modify Last Item Quantity ("না না ২ কেজি করো", "না না ৩টা", "পরিমাণ ৩টা করো", "না ১ কেজি")
+  const updateQtyMatch = normalized.match(/(?:না\s*না\s*|পরিমাণ\s*|না\s+)(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|হালি|টি|টা)?(?:\s*করো|\s*দাও|\s*রাখো)?/i);
+  if (updateQtyMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
+    const newQty = Number(updateQtyMatch[1]);
+    const newUnit = updateQtyMatch[2];
+    if (newQty > 0) {
+      return {
+        type: 'update_last_item',
+        updateQuantity: newQty,
+        updateUnit: newUnit,
+        rawSpeech: cleanRaw,
+        explanation: `সর্বশেষ পণ্যের পরিমাণ পরিবর্তন করে ${newQty} ${newUnit || ''} করার কমান্ড`
+      };
+    }
+  }
+
+  // D3. Remove Named Item ("তেল বাদ দাও", "আলু কাটো", "নাপা ডিলিট করো")
   const removeMatch = cleanRaw.match(/(.+?)\s*(?:বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|ডিলিট|কেটে\s*দাও|কাটো|বাতিল\s*করো|বাতিল)/);
   if (removeMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
     const itemToRem = removeMatch[1].trim();
@@ -511,6 +545,59 @@ export function parseVoicePOSCommand(
 }
 
 /**
+ * Fast Levenshtein distance for Bengali script to handle spelling and dialect variances
+ */
+export function bengaliLevenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Rich Bengali Product Synonyms & Colloquial Aliases
+ */
+export const BENGALI_PRODUCT_SYNONYMS: Record<string, string[]> = {
+  'সয়াবিন তেল': ['সয়াবিন', 'তীর তেল', 'রূপচাঁদা', 'রান্নার তেল', 'ফ্রেশ তেল', 'খোলা তেল', 'তেল', 'সোয়াবিন'],
+  'সরিষার তেল': ['সরিষা', 'সরিষার', 'ঘানি ভাঙা তেল', 'রাঁধুনী সরিষা'],
+  'চিনি': ['সাদা চিনি', 'লাল চিনি', 'চিনু', 'সুগার'],
+  'লবণ': ['লবন', 'আয়োডিন লবণ', 'মোটা লবণ', 'চিকন লবণ', 'সল্ট'],
+  'চাল': ['মিনিকেট', 'নাজিরশাইল', 'আটাশ', 'বালাম', 'পাইজাম', 'মোটা চাল', 'পোলাও চাল', 'বাসমতী', 'চাউল'],
+  'মসুর ডাল': ['মসুর', 'ডাল', 'মুসুর', 'লাল ডাল', 'চিকন ডাল'],
+  'মুগ ডাল': ['মুগ', 'মুগডাল'],
+  'ছোলা': ['বুট', 'ছোলার ডাল', 'ছোলা বুট'],
+  'আটা': ['ফ্রেশ আটা', 'প্যাকেট আটা', 'খোলা আটা', 'তীর আটা'],
+  'ময়দা': ['ময়দা', 'ফ্রেশ ময়দা', 'সাদা ময়দা', 'তীর ময়দা'],
+  'আলু': ['গোল আলু', 'নতুন আলু', 'লাল আলু', 'বগুড়ার আলু'],
+  'পেঁয়াজ': ['পিয়াজ', 'দেশি পেঁয়াজ', 'ভারতীয় পেঁয়াজ', 'পেয়াজ'],
+  'রসুন': ['দেশি রসুন', 'চায়না রসুন', 'রশুন'],
+  'আদা': ['দেশি আদা', 'চায়না আদা'],
+  'ডিম': ['মুরগির ডিম', 'হাঁসের ডিম', 'ফার্মের ডিম', 'লাল ডিম', 'সাদা ডিম'],
+  'চা': ['দুধ চা', 'রং চা', 'লাল চা', 'পাতা চা', 'ইস্পাহানি চা', 'তাঁজা চা'],
+  'সাবান': ['লাক্স', 'লাইফবয়', 'তিব্বত', 'ডোভ', 'ডেটোল', 'হুইল সাবান'],
+  'ডিটারজেন্ট': ['হুইল পাউডার', 'সার্ফ এক্সেল', 'রিন পাউডার', 'তিব্বত পাউডার'],
+  'নাপা': ['প্যারাসিটামল', 'এইস', 'ফাস্ট', 'নাপা এক্সটেন্ড', 'নাপা এক্সট্রা'],
+  'সেক্লো': ['ওমিপ্রাজল', 'সেকলো', 'ম্যাক্সপ্রো', 'প্যানটনিক', 'ফিনিক্স', 'গ্যাসের ওষুধ'],
+  'ওরস্যালাইন': ['স্যালাইন', 'খাবারের স্যালাইন', 'এসএমসি স্যালাইন', 'টেস্টি স্যালাইন']
+};
+
+/**
  * Smart Catalog Scoring for Bengali Voice POS
  * Accurately scores catalog items against spoken names and units
  */
@@ -525,6 +612,26 @@ export function scoreCatalogCandidate(prod: any, queryName: string, requestedUni
   if (bName === qName || pName === qName) return 10000;
 
   let nameMatchScore = 0;
+
+  // 1. Synonym & Colloquial Alias Mapping Match (+450 bonus)
+  for (const [canonical, syns] of Object.entries(BENGALI_PRODUCT_SYNONYMS)) {
+    const isProdInSyn = bName.includes(canonical) || canonical.includes(bName) || syns.some(s => bName.includes(s));
+    const isQueryInSyn = qName.includes(canonical) || canonical.includes(qName) || syns.some(s => qName.includes(s));
+    if (isProdInSyn && isQueryInSyn) {
+      nameMatchScore += 450;
+      break;
+    }
+  }
+
+  // 2. Phonetic Levenshtein Distance for dialect/speech recognition quirks
+  if (Math.abs(bName.length - qName.length) <= 2) {
+    const dist = bengaliLevenshteinDistance(bName, qName);
+    if (dist <= 1 && qName.length >= 3) {
+      nameMatchScore += 350;
+    } else if (dist <= 2 && qName.length >= 5) {
+      nameMatchScore += 200;
+    }
+  }
 
   // Word token overlap
   const pWords = (bName + ' ' + pName + ' ' + gName)

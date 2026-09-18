@@ -131,10 +131,25 @@ class VoiceProximityManager {
       }
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+
+      // Hardware Acoustic Bandpass Filtering:
+      // 1. Highpass (80Hz): Eliminates low-frequency ambient rumble, AC hum, ceiling fans, desk vibrations
+      const highpass = this.audioContext.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.setValueAtTime(80, this.audioContext.currentTime);
+
+      // 2. Lowpass (4000Hz): Cuts out sharp metal clinking, squeals, high-pitch horns outside human voice band
+      const lowpass = this.audioContext.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.setValueAtTime(4000, this.audioContext.currentTime);
+
+      source.connect(highpass);
+      highpass.connect(lowpass);
+
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048; // Required for pitch extraction (75-350Hz lag window)
       this.analyser.smoothingTimeConstant = 0.2;
-      source.connect(this.analyser);
+      lowpass.connect(this.analyser);
 
       this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       this.isActive = true;

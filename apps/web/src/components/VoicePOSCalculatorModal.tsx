@@ -432,14 +432,30 @@ export default function VoicePOSCalculatorModal({
 
     // 3. DUE / KHATA CHECKOUT
     if (result.type === 'due_checkout') {
-      if (itemsRef.current.length === 0) {
-        playBeep(450);
-        triggerHaptic('warning');
-        setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই। আগে মুখে বলে পণ্য যোগ করুন।');
-        return;
-      }
       const rawTarget = (result.customerName || selectedCustomerName || '').trim();
       const cleanCandidate = rawTarget.replace(/(ভাই|চাচা|কাকা|দাদা|আপা|সাহেব|হাজী|এর|ের)/g, '').trim().toLowerCase();
+
+      // If memo is empty but specific due amount is stated (e.g. "রহিমের বাকি খাতায় ৫০০ টাকা লেখো")
+      if (itemsRef.current.length === 0 && result.dueAmount && result.dueAmount > 0) {
+        const directDueItem: ParsedVoiceItem = {
+          id: 'vitem-' + Date.now(),
+          name: 'বাকি খতিয়ান এন্ট্রি',
+          banglaName: 'বাকি হিসাব',
+          quantity: 1,
+          unit: 'এন্ট্রি',
+          unitPrice: result.dueAmount,
+          totalPrice: result.dueAmount,
+          category: 'cat-grocery',
+          isExistingProduct: false
+        };
+        itemsRef.current = [directDueItem];
+        setItems([directDueItem]);
+      } else if (itemsRef.current.length === 0) {
+        playBeep(450);
+        triggerHaptic('warning');
+        setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই বা টাকার পরিমাণ বলা হয়নি');
+        return;
+      }
 
       // Look up in existing customer list
       const matchedCust = customers.find(c => {
@@ -473,12 +489,60 @@ export default function VoicePOSCalculatorModal({
       return;
     }
 
-    // 5. REMOVE ITEM
+    // 5. UNDO LAST ITEM ("আগেরটা কাটো", "ভুল হইছে", "লাস্টেরটা বাদ")
+    if (result.type === 'undo_last_item' || (result.type === 'remove_item' && result.removeItemName === '__last__')) {
+      if (itemsRef.current.length > 0) {
+        const removed = itemsRef.current[itemsRef.current.length - 1];
+        const updated = itemsRef.current.slice(0, -1);
+        setItems(updated);
+        playBeep(700);
+        triggerHaptic('medium');
+        speakFeedback(`${removed.banglaName || removed.name} মেমো থেকে বাদ দেওয়া হয়েছে`);
+        setLastActionMessage(`✓ "${removed.banglaName || removed.name}" মেমো থেকে বাদ দেওয়া হয়েছে`);
+      } else {
+        triggerHaptic('warning');
+        setLastActionMessage('⚠️ মেমোতে বাদ দেওয়ার মতো কোনো পণ্য নেই');
+      }
+      return;
+    }
+
+    // 5.1 UPDATE LAST ITEM QUANTITY / PRICE ("না না ২ কেজি", "পরিমাণ ৩টা করো")
+    if (result.type === 'update_last_item') {
+      if (itemsRef.current.length > 0) {
+        const lastIdx = itemsRef.current.length - 1;
+        const target = { ...itemsRef.current[lastIdx] };
+        if (result.updateQuantity && result.updateQuantity > 0) {
+          target.quantity = result.updateQuantity;
+          if (result.updateUnit) target.unit = result.updateUnit;
+          target.totalPrice = Math.round(target.quantity * target.unitPrice * 100) / 100;
+        }
+        if (result.updatePrice && result.updatePrice > 0) {
+          target.unitPrice = result.updatePrice;
+          target.totalPrice = Math.round(target.quantity * target.unitPrice * 100) / 100;
+        }
+        const updated = [...itemsRef.current];
+        updated[lastIdx] = target;
+        setItems(updated);
+        playBeep(1100);
+        triggerHaptic('success');
+        const msg = `${target.banglaName || target.name} পরিবর্তন হয়ে ${target.quantity} ${target.unit} হয়েছে`;
+        speakFeedback(msg);
+        setLastActionMessage(`✓ ${msg} (মোট: ৳${target.totalPrice})`);
+      } else {
+        triggerHaptic('warning');
+        setLastActionMessage('⚠️ মেমোতে কোনো পণ্য নেই');
+      }
+      return;
+    }
+
+    // 5.2 REMOVE NAMED ITEM ("তেল বাদ দাও", "আলু কাটো")
     if (result.type === 'remove_item' && result.removeItemName) {
       const searchRem = result.removeItemName.toLowerCase();
       const updated = itemsRef.current.filter(i => !i.banglaName.toLowerCase().includes(searchRem) && !i.name.toLowerCase().includes(searchRem));
       setItems(updated);
       playBeep(700);
+      triggerHaptic('medium');
+      speakFeedback(`${result.removeItemName} বাদ দেওয়া হয়েছে`);
       setLastActionMessage(`✓ "${result.removeItemName}" মেমো থেকে বাদ দেওয়া হয়েছে`);
       return;
     }
