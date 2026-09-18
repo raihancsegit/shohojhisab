@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult } from '../lib/voicePOSParser';
+import { parseVoicePOSCommand, ParsedVoiceItem, VoicePOSParseResult, scoreCatalogCandidate } from '../lib/voicePOSParser';
 import { isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, setSpeakerLockEnabled } from '../lib/speakerProfileEngine';
@@ -194,15 +194,16 @@ export default function VoicePOSCalculatorModal({
             const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('error');
+              playBeep(350);
               if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLastActionMessage('🛡️ টিভি / ব্যাকগ্রাউন্ড নয়েজ ফিল্টার করা হয়েছে (বাতিল)');
+                setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
               } else {
-                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (বাতিল)');
+                setLastActionMessage('🛡️ অননুমোদিত কণ্ঠ ফিল্টার করা হয়েছে (বাতিল - শুধু মালিকের কণ্ঠ গ্রহণযোগ্য)');
               }
               return;
             }
             if (speakerCheck.matchedSpeaker) {
-              setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত`);
+              setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত: "${textToProcess}"`);
             }
           }
 
@@ -262,60 +263,46 @@ export default function VoicePOSCalculatorModal({
 
       for (const item of result.items) {
         const qClean = (item.banglaName || item.name || '').toLowerCase().trim();
-        // Tier 1: Exact match
+        // Tier 1: Exact match or ID match
         let prod = products.find(p =>
           (item.productId && p.id === item.productId) ||
           ((p.banglaName || '').toLowerCase().trim() === qClean) ||
           ((p.name || '').toLowerCase().trim() === qClean)
         );
 
-        // Tier 2: Substring & candidate match
+        // Tier 2: Smart candidate scoring from catalog
         if (!prod) {
-          const candidates = products.filter(p => {
-            const bName = (p.banglaName || '').toLowerCase().trim();
-            const name = (p.name || '').toLowerCase().trim();
-            const gName = (p.genericName || '').toLowerCase().trim();
-            const brand = (p.brand || '').toLowerCase().trim();
-            return (bName && (bName.includes(qClean) || qClean.includes(bName))) ||
-                   (name && (name.includes(qClean) || qClean.includes(name))) ||
-                   (gName && (gName.includes(qClean) || qClean.includes(gName))) ||
-                   (brand && (brand.includes(qClean) || qClean.includes(brand)));
-          });
-
-          if (candidates.length > 0) {
-            candidates.sort((a, b) => {
-              const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
-              const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
-              if (aInStock !== bInStock) return bInStock - aInStock;
-              return (a.banglaName || a.name || '').length - (b.banglaName || b.name || '').length;
-            });
-            prod = candidates[0];
+          const scored = products
+            .map(p => ({ prod: p, score: scoreCatalogCandidate(p, qClean, item.unit) }))
+            .filter(c => c.score > 120);
+          if (scored.length > 0) {
+            scored.sort((a, b) => b.score - a.score);
+            prod = scored[0].prod;
           }
         }
 
         if (!prod) {
-          // If product not in catalog, still allow adding as a fast voice item so the sale never gets blocked!
-          validInStockItems.push({
-            ...item,
-            productId: undefined,
-            name: item.name || item.banglaName,
-            banglaName: item.banglaName || item.name,
-            unit: item.unit || 'পিস',
-            unitPrice: item.unitPrice || 0,
-            stock: 999,
-            isExistingProduct: false
-          });
+          notFoundNames.push(item.banglaName || item.name);
           continue;
         }
 
         const currentStock = Number(prod.stock || 0);
+        if (currentStock <= 0) {
+          outOfStockNames.push(prod.banglaName || prod.name);
+          continue;
+        }
+
+        const resolvedUnitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : (Number(prod.sellingPrice) || 0);
+        const resolvedTotalPrice = item.totalPrice && item.totalPrice > 0 ? item.totalPrice : Math.round(resolvedUnitPrice * item.quantity * 100) / 100;
+
         validInStockItems.push({
           ...item,
           productId: prod.id,
           name: prod.name,
           banglaName: prod.banglaName || prod.name,
           unit: item.unit || prod.unit || 'পিস',
-          unitPrice: item.unitPrice || prod.sellingPrice || 0,
+          unitPrice: resolvedUnitPrice,
+          totalPrice: resolvedTotalPrice,
           stock: currentStock,
           isExistingProduct: true
         });

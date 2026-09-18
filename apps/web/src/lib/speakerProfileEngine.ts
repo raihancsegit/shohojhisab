@@ -108,7 +108,8 @@ export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
     if (val !== null) return val === 'true';
     const defVal = localStorage.getItem(`${TOGGLE_KEY_PREFIX}default`);
     if (defVal !== null) return defVal === 'true';
-    return false;
+    // Priority rule: if the user saved/enrolled their voice on this device, it MUST default to TRUE (active lock)
+    return true;
   } catch (e) {
     return false;
   }
@@ -341,6 +342,18 @@ export function evaluateUtteranceSpeaker(
     };
   }
 
+  // Energy & Near-Field Acoustic Check:
+  // Legitimate mouth-to-microphone speech produces average RMS >= 0.012.
+  // Distant TV on the wall, background chatter, or laptop speakers across desk produce low diffuse RMS.
+  const avgRMS = recentFrames.reduce((s, f) => s + (f.rms || 0), 0) / recentFrames.length;
+  if (avgRMS < 0.011) {
+    return {
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
+    };
+  }
+
   let candidateProfiles = profiles;
   if (targetSpeakerId) {
     const specific = profiles.find(p => p.id === targetSpeakerId);
@@ -359,9 +372,10 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
-    // Exact pitch tolerance: ±28 Hz around mean, or between min-16 and max+20
-    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 16, profile.pitchMean - 28));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 20, profile.pitchMean + 28));
+    // Strict pitch window for speaker identity:
+    // ±16 Hz around profile.pitchMean, bounded within [pitchMin - 8, pitchMax + 12]
+    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 8, profile.pitchMean - 16));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 12, profile.pitchMean + 16));
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
@@ -370,6 +384,15 @@ export function evaluateUtteranceSpeaker(
     if (count > 0) {
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
+
+      // Timbre check: if spectral centroid differs by > 750 Hz, it's a loudspeaker/TV or another person!
+      if (profile.centroidMean && profile.centroidMean > 0) {
+        const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
+        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 750) {
+          continue;
+        }
+      }
+
       const conf = Math.max(50, Math.min(100, Math.round((ratio * 60) + (40 - diffFromMean))));
 
       if (!bestMatch || ratio > bestMatch.matchRatio || (ratio === bestMatch.matchRatio && count > bestMatch.matchingCount)) {
@@ -385,8 +408,8 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Strict Authorization Rule:
-  // Must have at least 2 voiced samples, and at least 45% of recent vocal samples must match
-  if (bestMatch && bestMatch.matchingCount >= 2 && bestMatch.matchRatio >= 0.45) {
+  // Must have at least 3 voiced samples, and at least 58% of recent vocal samples must match
+  if (bestMatch && bestMatch.matchingCount >= 3 && bestMatch.matchRatio >= 0.58) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -428,14 +451,14 @@ export function verifyLiveSpeaker(
   const timeData = new Float32Array(fftSize);
   analyserNode.getFloatTimeDomainData(timeData);
 
-  // 1. Check Energy Level
+  // 1. Check Energy Level (Near-field vs distant TV/laptop audio)
   let sum = 0;
   for (let i = 0; i < timeData.length; i += 4) {
     sum += timeData[i] * timeData[i];
   }
   const rms = Math.sqrt(sum / (timeData.length / 4));
 
-  if (rms < 0.009) {
+  if (rms < 0.012) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -464,12 +487,12 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 16, profile.pitchMean - 28));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 20, profile.pitchMean + 28));
+    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 8, profile.pitchMean - 16));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 12, profile.pitchMean + 16));
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      const confidence = Math.max(70, Math.round(100 - (diff * 1.2)));
+      const confidence = Math.max(70, Math.round(100 - (diff * 1.5)));
 
       return {
         isAuthorized: true,

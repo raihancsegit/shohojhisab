@@ -16,7 +16,7 @@ import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
-import { parseVoicePOSCommand } from '../../lib/voicePOSParser';
+import { parseVoicePOSCommand, scoreCatalogCandidate } from '../../lib/voicePOSParser';
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
@@ -2067,29 +2067,14 @@ export default function PosPage() {
       return bName === qClean || name === qClean;
     });
 
-    // Tier 2: Contains match (prioritizing in-stock products)
+    // Tier 2: Smart candidate scoring from catalog
     if (!foundProd) {
-      const candidates = products.filter(p => {
-        const bName = (p.banglaName || '').toLowerCase().trim();
-        const name = (p.name || '').toLowerCase().trim();
-        const gName = (p.genericName || '').toLowerCase().trim();
-        const brand = (p.brand || '').toLowerCase().trim();
-        return (bName && (bName.includes(qClean) || qClean.includes(bName))) ||
-               (name && (name.includes(qClean) || qClean.includes(name))) ||
-               (gName && (gName.includes(qClean) || qClean.includes(gName))) ||
-               (brand && (brand.includes(qClean) || qClean.includes(brand)));
-      });
-
-      if (candidates.length > 0) {
-        candidates.sort((a, b) => {
-          const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
-          const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
-          if (aInStock !== bInStock) return bInStock - aInStock;
-          const aLen = (a.banglaName || a.name || '').length;
-          const bLen = (b.banglaName || b.name || '').length;
-          return aLen - bLen;
-        });
-        foundProd = candidates[0];
+      const scored = products
+        .map(p => ({ prod: p, score: scoreCatalogCandidate(p, qClean) }))
+        .filter(c => c.score > 120);
+      if (scored.length > 0) {
+        scored.sort((a, b) => b.score - a.score);
+        foundProd = scored[0].prod;
       }
     }
 

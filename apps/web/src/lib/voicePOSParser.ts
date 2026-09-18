@@ -507,6 +507,74 @@ export function parseVoicePOSCommand(
 }
 
 /**
+ * Smart Catalog Scoring for Bengali Voice POS
+ * Accurately scores catalog items against spoken names and units
+ */
+export function scoreCatalogCandidate(prod: any, queryName: string, requestedUnit?: string): number {
+  let score = 0;
+  const bName = (prod.banglaName || prod.name || '').toLowerCase().trim();
+  const pName = (prod.name || '').toLowerCase().trim();
+  const gName = (prod.genericName || '').toLowerCase().trim();
+  const brand = (prod.brand || '').toLowerCase().trim();
+  const qName = queryName.toLowerCase().trim();
+
+  // Severely penalize corrupted or composite entries (sentences, comma separated junk)
+  if (bName.includes(',') || bName.length > 35) score -= 500;
+  if (/[০-৯0-9]/.test(bName) && !bName.includes('কেজি') && !bName.includes('লিটার') && !bName.includes('মি.গ্রা.') && !bName.includes('ট্যাবলেট') && !bName.includes('গ্রাম')) {
+    score -= 200;
+  }
+
+  // Exact Match
+  if (bName === qName || pName === qName) return 10000;
+
+  // In-stock availability bonus
+  if (Number(prod.stock || 0) > 0) score += 200;
+
+  // Unit compatibility
+  if (requestedUnit && prod.unit) {
+    if (prod.unit.toLowerCase() === requestedUnit.toLowerCase()) {
+      score += 300;
+    } else if (requestedUnit === 'কেজি' && prod.unit === 'বস্তা') {
+      score += 60;
+    }
+  }
+
+  // Word token overlap
+  const pWords = (bName + ' ' + pName + ' ' + gName)
+    .split(/\s+/)
+    .map(w => w.replace(/[^\u0980-\u09FFa-zA-Z0-9]/g, ''))
+    .filter(Boolean);
+  const qWords = qName
+    .split(/\s+/)
+    .map(w => w.replace(/[^\u0980-\u09FFa-zA-Z0-9]/g, ''))
+    .filter(Boolean);
+
+  for (const qw of qWords) {
+    if (qw.length < 2) continue;
+    if (pWords.includes(qw)) {
+      score += 250;
+    } else if (pWords.some(pw => pw.includes(qw) || qw.includes(pw))) {
+      score += 100;
+    }
+  }
+
+  // Substring inclusion
+  if (bName.includes(qName)) {
+    score += 150;
+    const ratio = qName.length / Math.max(bName.length, 1);
+    score += Math.round(ratio * 100);
+  } else if (qName.includes(bName)) {
+    score += 100;
+  }
+
+  if (brand && (brand.includes(qName) || qName.includes(brand))) {
+    score += 80;
+  }
+
+  return score;
+}
+
+/**
  * Parses a single item phrase with exact unit and multiplier calculation
  */
 function parseSingleVoiceItem(
@@ -539,7 +607,7 @@ function parseSingleVoiceItem(
   let unit: string = 'পিস';
   let unitMatched = false;
 
-  const qtyUnitMatch = normSeg.match(/(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/);
+  const qtyUnitMatch = normSeg.match(/(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/);
   if (qtyUnitMatch) {
     quantity = parseFloat(qtyUnitMatch[1]);
     unit = qtyUnitMatch[2];
@@ -553,7 +621,7 @@ function parseSingleVoiceItem(
     }
   } else {
     // If unit is mentioned without explicit number (e.g. "লবণ প্যাকেট" or "চাল কেজি")
-    const standaloneUnitMatch = normSeg.match(/(?:^|\s)(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স)(?=\s|$)/);
+    const standaloneUnitMatch = normSeg.match(/(?:^|\s)(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স)(?=\s|$)/);
     if (standaloneUnitMatch) {
       unit = standaloneUnitMatch[1];
       quantity = 1;
@@ -564,8 +632,8 @@ function parseSingleVoiceItem(
   // 4. Clean product name
   let cleanedName = normSeg
     .replace(/\d+(?:\.\d+)?\s*(?:টাকা|টাকার|tk|taka)/gi, '')
-    .replace(/(\d+(?:\.\d+)?)\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/gi, '')
-    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল)/gi, '')
+    .replace(/(\d+(?:\.\d+)?)\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/gi, '')
+    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল)/gi, '')
     .trim();
 
   // If trailing numbers remain as price e.g. "চাল ১ কেজি ৬০"
@@ -592,7 +660,7 @@ function parseSingleVoiceItem(
     return null;
   }
 
-  // 5. Match with Existing Catalog with Strict Prioritization
+  // 5. Match with Existing Catalog with Smart Prioritization
   let matchedProd: any = null;
   const qName = cleanedName.toLowerCase().trim();
 
@@ -603,29 +671,18 @@ function parseSingleVoiceItem(
       return bName === qName || (p.name || '').toLowerCase().trim() === qName;
     });
 
-    // Tier 2: Match by longest matching compound phrase (e.g. "নাপা এক্সট্রা" before "নাপা")
+    // Tier 2: Smart Candidate Scoring (Keyword tokens, unit compatibility, in-stock priority)
     if (!matchedProd) {
-      const candidateMatches = existingProducts.filter(p => {
-        const bName = (p.banglaName || p.name || '').toLowerCase().trim();
-        const pName = (p.name || '').toLowerCase().trim();
-        const gName = (p.genericName || '').toLowerCase().trim();
-        const brand = (p.brand || '').toLowerCase().trim();
-        return (bName && (qName.includes(bName) || bName.includes(qName))) ||
-               (pName && (qName.includes(pName) || pName.includes(qName))) ||
-               (gName && (qName.includes(gName) || gName.includes(qName))) ||
-               (brand && (brand.includes(qName) || qName.includes(brand)));
-      });
+      const scoredCandidates = existingProducts
+        .map(p => ({
+          prod: p,
+          score: scoreCatalogCandidate(p, qName, unitMatched ? unit : undefined)
+        }))
+        .filter(c => c.score > 120);
 
-      if (candidateMatches.length > 0) {
-        candidateMatches.sort((a, b) => {
-          const aInStock = Number(a.stock || 0) > 0 ? 1 : 0;
-          const bInStock = Number(b.stock || 0) > 0 ? 1 : 0;
-          if (aInStock !== bInStock) return bInStock - aInStock;
-          const aLen = (a.banglaName || a.name || '').length;
-          const bLen = (b.banglaName || b.name || '').length;
-          return bLen - aLen;
-        });
-        matchedProd = candidateMatches[0];
+      if (scoredCandidates.length > 0) {
+        scoredCandidates.sort((a, b) => b.score - a.score);
+        matchedProd = scoredCandidates[0].prod;
       }
     }
 
@@ -695,8 +752,23 @@ function parseSingleVoiceItem(
       }
     }
   } else if (matchedProd) {
-    finalUnitPrice = Number(matchedProd.sellingPrice) || 0;
-    finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    const rawRate = Number(matchedProd.sellingPrice) || 0;
+    // Bulk sack unit conversion (e.g. 50kg bag at 3500 Tk -> requested 5 kg rice)
+    if (matchedProd.unit === 'বস্তা' && unit === 'কেজি') {
+      const bagKgMatch = (matchedProd.banglaName || matchedProd.name || '').match(/(\d+(?:\.\d+)?)\s*কেজি/);
+      const bagCap = bagKgMatch ? parseFloat(bagKgMatch[1]) : 50;
+      finalUnitPrice = bagCap > 0 ? Math.round((rawRate / bagCap) * 100) / 100 : rawRate;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    } else if (matchedProd.unit === 'হালি' && (unit === 'পিস' || unit === 'টা')) {
+      finalUnitPrice = Math.round((rawRate / 4) * 100) / 100;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    } else if (matchedProd.unit === 'পাতা' && (unit === 'পিস' || unit === 'টা')) {
+      finalUnitPrice = Math.round((rawRate / 10) * 100) / 100;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    } else {
+      finalUnitPrice = rawRate;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    }
   } else {
     // Fallback if no existingProducts provided (standalone mode)
     finalUnitPrice = 50;
