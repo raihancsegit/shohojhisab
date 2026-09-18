@@ -44,14 +44,14 @@ export default function VoicePOSCalculatorModal({
   const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন বা লিখুন...');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(() => isSpeakerLockEnabled(tenantKey));
+  const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(false);
   const [activeCatalog, setActiveCatalog] = useState<any[]>(products || []);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isVoiceLockOn) {
       ensureBiometricMonitoring().catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, isVoiceLockOn]);
 
   useEffect(() => {
     if (products && products.length > 0) {
@@ -127,25 +127,42 @@ export default function VoicePOSCalculatorModal({
       recognitionRef.current = null;
     }
 
+    // Safety timeout: Never allow TTS lock to stay true for more than 3.5 seconds
+    const safetyTimer = setTimeout(() => {
+      if (isTTSActiveRef.current) {
+        isTTSActiveRef.current = false;
+        if (isComponentMounted.current && !isMuted && isOpen) {
+          spawnRecognitionInstance();
+        }
+      }
+    }, 3500);
+
     speakAnnouncement(text, () => {
-      // 800ms cooldown for speaker acoustic echo to dissipate
+      clearTimeout(safetyTimer);
+      // 500ms cooldown for speaker acoustic echo to dissipate
       ttsCooldownTimerRef.current = setTimeout(() => {
         isTTSActiveRef.current = false;
         if (isComponentMounted.current && !isMuted && isOpen) {
           spawnRecognitionInstance();
         }
         if (onDone) onDone();
-      }, 800);
+      }, 500);
     }, true);
   };
 
   // Start / Maintain Continuous Hands-Free Listening Loop with Fresh Instance Spawning
   const spawnRecognitionInstance = () => {
-    if (!isComponentMounted.current || isMuted || isTTSActiveRef.current) return;
+    if (!isComponentMounted.current || isMuted) return;
     const SpeechRecognition = typeof window !== 'undefined'
       ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
       : null;
     if (!SpeechRecognition) return;
+
+    // Reset TTS locks if synthesis is not actively speaking
+    if (typeof window !== 'undefined' && window.speechSynthesis && !window.speechSynthesis.speaking) {
+      isTTSActiveRef.current = false;
+      (window as any).__IS_TTS_SPEAKING__ = false;
+    }
 
     if (recognitionRef.current) {
       try {
@@ -197,7 +214,7 @@ export default function VoicePOSCalculatorModal({
         accumulatedTranscriptRef.current = currentSaid;
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-        const waitMs = isFinal ? (isMobile ? 380 : 320) : (isMobile ? 950 : 700);
+        const waitMs = isFinal ? (isMobile ? 350 : 280) : (isMobile ? 850 : 600);
 
         debounceTimerRef.current = setTimeout(() => {
           const isStillSpeaking = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
@@ -207,13 +224,13 @@ export default function VoicePOSCalculatorModal({
           if (!textToProcess) return;
 
           const now = Date.now();
-          if (lastProcessedRef.current.text === textToProcess && now - lastProcessedRef.current.time < 2200) {
+          if (lastProcessedRef.current.text === textToProcess && now - lastProcessedRef.current.time < 2000) {
             return;
           }
 
-          // Biometrics verification with enrolled speaker profile
+          // Biometrics verification with enrolled speaker profile (only if user explicitly turned it ON!)
           const tenantKey = currentTenantId || 'default';
-          if (isSpeakerLockEnabled(tenantKey)) {
+          if (isVoiceLockOn && isSpeakerLockEnabled(tenantKey)) {
             const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
@@ -234,7 +251,7 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onerror = (event: any) => {
-        console.log('[VoicePOSModal] Speech error:', event.error);
+        console.log('[VoicePOSModal] Speech error:', event?.error);
         if (event.error === 'not-allowed') {
           setIsListening(false);
           setLastActionMessage('⚠️ মাইক্রোফোন ব্যবহারের অনুমতি দিন');
@@ -245,10 +262,17 @@ export default function VoicePOSCalculatorModal({
 
       recognition.onend = () => {
         // Automatically spawn a fresh recognition instance if still active and modal is open
-        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+        if (isComponentMounted.current && !isMuted) {
           setTimeout(() => {
             if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
               spawnRecognitionInstance();
+            } else if (isComponentMounted.current && !isMuted) {
+              // If TTS was momentarily active, retry in 350ms
+              setTimeout(() => {
+                if (isComponentMounted.current && !isMuted) {
+                  spawnRecognitionInstance();
+                }
+              }, 350);
             }
           }, 150);
         } else {
@@ -260,7 +284,7 @@ export default function VoicePOSCalculatorModal({
       recognition.start();
     } catch (err) {
       console.warn('[VoicePOSModal] Failed to spawn recognition, retrying:', err);
-      if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+      if (isComponentMounted.current && !isMuted) {
         setTimeout(() => {
           if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
             spawnRecognitionInstance();
@@ -591,12 +615,28 @@ export default function VoicePOSCalculatorModal({
     }
   };
 
+  // Instant Wake-Up & Push-to-Talk helper
+  const startListeningNow = () => {
+    triggerHaptic('medium');
+    playBeep(920);
+    isTTSActiveRef.current = false;
+    if (typeof window !== 'undefined') {
+      (window as any).__IS_TTS_SPEAKING__ = false;
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    }
+    setIsMuted(false);
+    accumulatedTranscriptRef.current = '';
+    setLiveTranscript('');
+    setLastActionMessage('🎙️ শুনছি... এখন সরাসরি মুখে পণ্যের নাম ও পরিমাণ বলুন');
+    spawnRecognitionInstance();
+  };
+
   // Toggle Mute / Pause Mic
   const toggleMute = () => {
     if (isMuted) {
-      setIsMuted(false);
-      spawnRecognitionInstance();
-      setLastActionMessage('🎙️ মাইক আবার চালু হয়েছে। মুখে পণ্যের নাম বলুন...');
+      startListeningNow();
     } else {
       setIsMuted(true);
       setIsListening(false);
@@ -610,7 +650,7 @@ export default function VoicePOSCalculatorModal({
         } catch (e) {}
         recognitionRef.current = null;
       }
-      setLastActionMessage('⏸️ মাইক সাময়িকভাবে পজ করা হয়েছে।');
+      setLastActionMessage('⏸️ মাইক সাময়িকভাবে পজ করা হয়েছে। কথা বলতে আবার চালু করুন।');
     }
   };
 
@@ -618,16 +658,26 @@ export default function VoicePOSCalculatorModal({
     if (isOpen) {
       isComponentMounted.current = true;
       setIsMuted(false);
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      isTTSActiveRef.current = false;
+      accumulatedTranscriptRef.current = '';
+      setLiveTranscript('');
+      setLastActionMessage('মাইক চালু আছে। সরাসরি মুখে বলুন বা লিখুন...');
+
+      if (typeof window !== 'undefined') {
+        (window as any).__IS_TTS_SPEAKING__ = false;
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
       }
 
-      // Stop any getUserMedia track on mobile so SpeechRecognition gets exclusive mic
-      const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-      if (isMobile) {
-        try { voiceProximityManager.stop(); } catch (e) {}
-      } else {
-        voiceProximityManager.start().catch(() => {});
+      // If biometric lock is enabled, start proximity manager, otherwise keep mic free for SpeechRecognition
+      if (isVoiceLockOn) {
+        const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+        if (isMobile) {
+          try { voiceProximityManager.stop(); } catch (e) {}
+        } else {
+          voiceProximityManager.start().catch(() => {});
+        }
       }
 
       spawnRecognitionInstance();
@@ -889,36 +939,193 @@ export default function VoicePOSCalculatorModal({
           </div>
         </div>
 
-        {/* Live Audio Recognition Subtitle Banner */}
+        {/* 🎙️ SUPER PROMINENT LIVE MICROPHONE COCKPIT & INSTANT PUSH-TO-TALK */}
         <div style={{
-          background: isMuted ? '#f8fafc' : '#eff6ff',
-          borderBottom: '1.5px solid #dbeafe',
-          padding: '8px 16px',
+          background: isMuted
+            ? '#f8fafc'
+            : isListening
+              ? 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)'
+              : 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+          borderBottom: isListening && !isMuted ? '2px solid #10b981' : '1.5px solid #e2e8f0',
+          padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          flexShrink: 0
+          gap: '12px',
+          flexShrink: 0,
+          boxShadow: isListening && !isMuted ? 'inset 0 1px 4px rgba(16, 185, 129, 0.12)' : 'none',
+          transition: 'all 0.25s ease'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', minWidth: 0 }}>
-            <span style={{ fontSize: '15px', animation: isListening && !isMuted ? 'pulse 1.5s infinite' : 'none', flexShrink: 0 }}>
-              {isMuted ? '⏸️' : '🗣️'}
-            </span>
-            <span style={{
-              fontSize: '12.5px',
-              fontWeight: '700',
-              color: isMuted ? '#64748b' : '#1e40af',
+          {/* Pulsing Central Mic Wakeup Button */}
+          <button
+            type="button"
+            onClick={startListeningNow}
+            style={{
+              width: '52px',
+              height: '52px',
+              minWidth: '52px',
+              borderRadius: '50%',
+              border: isListening && !isMuted ? '3px solid #10b981' : '2px solid #cbd5e1',
+              background: isMuted
+                ? '#94a3b8'
+                : isListening
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              color: '#ffffff',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '24px',
+              cursor: 'pointer',
+              boxShadow: isListening && !isMuted
+                ? '0 0 0 5px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(16, 185, 129, 0.4)'
+                : '0 4px 10px rgba(0, 0, 0, 0.1)',
+              animation: isListening && !isMuted ? 'pulse 1.8s infinite' : 'none',
+              transition: 'transform 0.15s ease'
+            }}
+            title={isListening && !isMuted ? 'মাইক সক্রিয় - আবার চাপলে নতুন করে শুনবে' : 'কথা বলতে এখানে চাপ দিন'}
+          >
+            {isMuted ? '🔇' : isListening ? '🎙️' : '🗣️'}
+          </button>
+
+          {/* Real-time Live Speech Transcript / Status */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+              <span style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: isMuted ? '#94a3b8' : isListening ? '#10b981' : '#f59e0b',
+                animation: isListening && !isMuted ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'
+              }} />
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                letterSpacing: '0.4px',
+                color: isMuted ? '#64748b' : isListening ? '#047857' : '#b45309'
+              }}>
+                {isMuted ? 'মাইক পজ করা' : isListening ? '🟢 লাইভ শুনছি... কথা বলুন' : '🟡 মাইকে চাপ দিয়ে কথা বলুন'}
+              </span>
+              {isVoiceLockOn && (
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  background: '#dcfce7',
+                  color: '#166534',
+                  padding: '1px 6px',
+                  borderRadius: '6px',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  🛡️ ভয়েস লক
+                </span>
+              )}
+            </div>
+
+            <div style={{
+              fontSize: liveTranscript ? '15px' : '13px',
+              fontWeight: liveTranscript ? '800' : '600',
+              color: liveTranscript ? '#0f172a' : '#475569',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              minHeight: '22px'
             }}>
               {liveTranscript ? `"${liveTranscript}"` : lastActionMessage}
-            </span>
+            </div>
           </div>
-          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '800', flexShrink: 0 }}>
-            আইটেম: {items.length} টি
-          </span>
+
+          {/* Instant "Add Now" button if speech is detected */}
+          {liveTranscript && (
+            <button
+              type="button"
+              onClick={() => {
+                if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                handleProcessVoiceInput(liveTranscript);
+                accumulatedTranscriptRef.current = '';
+                setLiveTranscript('');
+              }}
+              style={{
+                background: '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              ✓ যোগ করুন
+            </button>
+          )}
+
+          {/* Items badge */}
+          <div style={{
+            flexShrink: 0,
+            textAlign: 'right',
+            background: '#ffffff',
+            padding: '4px 10px',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>মেমো আইটেম</span>
+            <strong style={{ fontSize: '14px', color: '#0f172a' }}>{items.length} টি</strong>
+          </div>
         </div>
+
+        {/* ⚡ 1-Tap Quick Staples Carousel from Stock */}
+        {activeCatalog && activeCatalog.length > 0 && (
+          <div style={{
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '6px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            overflowX: 'auto',
+            flexShrink: 0
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              দ্রুত যোগ:
+            </span>
+            {activeCatalog.slice(0, 8).map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  playBeep(950);
+                  const pName = p.banglaName || p.name;
+                  handleProcessVoiceInput(`${pName} ১ ${p.unit || 'পিস'}`);
+                }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '20px',
+                  padding: '3px 10px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  color: '#1e293b',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
+                }}
+              >
+                <span>{p.banglaName || p.name}</span>
+                <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '800' }}>৳{p.sellingPrice}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 🟢 Interactive Voice / Text Entry Bar (Works 100% Online & Offline) */}
         <form

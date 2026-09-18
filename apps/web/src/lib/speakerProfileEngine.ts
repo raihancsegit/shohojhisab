@@ -100,16 +100,12 @@ export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): 
 export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    // Only lock if at least one enrolled profile exists on this device
-    const profiles = getSpeakerVoiceProfiles(tenantId);
-    if (profiles.length === 0) return false;
-
     const val = localStorage.getItem(`${TOGGLE_KEY_PREFIX}${tenantId}`);
     if (val !== null) return val === 'true';
     const defVal = localStorage.getItem(`${TOGGLE_KEY_PREFIX}default`);
     if (defVal !== null) return defVal === 'true';
-    // Priority rule: if the user saved/enrolled their voice on this device, it MUST default to TRUE (active lock)
-    return true;
+    // Safe default: voice lock is OFF by default so user speech is NEVER blocked unintentionally
+    return false;
   } catch (e) {
     return false;
   }
