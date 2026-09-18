@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { parseVoiceStockIn, VoiceStockInResult } from '../lib/voicePOSParser';
 import { getIndustryVoiceConfig, getIndustryProductSuggestions } from '../lib/industryConfig';
 import { extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
 
 interface VoiceStockInModalProps {
   isOpen: boolean;
@@ -71,16 +72,32 @@ export default function VoiceStockInModal({
       recognition.onstart = () => {
         if (isComponentMounted.current) {
           setIsListening(true);
+          ensureBiometricMonitoring().catch(() => {});
         }
       };
 
       recognition.onresult = (event: any) => {
         const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (fullTranscript) {
+          const tenantKey = currentTenantId || 'default';
+          pingVoiceVerification(tenantKey);
           setLiveTranscript(fullTranscript);
         }
 
         if (isFinal && fullTranscript) {
+          const tenantKey = currentTenantId || 'default';
+          if (isSpeakerLockEnabled(tenantKey)) {
+            const speakerCheck = verifyCurrentVoice(tenantKey);
+            if (!speakerCheck.isAuthorized) {
+              triggerHaptic('warning');
+              if (speakerCheck.reason === 'background_noise_or_tv') {
+                setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
+              } else {
+                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
+              }
+              return;
+            }
+          }
           handleProcessVoiceInput(fullTranscript);
         }
       };

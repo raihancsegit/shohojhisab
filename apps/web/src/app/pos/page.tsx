@@ -23,6 +23,7 @@ import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtil
 import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { counterSleepManager } from '../../lib/counterSleepManager';
+import { playWarningSound } from '../../lib/audioFeedbackUtils';
 
 const CATEGORY_FAST_ITEMS: Record<string, { name: string; price: number; icon: string; unit: string }[]> = {
   'cat-pharmacy': [
@@ -1907,7 +1908,7 @@ export default function PosPage() {
 
           // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff
           if (isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
-            triggerHaptic('error');
+            triggerHaptic('warning');
             playWarningSound();
             if (speakerCheck.reason === 'background_noise_or_tv') {
               setVoiceNotice('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');

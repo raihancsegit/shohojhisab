@@ -193,7 +193,7 @@ export default function VoicePOSCalculatorModal({
           if (lockActive) {
             const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
             if (!speakerCheck.isAuthorized) {
-              triggerHaptic('error');
+              triggerHaptic('warning');
               playBeep(350);
               if (speakerCheck.reason === 'background_noise_or_tv') {
                 setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');

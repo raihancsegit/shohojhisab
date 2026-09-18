@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { counterSleepManager, CounterSleepState } from '../lib/counterSleepManager';
 import { playMicStartSound, playSuccessChime } from '../lib/audioFeedbackUtils';
 import { voiceProximityManager } from '../lib/voiceProximityGate';
-import { verifyCurrentVoice, isSpeakerLockEnabled } from '../lib/speakerProfileEngine';
+import { verifyCurrentVoice, isSpeakerLockEnabled, pingVoiceVerification } from '../lib/speakerProfileEngine';
 
 interface CounterBlackSleepOverlayProps {
   onExit?: () => void;
@@ -99,6 +99,7 @@ export default function CounterBlackSleepOverlay({ onExit }: CounterBlackSleepOv
         const spoken = (finalChunk || interim).trim();
         if (!spoken) return;
 
+        pingVoiceVerification('default');
         setLiveHeardText(spoken);
 
         // Check for wake word or direct retail sale intent

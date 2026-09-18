@@ -7,6 +7,7 @@ import { cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtil
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { executeOfflineAiShopCommand } from '../lib/offlineAiEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -77,6 +78,7 @@ export default function VoiceAssistant() {
     setFeedbackText('');
     isListeningRef.current = true;
     setIsListening(true);
+    ensureBiometricMonitoring().catch(() => {});
     setIsProcessing(false);
 
     // Auto dismiss after 10s if nothing is spoken
@@ -108,6 +110,8 @@ export default function VoiceAssistant() {
         }
         const cleaned = cleanSpokenBengali(full);
         if (!cleaned) return;
+
+        pingVoiceVerification(tenant?.id || 'default');
 
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         latestTranscriptRef.current = cleaned;
@@ -196,6 +200,26 @@ export default function VoiceAssistant() {
         setFeedbackType(null);
       }, 3000);
       return;
+    }
+
+    // Speaker Biometrics Verification (Filter TV/laptop/strangers)
+    const tenantKey = tenant?.id || 'default';
+    if (isSpeakerLockEnabled(tenantKey)) {
+      const speakerCheck = verifyCurrentVoice(tenantKey);
+      if (!speakerCheck.isAuthorized) {
+        triggerHaptic?.('warning');
+        playWarningSound();
+        setFeedbackType('error');
+        if (speakerCheck.reason === 'background_noise_or_tv') {
+          setFeedbackText('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার হয়েছে (বাতিল)');
+        } else {
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু মালিকের কণ্ঠ)');
+        }
+        autoDismissTimerRef.current = setTimeout(() => {
+          setFeedbackType(null);
+        }, 3500);
+        return;
+      }
     }
 
     setLastSpoken(query);

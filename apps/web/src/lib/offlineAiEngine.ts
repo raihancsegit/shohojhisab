@@ -3,6 +3,7 @@
 import { getVaultData, saveVaultSnapshot } from './dataVault';
 import { queueOfflineAction } from './offlineDataLayer';
 import { cleanSpokenBengali } from './banglaSpeechUtils';
+import { parseVoicePOSCommand } from './voicePOSParser';
 
 export interface OfflineAiResult {
   success: boolean;
@@ -241,6 +242,29 @@ export function executeOfflineAiShopCommand(
     };
   }
 
+  // 2b. Business Status & Summary Query ("ব্যবসা কেমন চলছে?", "আজকের সারাংশ বলো", "আজকের রিপোর্ট", "দোকানের অবস্থা কেমন")
+  if (
+    /ব্যবসা\s*কেমন|দোকান\s*কেমন|আজকের?\s*(সারাংশ|সামারি|রিপোর্ট|খবর|অবস্থা|হিসাব-নিকাশ)|সারাদিনের\s*হিসাব|দোকানের\s*খবর/i.test(normalized) &&
+    !/খরচ|বাকি|স্টক/i.test(normalized)
+  ) {
+    const totalSold = todaySales.reduce((acc, s) => acc + (Number(s.totalAmount || s.netTotal || s.total_amount || 0)), 0);
+    const totalCash = todaySales.reduce((acc, s) => acc + (Number(s.paidAmount || s.paid_amount || 0)), 0);
+    const totalExp = todayExpenses.reduce((acc, e) => acc + (Number(e.amount || 0)), 0);
+    const estProfit = Math.round(totalSold * 0.2 - totalExp);
+    const marketDue = customers.reduce((acc, c) => acc + (Number(c.totalDue || c.total_due || 0)), 0);
+    const lowStockCount = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || p.low_stock_threshold || 5)).length;
+
+    const speech = `আজকে মোট বিক্রি ৳${totalSold} টাকা, নগদ আদায় ৳${totalCash} টাকা, মোট খরচ ৳${totalExp} টাকা, আনুমানিক নিট লাভ ৳${estProfit} টাকা এবং বাজারে মোট বাকি ৳${marketDue} টাকা।`;
+    return {
+      success: true,
+      reply: `🏪 **আজকের সার্বিক ব্যবসার সারসংক্ষেপ:**\n• মোট বিক্রি (${todaySales.length}টি মেমো): **৳${totalSold.toLocaleString('en-US')}**\n• ক্যাশ কালেকশন: **৳${totalCash.toLocaleString('en-US')}**\n• মোট খরচ: **৳${totalExp.toLocaleString('en-US')}**\n• আনুমানিক নিট লাভ: **৳${estProfit.toLocaleString('en-US')}**\n• মোট বাজার বাকি: **৳${marketDue.toLocaleString('en-US')}**\n• স্টক অ্যালার্ট: **${lowStockCount}টি পণ্যের স্টক কম**\n\n🟢 *অফলাইন রিয়েলটাইম ড্যাশবোর্ড রিপোর্ট*`,
+      speech,
+      navigateTo: '/reports',
+      actionLink: { text: 'বিস্তারিত রিপোর্ট পেজ →', href: '/reports' },
+      isOffline: true
+    };
+  }
+
   // 3. Low Stock / Stock Check (কোন মালের স্টক কম / স্টক কত)
   if (/স্টক কম|কোন মাল কম|মাল শেষ|কোন কোন মালের স্টক/i.test(normalized)) {
     const lowItems = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockThreshold || p.low_stock_threshold || 5));
@@ -282,14 +306,50 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  // 4b. Specific Product Stock Query (যেমন: "নাপা কয়টা আছে?", "তেল কত লিটার আছে?", "চাল কতটুকু আছে?")
+  // 4b. Product Price & Rate Inquiry (যেমন: "চিনির দাম কত?", "তেলের রেট কত?", "নাপা পাতার দাম কত?", "চিনির কেজি কত?")
+  const priceInquiryMatch = normalized.match(/(.+?)\s*(?:এর)?\s*(?:দাম\s*কত|রেট\s*কত|দর\s*কত|টাকা\s*করে|কত\s*করে|কেজি\s*কত|লিটার\s*কত|পাতা\s*কত|পিস\s*কত|দর\s*কেমন|বিক্রি\s*কত|বেচা\s*কত)/i);
+  if (priceInquiryMatch && !/আজকে|মোট|খরচ|লাভ|বাকি|স্টক\s*কত/i.test(normalized)) {
+    const searchName = priceInquiryMatch[1].replace(/দোকানে|আমাদের|বর্তমান|ভাই|মাল|পণ্য/g, '').trim();
+    if (searchName && searchName.length >= 2) {
+      const stem = searchName.replace(/(?:ের|এর|র)$/, '').trim();
+      const p = products.find(prod => {
+        const b = (prod.banglaName || prod.name || '').toLowerCase();
+        const nm = (prod.name || '').toLowerCase();
+        const s = searchName.toLowerCase();
+        const st = stem.toLowerCase();
+        return b.includes(s) || s.includes(b) || nm.includes(s) || (st.length >= 2 && (b.includes(st) || st.includes(b) || nm.includes(st)));
+      });
+      if (p) {
+        const sPrice = Number(p.sellingPrice) || 0;
+        const pPrice = Number(p.purchasePrice) || Math.round(sPrice * 0.85);
+        const unit = p.unit || 'পিস';
+        const stockAmt = Number(p.stock || 0);
+
+        const speech = `${p.banglaName || p.name} এর বিক্রয় মূল্য ৳${sPrice} টাকা প্রতি ${unit}। স্টকে আছে ${stockAmt} ${unit}।`;
+        return {
+          success: true,
+          reply: `🏷️ **পণ্যের দর ও মূল্য তালিকা:**\n• পণ্য: **${p.banglaName || p.name}**\n• বিক্রয় মূল্য: **৳${sPrice} / ${unit}**\n• কেনা দর: ৳${pPrice} / ${unit}\n• বর্তমান মজুদ: **${stockAmt} ${unit}**\n\n🟢 *অফলাইন ক্যাটালগ তথ্য*`,
+          speech,
+          navigateTo: '/stock',
+          actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+          isOffline: true
+        };
+      }
+    }
+  }
+
+  // 4c. Specific Product Stock Query (যেমন: "নাপা কয়টা আছে?", "তেল কত লিটার আছে?", "চাল কতটুকু আছে?")
   const specificStockMatch = normalized.match(/(.+?)\s*(?:কয়টা|কয়টা|কতটুকু|কত\s*কেজি|কত\s*লিটার|কত\s*পাতা|কত\s*পিস|কত|কয়|কয়)\s*(?:কেজি|লিটার|পাতা|পিস|প্যাকেট|বোতল)?\s*(?:আছে|স্টক আছে|স্টকে আছে|মজুদ আছে|বাকি আছে)/i);
   if (specificStockMatch && !/আজকে|মোট|খরচ|বাকি|টাকা/i.test(normalized)) {
     const searchName = specificStockMatch[1].replace(/দোকানে|স্টকে|আমাদের|বর্তমান|ভাই|মাল/g, '').trim();
     if (searchName && searchName.length >= 2) {
+      const stem = searchName.replace(/(?:ের|এর|র)$/, '').trim();
       const p = products.find(prod => {
         const b = (prod.banglaName || prod.name || '').toLowerCase();
-        return b.includes(searchName) || searchName.includes(b);
+        const nm = (prod.name || '').toLowerCase();
+        const s = searchName.toLowerCase();
+        const st = stem.toLowerCase();
+        return b.includes(s) || s.includes(b) || nm.includes(s) || (st.length >= 2 && (b.includes(st) || st.includes(b) || nm.includes(st)));
       });
       if (p) {
         const stockAmt = Number(p.stock || 0);
@@ -354,6 +414,151 @@ export function executeOfflineAiShopCommand(
     }
   }
 
+  // 5b. Retail Sales Memo / বিক্রি ও মেমো কাটা (যেমন: "২ কেজি চিনি আর ১ লিটার তেল বিক্রি হলো" / "চিনি ১ কেজি বিক্রি" / "মেমো করো চিনি ১ কেজি")
+  const isSaleIntent = (
+    /বিক্রি|বেচা|সেল|মেমো\s*কাটো|মেমো\s*করো|মেমো|বিল\s*কাটো|বিল\s*করো/.test(normalized) ||
+    ((/বাকি|বাকিতে/.test(normalized)) && /(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|হালি|টি|টা)/.test(normalized))
+  ) && !/কত|কেমন|রিপোর্ট|দেখাও|খাতায়\s*যাও|বাকি\s*খাতা|বাকি\s*কত|পাওনা|তালিকা|লিস্ট|পেজ|পাতা|স্ক্রিন/.test(normalized);
+
+  if (isSaleIntent && /\d+/.test(normalized)) {
+    const posRes = parseVoicePOSCommand(cleanedText, products);
+    if (posRes.type === 'add_items' && posRes.items && posRes.items.length > 0) {
+      const isDue = /বাকি|বাকিতে|বাকি\s*নিল|বাকি\s*দাও/.test(normalized);
+      let customerName = isDue ? 'বাকি গ্রাহক' : 'নগদ কাস্টমার';
+      let targetCust: any = null;
+
+      if (isDue) {
+        const custMatch = cleanedText.match(/(.+?)\s*(?:ভাই|চাচা|কাকা|মামা|এর|ের)?\s*(?:বাকি|বাকিতে)/);
+        if (custMatch) {
+          const candidate = custMatch[1].replace(/মেমো|বিক্রি|টাকা|কেজি|লিটার|\d+/g, '').trim();
+          if (candidate && candidate.length >= 2) {
+            targetCust = customers.find(c => (c.name || '').toLowerCase().includes(candidate.toLowerCase()) || candidate.toLowerCase().includes((c.name || '').toLowerCase()));
+            if (!targetCust) {
+              targetCust = {
+                id: `cust-off-${Date.now()}`,
+                tenantId,
+                name: candidate.includes('ভাই') || candidate.includes('চাচা') ? candidate : `${candidate} ভাই`,
+                phone: '',
+                totalDue: 0
+              };
+              customers.push(targetCust);
+            }
+            customerName = targetCust.name;
+          }
+        }
+      }
+
+      // Check stock and process items
+      const validItems: any[] = [];
+      const outOfStockItems: string[] = [];
+      let totalSaleAmount = 0;
+      let totalProfitAmount = 0;
+
+      for (const item of posRes.items) {
+        const prod = products.find(p =>
+          (item.productId && p.id === item.productId) ||
+          (p.banglaName || p.name || '').toLowerCase().includes(item.name.toLowerCase()) ||
+          item.name.toLowerCase().includes((p.banglaName || p.name || '').toLowerCase())
+        );
+
+        if (!prod) {
+          outOfStockItems.push(item.banglaName || item.name);
+          continue;
+        }
+
+        const currentStock = Number(prod.stock || 0);
+        if (currentStock <= 0) {
+          outOfStockItems.push(prod.banglaName || prod.name);
+          continue;
+        }
+
+        const qty = item.quantity;
+        const sPrice = item.unitPrice || Number(prod.sellingPrice) || 0;
+        const pPrice = Number(prod.purchasePrice) || Math.round(sPrice * 0.8);
+        const lineTotal = item.totalPrice || Math.round(qty * sPrice);
+        const lineProfit = Math.max(0, lineTotal - Math.round(qty * pPrice));
+
+        // Deduct stock in memory
+        prod.stock = Math.max(0, currentStock - qty);
+
+        totalSaleAmount += lineTotal;
+        totalProfitAmount += lineProfit;
+
+        validItems.push({
+          productId: prod.id,
+          productName: prod.banglaName || prod.name,
+          quantity: qty,
+          unit: item.unit || prod.unit || 'পিস',
+          sellingPrice: sPrice,
+          totalPrice: lineTotal
+        });
+      }
+
+      if (outOfStockItems.length > 0 && validItems.length === 0) {
+        return {
+          success: false,
+          reply: `❌ **স্টক শেষ (Out of Stock)!**\n• পণ্য: **${outOfStockItems.join(', ')}**\nদোকানে বর্তমানে এই পণ্যের স্টক নেই (স্টক ০)। বিক্রি করতে আগে স্টক ইন করুন।`,
+          speech: `দুঃখিত, ${outOfStockItems.join(', ')} স্টকে নেই। বিক্রি করতে আগে স্টক যোগ করুন।`,
+          actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+          navigateTo: '/stock',
+          isOffline: true
+        };
+      }
+
+      if (validItems.length > 0) {
+        const saleId = `sale-off-${Date.now()}`;
+        const invoiceNo = (isDue ? 'BK-' : 'MEMO-') + Date.now().toString().slice(-4);
+
+        if (isDue && targetCust) {
+          targetCust.totalDue = (Number(targetCust.totalDue) || 0) + totalSaleAmount;
+        }
+
+        const newSale = {
+          id: saleId,
+          tenantId,
+          invoiceNo,
+          totalAmount: totalSaleAmount,
+          paidAmount: isDue ? 0 : totalSaleAmount,
+          dueAmount: isDue ? totalSaleAmount : 0,
+          profitAmount: totalProfitAmount,
+          paymentMethod: isDue ? 'due' : 'cash',
+          customerId: targetCust?.id || null,
+          customerName,
+          items: validItems,
+          createdAt: new Date().toISOString()
+        };
+        sales.push(newSale);
+
+        // Update vault snapshot and queue sync
+        saveVaultSnapshot(tenantId, { products, sales, customers });
+        queueOfflineAction({
+          type: 'create_sale',
+          payload: newSale
+        });
+
+        const itemsSummary = validItems.map(i => `${i.productName} (${i.quantity} ${i.unit})`).join(', ');
+        const speech = isDue
+          ? `${customerName} এর বাকি খাতায় ${itemsSummary} বাবদ ৳${totalSaleAmount} টাকা যোগ করা হয়েছে।`
+          : `৳${totalSaleAmount} টাকার বিক্রি সম্পন্ন হয়েছে। ${itemsSummary} মেমো তৈরি করা হয়েছে।`;
+
+        const reply = isDue
+          ? `📒 **বাকির মেমো সফল!**\n• খরিদ্দার: **${customerName}**\n• আইটেম: ${itemsSummary}\n• মোট বাকি: **৳${totalSaleAmount.toLocaleString('en-US')}**\n(বর্তমান মোট দেনা: ৳${targetCust?.totalDue || totalSaleAmount} টাকা)\n\n🟢 *অফলাইন খাতা ও মেমোতে সংরক্ষিত*`
+          : `🧾 **বিক্রয় মেমো সফল!**\n• মোট বিল: **৳${totalSaleAmount.toLocaleString('en-US')}**\n• পণ্যসমূহ: ${itemsSummary}\n• ইনভয়েস: #${invoiceNo}\n\n🟢 *অফলাইন ক্যাশ কাউন্টারে রেকর্ড সম্পন্ন*`;
+
+        return {
+          success: true,
+          action: 'sale_completed',
+          reply,
+          speech,
+          navigateTo: '/pos',
+          actionLink: { text: 'POS কাউন্টারে মেমো দেখুন →', href: '/pos' },
+          data: { saleId, totalAmount: totalSaleAmount, items: validItems },
+          isOffline: true
+        };
+      }
+    }
+  }
+
   // 6. Customer Due Payment / জমা আদায় (যেমন: "রিয়ান ২০ টাকা জমা দিল")
   const payMatch = normalized.match(/(.+?)\s+(\d+)\s*টাকা?\s*(জমা দিল|পরিশোধ করল|দিল|জমা করলো|জমা)/i);
   if (payMatch) {
@@ -377,7 +582,7 @@ export function executeOfflineAiShopCommand(
 
       saveVaultSnapshot(tenantId, { customers });
       queueOfflineAction({
-        type: 'customer_payment',
+        type: 'due_payment',
         payload: { customerId: cust.id, customerName: cust.name, amount, note: 'অফলাইন জমা গ্রহণ' }
       });
 

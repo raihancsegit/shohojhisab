@@ -7,6 +7,7 @@ import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } f
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../../lib/audioFeedbackUtils';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { executeOfflineAiShopCommand } from '../../lib/offlineAiEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
 
 export default function AiAssistantPage() {
   const router = useRouter();
@@ -181,12 +182,32 @@ export default function AiAssistantPage() {
         }
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
+        const tenantKey = currentTenantId || 'default';
+        pingVoiceVerification(tenantKey);
+
         setLiveTranscript(fullTranscript);
 
         // Smart auto-submit after 1.2s silence
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           stopListening();
+
+          // Speaker Biometrics Verification
+          if (isSpeakerLockEnabled(tenantKey)) {
+            const speakerCheck = verifyCurrentVoice(tenantKey);
+            if (!speakerCheck.isAuthorized) {
+              triggerHaptic('warning');
+              playWarningSound();
+              if (speakerCheck.reason === 'background_noise_or_tv') {
+                setLiveTranscript('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
+              } else {
+                setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ গ্রহণযোগ্য)');
+              }
+              setTimeout(() => setLiveTranscript(''), 3500);
+              return;
+            }
+          }
+
           handleAsk(fullTranscript);
         }, 1200);
       };

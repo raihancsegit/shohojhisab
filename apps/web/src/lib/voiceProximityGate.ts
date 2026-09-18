@@ -142,7 +142,7 @@ class VoiceProximityManager {
       const loop = () => {
         if (!this.isActive || !this.analyser || !this.dataArray) return;
 
-        this.analyser.getByteTimeDomainData(this.dataArray);
+        this.analyser.getByteTimeDomainData(this.dataArray as any);
 
         // Compute Root Mean Square (RMS) energy
         let sum = 0;

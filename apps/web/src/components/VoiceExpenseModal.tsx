@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
 
 interface VoiceExpenseModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export default function VoiceExpenseModal({
     setLiveTranscript('');
     setFeedback('🎙️ শুনছি... খরচ ও টাকার পরিমাণ বলুন');
     setIsListening(true);
+    ensureBiometricMonitoring().catch(() => {});
     triggerHaptic('medium');
 
     try {
@@ -63,6 +65,9 @@ export default function VoiceExpenseModal({
         const { fullTranscript } = extractTranscriptFromEvent(event);
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
+        const tenantKey = currentTenantId || 'default';
+        pingVoiceVerification(tenantKey);
+
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
@@ -70,6 +75,19 @@ export default function VoiceExpenseModal({
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isMountedRef.current && latestTranscriptRef.current.trim()) {
+            if (isSpeakerLockEnabled(tenantKey)) {
+              const speakerCheck = verifyCurrentVoice(tenantKey);
+              if (!speakerCheck.isAuthorized) {
+                triggerHaptic?.('warning');
+                if (speakerCheck.reason === 'background_noise_or_tv') {
+                  setFeedback('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
+                } else {
+                  setFeedback('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
+                }
+                setTimeout(() => setFeedback(''), 3500);
+                return;
+              }
+            }
             handleProcessExpense(latestTranscriptRef.current.trim());
           }
         }, 1300);

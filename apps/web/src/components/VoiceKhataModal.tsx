@@ -5,6 +5,7 @@ import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 import SmartVoiceConfirmationCard, { SmartVoiceActionData } from './SmartVoiceConfirmationCard';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
 
 interface VoiceKhataModalProps {
   isOpen: boolean;
@@ -84,6 +85,7 @@ export default function VoiceKhataModal({
     setLiveTranscript('');
     setLastActionMessage('🎙️ শুনছি... কাস্টমারের নাম, টাকা ও পণ্যের নাম বলুন');
     setIsListening(true);
+    ensureBiometricMonitoring().catch(() => {});
     playMicStartSound();
     if (triggerHaptic) triggerHaptic('medium');
 
@@ -102,6 +104,9 @@ export default function VoiceKhataModal({
         const { fullTranscript } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
 
+        const tenantKey = currentTenantId || 'default';
+        pingVoiceVerification(tenantKey);
+
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
@@ -109,6 +114,20 @@ export default function VoiceKhataModal({
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
           if (isMountedRef.current && latestTranscriptRef.current.trim()) {
+            if (isSpeakerLockEnabled(tenantKey)) {
+              const speakerCheck = verifyCurrentVoice(tenantKey);
+              if (!speakerCheck.isAuthorized) {
+                triggerHaptic?.('error');
+                playWarningSound();
+                if (speakerCheck.reason === 'background_noise_or_tv') {
+                  setLiveTranscript('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
+                } else {
+                  setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
+                }
+                setTimeout(() => setLiveTranscript(''), 3500);
+                return;
+              }
+            }
             handleProcessCommand(latestTranscriptRef.current.trim());
           }
         }, 1000);

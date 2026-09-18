@@ -368,7 +368,7 @@ export function splitMultiItemSpokenText(text: string, existingProducts: any[] =
     // Pattern 1: Product1 + (Qty1 or Price1) -> followed by Product2
     // e.g. "চাল 1 কেজি ডাল 2 কেজি" -> split before "ডাল"
     // e.g. "চাল 60 ডাল 200 তেল 190" -> split before "ডাল", before "তেল"
-    const prodFirstRegex = new RegExp(`((?:${staplePattern})[^\d]+(?:\\d+(?:\\.\\d+)?\\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স|টি|টা|টাকা)?\\s*(?:\\d+(?:\\.\\d+)?)?))\\s+(?=(?:${staplePattern}))`, 'gi');
+    const prodFirstRegex = new RegExp(`((?:${staplePattern})[^\\d]+(?:\\d+(?:\\.\\d+)?\\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|জোড়া|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স|টি|টা|টাকা)?\\s*(?:\\d+(?:\\.\\d+)?)?))\\s+(?=(?:${staplePattern}))`, 'gi');
     tagged = tagged.replace(prodFirstRegex, '$1|||');
 
     // Pattern 2: Qty1 + Product1 -> followed by Qty2 + Product2
@@ -633,7 +633,7 @@ function parseSingleVoiceItem(
   let cleanedName = normSeg
     .replace(/\d+(?:\.\d+)?\s*(?:টাকা|টাকার|tk|taka)/gi, '')
     .replace(/(\d+(?:\.\d+)?)\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/gi, '')
-    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল)/gi, '')
+    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল|বিক্রি\s*হলো|বিক্রি\s*করলাম|বিক্রি\s*করো|বিক্রি|বেচা\s*হলো|বেচা|সেল|মেমো\s*করো|মেমো\s*কাটো|মেমো|বিল\s*করো|বিল)/gi, '')
     .trim();
 
   // If trailing numbers remain as price e.g. "চাল ১ কেজি ৬০"

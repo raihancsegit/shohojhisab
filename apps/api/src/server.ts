@@ -3784,9 +3784,9 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     });
 
   const isSaleCommand = (
-    /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|নগদ\s*বিক্রি/.test(rawText) ||
-    ((/বাকি|বাকিতে/.test(rawText)) && hasItemUnitsOrNames)
-  ) && !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট|খাতায়\s*যান|খাতায়\s*যাও|বাকি\s*পেজ|বাকি\s*কত|পাওনা\s*কত/.test(rawText);
+    /বিক্রি\s*হলো|বেচা\s*হলো|বিক্রি\s*করলাম|মেমো\s*কাটো|মেমো\s*করো|বিক্রি\s*করো|বাকিতে\s*দাও|বাকি\s*নিল|নগদ\s*বিক্রি|বিক্রি|বেচা|সেল|মেমো|বিল/.test(rawText) &&
+    hasItemUnitsOrNames
+  ) && !/আজকের\s*বিক্রি|বিক্রি\s*কত|মোট\s*বিক্রি|লাভ|রিপোর্ট|খাতায়\s*যান|খাতায়\s*যাও|বাকি\s*পেজ|বাকি\s*কত|পাওনা\s*কত|তালিকা|লিস্ট|খোলো|যাও|যান/.test(rawText);
 
   if (isSaleCommand && /\d+/.test(normalized)) {
     // Check customer if credit / বাকি
@@ -4110,6 +4110,46 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   }
 
+  // 4.5. Specific Product Price & Rate Inquiry ("চিনির দাম কত", "তেলের রেট কত", "নাপা পাতার দাম কত", "চিনির কেজি কত")
+  if (/দাম\s*কত|রেট\s*কত|দর\s*কত|টাকা\s*করে|কত\s*করে|কেজি\s*কত|লিটার\s*কত|পাতা\s*কত|পিস\s*কত|দর\s*কেমন/.test(rawText) && !/আজকের|মোট|লাভ|বাকি|খরচ|স্টক\s*কত/.test(rawText)) {
+    const cleanCand = rawText
+      .replace(/(দোকানে|আমাদের|বর্তমান|ভাই|মাল|পণ্য|দাম\s*কত|রেট\s*কত|দর\s*কত|টাকা\s*করে|কত\s*করে|কেজি\s*কত|লিটার\s*কত|পাতা\s*কত|পিস\s*কত|দর\s*কেমন|কত|টাকা)/gi, '')
+      .trim();
+
+    if (cleanCand && cleanCand.length >= 2) {
+      const stem = cleanCand.replace(/(?:ের|এর|র)$/, '').trim();
+      let matchedProd = allProducts.find((p: any) => {
+        const bName = (p.bangla_name || '').toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        const cand = cleanCand.toLowerCase();
+        const s = stem.toLowerCase();
+        return (
+          bName.includes(cand) || cand.includes(bName) ||
+          pName.includes(cand) ||
+          (s.length >= 2 && (bName.includes(s) || s.includes(bName) || pName.includes(s)))
+        );
+      });
+
+      if (matchedProd) {
+        const sPrice = Number(matchedProd.selling_price) || 0;
+        const pPrice = Number(matchedProd.purchase_price) || Math.round(sPrice * 0.85);
+        const stockAmt = Number(matchedProd.stock) || 0;
+        const unit = matchedProd.unit || 'পিস';
+
+        const speech = `${matchedProd.bangla_name || matchedProd.name} এর বিক্রয় মূল্য ৳${sPrice} টাকা প্রতি ${unit}। স্টকে আছে ${stockAmt} ${unit}।`;
+        return {
+          success: true,
+          action: 'inquiry_product_price',
+          navigateTo: '/stock',
+          speech,
+          reply: `🏷️ **পণ্যের দর ও মূল্য তালিকা:**\n• পণ্য: **${matchedProd.bangla_name || matchedProd.name}**\n• বিক্রয় মূল্য: **৳${sPrice} প্রতি ${unit}**\n• কেনা দর: ৳${pPrice} প্রতি ${unit}\n• বর্তমান মজুদ: **${stockAmt} ${unit}**`,
+          actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
+          data: { product: matchedProd.bangla_name || matchedProd.name, sellingPrice: sPrice, purchasePrice: pPrice, stock: stockAmt, unit }
+        };
+      }
+    }
+  }
+
   // 5. Daily Live Report & Sales / Profit Narration
   if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট/.test(rawText)) {
     const todaySales = db.prepare(`
@@ -4428,8 +4468,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const todayExpRow = db.prepare(`
       SELECT COALESCE(SUM(amount), 0) as totalExp
       FROM expenses
-      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
-    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, `${todayDate}%`) as any;
 
     const sAmt = Number(todaySalesRow?.totalSales) || 0;
     const grossProfit = Number(todaySalesRow?.totalProfit) || 0;
@@ -4454,14 +4494,14 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const todayExpRow = db.prepare(`
       SELECT COALESCE(SUM(amount), 0) as totalExp, COUNT(*) as expCount
       FROM expenses
-      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
-    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, `${todayDate}%`) as any;
 
     const topExpList = db.prepare(`
       SELECT title, amount, category FROM expenses
-      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?)
       ORDER BY amount DESC LIMIT 4
-    `).all(tenantId, todayDate, todayDate, `${todayDate}%`) as any[];
+    `).all(tenantId, todayDate, `${todayDate}%`) as any[];
 
     const expAmt = Number(todayExpRow?.totalExp) || 0;
     const expCount = Number(todayExpRow?.expCount) || 0;
@@ -4481,8 +4521,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     };
   }
 
-  // 8.7. Today's Shop Full Brief / Overall Summary ("আজকের হিসাব বলো", "সারাদিনের হিসাব বলো", "আজকের সার্বিক হিসাব", "দোকানের অবস্থা কেমন", "আজকের সারসংক্ষেপ")
-  if (/আজকের?\s*(হিসাব|সার্বিক\s*হিসাব|সামারি|সারসংক্ষেপ|অবস্থা)|সারাদিনের\s*হিসাব|দোকানের\s*(অবস্থা|হিসাব)/.test(rawText) && !/গতকাল|সপ্তাহ|মাস/.test(rawText)) {
+  // 8.7. Today's Shop Full Brief / Overall Summary ("আজকের হিসাব বলো", "সারাদিনের হিসাব বলো", "আজকের সার্বিক হিসাব", "দোকানের অবস্থা কেমন", "আজকের সারসংক্ষেপ", "ব্যবসা কেমন চলছে")
+  if (/ব্যবসা\s*কেমন|দোকান\s*কেমন|আজকের?\s*(হিসাব|সার্বিক\s*হিসাব|সামারি|সারসংক্ষেপ|অবস্থা|সারাংশ|রিপোর্ট|খবর)|সারাদিনের\s*হিসাব|দোকানের\s*(অবস্থা|হিসাব|খবর)/.test(rawText) && !/গতকাল|সপ্তাহ|মাস/.test(rawText)) {
     const todaySalesRow = db.prepare(`
       SELECT COALESCE(SUM(total_amount), 0) as totalSales,
              COALESCE(SUM(profit_amount), 0) as totalProfit,
@@ -4494,8 +4534,8 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const todayExpRow = db.prepare(`
       SELECT COALESCE(SUM(amount), 0) as totalExp
       FROM expenses
-      WHERE tenant_id = ? AND (date = ? OR date(created_at) = ? OR created_at LIKE ?)
-    `).get(tenantId, todayDate, todayDate, `${todayDate}%`) as any;
+      WHERE tenant_id = ? AND (date(created_at) = ? OR created_at LIKE ?)
+    `).get(tenantId, todayDate, `${todayDate}%`) as any;
 
     const marketDueRow = db.prepare('SELECT COALESCE(SUM(total_due), 0) as totalDue, COUNT(*) as dueCustCount FROM customers WHERE tenant_id = ? AND total_due > 0').get(tenantId) as any;
 
@@ -4652,11 +4692,11 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 // Real-Time Dynamic AI Business Assistant
 fastify.post('/api/ai-assistant/query', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, query, text, assistantName } = body || {};
+  const { tenantId, query, text, command, assistantName } = body || {};
 
   if (!tenantId) return reply.status(400).send({ error: 'Tenant ID required' });
 
-  const q = String(query || text || '').trim();
+  const q = String(command || query || text || '').trim();
   const res = executeAiShopCommand(tenantId, q, assistantName);
   return {
     success: res.success,
@@ -4671,11 +4711,11 @@ fastify.post('/api/ai-assistant/query', async (request, reply) => {
 
 fastify.post('/api/ai-assistant/command', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, text, query, assistantName } = body || {};
+  const { tenantId, text, query, command, assistantName } = body || {};
 
   if (!tenantId) return reply.status(400).send({ error: 'Tenant ID required' });
 
-  const q = String(text || query || '').trim();
+  const q = String(command || text || query || '').trim();
   const res = executeAiShopCommand(tenantId, q, assistantName);
   return res;
 });

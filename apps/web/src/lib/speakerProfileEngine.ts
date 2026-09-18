@@ -299,6 +299,21 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
   } catch (e) {}
 }
 
+/**
+ * Ensures the microphone Web Audio stream & biometric analyzer is active.
+ * Should be invoked whenever any voice recognition or voice modal opens or starts listening.
+ */
+export async function ensureBiometricMonitoring(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  try {
+    const { voiceProximityManager } = require('./voiceProximityGate');
+    if (voiceProximityManager) {
+      return await voiceProximityManager.start();
+    }
+  } catch (e) {}
+  return false;
+}
+
 // Automatically subscribe to voiceProximityManager frames on load
 if (typeof window !== 'undefined') {
   try {
@@ -335,6 +350,18 @@ export function evaluateUtteranceSpeaker(
   // If no harmonic vocal frames were detected:
   // Diffuse noise, fan, traffic, or distant TV with no clear human vocal fold periodicity
   if (recentFrames.length === 0) {
+    // Check if live analyser right now has a valid frame
+    try {
+      const { voiceProximityManager } = require('./voiceProximityGate');
+      const analyser = voiceProximityManager?.getAnalyser();
+      if (analyser) {
+        const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+        if (live.isAuthorized) {
+          return live;
+        }
+      }
+    } catch (e) {}
+
     return {
       isAuthorized: false,
       confidence: 0,
@@ -343,10 +370,10 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Energy & Near-Field Acoustic Check:
-  // Legitimate mouth-to-microphone speech produces average RMS >= 0.012.
-  // Distant TV on the wall, background chatter, or laptop speakers across desk produce low diffuse RMS.
+  // Legitimate mouth-to-microphone speech produces average RMS >= 0.009.
+  // Distant TV on the wall, background chatter, or laptop speakers produce low diffuse RMS.
   const avgRMS = recentFrames.reduce((s, f) => s + (f.rms || 0), 0) / recentFrames.length;
-  if (avgRMS < 0.011) {
+  if (avgRMS < 0.009) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -372,10 +399,10 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
-    // Strict pitch window for speaker identity:
-    // ±16 Hz around profile.pitchMean, bounded within [pitchMin - 8, pitchMax + 12]
-    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 8, profile.pitchMean - 16));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 12, profile.pitchMean + 16));
+    // Pitch window for speaker identity:
+    // Natural human inflection during spoken Bengali varies ±24 Hz around mean
+    const lowerPitch = Math.max(60, Math.min(profile.pitchMin - 12, profile.pitchMean - 24));
+    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 16, profile.pitchMean + 24));
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
@@ -385,10 +412,10 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Timbre check: if spectral centroid differs by > 750 Hz, it's a loudspeaker/TV or another person!
+      // Timbre check: if spectral centroid differs by > 850 Hz, it's a loudspeaker/TV or another person!
       if (profile.centroidMean && profile.centroidMean > 0) {
         const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 750) {
+        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 850) {
           continue;
         }
       }
@@ -408,8 +435,8 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Strict Authorization Rule:
-  // Must have at least 3 voiced samples, and at least 58% of recent vocal samples must match
-  if (bestMatch && bestMatch.matchingCount >= 3 && bestMatch.matchRatio >= 0.58) {
+  // Must have at least 2 voiced samples, and at least 45% of recent vocal samples must match
+  if (bestMatch && bestMatch.matchingCount >= 2 && bestMatch.matchRatio >= 0.45) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
