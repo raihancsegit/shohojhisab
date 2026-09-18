@@ -3,11 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { cleanSpokenBengali, isEchoedTTSResponse } from '../lib/banglaSpeechUtils';
+import { cleanSpokenBengali, isEchoedTTSResponse, extractTranscriptFromEvent } from '../lib/banglaSpeechUtils';
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../lib/audioFeedbackUtils';
 import { getIndustryVoiceConfig } from '../lib/industryConfig';
 import { executeOfflineAiShopCommand } from '../lib/offlineAiEngine';
 import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../lib/speakerProfileEngine';
+import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 export default function VoiceAssistant() {
   const { tenant, userRole, triggerHaptic, speakAnnouncement } = useAuth();
@@ -46,7 +47,9 @@ export default function VoiceAssistant() {
   const isListeningRef = useRef<boolean>(false);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+      : null;
     if (!SpeechRecognition) {
       setIsSupported(false);
     }
@@ -63,11 +66,136 @@ export default function VoiceAssistant() {
     };
   }, []);
 
+  const resetInactivityWatchdog = () => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = setTimeout(() => {
+      if (isListeningRef.current && !latestTranscriptRef.current.trim()) {
+        cancelVoice();
+      }
+    }, 14000);
+  };
+
+  const spawnRecognitionInstance = () => {
+    if (!isListeningRef.current || isProcessing) return;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+      : null;
+    if (!SpeechRecognition) return;
+
+    // Clean up any previous recognition instance
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'bn-BD';
+      // On mobile Android, continuous MUST be false so native SpeechRecognizer returns events!
+      recognition.continuous = !isMobile;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        if (isListeningRef.current) {
+          setIsListening(true);
+        }
+      };
+
+      recognition.onresult = (event: any) => {
+        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        if (!fullTranscript) return;
+
+        resetInactivityWatchdog();
+        latestTranscriptRef.current = fullTranscript;
+        setLiveTranscript(fullTranscript);
+
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        const waitMs = isFinal ? (isMobile ? 450 : 400) : (isMobile ? 1100 : 800);
+        silenceTimerRef.current = setTimeout(() => {
+          if (latestTranscriptRef.current.trim()) {
+            stopAndExecute(latestTranscriptRef.current.trim());
+          }
+        }, waitMs);
+      };
+
+      recognition.onerror = (err: any) => {
+        console.warn('[VoiceAssistant] Recognition error:', err.error);
+        if (err.error === 'not-allowed') {
+          setFeedbackType('error');
+          setFeedbackText('মাইক্রোফোন পারমিশন বন্ধ আছে। ব্রাউজার সেটিংসে গিয়ে অনুমতি দিন।');
+          stopListeningOnly();
+          return;
+        }
+        if (err.error === 'audio-capture') {
+          setFeedbackType('error');
+          setFeedbackText('মাইক্রোফোন চালু করা যায়নি। অন্য অ্যাপের মাইক বন্ধ করুন।');
+          stopListeningOnly();
+          return;
+        }
+        if (err.error === 'network') {
+          if (latestTranscriptRef.current.trim()) {
+            stopAndExecute(latestTranscriptRef.current.trim());
+            return;
+          }
+          setFeedbackType('listening');
+          setFeedbackText('ভয়েস নেটওয়ার্ক ড্রপ করেছে। আবার বলুন বা লিখুন।');
+          return;
+        }
+        // 'no-speech' is expected when user is thinking/pausing; onend will seamlessly restart!
+      };
+
+      recognition.onend = () => {
+        // If we already have a spoken phrase and user paused
+        if (latestTranscriptRef.current.trim() && isMobile) {
+          if (!silenceTimerRef.current) {
+            stopAndExecute(latestTranscriptRef.current.trim());
+            return;
+          }
+        }
+
+        // Re-spawn a FRESH instance on Android/desktop to continue listening without InvalidStateError
+        if (isListeningRef.current && !isProcessing) {
+          setTimeout(() => {
+            if (isListeningRef.current && !isProcessing) {
+              spawnRecognitionInstance();
+            }
+          }, 150);
+        } else {
+          setIsListening(false);
+          isListeningRef.current = false;
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.warn('[VoiceAssistant] Start exception, retrying:', err);
+      if (isListeningRef.current && !isProcessing) {
+        setTimeout(() => {
+          if (isListeningRef.current && !isProcessing) {
+            spawnRecognitionInstance();
+          }
+        }, 300);
+      }
+    }
+  };
+
   const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+      : null;
     if (!SpeechRecognition) {
       setFeedbackType('error');
-      setFeedbackText('আপনার ব্রাউজারে বাংলা ভয়েস সাপোর্ট নেই। Chrome ব্যবহার করুন।');
+      setFeedbackText('আপনার ব্রাউজারে বাংলা ভয়েস সাপোর্ট নেই। Google Chrome ব্যবহার করুন।');
       return;
     }
 
@@ -95,101 +223,20 @@ export default function VoiceAssistant() {
     setFeedbackText('');
     isListeningRef.current = true;
     setIsListening(true);
-    ensureBiometricMonitoring().catch(() => {});
     setIsProcessing(false);
 
-    // Auto dismiss after 10s if nothing is spoken
-    inactivityTimerRef.current = setTimeout(() => {
-      if (isListeningRef.current && !latestTranscriptRef.current.trim()) {
-        cancelVoice();
-      }
-    }, 10000);
-
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
-      }
-
-      const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'bn-BD';
-      recognition.continuous = !isMobile;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      recognition.onresult = (event: any) => {
-        let full = '';
-        for (let i = 0; i < event.results.length; i++) {
-          const item = event.results[i];
-          if (item && item[0] && item[0].transcript) {
-            full += (full ? ' ' : '') + item[0].transcript;
-          }
-        }
-        const cleaned = cleanSpokenBengali(full);
-        if (!cleaned) return;
-
-        pingVoiceVerification(tenant?.id || 'default');
-
-        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-        latestTranscriptRef.current = cleaned;
-        setLiveTranscript(cleaned);
-
-        // Auto-complete after 700ms silence
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = setTimeout(() => {
-          if (latestTranscriptRef.current.trim()) {
-            stopAndExecute(latestTranscriptRef.current.trim());
-          }
-        }, 700);
-      };
-
-      recognition.onerror = (err: any) => {
-        console.warn('Voice recognition error:', err.error);
-        if (err.error === 'not-allowed') {
-          setFeedbackType('error');
-          setFeedbackText('মাইক্রোফোন পারমিশন বন্ধ আছে। ব্রাউজার সেটিংসে গিয়ে অনুমতি দিন।');
-          setIsListening(false);
-          isListeningRef.current = false;
-        } else if (err.error === 'network' || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-          setFeedbackType('listening');
-          setFeedbackText('🟢 অফলাইন মোড: কমান্ড বাটনে চাপুন বা লিখুন');
-          setIsListening(false);
-          isListeningRef.current = false;
-        } else if (err.error !== 'no-speech') {
-          if (latestTranscriptRef.current.trim()) {
-            stopAndExecute(latestTranscriptRef.current.trim());
-          }
-        }
-      };
-
-      recognition.onend = () => {
-        if (latestTranscriptRef.current.trim()) {
-          stopAndExecute(latestTranscriptRef.current.trim());
-          return;
-        }
-
-        if (isListeningRef.current && !isProcessing && typeof navigator !== 'undefined' && navigator.onLine) {
-          try {
-            recognition.start();
-          } catch (e) {
-            setIsListening(false);
-            isListeningRef.current = false;
-          }
-        } else {
-          setIsListening(false);
-          isListeningRef.current = false;
-        }
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
-      setIsListening(false);
-      isListeningRef.current = false;
-      setFeedbackType('listening');
-      setFeedbackText('🟢 অফলাইন সহকারী প্রস্তুত');
+    // On mobile devices, ensure proximity monitor / Web Audio is stopped so SpeechRecognition has 100% exclusive mic access
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      try {
+        voiceProximityManager.stop();
+      } catch (e) {}
+    } else {
+      ensureBiometricMonitoring().catch(() => {});
     }
+
+    resetInactivityWatchdog();
+    spawnRecognitionInstance();
   };
 
   const stopListeningOnly = () => {
@@ -219,9 +266,10 @@ export default function VoiceAssistant() {
       return;
     }
 
-    // Speaker Biometrics Verification (Filter TV/laptop/strangers)
+    // On mobile devices, bypass desktop acoustic centroid check so SpeechRecognition always executes!
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
     const tenantKey = tenant?.id || 'default';
-    if (isSpeakerLockEnabled(tenantKey)) {
+    if (!isMobile && isSpeakerLockEnabled(tenantKey)) {
       const speakerCheck = verifyCurrentVoice(tenantKey);
       if (!speakerCheck.isAuthorized) {
         triggerHaptic?.('warning');
@@ -412,10 +460,20 @@ export default function VoiceAssistant() {
                   🎙️
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700' }}>
-                    {isListening ? 'শুনছি, মুখে বলুন...' : 'কথা শেষে স্বয়ংক্রিয় প্রসেস হবে'}
+                  <div style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>{liveTranscript ? '🟢 রেকর্ড হচ্ছে:' : isListening ? '🎙️ মাইক প্রস্তুত, মুখে বলুন...' : 'কথা শেষে স্বয়ংক্রিয় প্রসেস হবে'}</span>
+                    {isListening && !liveTranscript && (
+                      <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#34d399' }} />
+                    )}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: '800', marginTop: '2px', wordBreak: 'break-word' }}>
+                  <div style={{
+                    fontSize: (liveTranscript || latestTranscriptRef.current) ? '15px' : '13px',
+                    color: (liveTranscript || latestTranscriptRef.current) ? '#34d399' : 'rgba(255,255,255,0.75)',
+                    fontWeight: '800',
+                    marginTop: '3px',
+                    wordBreak: 'break-word',
+                    minHeight: '22px'
+                  }}>
                     {liveTranscript || latestTranscriptRef.current || 'যেমন: "২ কেজি চিনি বিক্রি" বা "ব্যবসা কেমন চলছে"'}
                   </div>
                 </div>

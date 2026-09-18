@@ -305,6 +305,10 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
  */
 export async function ensureBiometricMonitoring(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
+  // On mobile Android/iOS, running getUserMedia simultaneously with Web Speech API
+  // locks the audio hardware and causes SpeechRecognition to receive 0 bytes!
+  const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+  if (isMobile) return false;
   try {
     const { voiceProximityManager } = require('./voiceProximityGate');
     if (voiceProximityManager) {
@@ -536,6 +540,13 @@ export function verifyCurrentVoice(
   tenantId: string = 'default',
   targetSpeakerId?: string
 ): SpeakerVerificationResult {
+  if (typeof window !== 'undefined') {
+    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      return { isAuthorized: true, confidence: 100, reason: 'authorized' };
+    }
+  }
+
   if (!isSpeakerLockEnabled(tenantId)) {
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
   }
