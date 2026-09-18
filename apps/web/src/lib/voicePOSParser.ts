@@ -479,7 +479,8 @@ export function parseVoicePOSCommand(
   }
 
   // D2. Modify Last Item Quantity ("না না ২ কেজি করো", "না না ৩টা", "পরিমাণ ৩টা করো", "না ১ কেজি")
-  const updateQtyMatch = normalized.match(/(?:না\s*না\s*|পরিমাণ\s*|না\s+)(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|হালি|টি|টা)?(?:\s*করো|\s*দাও|\s*রাখো)?/i);
+  // Note: Must require start of string (^|\s) and avoid matching product names ending in 'না' (e.g. সাবুদানা, ছানা)
+  const updateQtyMatch = normalized.match(/^(?:না\s*না\s+|পরিমাণ\s+|না\s+)(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|হালি|টি|টা)?(?:\s*করো|\s*দাও|\s*রাখো)?$/i);
   if (updateQtyMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
     const newQty = Number(updateQtyMatch[1]);
     const newUnit = updateQtyMatch[2];

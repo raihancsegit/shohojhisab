@@ -46,6 +46,7 @@ export default function VoicePOSCalculatorModal({
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(false);
   const [activeCatalog, setActiveCatalog] = useState<any[]>(products || []);
+  const [unrecognizedSpokenItems, setUnrecognizedSpokenItems] = useState<ParsedVoiceItem[]>([]);
 
   useEffect(() => {
     if (isOpen && isVoiceLockOn) {
@@ -343,6 +344,10 @@ export default function VoicePOSCalculatorModal({
         // Check if completely missing from shop catalog
         if (!prod) {
           notFoundNames.push(item.banglaName || item.name);
+          setUnrecognizedSpokenItems(prev => {
+            const exists = prev.some(p => (p.banglaName || p.name) === (item.banglaName || item.name));
+            return exists ? prev : [...prev, item];
+          });
           continue;
         }
 
@@ -382,8 +387,8 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = notFoundNames.join(', ');
-        speakFeedback(`দুঃখিত, ${nameList} পণ্যটি আপনার দোকানে স্টকে নেই বা পাওয়া যায়নি!`);
-        setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
+        speakFeedback(`দুঃখিত, ${nameList} পণ্যটি স্টকে পাওয়া যায়নি। নিচে ১-ট্যাপে মেমোতে যোগ করতে পারেন।`);
+        setLastActionMessage(`⚠️ "${nameList}" স্টকে পাওয়া যায়নি (নিচে বাটন চেপে মেমোতে যোগ করুন)`);
       }
 
       // Only add verified items that actually exist in stock!
@@ -1141,6 +1146,82 @@ export default function VoicePOSCalculatorModal({
             <strong style={{ fontSize: '14px', color: '#0f172a' }}>{items.length} টি</strong>
           </div>
         </div>
+
+        {/* ⚡ Uncataloged / Missing Item 1-Tap Recovery Banner */}
+        {unrecognizedSpokenItems.length > 0 && (
+          <div style={{
+            background: '#fffbeb',
+            borderBottom: '1px solid #fef3c7',
+            padding: '8px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            overflowX: 'auto',
+            flexShrink: 0
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: '900', color: '#b45309', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              ⚠️ স্টকে তালিকাভুক্ত নয়:
+            </span>
+            {unrecognizedSpokenItems.map((it, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('success');
+                  playBeep(1100);
+                  const price = it.unitPrice && it.unitPrice > 0 ? it.unitPrice : (it.totalPrice && it.totalPrice > 0 ? it.totalPrice : 50);
+                  const fallbackItem: ParsedVoiceItem = {
+                    id: 'vitem-custom-' + Date.now() + Math.random().toString().slice(-4),
+                    productId: 'prod-custom-' + Date.now().toString().slice(-6),
+                    name: it.name || it.banglaName,
+                    banglaName: it.banglaName || it.name,
+                    quantity: it.quantity || 1,
+                    unit: it.unit || 'পিস',
+                    unitPrice: price,
+                    totalPrice: price * (it.quantity || 1),
+                    isExistingProduct: false
+                  };
+                  setItems(prev => [...prev, fallbackItem]);
+                  setUnrecognizedSpokenItems(prev => prev.filter((_, i) => i !== idx));
+                  setLastActionMessage(`✓ "${fallbackItem.banglaName}" মেমোতে যোগ করা হয়েছে`);
+                  speakFeedback(`${fallbackItem.banglaName} মেমোতে যোগ হয়েছে`);
+                }}
+                style={{
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  color: '#92400e',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+              >
+                <span>➕ {it.banglaName || it.name} ({it.quantity || 1} {it.unit || 'পিস'}) যোগ করুন</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setUnrecognizedSpokenItems([])}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                fontSize: '13px',
+                cursor: 'pointer',
+                padding: '2px 6px'
+              }}
+              title="মুছে ফেলুন"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* ⚡ 1-Tap Quick Staples Carousel from Stock */}
         {activeCatalog && activeCatalog.length > 0 && (
