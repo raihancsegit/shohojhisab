@@ -57,7 +57,9 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
   let interimTranscript = '';
   let hasFinal = false;
 
-  for (let i = 0; i < event.results.length; i++) {
+  const startIndex = typeof event.resultIndex === 'number' ? event.resultIndex : 0;
+
+  for (let i = startIndex; i < event.results.length; i++) {
     const result = event.results[i];
     if (result && result[0] && result[0].transcript) {
       const trans = result[0].transcript.trim();

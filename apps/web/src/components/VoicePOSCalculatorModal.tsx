@@ -180,8 +180,8 @@ export default function VoicePOSCalculatorModal({
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      // On mobile Android, continuous MUST be false to prevent speech recognizer freezing
-      recognition.continuous = !isMobile;
+      // continuous: false gives instant sentence finalization and prevents Chrome event buffer staleness
+      recognition.continuous = false;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
