@@ -1841,14 +1841,18 @@ export default function PosPage() {
     if (posSilenceTimerRef.current) clearTimeout(posSilenceTimerRef.current);
     posTranscriptBufferRef.current = '';
 
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      try { voiceProximityManager.stop(); } catch (e) {}
+    } else {
+      voiceProximityManager.start().catch(() => {});
+    }
+
     const recognition = new SpeechRecognition();
     recognition.lang = 'bn-BD';
-    recognition.continuous = true;
+    recognition.continuous = !isMobile;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-
-    // Start proximity monitor for real-time RMS and F0 analysis
-    voiceProximityManager.start();
 
     setIsListening(true);
     setVoiceNotice('🎙️ শুনছি... বলুন: যেমন "চিনি ১ কেজি" বা "তেল ২ লিটার"');
@@ -1866,9 +1870,6 @@ export default function PosPage() {
         }
       }
 
-      // Continuously evaluate and cache voice while user is actively speaking
-      pingVoiceVerification(tenant?.id || 'default');
-
       if (finalChunk) {
         posTranscriptBufferRef.current += finalChunk;
       }
@@ -1882,8 +1883,9 @@ export default function PosPage() {
         counterSleepManager.wakeUp(fullSpoken);
       }
 
-      // 1.2-second silence timer before finishing command
+      // Silence timer before finishing command
       if (posSilenceTimerRef.current) clearTimeout(posSilenceTimerRef.current);
+      const waitMs = finalChunk ? (isMobile ? 350 : 300) : (isMobile ? 1000 : 700);
       posSilenceTimerRef.current = setTimeout(() => {
         try {
           recognition.stop();
@@ -1906,8 +1908,8 @@ export default function PosPage() {
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
 
-          // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff
-          if (isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
+          // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff (desktop only)
+          if (!isMobile && isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
             triggerHaptic('warning');
             playWarningSound();
             if (speakerCheck.reason === 'background_noise_or_tv') {
@@ -1928,7 +1930,7 @@ export default function PosPage() {
           counterSleepManager.resetIdleTimer();
         }
         setTimeout(() => setVoiceNotice(''), 4000);
-      }, 1200);
+      }, waitMs);
     };
 
     recognition.onerror = (err: any) => {
@@ -1943,8 +1945,7 @@ export default function PosPage() {
       if (counterSleepManager.getState().isEnabled) {
         setTimeout(() => {
           try {
-            recognition.start();
-            setIsListening(true);
+            startVoiceSearch();
           } catch (e) {}
         }, 350);
       }
@@ -2072,11 +2073,19 @@ export default function PosPage() {
     if (!foundProd) {
       const scored = products
         .map(p => ({ prod: p, score: scoreCatalogCandidate(p, qClean) }))
-        .filter(c => c.score > 120);
+        .filter(c => c.score > 70);
       if (scored.length > 0) {
         scored.sort((a, b) => b.score - a.score);
         foundProd = scored[0].prod;
       }
+    }
+
+    // Tier 3: Substring search (e.g. "চিনি" matches "সাদা চিনি" or "তীর তেল" matches "তেল")
+    if (!foundProd) {
+      foundProd = products.find(p => {
+        const b = (p.banglaName || p.name || '').toLowerCase().trim();
+        return b.includes(qClean) || qClean.includes(b);
+      });
     }
 
     if (foundProd) {

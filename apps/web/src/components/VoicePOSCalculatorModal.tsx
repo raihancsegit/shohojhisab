@@ -45,6 +45,35 @@ export default function VoicePOSCalculatorModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(() => isSpeakerLockEnabled(tenantKey));
+  const [activeCatalog, setActiveCatalog] = useState<any[]>(products || []);
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      setActiveCatalog(products);
+    } else {
+      try {
+        const rawVault = typeof window !== 'undefined' ? localStorage.getItem(`lbos_vault_${currentTenantId}`) : null;
+        if (rawVault) {
+          const parsed = JSON.parse(rawVault);
+          if (Array.isArray(parsed?.products) && parsed.products.length > 0) {
+            setActiveCatalog(parsed.products);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      if (currentTenantId) {
+        fetch(`/api/products?tenantId=${currentTenantId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+              setActiveCatalog(data);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [products, currentTenantId]);
 
   const recognitionRef = useRef<any>(null);
   const isComponentMounted = useRef<boolean>(true);
@@ -82,7 +111,14 @@ export default function VoicePOSCalculatorModal({
     setLiveTranscript('');
 
     if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
     }
 
     speakAnnouncement(text, () => {
@@ -90,50 +126,54 @@ export default function VoicePOSCalculatorModal({
       ttsCooldownTimerRef.current = setTimeout(() => {
         isTTSActiveRef.current = false;
         if (isComponentMounted.current && !isMuted && isOpen) {
-          try {
-            recognitionRef.current?.start();
-          } catch (e) {}
+          spawnRecognitionInstance();
         }
         if (onDone) onDone();
       }, 800);
     }, true);
   };
 
-  // Start / Maintain Continuous Hands-Free Listening Loop
-  const startContinuousListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে বাংলা ভয়েস সাপোর্ট করে না। Google Chrome ব্যবহার করুন।');
-      return;
+  // Start / Maintain Continuous Hands-Free Listening Loop with Fresh Instance Spawning
+  const spawnRecognitionInstance = () => {
+    if (!isComponentMounted.current || isMuted || isTTSActiveRef.current) return;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+      : null;
+    if (!SpeechRecognition) return;
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
     }
 
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
 
+    try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      recognition.continuous = true;
+      // On mobile Android, continuous MUST be false to prevent speech recognizer freezing
+      recognition.continuous = !isMobile;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         if (isComponentMounted.current) {
           setIsListening(true);
-          voiceProximityManager.start();
         }
       };
 
       recognition.onresult = (event: any) => {
-        // Echo Prevention: Do not capture speech while real browser TTS is speaking
         const isSpeakingReal = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
         if (!isSpeakingReal && typeof window !== 'undefined') {
           (window as any).__IS_TTS_SPEAKING__ = false;
         }
-        if (isTTSActiveRef.current && isSpeakingReal) {
-          return;
-        }
+        if (isTTSActiveRef.current && isSpeakingReal) return;
 
         let interimText = '';
         let finalChunk = '';
@@ -149,9 +189,6 @@ export default function VoicePOSCalculatorModal({
         const currentSaid = (finalChunk || interimText).trim();
         if (!currentSaid) return;
 
-        // Continuously evaluate and cache voice while user is actively speaking
-        pingVoiceVerification(currentTenantId || 'default');
-
         // Extra guard: Ignore if transcript is echo of confirmation keywords
         if (
           isEchoedTTSResponse(currentSaid) ||
@@ -163,34 +200,24 @@ export default function VoicePOSCalculatorModal({
         setLiveTranscript(currentSaid);
         accumulatedTranscriptRef.current = currentSaid;
 
-        // Debounce: Wait for user to finish speaking the whole phrase before parsing
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        const waitMs = finalChunk ? (isMobile ? 350 : 300) : (isMobile ? 900 : 650);
 
-        const waitMs = finalChunk ? 400 : 700;
         debounceTimerRef.current = setTimeout(() => {
           const isStillSpeaking = typeof window !== 'undefined' && window.speechSynthesis?.speaking === true;
-          if (isTTSActiveRef.current && isStillSpeaking) {
-            return;
-          }
+          if (isTTSActiveRef.current && isStillSpeaking) return;
 
           const textToProcess = accumulatedTranscriptRef.current.trim();
           if (!textToProcess) return;
 
           const now = Date.now();
-          // Deduplicate if identical phrase repeated within 2.5s
-          if (
-            lastProcessedRef.current.text === textToProcess &&
-            now - lastProcessedRef.current.time < 2500
-          ) {
+          if (lastProcessedRef.current.text === textToProcess && now - lastProcessedRef.current.time < 2200) {
             return;
           }
 
-          // Speaker Biometrics & TV Noise Verification
+          // Biometrics verification on desktop only (mobile bypasses centroid to never drop speech)
           const tenantKey = currentTenantId || 'default';
-          const lockActive = isSpeakerLockEnabled(tenantKey);
-          if (lockActive) {
+          if (!isMobile && isSpeakerLockEnabled(tenantKey)) {
             const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
@@ -198,12 +225,9 @@ export default function VoicePOSCalculatorModal({
               if (speakerCheck.reason === 'background_noise_or_tv') {
                 setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
               } else {
-                setLastActionMessage('🛡️ অননুমোদিত কণ্ঠ ফিল্টার করা হয়েছে (বাতিল - শুধু মালিকের কণ্ঠ গ্রহণযোগ্য)');
+                setLastActionMessage('🛡️ অননুমোদিত কণ্ঠ ফিল্টার করা হয়েছে (বাতিল - শুধু মালিকের কণ্ঠ)');
               }
               return;
-            }
-            if (speakerCheck.matchedSpeaker) {
-              setLastActionMessage(`✓ [${speakerCheck.matchedSpeaker.name}] কণ্ঠ যাচাইকৃত: "${textToProcess}"`);
             }
           }
 
@@ -214,25 +238,23 @@ export default function VoicePOSCalculatorModal({
       };
 
       recognition.onerror = (event: any) => {
-        console.log('Speech error:', event.error);
+        console.log('[VoicePOSModal] Speech error:', event.error);
         if (event.error === 'not-allowed') {
           setIsListening(false);
           setLastActionMessage('⚠️ মাইক্রোফোন ব্যবহারের অনুমতি দিন');
         } else if (event.error === 'network') {
-          setLastActionMessage('🎙️ শুনছি... মুখে বলুন বা ইনপুট বক্সে লিখে যোগ করুন');
+          setLastActionMessage('🎙️ শুনছি... মুখে বলুন বা নিচে টাইপ করে যোগ করুন');
         }
       };
 
       recognition.onend = () => {
-        // Auto-restart loop if still open, not muted, not currently speaking TTS, and online
-        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current && typeof navigator !== 'undefined' && navigator.onLine) {
+        // Automatically spawn a fresh recognition instance if still active and modal is open
+        if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
           setTimeout(() => {
-            try {
-              recognition.start();
-            } catch (e) {
-              setIsListening(false);
+            if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+              spawnRecognitionInstance();
             }
-          }, 300);
+          }, 150);
         } else {
           setIsListening(false);
         }
@@ -241,13 +263,21 @@ export default function VoicePOSCalculatorModal({
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error('Failed to start continuous speech recognition', err);
+      console.warn('[VoicePOSModal] Failed to spawn recognition, retrying:', err);
+      if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+        setTimeout(() => {
+          if (isComponentMounted.current && !isMuted && !isTTSActiveRef.current) {
+            spawnRecognitionInstance();
+          }
+        }, 300);
+      }
     }
   };
 
-  // Process Spoken Speech
+  // Process Spoken Speech & Strictly Ground against In-Stock Catalog
   const handleProcessVoiceInput = (spokenText: string) => {
-    const result: VoicePOSParseResult = parseVoicePOSCommand(spokenText, products);
+    const catalog = activeCatalog.length > 0 ? activeCatalog : (products || []);
+    const result: VoicePOSParseResult = parseVoicePOSCommand(spokenText, catalog);
     console.log('Voice POS Parsed:', result);
 
     if (result.type === 'noise_ignored') {
@@ -263,30 +293,41 @@ export default function VoicePOSCalculatorModal({
 
       for (const item of result.items) {
         const qClean = (item.banglaName || item.name || '').toLowerCase().trim();
-        // Tier 1: Exact match or ID match
-        let prod = products.find(p =>
+
+        // Tier 1: Exact Match or ID Match
+        let prod = catalog.find(p =>
           (item.productId && p.id === item.productId) ||
           ((p.banglaName || '').toLowerCase().trim() === qClean) ||
           ((p.name || '').toLowerCase().trim() === qClean)
         );
 
-        // Tier 2: Smart candidate scoring from catalog
+        // Tier 2: Smart Candidate Scoring from Catalog
         if (!prod) {
-          const scored = products
+          const scored = catalog
             .map(p => ({ prod: p, score: scoreCatalogCandidate(p, qClean, item.unit) }))
-            .filter(c => c.score > 120);
+            .filter(c => c.score > 70); // resilient Bengali match threshold
           if (scored.length > 0) {
             scored.sort((a, b) => b.score - a.score);
             prod = scored[0].prod;
           }
         }
 
+        // Tier 3: Substring Inclusion (e.g. "চিনি" matches "সাদা চিনি" or "সয়াবিন তেল" matches "তীর সয়াবিন তেল")
+        if (!prod) {
+          prod = catalog.find(p => {
+            const b = (p.banglaName || p.name || '').toLowerCase().trim();
+            return b.includes(qClean) || qClean.includes(b);
+          });
+        }
+
+        // Check if completely missing from shop catalog
         if (!prod) {
           notFoundNames.push(item.banglaName || item.name);
           continue;
         }
 
-        const currentStock = Number(prod.stock || 0);
+        // Check if out of stock
+        const currentStock = Number(prod.stock ?? 0);
         if (currentStock <= 0) {
           outOfStockNames.push(prod.banglaName || prod.name);
           continue;
@@ -313,7 +354,7 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = outOfStockNames.join(', ');
-        speakFeedback(`দুঃখিত, "${nameList}" পণ্যটির স্টক শেষ বা নেই!`);
+        speakFeedback(`দুঃখিত, ${nameList} পণ্যটির স্টক শেষ বা নেই!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই!`);
       }
 
@@ -321,7 +362,7 @@ export default function VoicePOSCalculatorModal({
         triggerHaptic('warning');
         playBeep(450);
         const nameList = notFoundNames.join(', ');
-        speakFeedback(`দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
+        speakFeedback(`দুঃখিত, ${nameList} পণ্যটি আপনার দোকানে স্টকে নেই বা পাওয়া যায়নি!`);
         setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই বা পাওয়া যায়নি!`);
       }
 
@@ -558,13 +599,20 @@ export default function VoicePOSCalculatorModal({
   const toggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
-      startContinuousListening();
-      setLastActionMessage('🎙️ মাইক আবার চালু হয়েছে। বলুন...');
+      spawnRecognitionInstance();
+      setLastActionMessage('🎙️ মাইক আবার চালু হয়েছে। মুখে পণ্যের নাম বলুন...');
     } else {
       setIsMuted(true);
       setIsListening(false);
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
+        try {
+          recognitionRef.current.onstart = null;
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onerror = null;
+          recognitionRef.current.onend = null;
+          recognitionRef.current.abort();
+        } catch (e) {}
+        recognitionRef.current = null;
       }
       setLastActionMessage('⏸️ মাইক সাময়িকভাবে পজ করা হয়েছে।');
     }
@@ -577,13 +625,29 @@ export default function VoicePOSCalculatorModal({
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
-      startContinuousListening();
+
+      // Stop any getUserMedia track on mobile so SpeechRecognition gets exclusive mic
+      const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+      if (isMobile) {
+        try { voiceProximityManager.stop(); } catch (e) {}
+      } else {
+        voiceProximityManager.start().catch(() => {});
+      }
+
+      spawnRecognitionInstance();
     }
 
     return () => {
       isComponentMounted.current = false;
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
+        try {
+          recognitionRef.current.onstart = null;
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onerror = null;
+          recognitionRef.current.onend = null;
+          recognitionRef.current.abort();
+        } catch (e) {}
+        recognitionRef.current = null;
       }
     };
   }, [isOpen]);
