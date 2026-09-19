@@ -262,8 +262,8 @@ export default function ExpensesPage() {
               ৳{totalExpense.toLocaleString('en-US')}
             </div>
           </div>
-          <button onClick={() => setShowAddModal(true)} style={{ background: '#fff', color: '#991b1b', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '900', fontSize: '12.5px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-            ➕ নতুন খরচ এন্ট্রি
+          <button onClick={() => setShowAddModal(true)} style={{ background: '#fff', color: '#991b1b', border: 'none', padding: '7px 12px', borderRadius: '10px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.12)' }}>
+            ➕ নতুন খরচ
           </button>
         </div>
       </div>

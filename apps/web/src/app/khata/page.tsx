@@ -1152,18 +1152,18 @@ export default function KhataPage() {
               background: '#047857',
               color: '#fff',
               border: 'none',
-              padding: '8px 12px',
+              padding: '7px 11px',
               borderRadius: '10px',
               fontWeight: '800',
               fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(4, 120, 87, 0.2)',
+              boxShadow: '0 2px 6px rgba(4, 120, 87, 0.2)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
             }}
           >
-            <span>📥</span> এক্সেল / CSV
+            <span>📥</span> এক্সেল
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -1171,18 +1171,18 @@ export default function KhataPage() {
               background: theme.primaryGradient,
               color: '#fff',
               border: 'none',
-              padding: '8px 12px',
+              padding: '7px 11px',
               borderRadius: '10px',
               fontWeight: '800',
               fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px'
             }}
           >
-            <span>➕</span> নতুন বাকি খাতা
+            <span>➕</span> নতুন খাতা
           </button>
         </div>
       </div>
