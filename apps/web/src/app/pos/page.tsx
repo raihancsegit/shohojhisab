@@ -250,6 +250,8 @@ export interface AdaptiveSubUnitChip {
   unit?: string;
   isTabletBreakdown?: boolean;
   tabletCount?: number;
+  isTare?: boolean;
+  tareGrams?: number;
 }
 
 export interface AdaptiveSubUnitConfig {
@@ -269,21 +271,37 @@ export function getAdaptiveSubUnitChips(
   const cleanName = activeItem ? (p?.banglaName || p?.name || activeItem.note || '').split('(')[0].trim() : '';
 
   // 1. Weight & Liquid Volume (কেজি, লিটার, গ্রাম, মিলি)
-  if (unit === 'কেজি' || unit === 'লিটার' || category === 'cat-grocery' || category === 'cat-meat-fish' || category === 'cat-sweet') {
+  if (unit === 'কেজি' || unit === 'লিটার' || category === 'cat-grocery' || category === 'cat-meat-fish') {
     const isLiquid = unit === 'লিটার';
     const mainUnit = isLiquid ? 'লিটার' : 'কেজি';
     const subUnit = isLiquid ? 'মিলি' : 'গ্রাম';
     return {
       icon: isLiquid ? '🛢️' : '⚖️',
-      title: cleanName ? `${cleanName} (${mainUnit}):` : `${isLiquid ? 'তরল' : 'ওজন'} ভগ্নাংশ:`,
+      title: cleanName ? `${cleanName} (${mainUnit}):` : `${isLiquid ? 'তরল' : 'ওজন'} মাপ:`,
       chips: [
-        { label: `হাফ ${mainUnit} (০.৫×)`, mult: 0.5, unit: mainUnit },
-        { label: isLiquid ? `২৫০ ${subUnit} (০.২৫×)` : `১ পোয়া (২৫০ গ্রাম)`, mult: 0.25, unit: mainUnit },
-        { label: `১০০ ${subUnit} (০.১×)`, mult: 0.1, unit: mainUnit },
-        { label: `৫০ ${subUnit} (০.০৫×)`, mult: 0.05, unit: mainUnit },
-        { label: `দেড় ${mainUnit} (১.৫×)`, mult: 1.5, unit: mainUnit },
-        { label: `২ ${mainUnit} (২×)`, mult: 2, unit: mainUnit },
-        { label: `৫ ${mainUnit} (৫×)`, mult: 5, unit: mainUnit },
+        { label: `হাফ ${mainUnit}`, mult: 0.5, unit: mainUnit },
+        { label: isLiquid ? '২৫০ml' : '১ পোয়া', mult: 0.25, unit: mainUnit },
+        { label: isLiquid ? '১০০ml' : '১০০g', mult: 0.1, unit: mainUnit },
+        { label: isLiquid ? '৫০ml' : '৫০g', mult: 0.05, unit: mainUnit },
+        { label: `দেড় ${mainUnit}`, mult: 1.5, unit: mainUnit },
+        { label: `২ ${mainUnit}`, mult: 2, unit: mainUnit },
+        { label: `৫ ${mainUnit}`, mult: 5, unit: mainUnit },
+      ]
+    };
+  }
+
+  // 1b. Sweets & Confectionery (মিষ্টি - বক্সের খালি ওজন বাদ সহ)
+  if (category === 'cat-sweet') {
+    return {
+      icon: '🧁',
+      title: cleanName ? `${cleanName}:` : 'মিষ্টির মাপ ও বক্স:',
+      chips: [
+        { label: 'হাফ কেজি', mult: 0.5, unit: 'কেজি' },
+        { label: '১ পোয়া', mult: 0.25, unit: 'কেজি' },
+        { label: '১ কেজি', mult: 1, unit: 'কেজি' },
+        { label: '২ কেজি', mult: 2, unit: 'কেজি' },
+        { label: '[-৫০g বক্স]', mult: -0.05, unit: 'কেজি', isTare: true, tareGrams: 50 },
+        { label: '[-৮০g বক্স]', mult: -0.08, unit: 'কেজি', isTare: true, tareGrams: 80 },
       ]
     };
   }
@@ -293,15 +311,14 @@ export function getAdaptiveSubUnitChips(
     const ratio = (p && Number(p.conversionRatio) > 1) ? Number(p.conversionRatio) : 10;
     return {
       icon: '💊',
-      title: cleanName ? `${cleanName} (ঔষধ):` : 'ফার্মেসি একক:',
+      title: cleanName ? `${cleanName}:` : 'ঔষধের মাপ:',
       chips: [
-        { label: '১ পাতা (১×)', mult: 1, unit: 'পাতা' },
-        { label: `হাফ পাতা (${Math.round(ratio / 2)}টি)`, mult: 0.5, unit: 'পাতা' },
-        { label: '১টি ট্যাবলেট', mult: 1 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 1 },
-        { label: '২টি ট্যাবলেট', mult: 2 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 2 },
-        { label: '৩টি ট্যাবলেট', mult: 3 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 3 },
-        { label: '৫টি ট্যাবলেট', mult: 5 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 5 },
-        { label: `${ratio}টি পাতা`, mult: 1, unit: 'পাতা' },
+        { label: '১ পাতা', mult: 1, unit: 'পাতা' },
+        { label: 'হাফ পাতা', mult: 0.5, unit: 'পাতা' },
+        { label: '১টি ট্যাব', mult: 1 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 1 },
+        { label: '২টি ট্যাব', mult: 2 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 2 },
+        { label: '৩টি ট্যাব', mult: 3 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 3 },
+        { label: '৫টি ট্যাব', mult: 5 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 5 },
       ]
     };
   }
@@ -313,16 +330,16 @@ export function getAdaptiveSubUnitChips(
       icon: '🥚',
       title: cleanName ? `${cleanName}:` : 'হালি ও ডজন:',
       chips: isHali ? [
-        { label: '১ হালি (১×)', mult: 1, unit: 'হালি' },
-        { label: '২ হালি (২×)', mult: 2, unit: 'হালি' },
-        { label: '১ ডজন (৩×)', mult: 3, unit: 'হালি' },
-        { label: '২ ডজন (৬×)', mult: 6, unit: 'হালি' },
-        { label: 'হাফ হালি (২টি)', mult: 0.5, unit: 'হালি' },
+        { label: '১ হালি', mult: 1, unit: 'হালি' },
+        { label: '২ হালি', mult: 2, unit: 'হালি' },
+        { label: '১ ডজন', mult: 3, unit: 'হালি' },
+        { label: '২ ডজন', mult: 6, unit: 'হালি' },
+        { label: 'হাফ হালি', mult: 0.5, unit: 'হালি' },
       ] : [
-        { label: '১ ডজন (১×)', mult: 1, unit: 'ডজন' },
-        { label: 'হাফ ডজন (৬টি)', mult: 0.5, unit: 'ডজন' },
-        { label: '১ হালি (৪টি)', mult: 4 / 12, unit: 'ডজন' },
-        { label: '২ ডজন (২×)', mult: 2, unit: 'ডজন' },
+        { label: '১ ডজন', mult: 1, unit: 'ডজন' },
+        { label: 'হাফ ডজন', mult: 0.5, unit: 'ডজন' },
+        { label: '১ হালি', mult: 4 / 12, unit: 'ডজন' },
+        { label: '২ ডজন', mult: 2, unit: 'ডজন' },
       ]
     };
   }
@@ -332,14 +349,13 @@ export function getAdaptiveSubUnitChips(
     const mUnit = unit || 'গজ';
     return {
       icon: '✂️',
-      title: cleanName ? `${cleanName} (${mUnit}):` : 'কাপড়ের মাপ:',
+      title: cleanName ? `${cleanName}:` : 'কাপড়ের মাপ:',
       chips: [
-        { label: `হাফ ${mUnit} (০.৫×)`, mult: 0.5, unit: mUnit },
-        { label: `১ ${mUnit} (১×)`, mult: 1, unit: mUnit },
-        { label: `দেড় ${mUnit} (১.৫×)`, mult: 1.5, unit: mUnit },
-        { label: `২ ${mUnit} (২×)`, mult: 2, unit: mUnit },
-        { label: `আড়াই ${mUnit} (২.৫×)`, mult: 2.5, unit: mUnit },
-        { label: `৩ ${mUnit} (৩×)`, mult: 3, unit: mUnit },
+        { label: `হাফ ${mUnit}`, mult: 0.5, unit: mUnit },
+        { label: `১ ${mUnit}`, mult: 1, unit: mUnit },
+        { label: `দেড় ${mUnit}`, mult: 1.5, unit: mUnit },
+        { label: `২ ${mUnit}`, mult: 2, unit: mUnit },
+        { label: `আড়াই ${mUnit}`, mult: 2.5, unit: mUnit },
       ]
     };
   }
@@ -349,13 +365,13 @@ export function getAdaptiveSubUnitChips(
     const mainUnit = unit === 'বাটি' ? 'বাটি' : (unit === 'সেট' ? 'সেট' : 'প্লেট');
     return {
       icon: '🍽️',
-      title: cleanName ? `${cleanName} (${mainUnit}):` : 'খাবারের মাপ:',
+      title: cleanName ? `${cleanName}:` : 'খাবারের মাপ:',
       chips: [
-        { label: `হাফ ${mainUnit} (০.৫×)`, mult: 0.5, unit: mainUnit },
-        { label: `১ ${mainUnit} (১×)`, mult: 1, unit: mainUnit },
-        { label: `দেড় ${mainUnit} (১.৫×)`, mult: 1.5, unit: mainUnit },
-        { label: `২ ${mainUnit} (২×)`, mult: 2, unit: mainUnit },
-        { label: `১ পার্সেল (১×)`, mult: 1, unit: mainUnit },
+        { label: `হাফ ${mainUnit}`, mult: 0.5, unit: mainUnit },
+        { label: `১ ${mainUnit}`, mult: 1, unit: mainUnit },
+        { label: `দেড় ${mainUnit}`, mult: 1.5, unit: mainUnit },
+        { label: `২ ${mainUnit}`, mult: 2, unit: mainUnit },
+        { label: 'পার্সেল', mult: 1, unit: mainUnit },
       ]
     };
   }
@@ -364,14 +380,14 @@ export function getAdaptiveSubUnitChips(
   if (unit === 'কাপ' || unit === 'শলা' || unit === 'খিলি' || category === 'cat-tea') {
     return {
       icon: '☕',
-      title: cleanName ? `${cleanName}:` : 'চা, পান ও শলা:',
+      title: cleanName ? `${cleanName}:` : 'চা ও পান:',
       chips: [
-        { label: '১ কাপ (১×)', mult: 1, unit: 'কাপ' },
-        { label: '২ কাপ (২×)', mult: 2, unit: 'কাপ' },
-        { label: '৩ কাপ (৩×)', mult: 3, unit: 'কাপ' },
-        { label: '১ শলা (১×)', mult: 1, unit: 'শলা' },
-        { label: '২ শলা (২×)', mult: 2, unit: 'শলা' },
-        { label: '১ খিলি পান (১×)', mult: 1, unit: 'খিলি' },
+        { label: '১ কাপ', mult: 1, unit: 'কাপ' },
+        { label: '২ কাপ', mult: 2, unit: 'কাপ' },
+        { label: '৩ কাপ', mult: 3, unit: 'কাপ' },
+        { label: '১ শলা', mult: 1, unit: 'শলা' },
+        { label: '২ শলা', mult: 2, unit: 'শলা' },
+        { label: 'খিলি পান', mult: 1, unit: 'খিলি' },
       ]
     };
   }
@@ -531,6 +547,20 @@ export default function PosPage() {
   const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
   const [numpadInput, setNumpadInput] = useState('');
   const [activeNumpadItemId, setActiveNumpadItemId] = useState<string | null>(null);
+  // Specialized Industry Modals & States
+  const [showSubstituteModal, setShowSubstituteModal] = useState(false);
+  const [substituteBaseProd, setSubstituteBaseProd] = useState<any | null>(null);
+  const [showWastageModal, setShowWastageModal] = useState(false);
+  const [wastageProd, setWastageProd] = useState<any | null>(null);
+  const [wastageQty, setWastageQty] = useState('1');
+  const [wastageReason, setWastageReason] = useState('পচে নষ্ট হয়েছে');
+  const [showBagConvertModal, setShowBagConvertModal] = useState(false);
+  const [bagTargetProd, setBagTargetProd] = useState<any | null>(null);
+  const [selectedClothingSize, setSelectedClothingSize] = useState<string>('all');
+  const [doctorName, setDoctorName] = useState('');
+  const [patientName, setPatientName] = useState('');
+  const [isWarrantyPrint, setIsWarrantyPrint] = useState(false);
+  const [mobileImeiInput, setMobileImeiInput] = useState('');
   const [numpadItems, setNumpadItems] = useState<Array<{
     id: string;
     amount: number;
@@ -1128,6 +1158,8 @@ export default function PosPage() {
     const chipUnit = typeof chip === 'object' ? chip.unit : undefined;
     const isTabletBreakdown = typeof chip === 'object' ? chip.isTabletBreakdown : false;
     const tabletCount = typeof chip === 'object' ? chip.tabletCount : undefined;
+    const isTare = typeof chip === 'object' ? chip.isTare : false;
+    const tareGrams = typeof chip === 'object' ? (chip.tareGrams || 50) : 50;
 
     // Check if there is an active item in numpadItems to apply directly!
     const activeItem = numpadItems.find(i => i.id === activeNumpadItemId) || (numpadItems.length > 0 ? numpadItems[numpadItems.length - 1] : null);
@@ -1139,6 +1171,13 @@ export default function PosPage() {
       let newQty = mult;
       let newUnitPrice = baseUnitPrice;
       let newUnit = chipUnit || activeItem.unit || prod?.unit || 'পিস';
+
+      // Special sweet box tare weight deduction
+      if (isTare) {
+        const curQ = activeItem.quantity || 1;
+        const tareKg = tareGrams / 1000;
+        newQty = Math.max(0.05, Math.round((curQ - tareKg) * 1000) / 1000);
+      }
 
       // Special pharmacy tablet breakdown handling
       if (isTabletBreakdown && prod && Number(prod.conversionRatio) > 1) {
@@ -1207,6 +1246,46 @@ export default function PosPage() {
     playBeep(700);
     triggerHaptic('light');
     setNumpadInput(prev => prev.slice(0, -1));
+  };
+
+  // 🧪 Open Substitute/Generic Modal for Medicines
+  const openSubstituteModal = (product: any) => {
+    playBeep(900);
+    triggerHaptic('light');
+    setSubstituteBaseProd(product);
+    setShowSubstituteModal(true);
+  };
+
+  // 📦 Handle Bulk Bag to Retail Stock Conversion
+  const handleConvertBagToRetail = (bagProd: any) => {
+    playBeep(1100);
+    triggerHaptic('medium');
+    const ratio = Number(bagProd.conversionRatio) || 50;
+    setProducts(prev => prev.map(p => {
+      if (p.id === bagProd.id) {
+        return { ...p, stock: Math.max(0, (p.stock || 0) - 1) };
+      }
+      return p;
+    }));
+    setShowBagConvertModal(false);
+    setNumpadVoiceNotice(`✓ ১ বস্তা ${bagProd.banglaName || bagProd.name} ভেঙে ${ratio} কেজি খুচরা স্টকে যোগ হয়েছে!`);
+    setTimeout(() => setNumpadVoiceNotice(''), 4500);
+  };
+
+  // 🗑️ Handle Product Wastage Recording
+  const handleRecordWastage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wastageProd) return;
+    const lossQty = parseFloat(wastageQty) || 1;
+    setProducts(prev => prev.map(p => {
+      if (p.id === wastageProd.id) {
+        return { ...p, stock: Math.max(0, (p.stock || 0) - lossQty) };
+      }
+      return p;
+    }));
+    setShowWastageModal(false);
+    setNumpadVoiceNotice(`✓ ${lossQty} ${wastageProd.unit || 'কেজি'} ${wastageProd.banglaName || wastageProd.name} অপচয় হিসেবে রেকর্ড হয়েছে।`);
+    setTimeout(() => setNumpadVoiceNotice(''), 4500);
   };
 
   // 1-Tap Smart Add Suggested Product into Numpad Bill with Stock Linkage
@@ -3728,17 +3807,18 @@ export default function PosPage() {
                       handleNumpadMultiplier(chip);
                     }}
                     style={{
-                      background: 'rgba(16, 185, 129, 0.08)',
-                      border: '1.5px solid rgba(16, 185, 129, 0.35)',
-                      borderRadius: '10px',
-                      padding: '5px 10px',
-                      fontSize: '11.5px',
+                      background: chip.isTare ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
+                      border: chip.isTare ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '7px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
                       fontWeight: '800',
-                      color: '#059669',
+                      color: chip.isTare ? '#b91c1c' : '#059669',
                       cursor: 'pointer',
                       flexShrink: 0,
                       whiteSpace: 'nowrap',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                      transition: 'all 0.1s ease'
                     }}
                     title={`${chip.label} নির্বাচন করুন`}
                   >
@@ -4550,7 +4630,7 @@ export default function PosPage() {
           </button>
         )}
 
-        {/* Dynamic Industry Category Chips */}
+        {/* Dynamic Industry Category Chips (Compact Sleek) */}
         {(INDUSTRY_SUBCATS[industryId] || []).map(cat => (
           <button
             key={cat.id}
@@ -4559,22 +4639,22 @@ export default function PosPage() {
             style={{
               background: selectedCategory === cat.id ? '#4f46e5' : '#ffffff',
               color: selectedCategory === cat.id ? '#ffffff' : '#475569',
-              border: selectedCategory === cat.id ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
-              padding: '7px 14px',
-              borderRadius: '20px',
-              fontSize: '12.5px',
+              border: selectedCategory === cat.id ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+              padding: '4px 9px',
+              borderRadius: '12px',
+              fontSize: '11px',
               fontWeight: '800',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-              transition: 'all 0.15s ease'
+              gap: '4px',
+              boxShadow: selectedCategory === cat.id ? '0 1px 4px rgba(79, 70, 229, 0.2)' : 'none',
+              transition: 'all 0.1s ease'
             }}
           >
-            <span>{cat.icon}</span>
+            <span style={{ fontSize: '12px' }}>{cat.icon}</span>
             <span>{cat.label}</span>
           </button>
         ))}
@@ -4605,22 +4685,22 @@ export default function PosPage() {
         )}
       </div>
 
-      {/* 🫖 RUNNING TABS / চলতি আড্ডা খাতা (দোকানে বসা কাস্টমার বিল - শুধুমাত্র রেস্টুরেন্ট/ক্যাফে/চা এর জন্য) */}
+      {/* 🫖 RUNNING TABS (Compact Sleek Ribbon) */}
       {(industryId === 'cat-restaurant' || industryId === 'cat-tea' || tenant?.features?.enableKitchenKOT || tenant?.features?.enableRunningTabs) && (
         <div style={{
           background: '#ffffff',
-          border: '1.5px solid #e2e8f0',
-          borderRadius: '18px',
-          padding: '14px 16px',
-          marginBottom: '14px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          padding: '8px 12px',
+          marginBottom: '10px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: runningTabs.length > 0 ? '8px' : '0', flexWrap: 'wrap', gap: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '18px' }}>🫖</span>
-              <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>চলতি আড্ডা খাতা / রানিং বিল</strong>
-              <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
-                {runningTabs.length}টি খোলা ট্যাব
+              <span style={{ fontSize: '15px' }}>🫖</span>
+              <strong style={{ fontSize: '12px', color: '#0f172a' }}>রানিং বিল</strong>
+              <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '1px 6px', borderRadius: '99px', fontWeight: '800' }}>
+                {runningTabs.length}টি খোলা
               </span>
             </div>
 
@@ -4631,9 +4711,9 @@ export default function PosPage() {
                 background: '#059669',
                 color: '#ffffff',
                 border: 'none',
-                padding: '6px 12px',
-                borderRadius: '10px',
-                fontSize: '12px',
+                padding: '4px 9px',
+                borderRadius: '8px',
+                fontSize: '11px',
                 fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
@@ -4641,7 +4721,7 @@ export default function PosPage() {
                 gap: '4px'
               }}
             >
-              <span>➕</span> নতুন আড্ডা/কাস্টমার ট্যাব
+              <span>➕</span> নতুন ট্যাব
             </button>
           </div>
 
@@ -4691,187 +4771,190 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* 💊 PHARMACY SPECIALIZED RX & DISPENSING BAR */}
+      {/* 💊 PHARMACY SLEEK RIBBON */}
       {industryId === 'cat-pharmacy' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-          border: '1.5px solid #a7f3d0',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #ecfdf5 0%, #f0fdf4 100%)',
+          border: '1px solid #a7f3d0',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px',
-          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>💊</span>
-            <div>
-              <strong style={{ fontSize: '14px', color: '#065f46' }}>ফার্মেসি ও ড্রাগ কাউন্টার (OTC & প্রেসক্রিপশন)</strong>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#047857' }}>
-                পাতা বা পিসে ঔষধ বিক্রি করুন • মেয়াদোত্তীর্ণ তারিখ ও জেনেরিক নাম স্বয়ংক্রিয় ট্র্যাকিং
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>💊</span>
+            <strong style={{ fontSize: '11.5px', color: '#065f46' }}>ফার্মেসি কাউন্টার</strong>
+            <span style={{ fontSize: '10.5px', color: '#047857' }}>• ড্রাগ ও জেনেরিক ট্র্যাকিং</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <Link href="/expiry-tracker" style={{
               background: '#ffffff',
-              border: '1.5px solid #10b981',
-              borderRadius: '10px',
-              padding: '6px 12px',
-              fontSize: '12px',
+              border: '1px solid #10b981',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '10.5px',
               fontWeight: '800',
               color: '#047857',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
+              textDecoration: 'none'
             }}>
-              <span>⏳</span> এক্সপায়ারি ট্র্যাকার
+              ⏳ মেয়াদ ট্র্যাকার
             </Link>
           </div>
         </div>
       )}
 
-      {/* 👗 CLOTHING & FASHION SPECIALIZED BAR */}
+      {/* 👗 CLOTHING & FASHION SLEEK SIZE STRIP */}
       {industryId === 'cat-clothing' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
-          border: '1.5px solid #ddd6fe',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #f5f3ff 0%, #faf5ff 100%)',
+          border: '1px solid #ddd6fe',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px',
-          boxShadow: '0 2px 8px rgba(124, 58, 237, 0.08)'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>👗</span>
-            <div>
-              <strong style={{ fontSize: '14px', color: '#5b21b6' }}>গার্মেন্টস ও ফ্যাশন সেলস কাউন্টার</strong>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#6d28d9' }}>
-                সাইজ (S/M/L/XL), কালার ও ফেব্রিক ভ্যারিয়েন্ট অনুযায়ী ট্র্যাকিং
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>👗</span>
+            <strong style={{ fontSize: '11.5px', color: '#5b21b6' }}>সাইজ ফিল্টার:</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto' }}>
+            {['সব', 'S', 'M', 'L', 'XL', 'XXL', 'ফ্রি সাইজ'].map(sz => {
+              const isActive = selectedClothingSize === (sz === 'সব' ? 'all' : sz);
+              return (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => {
+                    const target = sz === 'সব' ? 'all' : sz;
+                    setSelectedClothingSize(target);
+                    setSearch(sz === 'সব' ? '' : sz);
+                    triggerHaptic('light');
+                  }}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: isActive ? '1px solid #7c3aed' : '1px solid #ddd6fe',
+                    background: isActive ? '#7c3aed' : '#ffffff',
+                    color: isActive ? '#ffffff' : '#6d28d9',
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {sz}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* 👞 SHOES & FOOTWEAR SPECIALIZED BAR */}
+      {/* 👞 SHOES & FOOTWEAR SLEEK SIZE STRIP */}
       {industryId === 'cat-shoes' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)',
-          border: '1.5px solid #e9d5ff',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #faf5ff 0%, #fdf4ff 100%)',
+          border: '1px solid #e9d5ff',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>👞</span>
-            <div>
-              <strong style={{ fontSize: '14px', color: '#7e22ce' }}>জুতা ও ফুটওয়্যার সেলস কাউন্টার</strong>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#9333ea' }}>
-                জুতার সাইজ (EU ৩৮-৪৪) ও জোড়া হিসাব • মেমোসহ ৭ দিনের পরিবর্তন সুবিধা
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>👞</span>
+            <strong style={{ fontSize: '11.5px', color: '#7e22ce' }}>জুতার সাইজ:</strong>
           </div>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {['38', '39', '40', '41', '42', '43', '44'].map(sz => (
-              <button
-                key={sz}
-                type="button"
-                onClick={() => { setSearch(sz); triggerHaptic('light'); }}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid #d8b4fe',
-                  background: '#fff',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  color: '#7e22ce',
-                  cursor: 'pointer'
-                }}
-              >
-                {sz}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto' }}>
+            {['সব', '৩৮', '৩৯', '৪০', '৪১', '৪২', '৪৩', '৪৪'].map(sz => {
+              const isActive = search === (sz === 'সব' ? '' : sz);
+              return (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => {
+                    setSearch(sz === 'সব' ? '' : sz);
+                    triggerHaptic('light');
+                  }}
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: isActive ? '1px solid #7e22ce' : '1px solid #d8b4fe',
+                    background: isActive ? '#7e22ce' : '#fff',
+                    color: isActive ? '#fff' : '#7e22ce',
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {sz}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* 📱 MOBILE & GADGET SPECIALIZED BAR */}
+      {/* 📱 MOBILE & GADGET SLEEK RIBBON */}
       {industryId === 'cat-mobile' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          border: '1.5px solid #bae6fd',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%)',
+          border: '1px solid #bae6fd',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>📱</span>
-            <div>
-              <strong style={{ fontSize: '14px', color: '#0369a1' }}>মোবাইল ও গ্যাজেট কাউন্টার</strong>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#0284c7' }}>
-                IMEI নম্বর ট্র্যাকিং ও অফিশিয়াল ওয়ারেন্টি কার্ড স্বয়ংক্রিয়ভাবে মেমোতে যুক্ত হবে
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>📱</span>
+            <strong style={{ fontSize: '11.5px', color: '#0369a1' }}>মোবাইল ও গ্যাজেট</strong>
+            <span style={{ fontSize: '10.5px', color: '#0284c7' }}>• IMEI ও ১ বছর অফিসিয়াল ওয়ারেন্টি</span>
           </div>
-          <span style={{ background: '#0284c7', color: '#fff', padding: '4px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800' }}>
+          <span style={{ background: '#0284c7', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800' }}>
             🛡️ ওয়ারেন্টি সক্রিয়
           </span>
         </div>
       )}
 
-      {/* 🍽️ RESTAURANT & TEA SPECIALIZED TABLE BAR */}
+      {/* 🍽️ RESTAURANT SLEEK TABLE RIBBON */}
       {(industryId === 'cat-restaurant' || industryId === 'cat-tea') && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
-          border: '1.5px solid #fed7aa',
-          borderRadius: '18px',
-          padding: '12px 18px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #fff7ed 0%, #fffbeb 100%)',
+          border: '1px solid #fed7aa',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '10px'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '26px' }}>🍽️</span>
-            <div>
-              <strong style={{ fontSize: '14px', color: '#c2410c' }}>টেবিল ও খাবার অর্ডার কাউন্টার</strong>
-              <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#ea580c' }}>
-                ডাইন-ইন টেবিল নির্বাচন করুন অথবা সরাসরি পার্সেল মেমো তৈরি করুন
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>🍽️</span>
+            <strong style={{ fontSize: '11.5px', color: '#c2410c' }}>অর্ডার টাইপ:</strong>
           </div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
             <button
               type="button"
               onClick={() => { setOrderType('takeaway'); triggerHaptic('light'); }}
               style={{
-                padding: '5px 10px',
-                borderRadius: '8px',
-                border: orderType === 'takeaway' ? '2px solid #ea580c' : '1px solid #fed7aa',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: orderType === 'takeaway' ? '1.5px solid #ea580c' : '1px solid #fed7aa',
                 background: orderType === 'takeaway' ? '#ea580c' : '#fff',
                 color: orderType === 'takeaway' ? '#fff' : '#c2410c',
-                fontSize: '11.5px',
+                fontSize: '11px',
                 fontWeight: '800',
                 cursor: 'pointer'
               }}
@@ -4884,12 +4967,12 @@ export default function PosPage() {
                 type="button"
                 onClick={() => { setOrderType('dine-in'); setTableNumber(tbl); triggerHaptic('light'); }}
                 style={{
-                  padding: '5px 8px',
-                  borderRadius: '8px',
-                  border: (orderType === 'dine-in' && tableNumber === tbl) ? '2px solid #ea580c' : '1px solid #fed7aa',
+                  padding: '3px 7px',
+                  borderRadius: '6px',
+                  border: (orderType === 'dine-in' && tableNumber === tbl) ? '1.5px solid #ea580c' : '1px solid #fed7aa',
                   background: (orderType === 'dine-in' && tableNumber === tbl) ? '#ea580c' : '#fff',
                   color: (orderType === 'dine-in' && tableNumber === tbl) ? '#fff' : '#c2410c',
-                  fontSize: '11.5px',
+                  fontSize: '10.5px',
                   fontWeight: '800',
                   cursor: 'pointer'
                 }}
@@ -4901,46 +4984,67 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* 🛒 GROCERY FRACTIONAL WEIGHT SELECTOR BAR */}
-      {industryId === 'cat-grocery' && (
+      {/* 🛒 GROCERY & RAW MARKET SLEEK ACTION RIBBON (বস্তা ভাঙা ও অপচয় ট্র্যাকার সহ) */}
+      {(industryId === 'cat-grocery' || industryId === 'cat-meat-fish') && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-          border: '1.5px solid #bbf7d0',
-          borderRadius: '18px',
-          padding: '10px 16px',
-          marginBottom: '14px',
+          background: 'linear-gradient(90deg, #f0fdf4 0%, #f8fafc 100%)',
+          border: '1px solid #bbf7d0',
+          borderRadius: '10px',
+          padding: '5px 12px',
+          marginBottom: '10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
           gap: '8px'
         }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#166534' }}>
-            ⚖️ ওজনের দ্রুত মাপ:
-          </span>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {[
-              { label: '১ পোয়া (২৫০ গ্রাম)', val: 0.25 },
-              { label: 'হাফ কেজি (৫০০ গ্রাম)', val: 0.5 },
-              { label: '১ কেজি', val: 1 },
-              { label: '২ কেজি', val: 2 },
-              { label: '৫ কেজি', val: 5 }
-            ].map(w => (
-              <span
-                key={w.label}
-                style={{
-                  background: '#fff',
-                  border: '1px solid #86efac',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: '#15803d'
-                }}
-              >
-                {w.label}
-              </span>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '15px' }}>🛒</span>
+            <strong style={{ fontSize: '11.5px', color: '#166534' }}>মুদি ও বাজার কাউন্টার</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => { setShowBagConvertModal(true); triggerHaptic('light'); }}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #16a34a',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '10.5px',
+                fontWeight: '800',
+                color: '#15803d',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>📦</span> বস্তা ভাঙা
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const perish = products.find(p => p.unit === 'কেজি') || products[0];
+                setWastageProd(perish);
+                setShowWastageModal(true);
+                triggerHaptic('light');
+              }}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #ef4444',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '10.5px',
+                fontWeight: '800',
+                color: '#dc2626',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>🗑️</span> নষ্ট মাল
+            </button>
           </div>
         </div>
       )}
@@ -5239,9 +5343,33 @@ export default function PosPage() {
                   #{p.barcode}
                 </span>
                 {p.genericName && (
-                  <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '2px' }}>
-                    🧪 {p.genericName}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px' }}>
+                    <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      🧪 {p.genericName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openSubstituteModal(p);
+                      }}
+                      style={{
+                        background: '#e0e7ff',
+                        border: '1px solid #c7d2fe',
+                        borderRadius: '4px',
+                        padding: '1px 5px',
+                        fontSize: '9.5px',
+                        fontWeight: '800',
+                        color: '#4338ca',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
+                      }}
+                      title="বিকল্প ঔষধ দেখুন"
+                    >
+                      🔄 বিকল্প
+                    </button>
+                  </div>
                 )}
                 {p.size && (
                   <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
@@ -6431,7 +6559,45 @@ export default function PosPage() {
             transition: 'max-width 0.25s ease'
           }}>
             {/* Printable Thermal Receipt Box */}
-            {isKotPrint ? (
+            {isWarrantyPrint ? (
+              <div className="printable-receipt" style={{
+                background: '#fff',
+                fontFamily: '"Hind Siliguri", sans-serif',
+                fontSize: '12.5px',
+                lineHeight: 1.4,
+                color: '#000',
+                border: '2px solid #0284c7',
+                borderRadius: '10px',
+                padding: '14px',
+                marginBottom: '14px'
+              }}>
+                <div style={{ textAlign: 'center', borderBottom: '2px solid #0284c7', paddingBottom: '8px', marginBottom: '10px' }}>
+                  <h3 style={{ margin: '0 0 2px', fontSize: '16px', fontWeight: '900', color: '#0369a1' }}>🛡️ অফিশিয়াল ওয়ারেন্টি কার্ড</h3>
+                  <p style={{ margin: 0, fontSize: '12.5px', fontWeight: '800' }}>{receipt.shopName}</p>
+                  <p style={{ margin: 0, fontSize: '10.5px', color: '#475569' }}>📍 {receipt.location} • 📞 {receipt.phone}</p>
+                </div>
+                <div style={{ fontSize: '11.5px', marginBottom: '8px', display: 'grid', gap: '2px' }}>
+                  <div>গ্রাহকের নাম: <strong>{receipt.customerName}</strong></div>
+                  <div>মোবাইল: <strong>{receipt.customerPhone || 'প্রযোজ্য নয়'}</strong></div>
+                  <div>মেমো নং: <strong>#{receipt.invoiceNo}</strong> • তারিখ: <strong>{receipt.date}</strong></div>
+                </div>
+                <div style={{ background: '#f0f9ff', border: '1px dashed #0284c7', padding: '8px', borderRadius: '6px', marginBottom: '8px', fontSize: '11.5px' }}>
+                  {(receipt.items || []).map((it: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', marginBottom: '2px' }}>
+                      <span>{it.product?.banglaName || it.product?.name || it.productName || 'ডিভাইস'}</span>
+                      <span style={{ color: '#0284c7' }}>১ বছর সার্ভিসিং ওয়ারেন্টি</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '14px', lineHeight: 1.3 }}>
+                  * ডিসপ্লে এবং পানিতে পড়া ছাড়া হার্ডওয়্যার পার্টসে অফিসিয়াল ওয়ারেন্টি প্রযোজ্য। ওয়ারেন্টি পাওয়ার জন্য এই স্লিপ ও বক্স সাথে আনতে হবে।
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '8px', borderTop: '1px solid #cbd5e1', fontSize: '10.5px' }}>
+                  <span>ক্রেতার স্বাক্ষর: ________</span>
+                  <span>দোকানের সিল ও স্বাক্ষর: ________</span>
+                </div>
+              </div>
+            ) : isKotPrint ? (
               <div className="printable-receipt" style={{
                 background: '#fff',
                 fontFamily: 'monospace, "Hind Siliguri", sans-serif',
@@ -6794,21 +6960,51 @@ export default function PosPage() {
                   }}
                   style={{
                     width: '100%',
-                    padding: '12px',
+                    padding: '10px',
                     background: '#d97706',
                     color: '#fff',
                     border: 'none',
-                    borderRadius: '12px',
+                    borderRadius: '10px',
                     fontWeight: '800',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '6px'
                   }}
                 >
-                  <span>🍳</span> কিচেন অর্ডার স্লিপ (KOT) প্রিন্ট
+                  <span>🍳</span> কিচেন স্লিপ (KOT) প্রিন্ট
+                </button>
+              )}
+
+              {(industryId === 'cat-mobile' || receipt.industryId === 'cat-mobile') && (
+                <button
+                  onClick={() => {
+                    setIsWarrantyPrint(true);
+                    triggerHaptic('light');
+                    setTimeout(() => {
+                      window.print();
+                      setTimeout(() => setIsWarrantyPrint(false), 800);
+                    }, 100);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#0284c7',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🛡️</span> অফিসিয়াল ওয়ারেন্টি কার্ড প্রিন্ট
                 </button>
               )}
 
@@ -7446,6 +7642,310 @@ export default function PosPage() {
               <span>বিক্রি করুন</span>
               <span>➔</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      
+      {/* 🧪 MODAL: PHARMACY SUBSTITUTE / GENERIC FINDER */}
+      {showSubstituteModal && substituteBaseProd && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 120,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '460px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#0f172a' }}>
+                  🔄 বিকল্প ঔষধ তালিকা
+                </h3>
+                <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700' }}>
+                  🧪 {substituteBaseProd.genericName || substituteBaseProd.banglaName || substituteBaseProd.name}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowSubstituteModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '11.5px', color: '#64748b', margin: '0 0 12px' }}>
+              একই জেনেরিক উপাদানের অন্যান্য প্রস্তুতকারক কোম্পানির ঔষধ যা আপনার স্টকে আছে:
+            </p>
+
+            <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {products
+                .filter(p => p.id !== substituteBaseProd.id && (
+                  (substituteBaseProd.genericName && p.genericName && p.genericName.toLowerCase().trim() === substituteBaseProd.genericName.toLowerCase().trim()) ||
+                  (p.category === 'cat-pharmacy' && p.unit === substituteBaseProd.unit && p.sellingPrice === substituteBaseProd.sellingPrice)
+                ))
+                .map(sub => (
+                  <div
+                    key={sub.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
+                        {sub.banglaName || sub.name}
+                      </strong>
+                      <span style={{ fontSize: '10.5px', color: sub.stock > 0 ? '#15803d' : '#dc2626', fontWeight: '700' }}>
+                        স্টক: {sub.stock} {sub.unit || 'পাতা'} • ৳{sub.sellingPrice}/{sub.unit || 'পাতা'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addToCart(sub, 1);
+                        setShowSubstituteModal(false);
+                      }}
+                      style={{
+                        background: '#059669',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 9px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + মেমোতে নিন
+                    </button>
+                  </div>
+                ))}
+              {products.filter(p => p.id !== substituteBaseProd.id && (
+                (substituteBaseProd.genericName && p.genericName && p.genericName.toLowerCase().trim() === substituteBaseProd.genericName.toLowerCase().trim())
+              )).length === 0 && (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+                  এই জেনেরিকের অন্য কোনো বিকল্প ঔষধ বর্তমানে স্টকে নেই।
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowSubstituteModal(false)}
+              style={{ width: '100%', marginTop: '14px', padding: '9px', background: '#f1f5f9', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >
+              বন্ধ করুন
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 MODAL: BULK BAG TO RETAIL CONVERT */}
+      {showBagConvertModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 120,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '440px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '20px' }}>📦</span>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#0f172a' }}>
+                  বস্তা বা কার্টন ভাঙা (খুচরা কনভার্ট)
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowBagConvertModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '11.5px', color: '#64748b', margin: '0 0 12px' }}>
+              যে পণ্যটির আস্ত বস্তা ভেঙে খুচরা কেজিতে বিক্রি করতে চান, সেটি নির্বাচন করুন:
+            </p>
+
+            <div style={{ maxHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {products
+                .filter(p => p.unit === 'বস্তা' || p.unit === 'কেজি' || Number(p.conversionRatio) > 1)
+                .slice(0, 10)
+                .map(prod => (
+                  <div
+                    key={prod.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
+                        {prod.banglaName || prod.name}
+                      </strong>
+                      <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+                        বর্তমান স্টক: {prod.stock} {prod.unit}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleConvertBagToRetail(prod)}
+                      style={{
+                        background: '#16a34a',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 9px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ১ বস্তা ভাঙুন
+                    </button>
+                  </div>
+                ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowBagConvertModal(false)}
+              style={{ width: '100%', marginTop: '14px', padding: '9px', background: '#f1f5f9', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            >
+              বাতিল
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🗑️ MODAL: WASTAGE & SPOILED PRODUCE RECORD */}
+      {showWastageModal && wastageProd && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 120,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            padding: '20px',
+            width: '100%',
+            maxWidth: '380px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '20px' }}>🗑️</span>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#dc2626' }}>
+                  নষ্ট বা অপচয় মাল রেকর্ড
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowWastageModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleRecordWastage} style={{ display: 'grid', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '3px' }}>
+                  পণ্যের নাম:
+                </label>
+                <div style={{ padding: '8px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                  {wastageProd.banglaName || wastageProd.name} (স্টক: {wastageProd.stock} {wastageProd.unit})
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '3px' }}>
+                  নষ্ট বা পচা পরিমাণ ({wastageProd.unit || 'কেজি'}):
+                </label>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={wastageQty}
+                  onChange={(e) => setWastageQty(e.target.value)}
+                  required
+                  autoFocus
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '800' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '3px' }}>
+                  কারণ:
+                </label>
+                <select
+                  value={wastageReason}
+                  onChange={(e) => setWastageReason(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '12px' }}
+                >
+                  <option value="পচে নষ্ট হয়েছে">পচে নষ্ট হয়েছে</option>
+                  <option value="শুকিয়ে ওজন কমেছে">শুকিয়ে ওজন কমেছে</option>
+                  <option value="ভাঙা বা নষ্ট প্যাকেট">ভাঙা বা নষ্ট প্যাকেট</option>
+                  <option value="মেয়াদোত্তীর্ণ">মেয়াদোত্তীর্ণ</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowWastageModal(false)}
+                  style={{ flex: 1, padding: '9px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  style={{ flex: 1, padding: '9px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '12px' }}
+                >
+                  স্টক থেকে বাদ দিন
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
