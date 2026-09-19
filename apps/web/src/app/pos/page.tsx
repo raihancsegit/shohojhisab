@@ -14,6 +14,7 @@ import {
 import Pagination from '../../components/Pagination';
 import ThermalReceipt from '../../components/ThermalReceipt';
 import VoicePOSCalculatorModal from '../../components/VoicePOSCalculatorModal';
+import VoiceDiagnosticModal from '../../components/VoiceDiagnosticModal';
 import IndustryUnitSelect from '../../components/IndustryUnitSelect';
 import DataLoader from '../../components/DataLoader';
 import { parseVoicePOSCommand, scoreCatalogCandidate } from '../../lib/voicePOSParser';
@@ -544,6 +545,72 @@ export default function PosPage() {
   const expressInputRef = useRef<HTMLInputElement | null>(null);
 
   // 🔢 Amar Dokan Style Fast Numpad POS Mode
+    // 👥 4 Concurrent Counter Slots (মাল্টি-বিক্রেতা কাউন্টার ১, ২, ৩, ৪)
+  const [activeCounterId, setActiveCounterId] = useState<number>(1);
+  const [counterSlots, setCounterSlots] = useState<Record<number, {
+    id: number;
+    cart: any[];
+    numpadItems: any[];
+    selectedCustomer: string;
+    newCustName: string;
+    newCustPhone: string;
+    discount: string;
+    paymentMethod: 'cash' | 'bkash' | 'nagad' | 'due';
+    cashTendered: string;
+  }>>({
+    1: { id: 1, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' },
+    2: { id: 2, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' },
+    3: { id: 3, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' },
+    4: { id: 4, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' },
+  });
+  const [showVoiceDiagnosticModal, setShowVoiceDiagnosticModal] = useState(false);
+  const [liveVoiceHeardCard, setLiveVoiceHeardCard] = useState<{
+    heardText: string;
+    matchedItem?: string;
+    qty?: number;
+    unit?: string;
+    price?: number;
+    counterId: number;
+    isNoise?: boolean;
+  } | null>(null);
+  const [liveInterimVoiceText, setLiveInterimVoiceText] = useState('');
+
+  // Switch Active Counter Slot (Preserves and restores isolated state)
+  const switchCounterSlot = (targetId: number) => {
+    if (targetId === activeCounterId) return;
+    triggerHaptic('light');
+
+    // Save active counter state
+    setCounterSlots(prev => ({
+      ...prev,
+      [activeCounterId]: {
+        ...prev[activeCounterId],
+        cart,
+        numpadItems,
+        selectedCustomer,
+        newCustName,
+        newCustPhone,
+        discount,
+        paymentMethod,
+        cashTendered
+      }
+    }));
+
+    // Restore target counter state
+    const target = counterSlots[targetId] || { id: targetId, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' };
+    setCart(target.cart || []);
+    setNumpadItems(target.numpadItems || []);
+    setSelectedCustomer(target.selectedCustomer || 'none');
+    setNewCustName(target.newCustName || '');
+    setNewCustPhone(target.newCustPhone || '');
+    setDiscount(target.discount || '0');
+    setPaymentMethod(target.paymentMethod || 'cash');
+    setCashTendered(target.cashTendered || '');
+
+    setActiveCounterId(targetId);
+    speakAnnouncement(`কাউন্টার ${targetId} সক্রিয়`);
+  };
+
   const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
   const [numpadInput, setNumpadInput] = useState('');
   const [activeNumpadItemId, setActiveNumpadItemId] = useState<string | null>(null);
@@ -1347,7 +1414,7 @@ export default function PosPage() {
       const rec = new SpeechRec();
       rec.lang = 'bn-BD';
       rec.continuous = false;
-      rec.interimResults = false;
+      rec.interimResults = true;
 
       rec.onstart = () => {
         setIsNumpadVoiceListening(true);
@@ -1357,15 +1424,22 @@ export default function PosPage() {
       };
 
       rec.onresult = (event: any) => {
+        let interimText = '';
         let finalText = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             finalText += event.results[i][0].transcript;
+          } else {
+            interimText += event.results[i][0].transcript;
           }
         }
-        const spoken = finalText.trim();
+        const spoken = (finalText || interimText).trim();
         if (spoken) {
-          handleNumpadVoiceInput(spoken);
+          setLiveInterimVoiceText(spoken);
+        }
+        if (finalText.trim()) {
+          setLiveInterimVoiceText('');
+          handleNumpadVoiceInput(finalText.trim());
         }
       };
 
@@ -1389,6 +1463,21 @@ export default function PosPage() {
   const handleNumpadVoiceInput = (rawText: string) => {
     try {
       const res = parseVoicePOSCommand(rawText, products);
+      const targetCounter = res.targetCounterId || activeCounterId;
+
+      if (res.type === 'noise_ignored') {
+        playBeep(450);
+        triggerHaptic('warning');
+        setNumpadVoiceNotice('🛡️ দোকানের সাধারণ কথাবলার নয়েজ ফিল্টার করা হয়েছে');
+        setLiveVoiceHeardCard({
+          heardText: rawText,
+          counterId: targetCounter,
+          isNoise: true
+        });
+        setTimeout(() => setLiveVoiceHeardCard(null), 4500);
+        return;
+      }
+
       if (res.type === 'add_items' && res.items && res.items.length > 0) {
         res.items.forEach(it => {
           const pMatch = products.find(p => p.id === it.productId) ||
@@ -1404,24 +1493,45 @@ export default function PosPage() {
           const totAmt = it.totalPrice || Math.round(qty * uPrice * 100) / 100;
           const dispName = it.banglaName || it.name || pMatch?.banglaName || pMatch?.name || 'আইটেম';
 
-          setNumpadItems(prev => [
-            ...prev,
-            {
-              id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
-              amount: totAmt,
-              note: `${dispName} (${qty} ${uUnit})`,
-              productId: pMatch?.id || null,
-              unit: uUnit,
-              quantity: qty,
-              unitPrice: uPrice,
-              purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
-            }
-          ]);
+          const newItem = {
+            id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+            amount: totAmt,
+            note: `${dispName} (${qty} ${uUnit})`,
+            productId: pMatch?.id || null,
+            unit: uUnit,
+            quantity: qty,
+            unitPrice: uPrice,
+            purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
+          };
+
+          if (targetCounter === activeCounterId) {
+            setNumpadItems(prev => [...prev, newItem]);
+          } else {
+            setCounterSlots(prev => {
+              const slot = prev[targetCounter] || { id: targetCounter, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' };
+              return {
+                ...prev,
+                [targetCounter]: {
+                  ...slot,
+                  numpadItems: [...(slot.numpadItems || []), newItem]
+                }
+              };
+            });
+          }
 
           playBeep(1100);
           triggerHaptic('success');
-          setNumpadVoiceNotice(`✓ ${dispName} (${qty} ${uUnit}) ৳${totAmt} স্টকে যোগ হয়েছে!`);
-          speakAnnouncement(`${dispName} ${qty} ${uUnit} যোগ হয়েছে।`);
+          setNumpadVoiceNotice(`✓ [কাউন্টার ${targetCounter}] এ ${dispName} (${qty} ${uUnit}) ৳${totAmt} যোগ হয়েছে!`);
+          speakAnnouncement(`কাউন্টার ${targetCounter} এ ${dispName} ${qty} ${uUnit} যোগ হয়েছে।`);
+          setLiveVoiceHeardCard({
+            heardText: rawText,
+            matchedItem: dispName,
+            qty,
+            unit: uUnit,
+            price: totAmt,
+            counterId: targetCounter
+          });
+          setTimeout(() => setLiveVoiceHeardCard(null), 6000);
           setTimeout(() => setNumpadVoiceNotice(''), 4500);
         });
       } else {
@@ -1430,10 +1540,25 @@ export default function PosPage() {
         const directProd = products.find(p => (p.banglaName || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q));
         if (directProd) {
           handleQuickProductTap(directProd);
-          setNumpadVoiceNotice(`✓ ${directProd.banglaName || directProd.name} স্টকে যোগ হয়েছে!`);
+          setNumpadVoiceNotice(`✓ ${directProd.banglaName || directProd.name} যোগ হয়েছে!`);
+          setLiveVoiceHeardCard({
+            heardText: rawText,
+            matchedItem: directProd.banglaName || directProd.name,
+            qty: 1,
+            unit: directProd.unit || 'পিস',
+            price: Number(directProd.sellingPrice) || 0,
+            counterId: targetCounter
+          });
+          setTimeout(() => setLiveVoiceHeardCard(null), 6000);
           setTimeout(() => setNumpadVoiceNotice(''), 4500);
         } else {
-          setNumpadVoiceNotice(`⚠️ "${rawText}" বোঝা যায়নি। দয়া করে আবার বলুন।`);
+          setNumpadVoiceNotice(`⚠️ "${rawText}" স্টকে পাওয়া যায়নি।`);
+          setLiveVoiceHeardCard({
+            heardText: rawText,
+            counterId: targetCounter,
+            isNoise: false
+          });
+          setTimeout(() => setLiveVoiceHeardCard(null), 4500);
           setTimeout(() => setNumpadVoiceNotice(''), 4500);
         }
       }
@@ -2038,6 +2163,23 @@ export default function PosPage() {
         return;
       }
 
+      const targetCounter = res.targetCounterId || activeCounterId;
+
+      if (res.type === 'noise_ignored') {
+        playBeep(450);
+        triggerHaptic('warning');
+        setVoiceNotice('🛡️ দোকানের সাধারণ কথাবলার নয়েজ ফিল্টার করা হয়েছে');
+        setLiveVoiceHeardCard({
+          heardText: rawText,
+          counterId: targetCounter,
+          isNoise: true
+        });
+        setTimeout(() => setLiveVoiceHeardCard(null), 4500);
+        setExpressInput('');
+        setExpressPreview(null);
+        return;
+      }
+
       // 6. Add Items Command
       if (res.type === 'add_items' && res.items && res.items.length > 0) {
         if (posMode === 'calculator' || posMode === 'numpad') {
@@ -2052,20 +2194,33 @@ export default function PosPage() {
             const qty = it.quantity || 1;
             const uPrice = it.unitPrice || Number(pMatch?.sellingPrice) || 0;
             const totAmt = it.totalPrice || Math.round(qty * uPrice * 100) / 100;
+            const dispName = it.banglaName || it.name;
 
-            setNumpadItems(prev => [
-              ...prev,
-              {
-                id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
-                amount: totAmt,
-                note: `${it.banglaName || it.name}${qty > 1 ? ` (${qty} ${it.unit || pMatch?.unit || 'পিস'})` : ''}`,
-                productId: pMatch?.id || null,
-                unit: it.unit || pMatch?.unit || 'পিস',
-                quantity: qty,
-                unitPrice: uPrice,
-                purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
-              }
-            ]);
+            const newItem = {
+              id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+              amount: totAmt,
+              note: `${dispName}${qty > 1 ? ` (${qty} ${it.unit || pMatch?.unit || 'পিস'})` : ''}`,
+              productId: pMatch?.id || null,
+              unit: it.unit || pMatch?.unit || 'পিস',
+              quantity: qty,
+              unitPrice: uPrice,
+              purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
+            };
+
+            if (targetCounter === activeCounterId) {
+              setNumpadItems(prev => [...prev, newItem]);
+            } else {
+              setCounterSlots(prev => {
+                const slot = prev[targetCounter] || { id: targetCounter, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' };
+                return {
+                  ...prev,
+                  [targetCounter]: {
+                    ...slot,
+                    numpadItems: [...(slot.numpadItems || []), newItem]
+                  }
+                };
+              });
+            }
           });
         } else {
           // Standard Cart Mode
@@ -2090,7 +2245,28 @@ export default function PosPage() {
             const qty = it.quantity || 1;
             const customPrice = it.unitPrice;
 
-            addToCart(targetProduct, qty, it.unit, customPrice);
+            if (targetCounter === activeCounterId) {
+              addToCart(targetProduct, qty, it.unit, customPrice);
+            } else {
+              setCounterSlots(prev => {
+                const slot = prev[targetCounter] || { id: targetCounter, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' };
+                const prevCart = slot.cart || [];
+                const existIdx = prevCart.findIndex((c: any) => c.product.id === targetProduct.id);
+                let updatedCart;
+                if (existIdx >= 0) {
+                  updatedCart = prevCart.map((c: any, idx: number) => idx === existIdx ? { ...c, quantity: c.quantity + qty } : c);
+                } else {
+                  updatedCart = [...prevCart, { product: targetProduct, quantity: qty, unit: it.unit || targetProduct.unit, price: customPrice || targetProduct.sellingPrice }];
+                }
+                return {
+                  ...prev,
+                  [targetCounter]: {
+                    ...slot,
+                    cart: updatedCart
+                  }
+                };
+              });
+            }
           });
         }
 
@@ -2098,8 +2274,17 @@ export default function PosPage() {
         triggerHaptic('success');
         const first = res.items[0];
         const dispName = first.banglaName || first.name;
-        setVoiceNotice(`✓ ${dispName} (${first.quantity} ${first.unit}) মোট ৳${first.totalPrice} মেমোতে যোগ হয়েছে!`);
-        speakAnnouncement(`${dispName} ${first.quantity} ${first.unit} যোগ হয়েছে।`);
+        setVoiceNotice(`✓ [কাউন্টার ${targetCounter}] এ ${dispName} (${first.quantity} ${first.unit}) মোট ৳${first.totalPrice} যোগ হয়েছে!`);
+        speakAnnouncement(`কাউন্টার ${targetCounter} এ ${dispName} ${first.quantity} ${first.unit} যোগ হয়েছে।`);
+        setLiveVoiceHeardCard({
+          heardText: rawText,
+          matchedItem: dispName,
+          qty: first.quantity,
+          unit: first.unit,
+          price: first.totalPrice,
+          counterId: targetCounter
+        });
+        setTimeout(() => setLiveVoiceHeardCard(null), 6000);
         setExpressInput('');
         setExpressPreview(null);
         setTimeout(() => setVoiceNotice(''), 4000);
@@ -2207,8 +2392,10 @@ export default function PosPage() {
         const spoken = (finalText || interimText).trim();
         if (spoken) {
           setExpressInput(spoken);
+          setLiveInterimVoiceText(spoken);
         }
         if (finalText.trim()) {
+          setLiveInterimVoiceText('');
           handleAddExpressItem(finalText.trim());
         }
       };
@@ -3255,26 +3442,53 @@ export default function PosPage() {
               </div>
             </div>
 
-            <span
-              style={{
-                background: '#ffffff',
-                color: '#047857',
-                padding: '5px 11px',
-                borderRadius: '8px',
-                fontWeight: '900',
-                fontSize: '11.5px',
-                flexShrink: 0,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              শুরু করুন ➔
-            </span>
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowVoiceDiagnosticModal(true);
+                  triggerHaptic('light');
+                }}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.25)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.45)',
+                  padding: '4px 9px',
+                  borderRadius: '8px',
+                  fontWeight: '900',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap'
+                }}
+                title="ভয়েস টেস্ট ল্যাব ও মাইক্রোফোন পরীক্ষণ"
+              >
+                <span>🧪</span> টেস্ট ল্যাব
+              </button>
 
+              <span
+                style={{
+                  background: '#ffffff',
+                  color: '#047857',
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  fontWeight: '900',
+                  fontSize: '11.5px',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                শুরু করুন ➔
+              </span>
+            </div>
+          </div>
           <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
             বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
           </div>
@@ -3307,6 +3521,159 @@ export default function PosPage() {
           </span>
         </button>
       </div>
+
+      
+      {/* 👥 4 CONCURRENT PHARMACY & RETAIL COUNTERS (একসাথে ৪ জন বিক্রেতার পৃথক স্লট) */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '6px',
+        marginBottom: '10px',
+        background: '#ffffff',
+        padding: '6px 12px',
+        borderRadius: '14px',
+        border: '1.5px solid #e2e8f0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '15px' }}>👥</span>
+          <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#334155', whiteSpace: 'nowrap' }}>
+            কাউন্টার স্লট:
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', alignItems: 'center' }}>
+          {[1, 2, 3, 4].map(slotId => {
+            const isActive = activeCounterId === slotId;
+            const slotData = counterSlots[slotId];
+            const itemCount = isActive
+              ? (posMode === 'numpad' ? numpadItems.length : cart.length)
+              : ((slotData?.cart?.length || 0) + (slotData?.numpadItems?.length || 0));
+
+            return (
+              <button
+                key={slotId}
+                type="button"
+                onClick={() => switchCounterSlot(slotId)}
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '10px',
+                  border: isActive ? '1.5px solid #059669' : '1px solid #cbd5e1',
+                  background: isActive ? '#ecfdf5' : '#ffffff',
+                  color: isActive ? '#065f46' : '#64748b',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: isActive ? '0 2px 6px rgba(5, 150, 105, 0.18)' : 'none',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <span>{isActive ? '🟢' : '⚪'}</span>
+                <span>কাউন্টার {slotId}</span>
+                {itemCount > 0 && (
+                  <span style={{
+                    background: isActive ? '#059669' : '#64748b',
+                    color: '#ffffff',
+                    fontSize: '10px',
+                    padding: '1px 6px',
+                    borderRadius: '99px',
+                    fontWeight: '900'
+                  }}>
+                    {itemCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 🔴 LIVE REAL-TIME VOICE RECOGNITION SUBTITLE DOCK */}
+      {(isExpressListening || isNumpadVoiceListening || isListening || liveInterimVoiceText) && (
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          border: '1.5px solid #38bdf8',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          marginBottom: '12px',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          boxShadow: '0 4px 20px rgba(56, 189, 248, 0.25)',
+          animation: 'pulse 1.8s infinite'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: '#ef4444',
+              boxShadow: '0 0 10px #ef4444',
+              flexShrink: 0
+            }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '11px', color: '#7dd3fc', fontWeight: '800' }}>
+                🎙️ শুনছি... [কাউন্টার {activeCounterId}]
+              </div>
+              <div style={{ fontSize: '14px', fontWeight: '900', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                &quot;{liveInterimVoiceText || 'কথা বলুন (যেমন: নাপা ৩ পাতা বা কাউন্টার ২ সারজেল ২০টা)...'}&quot;
+              </div>
+            </div>
+          </div>
+          <span style={{ fontSize: '11px', background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', whiteSpace: 'nowrap' }}>
+            লাইভ ভয়েস
+          </span>
+        </div>
+      )}
+
+      {/* ✅ INSTANT HEARD & PARSED CONFIRMATION CARD */}
+      {liveVoiceHeardCard && (
+        <div style={{
+          background: liveVoiceHeardCard.isNoise ? '#fef2f2' : '#ecfdf5',
+          border: `1.5px solid ${liveVoiceHeardCard.isNoise ? '#fca5a5' : '#86efac'}`,
+          borderRadius: '16px',
+          padding: '12px 16px',
+          marginBottom: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '22px' }}>{liveVoiceHeardCard.isNoise ? '🛡️' : '✅'}</span>
+            <div>
+              <div style={{ fontSize: '12px', color: '#475569' }}>
+                <strong>🗣️ আপনি বলেছেন:</strong> &quot;{liveVoiceHeardCard.heardText}&quot;
+              </div>
+              {liveVoiceHeardCard.isNoise ? (
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#b91c1c' }}>
+                  দোকানের সাধারণ কথাবার্তা ফিল্টার করা হয়েছে (বাতিল)
+                </div>
+              ) : (
+                <div style={{ fontSize: '13.5px', fontWeight: '900', color: '#065f46' }}>
+                  [কাউন্টার {liveVoiceHeardCard.counterId}] এ {liveVoiceHeardCard.matchedItem} {liveVoiceHeardCard.qty ? `(${liveVoiceHeardCard.qty} ${liveVoiceHeardCard.unit || 'পিস'})` : ''} {liveVoiceHeardCard.price ? `= ৳${liveVoiceHeardCard.price}` : ''} যোগ হয়েছে ✓
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLiveVoiceHeardCard(null)}
+            style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* 🎛️ POS Mode Switcher (Catalog & Express Sale vs. Clean Calculator Sale) */}
       <div style={{

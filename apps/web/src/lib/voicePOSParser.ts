@@ -33,6 +33,7 @@ export interface VoicePOSParseResult {
   updateQuantity?: number;
   updateUnit?: string;
   updatePrice?: number;
+  targetCounterId?: number; // 1, 2, 3, or 4 (e.g. "কাউন্টার ১: নাপা ৩ পাতা", "২ নম্বর: সারজেল ২০টা")
   rawSpeech: string;
   explanation: string;
 }
@@ -257,6 +258,9 @@ const NON_COMMERCIAL_PATTERNS = [
   /দাম\s*বেশি|কম\s*রাখেন|কম\s*রাখা\s*যায়\s*না|একদাম|এক\s*টাকাও\s*কম\s*হবে\s*না/,
   /চা\s*খাবেন|চা\s*খাব|পানি\s*খাব|পানি\s*খান|বসেন\s*একটু|একটু\s*দাঁড়ান|দাঁড়ান\s*ভাই/,
   /গাড়ি\s*আসতেছে|রিকশা\s*ডাকো|রাস্তায়\s*যানজট|যানজট\s*লেগে\s*আছে/,
+  /ডাক্তার\s*কখন\s*আসবে|ডাক্তার\s*বসেছে|ডাক্তার\s*আছে|চেম্বার\s*কখন|প্রেসক্রিপশন\s*দেখেন|প্রেসক্রিপশন\s*পড়তে\s*পারছি\s*না/,
+  /রসিদ\s*দেন|মেমো\s*দেন|বিল\s*দেন|মেমো\s*দিবেন\s*না|কাগজ\s*দেন|রশিদ\s*দেন/,
+  /কত\s*হইলো|কত\s*হয়েছে|কত\s*টাকা\s*হলো|দাম\s*কত\s*রাখছেন/,
   /যোগ\s*হয়েছে|যোগ\s*করা\s*হয়েছে|বাদ\s*দেওয়া\s*হয়েছে|ছাড়\s*দেওয়া\s*হয়েছে|ক্লিয়ার\s*হয়েছে|ক্যালকুলেটর\s*চালু|স্বাগতম|চালু\s*হয়েছে|মোট\s*\d+\s*টাকা/
 ];
 
@@ -423,12 +427,31 @@ export function parseVoicePOSCommand(
     };
   }
 
-  const normalized = normalizeSpokenNumbers(cleanRaw.toLowerCase());
+  // 0. Detect Multi-Counter Routing (e.g. "কাউন্টার ১: নাপা ৩ পাতা", "২ নম্বর: সারজেল ২০টা", "কাউন্টার ৩ এ ২টা স্যাভলন")
+  let targetCounterId: number | undefined = undefined;
+  let textToParse = cleanRaw;
+
+  const counterPrefixMatch = cleanRaw.match(/^(?:কাউন্টার|কাউন্টার\s*নং|কাউন্টার\s*নম্বর)?\s*([১-৪1-4]|এক|দুই|তিন|চার)\s*(?:নম্বর|নং)?\s*(?:কাউন্টার|কাউন্টারে)?\s*(?:এ|তে|:|-)?\s+(.+)$/i);
+  if (counterPrefixMatch && (cleanRaw.includes('কাউন্টার') || cleanRaw.includes('নম্বর') || cleanRaw.includes('নং') || cleanRaw.includes(':'))) {
+    const wordToNum: Record<string, number> = {
+      '১': 1, '1': 1, 'এক': 1,
+      '২': 2, '2': 2, 'দুই': 2,
+      '৩': 3, '3': 3, 'তিন': 3,
+      '৪': 4, '4': 4, 'চার': 4
+    };
+    if (wordToNum[counterPrefixMatch[1]]) {
+      targetCounterId = wordToNum[counterPrefixMatch[1]];
+      textToParse = counterPrefixMatch[2].trim();
+    }
+  }
+
+  const normalized = normalizeSpokenNumbers(textToParse.toLowerCase());
 
   // A. Cash Checkout
-  if (/ক্যাশ\s*বিক্রি|নগদ\s*বিক্রি|বিল\s*করো|বিল\s*ফাইনাল|টাকা\s*পেয়েছি|ক্যাশ\s*পেমেন্ট|নগদ\s*আদায়|ক্যাশে\s*দাও|নগদে\s*বিক্রি|ক্যাশ\s*করো/.test(cleanRaw)) {
+  if (/ক্যাশ\s*বিক্রি|নগদ\s*বিক্রি|বিল\s*করো|বিল\s*ফাইনাল|টাকা\s*পেয়েছি|ক্যাশ\s*পেমেন্ট|নগদ\s*আদায়|ক্যাশে\s*দাও|নগদে\s*বিক্রি|ক্যাশ\s*করো/.test(textToParse)) {
     return {
       type: 'cash_checkout',
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: 'নগদ ক্যাশ বিক্রয় সম্পন্ন করার কমান্ড'
     };
@@ -436,7 +459,7 @@ export function parseVoicePOSCommand(
 
   // B. Due / Khata Checkout
   const dueWithAmtMatch = normalized.match(/(?:(.+?)(?:\s*ভাইয়ের|\s*চাচার|\s*কাকুর|\s*এর)?\s*)?(?:বাকি\s*খাতায়|বাকিতে)\s*(?:লেখো\s*)?(\d+)\s*(?:টাকা)?/i);
-  if (dueWithAmtMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(cleanRaw)) {
+  if (dueWithAmtMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(textToParse)) {
     const custRaw = dueWithAmtMatch[1] || '';
     const custName = custRaw.replace(/খাতায়|এর|ভাইয়ের|চাচার|কাকুর|বাকি|বিক্রি/g, '').trim();
     const dueAmt = Number(dueWithAmtMatch[2]);
@@ -444,17 +467,19 @@ export function parseVoicePOSCommand(
       type: 'due_checkout',
       customerName: custName || undefined,
       dueAmount: dueAmt > 0 ? dueAmt : undefined,
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: `${custName ? `"${custName}" এর ` : ''}বাকি খাতায়${dueAmt ? ` ৳${dueAmt} টাকা` : ''} যোগ করার কমান্ড`
     };
   }
 
-  const dueMatch = cleanRaw.match(/(.+?)(?:\s*ভাইয়ের|\s*চাচার|\s*কাকুর|\s*এর)?\s*(?:খাতায়)?\s*বাকি(?:\s*লেখো|\s*নিল|\s*দাও|\s*বিক্রি)?/);
-  if (dueMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(cleanRaw)) {
+  const dueMatch = textToParse.match(/(.+?)(?:\s*ভাইয়ের|\s*চাচার|\s*কাকুর|\s*এর)?\s*(?:খাতায়)?\s*বাকি(?:\s*লেখো|\s*নিল|\s*দাও|\s*বিক্রি)?/);
+  if (dueMatch && !/বাকি\s*কত|মোট\s*বাকি/.test(textToParse)) {
     const custName = dueMatch[1].replace(/খাতায়|এর|ভাইয়ের|চাচার|কাকুর|বাকি|বিক্রি/g, '').trim();
     return {
       type: 'due_checkout',
       customerName: custName || 'বাকি গ্রাহক',
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: `"${custName || 'গ্রাহক'}" এর বাকি খাতায় হিসাব যোগ করার কমান্ড`
     };
@@ -467,6 +492,7 @@ export function parseVoicePOSCommand(
     return {
       type: 'discount',
       discountAmount: disc,
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: `৳${disc} ছাড় (ডিসকাউন্ট) প্রয়োগের কমান্ড`
     };
@@ -474,21 +500,21 @@ export function parseVoicePOSCommand(
 
   // D1. Quick Undo / Remove Last Item ("আগেরটা কাটো", "ভুল হইছে", "লাস্টেরটা বাদ", "কেটে দাও")
   if (
-    /^(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|শেষের\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে|এটা\s*ভুল)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)?$/i.test(cleanRaw) ||
-    /(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট|কেটে\s*দাও)/i.test(cleanRaw)
+    /^(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|শেষের\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে|এটা\s*ভুল)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|কেটে\s*দাও|বাতিল\s*করো)?$/i.test(textToParse) ||
+    /(শেষেরটা|লাস্টেরটা|আগেরটা|লাস্ট\s*আইটেম|ভুল\s*হইছে|ভুল\s*হয়েছে)\s*(কাটো|বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট|কেটে\s*দাও)/i.test(textToParse)
   ) {
     return {
       type: 'undo_last_item',
       removeItemName: '__last__',
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: 'সর্বশেষ যুক্ত করা আইটেমটি মেমো থেকে মুছে ফেলার (Undo) কমান্ড'
     };
   }
 
   // D2. Modify Last Item Quantity ("না না ২ কেজি করো", "না না ৩টা", "পরিমাণ ৩টা করো", "না ১ কেজি")
-  // Note: Must require start of string (^|\s) and avoid matching product names ending in 'না' (e.g. সাবুদানা, ছানা)
   const updateQtyMatch = normalized.match(/^(?:না\s*না\s+|পরিমাণ\s+|না\s+)(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|বস্তা|হালি|টি|টা)?(?:\s*করো|\s*দাও|\s*রাখো)?$/i);
-  if (updateQtyMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
+  if (updateQtyMatch && !/বাকি|ক্যাশ|ছাড়/.test(textToParse)) {
     const newQty = Number(updateQtyMatch[1]);
     const newUnit = updateQtyMatch[2];
     if (newQty > 0) {
@@ -496,6 +522,7 @@ export function parseVoicePOSCommand(
         type: 'update_last_item',
         updateQuantity: newQty,
         updateUnit: newUnit,
+        targetCounterId,
         rawSpeech: cleanRaw,
         explanation: `সর্বশেষ পণ্যের পরিমাণ পরিবর্তন করে ${newQty} ${newUnit || ''} করার কমান্ড`
       };
@@ -503,13 +530,14 @@ export function parseVoicePOSCommand(
   }
 
   // D3. Remove Named Item ("তেল বাদ দাও", "আলু কাটো", "নাপা ডিলিট করো")
-  const removeMatch = cleanRaw.match(/(.+?)\s*(?:বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|ডিলিট|কেটে\s*দাও|কাটো|বাতিল\s*করো|বাতিল)/);
-  if (removeMatch && !/বাকি|ক্যাশ|ছাড়/.test(cleanRaw)) {
+  const removeMatch = textToParse.match(/(.+?)\s*(?:বাদ\s*দাও|বাদ|মুছে\s*ফেলো|মুছো|ডিলিট\s*করো|ডিলিট|কেটে\s*দাও|কাটো|বাতিল\s*করো|বাতিল)/);
+  if (removeMatch && !/বাকি|ক্যাশ|ছাড়/.test(textToParse)) {
     const itemToRem = removeMatch[1].trim();
     if (itemToRem && itemToRem !== 'সব' && itemToRem !== 'মেমো' && itemToRem !== 'বিল') {
       return {
         type: 'remove_item',
         removeItemName: itemToRem,
+        targetCounterId,
         rawSpeech: cleanRaw,
         explanation: `"${itemToRem}" পণ্যটি মেমো থেকে মুছে ফেলার কমান্ড`
       };
@@ -517,16 +545,17 @@ export function parseVoicePOSCommand(
   }
 
   // E. Clear Memo
-  if (/নতুন\s*মেমো|সব\s*ক্লিয়ার|ক্লিয়ার\s*করো|ক্লিয়ার|রিসেট\s*করো|মেমো\s*মুছো|সব\s*মুছো|সব\s*কাটো|মেমো\s*ক্লিয়ার|বিল\s*ক্লিয়ার|মেমো\s*রিসেট/.test(cleanRaw)) {
+  if (/নতুন\s*মেমো|সব\s*ক্লিয়ার|ক্লিয়ার\s*করো|ক্লিয়ার|রিসেট\s*করো|মেমো\s*মুছো|সব\s*মুছো|সব\s*কাটো|মেমো\s*ক্লিয়ার|বিল\s*ক্লিয়ার|মেমো\s*রিসেট/.test(textToParse)) {
     return {
       type: 'clear_memo',
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: 'মেমোর সকল পণ্য মুছে নতুন মেমো খোলার কমান্ড'
     };
   }
 
   // Multi-item stream splitter
-  const segments = splitMultiItemSpokenText(cleanRaw, existingProducts);
+  const segments = splitMultiItemSpokenText(textToParse, existingProducts);
   const parsedItems: ParsedVoiceItem[] = [];
 
   for (const seg of segments) {
@@ -540,6 +569,7 @@ export function parseVoicePOSCommand(
     return {
       type: 'add_items',
       items: parsedItems,
+      targetCounterId,
       rawSpeech: cleanRaw,
       explanation: `${parsedItems.length}টি পণ্য মেমোতে যোগ করা হয়েছে`
     };
@@ -547,6 +577,7 @@ export function parseVoicePOSCommand(
 
   return {
     type: 'noise_ignored',
+    targetCounterId,
     rawSpeech: cleanRaw,
     explanation: 'বাণিজ্যিক পণ্যের তথ্য পাওয়া যায়নি'
   };
