@@ -6245,6 +6245,14 @@ fastify.post('/api/sales', async (request, reply) => {
               const ctnRatio = prodRatio > 1 ? prodRatio : 24;
               baseQtyDeducted = qty / ctnRatio;
               cost = cost / ctnRatio;
+            } else if (product.unit === 'বক্স' && (item.selectedUnit === 'পাতা')) {
+              const boxRatio = prodRatio > 1 ? prodRatio : 10;
+              baseQtyDeducted = qty / boxRatio;
+              cost = cost / boxRatio;
+            } else if (product.unit === 'বক্স' && (item.selectedUnit === 'ট্যাবলেট' || item.selectedUnit === 'ক্যাপসুল' || item.selectedUnit === 'পিস')) {
+              const boxRatio = prodRatio > 1 ? prodRatio : 100;
+              baseQtyDeducted = qty / boxRatio;
+              cost = cost / boxRatio;
             }
           }
           baseQtyDeducted = Math.round(baseQtyDeducted * 10000) / 10000;

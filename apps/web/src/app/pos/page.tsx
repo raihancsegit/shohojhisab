@@ -299,6 +299,9 @@ export default function PosPage() {
   const [numpadNewCustPhone, setNumpadNewCustPhone] = useState('');
   const [numpadSubmitting, setNumpadSubmitting] = useState(false);
   const [isCounterSleepActive, setIsCounterSleepActive] = useState(false);
+  const [isNumpadVoiceListening, setIsNumpadVoiceListening] = useState(false);
+  const numpadVoiceRecognitionRef = useRef<any>(null);
+  const [numpadVoiceNotice, setNumpadVoiceNotice] = useState('');
 
   // Industry-Tailored Workflows
   const industryId = tenant?.industryId || 'cat-grocery';
@@ -611,26 +614,244 @@ export default function PosPage() {
   const numpadPendingVal = parsedPending.total;
   const numpadTotal = numpadItems.reduce((sum, i) => sum + i.amount, 0) + numpadPendingVal;
 
-  // 🔮 Real-time Instant Price-to-Product Prediction Pills
+  // 🔮 Real-time Instant Multi-Match Price-to-Product Prediction Pills
   const predictedProducts = useMemo(() => {
     const targetPrice = parsedPending.unitPrice || parsedPending.total;
     if (!targetPrice || targetPrice <= 0) return [];
 
-    // 1. Highest priority: exact price matches from active stock
-    const exactMatches = products.filter(p => Number(p.sellingPrice) === targetPrice);
-    if (exactMatches.length > 0) {
-      // Sort in-stock items first
-      return exactMatches.sort((a, b) => (Number(b.stock || 0) > 0 ? 1 : 0) - (Number(a.stock || 0) > 0 ? 1 : 0)).slice(0, 8);
+    const matches: Array<{
+      id: string;
+      productId: string;
+      product: any;
+      name: string;
+      banglaName: string;
+      quantity: number;
+      unit: string;
+      unitPrice: number;
+      amount: number;
+      badgeText: string;
+      stock: number;
+      inStock: boolean;
+      score: number;
+    }> = [];
+
+    const addedKeys = new Set<string>();
+
+    const addPill = (
+      p: any,
+      qty: number,
+      unit: string,
+      unitPrice: number,
+      amount: number,
+      badgeText: string,
+      baseScore: number
+    ) => {
+      const key = `${p.id}-${unit}-${qty}-${amount}`;
+      if (addedKeys.has(key)) return;
+      addedKeys.add(key);
+
+      const stk = Number(p.stock || 0);
+      const inStock = stk > 0;
+      const score = baseScore + (inStock ? 500 : 0);
+
+      matches.push({
+        id: 'pill-' + key,
+        productId: p.id,
+        product: p,
+        name: p.name,
+        banglaName: p.banglaName || p.name,
+        quantity: Math.round(qty * 1000) / 1000,
+        unit: unit || p.unit || 'পিস',
+        unitPrice: Math.round(unitPrice * 100) / 100,
+        amount: Math.round(amount * 100) / 100,
+        badgeText,
+        stock: stk,
+        inStock,
+        score
+      });
+    };
+
+    const multiplierQty = parsedPending.isMultiplier && parsedPending.quantity > 0 ? parsedPending.quantity : 1;
+
+    // 1. Exact Unit Price Match (e.g. 50 tk = 1 piece/unit)
+    for (const p of products) {
+      const sPrice = Number(p.sellingPrice) || 0;
+      if (sPrice > 0 && Math.abs(sPrice - targetPrice) < 0.01) {
+        addPill(
+          p,
+          multiplierQty,
+          p.unit || 'পিস',
+          sPrice,
+          multiplierQty * sPrice,
+          multiplierQty > 1 ? `${multiplierQty} ${p.unit || 'পিস'}` : `১ ${p.unit || 'পিস'}`,
+          1000
+        );
+      }
     }
 
-    // 2. Secondary: if note or text was typed, match by name
+    // 2. Grocery Sub-Units (Half kg, 1 Poa, 100 gm, 1.5 kg)
+    for (const p of products) {
+      const sPrice = Number(p.sellingPrice) || 0;
+      const pUnit = p.unit || '';
+      const isWeightVolume = pUnit === 'কেজি' || pUnit === 'লিটার' || p.category === 'cat-grocery';
+      if (!isWeightVolume || sPrice <= 0) continue;
+
+      // Half kg (0.5 kg) match: e.g. 100 tk/kg -> 50 tk
+      if (Math.abs(Math.round(sPrice * 0.5) - targetPrice) < 0.5) {
+        addPill(
+          p,
+          0.5,
+          pUnit || 'কেজি',
+          sPrice,
+          targetPrice,
+          `হাফ ${pUnit || 'কেজি'} (০.৫)`,
+          920
+        );
+      }
+
+      // 1 Poa / 250 gm (0.25 kg) match: e.g. 200 tk/kg -> 50 tk, or 100 tk/kg -> 25 tk
+      if (Math.abs(Math.round(sPrice * 0.25) - targetPrice) < 0.5) {
+        addPill(
+          p,
+          0.25,
+          pUnit || 'কেজি',
+          sPrice,
+          targetPrice,
+          `১ পোয়া (২৫০ গ্রাম)`,
+          880
+        );
+      }
+
+      // 100 gm (0.1 kg) match: e.g. 500 tk/kg -> 50 tk, or 200 tk/kg -> 20 tk
+      if (Math.abs(Math.round(sPrice * 0.1) - targetPrice) < 0.5) {
+        addPill(
+          p,
+          0.1,
+          pUnit || 'কেজি',
+          sPrice,
+          targetPrice,
+          `১০০ গ্রাম`,
+          840
+        );
+      }
+
+      // 1.5 kg match: e.g. 60 tk/kg -> 90 tk
+      if (Math.abs(Math.round(sPrice * 1.5) - targetPrice) < 0.5) {
+        addPill(
+          p,
+          1.5,
+          pUnit || 'কেজি',
+          sPrice,
+          targetPrice,
+          `দেড় ${pUnit || 'কেজি'} (১.৫)`,
+          780
+        );
+      }
+    }
+
+    // 3. Pharmacy Strip & Tablet Breakdown (পাতা ও ট্যাবলেট)
+    for (const p of products) {
+      const sPrice = Number(p.sellingPrice) || 0;
+      const isMed = p.unit === 'পাতা' || p.category === 'cat-pharmacy';
+      if (!isMed || sPrice <= 0) continue;
+
+      const prodRatio = Number(p.conversionRatio) || 10;
+      const perTabPrice = sPrice / prodRatio;
+
+      // Match individual tablets (1, 2, 3, 4, 5, 10, etc.)
+      if (perTabPrice > 0) {
+        const numTabs = Math.round(targetPrice / perTabPrice);
+        if (numTabs >= 1 && numTabs <= 30 && Math.abs(numTabs * perTabPrice - targetPrice) < 0.3) {
+          addPill(
+            p,
+            numTabs,
+            'ট্যাবলেট',
+            perTabPrice,
+            targetPrice,
+            `${numTabs}টি ট্যাবলেট`,
+            960
+          );
+        }
+      }
+
+      // Half strip (0.5 পাতা) match: e.g. 30 tk -> 15 tk
+      if (Math.abs(Math.round(sPrice * 0.5) - targetPrice) < 0.5) {
+        addPill(
+          p,
+          0.5,
+          'পাতা',
+          sPrice,
+          targetPrice,
+          `হাফ পাতা (${Math.round(prodRatio / 2)}টি)`,
+          890
+        );
+      }
+    }
+
+    // 4. Taka-to-Weight Exact Calculation for Active In-Stock Staples (e.g. 30, 45, 75 tk)
+    for (const p of products) {
+      const sPrice = Number(p.sellingPrice) || 0;
+      const pUnit = p.unit || '';
+      const bName = (p.banglaName || p.name || '').toLowerCase();
+      const isStaple = /চাল|ডাল|চিনি|তেল|আলু|পেঁয়াজ|রসুন|আদা|আটা|ময়দা/.test(bName);
+      if (isStaple && sPrice > 0 && (pUnit === 'কেজি' || pUnit === 'লিটার')) {
+        const calcQty = Math.round((targetPrice / sPrice) * 1000) / 1000;
+        if (calcQty >= 0.05 && calcQty <= 15) {
+          const weightLabel = calcQty < 1 ? `${Math.round(calcQty * 1000)} গ্রাম` : `${calcQty} ${pUnit}`;
+          addPill(
+            p,
+            calcQty,
+            pUnit,
+            sPrice,
+            targetPrice,
+            `${weightLabel}`,
+            620
+          );
+        }
+      }
+    }
+
+    // 5. Note / Keyword Search match
     if (numpadNote.trim()) {
       const q = numpadNote.trim().toLowerCase();
-      return products.filter(p => (p.banglaName || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q)).slice(0, 8);
+      for (const p of products) {
+        const b = (p.banglaName || '').toLowerCase();
+        const n = (p.name || '').toLowerCase();
+        if (b.includes(q) || n.includes(q)) {
+          const sPrice = Number(p.sellingPrice) || targetPrice;
+          addPill(
+            p,
+            multiplierQty,
+            p.unit || 'পিস',
+            sPrice,
+            multiplierQty * sPrice,
+            `খোঁজা হয়েছে`,
+            1200
+          );
+        }
+      }
     }
 
-    return [];
-  }, [products, parsedPending.unitPrice, parsedPending.total, numpadNote]);
+    // 6. Close price matches (within ±10%) if list is short
+    if (matches.length < 5) {
+      for (const p of products) {
+        const sPrice = Number(p.sellingPrice) || 0;
+        if (sPrice > 0 && Math.abs(sPrice - targetPrice) / targetPrice <= 0.12) {
+          addPill(
+            p,
+            1,
+            p.unit || 'পিস',
+            sPrice,
+            sPrice,
+            `দর ৳${sPrice}`,
+            400
+          );
+        }
+      }
+    }
+
+    return matches.sort((a, b) => b.score - a.score).slice(0, 10);
+  }, [products, parsedPending.unitPrice, parsedPending.total, parsedPending.quantity, parsedPending.isMultiplier, numpadNote]);
 
   // Frequently sold in-stock items when numpad is empty
   const popularNumpadProducts = useMemo(() => {
@@ -681,24 +902,30 @@ export default function PosPage() {
   };
 
   // 1-Tap Smart Add Suggested Product into Numpad Bill with Stock Linkage
-  const handleQuickProductTap = (p: any) => {
+  const handleQuickProductTap = (pill: any) => {
     playBeep(1100);
     triggerHaptic('medium');
 
+    const p = pill.product || pill;
     const expr = parseNumpadExpression(numpadInput);
-    // If multiplier was explicitly typed (e.g. 5×), use that quantity. Otherwise 1 piece.
-    const qty = expr.quantity > 0 ? expr.quantity : 1;
-    const uPrice = Number(p.sellingPrice) || 0;
-    const totAmt = Math.round(qty * uPrice * 100) / 100;
+    const qty = pill.quantity !== undefined
+      ? pill.quantity
+      : (expr.quantity > 0 ? expr.quantity : 1);
+    const uUnit = pill.unit || p.unit || 'পিস';
+    const uPrice = pill.unitPrice !== undefined ? pill.unitPrice : (Number(p.sellingPrice) || 0);
+    const totAmt = pill.amount !== undefined ? pill.amount : (Math.round(qty * uPrice * 100) / 100);
+    const itemNote = pill.badgeText
+      ? `${p.banglaName || p.name} (${pill.badgeText})`
+      : `${p.banglaName || p.name}${qty !== 1 ? ` (${qty} ${uUnit})` : ''}`;
 
     setNumpadItems(prev => [
       ...prev,
       {
         id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
         amount: totAmt,
-        note: `${p.banglaName || p.name}${qty > 1 ? ` (${qty} ${p.unit || 'পিস'})` : ''}`,
+        note: itemNote,
         productId: p.id,
-        unit: p.unit || 'পিস',
+        unit: uUnit,
         quantity: qty,
         unitPrice: uPrice,
         purchasePrice: Number(p.purchasePrice) || Math.round(uPrice * 0.85)
@@ -709,6 +936,121 @@ export default function PosPage() {
     setNumpadNote('');
     setNumpadSelectedProduct(null);
     setShowNumpadProductDropdown(false);
+  };
+
+  // 🎙️ Live Voice Speech Recognition for Numpad Mode
+  const toggleNumpadVoiceListening = () => {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      alert('আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই। Google Chrome ব্যবহার করুন।');
+      return;
+    }
+
+    if (isNumpadVoiceListening) {
+      if (numpadVoiceRecognitionRef.current) {
+        try { numpadVoiceRecognitionRef.current.stop(); } catch(e){}
+      }
+      setIsNumpadVoiceListening(false);
+      return;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      rec.lang = 'bn-BD';
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      rec.onstart = () => {
+        setIsNumpadVoiceListening(true);
+        triggerHaptic('medium');
+        playBeep(920);
+        setNumpadVoiceNotice('🎙️ শুনছি... মুখে বলুন (যেমন: "হাফ কেজি চাল ৫০" বা "৩টা নাপা")');
+      };
+
+      rec.onresult = (event: any) => {
+        let finalText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalText += event.results[i][0].transcript;
+          }
+        }
+        const spoken = finalText.trim();
+        if (spoken) {
+          handleNumpadVoiceInput(spoken);
+        }
+      };
+
+      rec.onerror = () => {
+        setIsNumpadVoiceListening(false);
+        setNumpadVoiceNotice('');
+      };
+
+      rec.onend = () => {
+        setIsNumpadVoiceListening(false);
+      };
+
+      numpadVoiceRecognitionRef.current = rec;
+      rec.start();
+    } catch(e) {
+      setIsNumpadVoiceListening(false);
+      setNumpadVoiceNotice('');
+    }
+  };
+
+  const handleNumpadVoiceInput = (rawText: string) => {
+    try {
+      const res = parseVoicePOSCommand(rawText, products);
+      if (res.type === 'add_items' && res.items && res.items.length > 0) {
+        res.items.forEach(it => {
+          const pMatch = products.find(p => p.id === it.productId) ||
+                         products.find(p => {
+                           const b = (p.banglaName || p.name || '').toLowerCase();
+                           const itB = (it.banglaName || it.name || '').toLowerCase();
+                           return b.includes(itB) || itB.includes(b);
+                         });
+
+          const qty = it.quantity || 1;
+          const uUnit = it.unit || pMatch?.unit || 'পিস';
+          const uPrice = it.unitPrice || Number(pMatch?.sellingPrice) || 0;
+          const totAmt = it.totalPrice || Math.round(qty * uPrice * 100) / 100;
+          const dispName = it.banglaName || it.name || pMatch?.banglaName || pMatch?.name || 'আইটেম';
+
+          setNumpadItems(prev => [
+            ...prev,
+            {
+              id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+              amount: totAmt,
+              note: `${dispName} (${qty} ${uUnit})`,
+              productId: pMatch?.id || null,
+              unit: uUnit,
+              quantity: qty,
+              unitPrice: uPrice,
+              purchasePrice: Number(pMatch?.purchasePrice) || Math.round(uPrice * 0.85)
+            }
+          ]);
+
+          playBeep(1100);
+          triggerHaptic('success');
+          setNumpadVoiceNotice(`✓ ${dispName} (${qty} ${uUnit}) ৳${totAmt} স্টকে যোগ হয়েছে!`);
+          speakAnnouncement(`${dispName} ${qty} ${uUnit} যোগ হয়েছে।`);
+          setTimeout(() => setNumpadVoiceNotice(''), 4500);
+        });
+      } else {
+        // Direct search fallback
+        const q = rawText.toLowerCase().trim();
+        const directProd = products.find(p => (p.banglaName || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q));
+        if (directProd) {
+          handleQuickProductTap(directProd);
+          setNumpadVoiceNotice(`✓ ${directProd.banglaName || directProd.name} স্টকে যোগ হয়েছে!`);
+          setTimeout(() => setNumpadVoiceNotice(''), 4500);
+        } else {
+          setNumpadVoiceNotice(`⚠️ "${rawText}" বোঝা যায়নি। দয়া করে আবার বলুন।`);
+          setTimeout(() => setNumpadVoiceNotice(''), 4500);
+        }
+      }
+    } catch(e) {
+      console.error(e);
+    }
   };
 
   // Increment or Decrement Numpad Item Quantity
@@ -2625,8 +2967,8 @@ export default function PosPage() {
           maxWidth: '560px',
           margin: '0 auto 24px auto'
         }}>
-          {/* Header Title */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          {/* Header Title & Voice Billing Trigger */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '8px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '22px' }}>🔢</span>
               <div>
@@ -2638,25 +2980,74 @@ export default function PosPage() {
                 </span>
               </div>
             </div>
-            {numpadItems.length > 0 && (
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* 🎙️ Quick Voice Billing Button */}
               <button
                 type="button"
-                onClick={handleNumpadClear}
+                onClick={toggleNumpadVoiceListening}
                 style={{
-                  background: '#fee2e2',
-                  color: '#dc2626',
+                  background: isNumpadVoiceListening ? '#ef4444' : 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                  color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
-                  padding: '4px 10px',
-                  fontSize: '11.5px',
+                  borderRadius: '10px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
                   fontWeight: '800',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: isNumpadVoiceListening ? '0 0 12px rgba(239,68,68,0.6)' : '0 2px 6px rgba(5,150,105,0.2)',
+                  transition: 'all 0.2s ease'
                 }}
+                title="মুখে বলে স্টক থেকে সরাসরি মেমোতে যোগ করুন (যেমন: হাফ কেজি চাল ৫০, ৩টা নাপা)"
               >
-                সব মুছুন (C)
+                <span style={{ fontSize: '14px' }}>{isNumpadVoiceListening ? '🔴' : '🎙️'}</span>
+                <span>{isNumpadVoiceListening ? 'শুনছি...' : 'মুখে বলুন'}</span>
               </button>
-            )}
+
+              {numpadItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleNumpadClear}
+                  style={{
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  সব মুছুন (C)
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* 🎙️ Real-time Voice Notice Banner */}
+          {numpadVoiceNotice && (
+            <div style={{
+              background: isNumpadVoiceListening ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              border: `1.5px solid ${isNumpadVoiceListening ? '#fca5a5' : '#86efac'}`,
+              color: isNumpadVoiceListening ? '#b91c1c' : '#15803d',
+              borderRadius: '12px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: '800',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+            }}>
+              <span style={{ fontSize: '15px' }}>{isNumpadVoiceListening ? '🎙️' : '✓'}</span>
+              <span>{numpadVoiceNotice}</span>
+            </div>
+          )}
 
           {/* LED Display Screen */}
           <div style={{
@@ -2709,7 +3100,7 @@ export default function PosPage() {
                   <span>মিল পাওয়া স্টক পণ্য ({predictedProducts.length}টি) — ১-ট্যাপে স্টকে যোগ:</span>
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
-                  দর: ৳{parsedPending.unitPrice || parsedPending.total}
+                  দর/টাকা: ৳{parsedPending.unitPrice || parsedPending.total}
                 </span>
               </div>
 
@@ -2717,10 +3108,10 @@ export default function PosPage() {
                 display: 'flex',
                 gap: '8px',
                 overflowX: 'auto',
-                paddingBottom: '4px'
+                paddingBottom: '6px'
               }}>
                 {predictedProducts.map((p) => {
-                  const inStock = Number(p.stock || 0) > 0;
+                  const inStock = p.inStock;
                   return (
                     <button
                       key={p.id}
@@ -2735,8 +3126,9 @@ export default function PosPage() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'flex-start',
-                        gap: '3px',
+                        gap: '4px',
                         flexShrink: 0,
+                        minWidth: '150px',
                         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
                         transition: 'transform 0.1s ease',
                         textAlign: 'left'
@@ -2744,25 +3136,39 @@ export default function PosPage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontSize: '14px' }}>
-                          {p.category === 'cat-pharmacy' ? '💊' : p.category === 'cat-grocery' ? '🌾' : '📦'}
+                          {p.product?.category === 'cat-pharmacy' || p.unit === 'ট্যাবলেট' || p.unit === 'পাতা' ? '💊' : (p.unit === 'কেজি' || p.unit === 'লিটার') ? '🌾' : '📦'}
                         </span>
-                        <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.banglaName || p.name}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', marginTop: '2px' }}>
-                        <span style={{ fontWeight: '800', color: '#059669' }}>
-                          ৳{p.sellingPrice} {parsedPending.quantity > 1 ? `× ${parsedPending.quantity} = ৳${Math.round(parsedPending.quantity * Number(p.sellingPrice))}` : ''}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          background: '#dbeafe',
+                          color: '#1d4ed8',
+                          padding: '1px 6px',
+                          borderRadius: '6px',
+                          fontSize: '10.5px',
+                          fontWeight: '800'
+                        }}>
+                          {p.badgeText}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '6px', marginTop: '2px' }}>
+                        <span style={{ fontWeight: '900', color: '#059669', fontSize: '13px' }}>
+                          ৳{p.amount}
                         </span>
                         <span style={{
                           background: inStock ? '#dcfce7' : '#fee2e2',
                           color: inStock ? '#15803d' : '#b91c1c',
-                          padding: '1px 6px',
-                          borderRadius: '6px',
-                          fontSize: '10px',
+                          padding: '1px 5px',
+                          borderRadius: '5px',
+                          fontSize: '9.5px',
                           fontWeight: '800'
                         }}>
-                          স্টক: {p.stock ?? 0} {p.unit || 'পিস'}
+                          স্টক: {p.stock} {p.product?.unit || p.unit || 'পিস'}
                         </span>
                       </div>
                     </button>
@@ -2952,6 +3358,67 @@ export default function PosPage() {
               ))}
             </div>
           )}
+
+          {/* ⚖️ Quick Fractional / Sub-Unit Multipliers */}
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            marginBottom: '10px',
+            overflowX: 'auto',
+            paddingBottom: '4px',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>{industryId === 'cat-pharmacy' ? '💊' : '⚖️'}</span>
+              <span>{industryId === 'cat-pharmacy' ? 'ফার্মেসি একক:' : 'ওজন ভগ্নাংশ:'}</span>
+            </span>
+            {(industryId === 'cat-pharmacy'
+              ? [
+                  { label: '১ পাতা', mult: 1 },
+                  { label: 'হাফ পাতা (৫টি)', mult: 0.5 },
+                  { label: '১টি', mult: 1 },
+                  { label: '২টি', mult: 2 },
+                  { label: '৩টি', mult: 3 },
+                  { label: '৫টি', mult: 5 },
+                  { label: '১০টি', mult: 10 }
+                ]
+              : [
+                  { label: 'হাফ কেজি (০.৫×)', mult: 0.5 },
+                  { label: '১ পোয়া (০.২৫×)', mult: 0.25 },
+                  { label: '১০০ গ্রাম (০.১×)', mult: 0.1 },
+                  { label: 'দেড় কেজি (১.৫×)', mult: 1.5 },
+                  { label: 'আড়াই কেজি (২.৫×)', mult: 2.5 },
+                  { label: '৩ কেজি (৩×)', mult: 3 },
+                  { label: '৫ কেজি (৫×)', mult: 5 }
+                ]
+            ).map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  playBeep(920);
+                  triggerHaptic('light');
+                  handleNumpadMultiplier(chip.mult);
+                }}
+                style={{
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                  borderRadius: '10px',
+                  padding: '5px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: '800',
+                  color: '#059669',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                }}
+                title={`${chip.label} দিয়ে দর গুণ করুন`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
 
           {/* Quick Amount Pills */}
           <div style={{

@@ -82,6 +82,12 @@ export function normalizeSpokenNumbers(text: string): string {
   s = s.replace(/(?<=\d|\s|^)(?:patas?|পাতা)\b/gi, ' পাতা ');
   s = s.replace(/(?<=\d|\s|^)(?:halis?|হালি)\b/gi, ' হালি ');
   s = s.replace(/(?<=\d|\s|^)(?:dozens?|ডজন)\b/gi, ' ডজন ');
+  s = s.replace(/(?<=\d|\s|^)(?:tablets?|tabs?|ট্যাবলেট|ট্যাব)\b/gi, ' ট্যাবলেট ');
+  s = s.replace(/(?<=\d|\s|^)(?:capsules?|caps?|ক্যাপসুল)\b/gi, ' ক্যাপসুল ');
+
+  // Strip trailing '+' or 'প্লাস' (e.g. '৫০+' or '৫০ প্লাস')
+  s = s.replace(/\s*[+]\s*$/g, '');
+  s = s.replace(/\s*প্লাস\s*$/g, '');
 
   // Common Product Banglish Transliterations
   s = s.replace(/\b(?:chal|chaal)\b/gi, 'চাল');
@@ -199,7 +205,8 @@ export function normalizeSpokenNumbers(text: string): string {
 // Clean colloquial filler words
 export function cleanFillerWords(text: string): string {
   let s = String(text || '');
-  s = s.replace(/(?:^|\s)(বললাম\s*যে|বললাম|বলসি|বলছি|লিখুন|লেখেন|লেখ|তোলো|তুলুন|উঠান|তুলে\s*নেন|যোগ\s*করুন|যোগ\s*করো|দাও|দেন|দিন\s*তো|দিন|নিন|নাও|রাখেন|রাখো|হবে|চাই|নেব|নেবো|একটু|প্লিজ|মেমোতে|খাতায়|তুলে|রেখে|হলো|হল|করে)(?=\s|$)/gi, ' ');
+  s = s.replace(/(?:^|\s)(বললাম\s*যে|বললাম|বলসি|বলছি|লিখুন|লেখেন|লেখ|তোলো|তুলুন|উঠান|তুলে\s*নেন|যোগ\s*করুন|যোগ\s*করো|দাও|দেন|দিন\s*তো|দিন|নিন|নাও|রাখেন|রাখো|হবে|চাই|নেব|নেবো|একটু|প্লিজ|মেমোতে|খাতায়|তুলে|রেখে|হলো|হল|করে|প্লাস|যোগ)(?=\s|$)/gi, ' ');
+  s = s.replace(/[+]/g, ' ');
   return s.replace(/\s+/g, ' ').trim();
 }
 
@@ -721,7 +728,7 @@ function parseSingleVoiceItem(
   let unit: string = 'পিস';
   let unitMatched = false;
 
-  const qtyUnitMatch = normSeg.match(/(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/);
+  const qtyUnitMatch = normSeg.match(/(\d+(?:\.\d+)?)\s*(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|ট্যাবলেট|ক্যাপসুল)/);
   if (qtyUnitMatch) {
     quantity = parseFloat(qtyUnitMatch[1]);
     unit = qtyUnitMatch[2];
@@ -735,7 +742,7 @@ function parseSingleVoiceItem(
     }
   } else {
     // If unit is mentioned without explicit number (e.g. "লবণ প্যাকেট" or "চাল কেজি")
-    const standaloneUnitMatch = normSeg.match(/(?:^|\s)(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স)(?=\s|$)/);
+    const standaloneUnitMatch = normSeg.match(/(?:^|\s)(কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|হালি|বোতল|কাপ|প্লেট|বক্স|ট্যাবলেট|ক্যাপসুল)(?=\s|$)/);
     if (standaloneUnitMatch) {
       unit = standaloneUnitMatch[1];
       quantity = 1;
@@ -746,8 +753,8 @@ function parseSingleVoiceItem(
   // 4. Clean product name
   let cleanedName = normSeg
     .replace(/\d+(?:\.\d+)?\s*(?:টাকা|টাকার|tk|taka)/gi, '')
-    .replace(/(\d+(?:\.\d+)?)\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা)/gi, '')
-    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল|বিক্রি\s*হলো|বিক্রি\s*করলাম|বিক্রি\s*করো|বিক্রি|বেচা\s*হলো|বেচা|সেল|মেমো\s*করো|মেমো\s*কাটো|মেমো|বিল\s*করো|বিল)/gi, '')
+    .replace(/(\d+(?:\.\d+)?)\s*(?:কেজি|লিটার|গ্রাম|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|ট্যাবলেট|ক্যাপসুল)/gi, '')
+    .replace(/(?:টাকা|টাকার|tk|taka|কেজি|লিটার|পিস|পাতা|প্যাকেট|প্যাক|বস্তা|জোড়া|জোড়া|হালি|বোতল|ফুট|গজ|কাপ|প্লেট|কয়েল|বক্স|টি|টা|ট্যাবলেট|ক্যাপসুল|যোগ\s*করো|দাও|নাও|মেমোতে|দর|রেট|করে|বললাম|বলসি|হলো|হল|বিক্রি\s*হলো|বিক্রি\s*করলাম|বিক্রি\s*করো|বিক্রি|বেচা\s*হলো|বেচা|সেল|মেমো\s*করো|মেমো\s*কাটো|মেমো|বিল\s*করো|বিল|প্লাস|যোগ)/gi, '')
     .trim();
 
   // If trailing numbers remain as price e.g. "চাল ১ কেজি ৬০"
@@ -813,7 +820,7 @@ function parseSingleVoiceItem(
     // or known retail catalog item. DO NOT convert random conversation ("এই ভাই", "মামা") into products!
     if (!matchedProd && (!extractedPrice || extractedPrice <= 0)) {
       const isKnownStaple = COMMON_GROCERY_DEFAULTS[qName] !== undefined;
-      const hasCommercialUnit = unitMatched && ['কেজি', 'লিটার', 'গ্রাম', 'পিস', 'পাতা', 'প্যাকেট', 'বস্তা', 'জোড়া', 'হালি', 'বোতল', 'বক্স'].includes(unit);
+      const hasCommercialUnit = unitMatched && ['কেজি', 'লিটার', 'গ্রাম', 'পিস', 'পাতা', 'প্যাকেট', 'বস্তা', 'জোড়া', 'হালি', 'বোতল', 'বক্স', 'ট্যাবলেট', 'ক্যাপসুল'].includes(unit);
 
       if ((hasCommercialUnit || isKnownStaple) && cleanedName && cleanedName.length >= 2 && !isBackgroundNoise(cleanedName)) {
         const detected = detectProductCategory(cleanedName);
@@ -846,6 +853,13 @@ function parseSingleVoiceItem(
     }
   }
 
+  // If medicine product and user asked for individual tablets/pieces (e.g. "৩টা নাপা")
+  if (matchedProd && (matchedProd.unit === 'পাতা' || matchedProd.category === 'cat-pharmacy')) {
+    if (unit === 'পিস' || unit === 'টা') {
+      unit = 'ট্যাবলেট';
+    }
+  }
+
   // 6. Precise Unit Rate & Line Total Calculations
   let finalUnitPrice = 0;
   let finalTotalPrice = 0;
@@ -861,12 +875,19 @@ function parseSingleVoiceItem(
     finalTotalPrice = extractedPrice;
   } else if (extractedPrice !== null && extractedPrice > 0) {
     const catalogRate = matchedProd ? (Number(matchedProd.sellingPrice) || 0) : 0;
-    if (isExplicitRate || quantity <= 1) {
+    if (isExplicitRate) {
       finalUnitPrice = extractedPrice;
       finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+    } else if (quantity < 1) {
+      // E.g. "হাফ কেজি চাল ৫০" or "১ পোয়া ডাল ২৫"
+      // In Bengali commerce, the spoken amount is the TOTAL price for that fractional weight!
+      finalTotalPrice = extractedPrice;
+      finalUnitPrice = Math.round((extractedPrice / quantity) * 100) / 100;
+    } else if (quantity === 1) {
+      finalUnitPrice = extractedPrice;
+      finalTotalPrice = extractedPrice;
     } else {
       // Quantity > 1 (e.g. "চাল ৪ কেজি ৩০০ টাকা" or "নাপা ৫ টা ২৫ টাকা")
-      // In Bengali commerce, the spoken amount is usually the TOTAL price for that line item!
       if (catalogRate > 0 && Math.abs(extractedPrice - catalogRate) < Math.abs(extractedPrice - (catalogRate * quantity))) {
         // Closer to single unit rate
         finalUnitPrice = extractedPrice;
@@ -879,17 +900,28 @@ function parseSingleVoiceItem(
     }
   } else if (matchedProd) {
     const rawRate = Number(matchedProd.sellingPrice) || 0;
-    // Bulk sack unit conversion (e.g. 50kg bag at 3500 Tk -> requested 5 kg rice)
-    if (matchedProd.unit === 'বস্তা' && unit === 'কেজি') {
+    const prodRatio = Number(matchedProd.conversionRatio) || 1;
+
+    // Pharmacy strip to tablet conversion
+    if ((matchedProd.unit === 'পাতা' || matchedProd.category === 'cat-pharmacy') && (unit === 'ট্যাবলেট' || unit === 'ক্যাপসুল' || unit === 'পিস' || unit === 'টা')) {
+      const stripRatio = prodRatio > 1 ? prodRatio : 10;
+      finalUnitPrice = Math.round((rawRate / stripRatio) * 100) / 100;
+      finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
+      unit = 'ট্যাবলেট';
+    } else if (matchedProd.unit === 'পাতা' && unit === 'পাতা' && quantity === 0.5) {
+      // হাফ পাতা (e.g. half strip = 5 tablets)
+      finalUnitPrice = rawRate;
+      finalTotalPrice = Math.round(rawRate * 0.5 * 100) / 100;
+    } else if (matchedProd.unit === 'বস্তা' && unit === 'কেজি') {
       const bagKgMatch = (matchedProd.banglaName || matchedProd.name || '').match(/(\d+(?:\.\d+)?)\s*কেজি/);
-      const bagCap = bagKgMatch ? parseFloat(bagKgMatch[1]) : 50;
+      const bagCap = bagKgMatch ? parseFloat(bagKgMatch[1]) : (prodRatio > 1 ? prodRatio : 50);
       finalUnitPrice = bagCap > 0 ? Math.round((rawRate / bagCap) * 100) / 100 : rawRate;
       finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
     } else if (matchedProd.unit === 'হালি' && (unit === 'পিস' || unit === 'টা')) {
       finalUnitPrice = Math.round((rawRate / 4) * 100) / 100;
       finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
-    } else if (matchedProd.unit === 'পাতা' && (unit === 'পিস' || unit === 'টা')) {
-      finalUnitPrice = Math.round((rawRate / 10) * 100) / 100;
+    } else if (matchedProd.unit === 'ডজন' && (unit === 'পিস' || unit === 'টা')) {
+      finalUnitPrice = Math.round((rawRate / 12) * 100) / 100;
       finalTotalPrice = Math.round(finalUnitPrice * quantity * 100) / 100;
     } else {
       finalUnitPrice = rawRate;
