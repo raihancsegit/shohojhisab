@@ -3196,7 +3196,7 @@ export default function PosPage() {
     if (isCounterSleepActive) {
       counterSleepManager.disable();
       setIsCounterSleepActive(false);
-      setVoiceNotice('কাউন্টার স্লিপ মোড বন্ধ হয়েছে।');
+      setVoiceNotice('স্লিপ মোড মোড বন্ধ হয়েছে।');
       setTimeout(() => setVoiceNotice(''), 2500);
     } else {
       triggerHaptic('success');
@@ -3247,7 +3247,7 @@ export default function PosPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
                 <strong style={{ fontSize: 'clamp(13px, 3.8vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
-                  ভয়েস মেমো ও বিলিং
+                  ভয়েস মেমো
                 </strong>
                 <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
                   লাইভ মেমো
@@ -3323,13 +3323,13 @@ export default function PosPage() {
           onClick={() => { changePosMode('catalog'); triggerHaptic('light'); }}
           style={{
             flex: 1,
-            padding: '10px 14px',
-            borderRadius: '12px',
+            padding: '7px 12px',
+            borderRadius: '10px',
             border: 'none',
             background: posMode === 'catalog' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
             color: posMode === 'catalog' ? '#ffffff' : 'var(--text-secondary)',
             fontWeight: '800',
-            fontSize: '13px',
+            fontSize: '12px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -3339,20 +3339,20 @@ export default function PosPage() {
             transition: 'all 0.2s ease'
           }}
         >
-          <span>🛍️ ক্যাটালগ ও এক্সপ্রেস মেমো</span>
+          <span>🛍️ ক্যাটালগ মেমো</span>
         </button>
         <button
           type="button"
           onClick={() => { changePosMode('numpad'); triggerHaptic('light'); }}
           style={{
             flex: 1,
-            padding: '10px 14px',
-            borderRadius: '12px',
+            padding: '7px 12px',
+            borderRadius: '10px',
             border: 'none',
             background: posMode === 'numpad' ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'transparent',
             color: posMode === 'numpad' ? '#ffffff' : 'var(--text-secondary)',
             fontWeight: '800',
-            fontSize: '13px',
+            fontSize: '12px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -3362,7 +3362,7 @@ export default function PosPage() {
             transition: 'all 0.2s ease'
           }}
         >
-          <span>🔢 ক্যালকুলেটর কুইক সেল</span>
+          <span>🔢 ক্যালকুলেটর</span>
         </button>
       </div>
 
@@ -3384,7 +3384,7 @@ export default function PosPage() {
               <span style={{ fontSize: '22px' }}>🔢</span>
               <div>
                 <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                  ক্যালকুলেটর কুইক সেল
+                  ক্যালকুলেটর মেমো
                 </h2>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                   সরাসরি টাকার অংকে দ্রুত বিক্রি ও বাকি হিসাব
@@ -3433,7 +3433,7 @@ export default function PosPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  সব মুছুন (C)
+                  মুছুন (C)
                 </button>
               )}
             </div>
@@ -3508,7 +3508,7 @@ export default function PosPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <span>✨</span>
-                  <span>মিল পাওয়া স্টক পণ্য ({predictedProducts.length}টি) — ১-ট্যাপে স্টকে যোগ:</span>
+                  <span>স্টক পণ্য ({predictedProducts.length}টি):</span>
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
                   দর/টাকা: ৳{parsedPending.unitPrice || parsedPending.total}
@@ -3605,7 +3605,7 @@ export default function PosPage() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4f46e5', fontWeight: '700' }}>
                 <span>⚡</span>
-                <span>৳{parsedPending.total} টাকার পণ্য সরাসরি মেলেনি</span>
+                <span>সাধারণ আইটেম (৳{parsedPending.total})</span>
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
@@ -4007,13 +4007,13 @@ export default function PosPage() {
               disabled={numpadTotal <= 0 || numpadSubmitting}
               onClick={() => handleNumpadCheckout('cash')}
               style={{
-                height: '52px',
-                borderRadius: '14px',
+                height: '42px',
+                borderRadius: '10px',
                 border: 'none',
                 background: numpadTotal <= 0 ? 'var(--bg-canvas)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: numpadTotal <= 0 ? 'var(--text-muted)' : '#ffffff',
                 fontWeight: '900',
-                fontSize: '14px',
+                fontSize: '13px',
                 cursor: numpadTotal <= 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -4022,7 +4022,7 @@ export default function PosPage() {
                 boxShadow: numpadTotal <= 0 ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.4)'
               }}
             >
-              <span>⚡ নগদ বিক্রি</span>
+              <span>⚡ নগদ</span>
               <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
             </button>
 
@@ -4031,13 +4031,13 @@ export default function PosPage() {
               disabled={numpadTotal <= 0 || numpadSubmitting}
               onClick={() => handleNumpadCheckout('due')}
               style={{
-                height: '52px',
-                borderRadius: '14px',
+                height: '42px',
+                borderRadius: '10px',
                 border: 'none',
                 background: numpadTotal <= 0 ? 'var(--bg-canvas)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 color: numpadTotal <= 0 ? 'var(--text-muted)' : '#ffffff',
                 fontWeight: '900',
-                fontSize: '14px',
+                fontSize: '13px',
                 cursor: numpadTotal <= 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -4046,7 +4046,7 @@ export default function PosPage() {
                 boxShadow: numpadTotal <= 0 ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.4)'
               }}
             >
-              <span>🔴 বাকি খাতা</span>
+              <span>🔴 বাকি</span>
               <span className="num-font" style={{ fontSize: '16px' }}>৳{numpadTotal.toLocaleString('en-US')}</span>
             </button>
           </div>
@@ -4070,11 +4070,11 @@ export default function PosPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '18px' }}>🎙️</span>
                 <strong style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
-                  মুখে বলে বা লিখে দ্রুত আইটেম যোগ
+                  দ্রুত আইটেম যোগ
                 </strong>
               </div>
               <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
-                ⚡ দ্রুত বিল
+                দ্রুত বিল
               </span>
             </div>
 
@@ -4177,8 +4177,7 @@ export default function PosPage() {
                   flexShrink: 0
                 }}
               >
-                <span>যোগ</span>
-                <span>+</span>
+                <span>+ যোগ</span>
               </button>
             </form>
 
@@ -4549,10 +4548,10 @@ export default function PosPage() {
           style={{
             background: selectedCategory === 'all' ? '#4f46e5' : '#ffffff',
             color: selectedCategory === 'all' ? '#ffffff' : '#475569',
-            border: selectedCategory === 'all' ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
-            padding: '7px 14px',
-            borderRadius: '20px',
-            fontSize: '12.5px',
+            border: selectedCategory === 'all' ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontSize: '11px',
             fontWeight: '800',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
@@ -4582,10 +4581,10 @@ export default function PosPage() {
           style={{
             background: selectedCategory === 'fast' ? '#4f46e5' : '#ffffff',
             color: selectedCategory === 'fast' ? '#ffffff' : '#475569',
-            border: selectedCategory === 'fast' ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
-            padding: '7px 14px',
-            borderRadius: '20px',
-            fontSize: '12.5px',
+            border: selectedCategory === 'fast' ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontSize: '11px',
             fontWeight: '800',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
@@ -4613,10 +4612,10 @@ export default function PosPage() {
             style={{
               background: '#ffffff',
               color: '#475569',
-              border: '1.5px solid #e2e8f0',
-              padding: '7px 14px',
-              borderRadius: '20px',
-              fontSize: '12.5px',
+              border: '1px solid #e2e8f0',
+              padding: '4px 10px',
+              borderRadius: '12px',
+              fontSize: '11px',
               fontWeight: '800',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
@@ -4626,7 +4625,7 @@ export default function PosPage() {
               gap: '5px'
             }}
           >
-            <span>⚖️ গ্রাম মাপুন</span>
+            <span>⚖️ গ্রাম</span>
           </button>
         )}
 
@@ -4666,10 +4665,10 @@ export default function PosPage() {
             onClick={handleHoldCart}
             style={{
               background: '#fff7ed',
-              border: '1.5px solid #fed7aa',
-              borderRadius: '20px',
-              padding: '7px 14px',
-              fontSize: '12.5px',
+              border: '1px solid #fed7aa',
+              borderRadius: '12px',
+              padding: '4px 10px',
+              fontSize: '11px',
               fontWeight: '800',
               color: '#c2410c',
               cursor: 'pointer',
@@ -7639,7 +7638,7 @@ export default function PosPage() {
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)'
               }}
             >
-              <span>বিক্রি করুন</span>
+              <span>বিক্রি</span>
               <span>➔</span>
             </button>
           </div>

@@ -466,7 +466,7 @@ export default function ShopkeeperDashboard() {
         >
           <span style={{ fontSize: '24px' }}>🔢</span>
           <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>ক্যালকুলেটর কুইক সেল</div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>ক্যালকুলেটর</div>
             <div style={{ fontSize: '10px', color: '#a7f3d0' }}>টাকা দিয়ে দ্রুত বিক্রি</div>
           </div>
         </Link>
@@ -490,7 +490,7 @@ export default function ShopkeeperDashboard() {
         >
           <span style={{ fontSize: '24px' }}>🎙️</span>
           <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস মেমো ও বিলিং</div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস মেমো</div>
             <div style={{ fontSize: '10px', color: '#c7d2fe' }}>মুখে বলে লাইভ মেমো</div>
           </div>
         </Link>

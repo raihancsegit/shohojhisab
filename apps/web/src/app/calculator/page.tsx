@@ -14,7 +14,7 @@ export default function CalculatorRedirectPage() {
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '40px', marginBottom: '12px', animation: 'pulse 1.5s infinite' }}>🔢</div>
         <div style={{ fontWeight: '800', fontSize: '17px', color: '#0f172a', marginBottom: '4px' }}>
-          ক্যালকুলেটর কুইক সেল চালু হচ্ছে...
+          ক্যালকুলেটর চালু হচ্ছে...
         </div>
         <div style={{ fontSize: '13px', color: '#64748b' }}>দয়া করে অপেক্ষা করুন</div>
       </div>
