@@ -134,7 +134,7 @@ function DigitalCatalogContent() {
         </div>
 
         <div style={{ background: 'rgba(255,255,255,0.1)', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', color: '#e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>🌐 ডিজিটাল ক্যাটালগ ও অনলাইন অর্ডার</span>
+          <span>🌐 অনলাইন ক্যাটালগ</span>
           <span style={{ color: '#86efac', fontWeight: '800' }}>● দোকান খোলা আছে</span>
         </div>
       </div>

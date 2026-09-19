@@ -389,7 +389,7 @@ export default function ShopkeeperDashboard() {
             }}
             className="clickable-card"
           >
-            <span>🔢 ক্যালকুলেটর সেল</span>
+            <span>🔢 ক্যালকুলেটর</span>
           </Link>
 
           <Link
@@ -410,7 +410,7 @@ export default function ShopkeeperDashboard() {
             }}
             className="clickable-card"
           >
-            <span>🎙️ ভয়েস মেমো</span>
+            <span>🎙️ ভয়েস</span>
           </Link>
 
           <button
@@ -467,7 +467,7 @@ export default function ShopkeeperDashboard() {
           <span style={{ fontSize: '24px' }}>🔢</span>
           <div>
             <div style={{ fontWeight: '900', fontSize: '13px' }}>ক্যালকুলেটর</div>
-            <div style={{ fontSize: '10px', color: '#a7f3d0' }}>টাকা দিয়ে দ্রুত বিক্রি</div>
+            <div style={{ fontSize: '10px', color: '#a7f3d0' }}>টাকা দিয়ে বিক্রি</div>
           </div>
         </Link>
 
@@ -490,8 +490,8 @@ export default function ShopkeeperDashboard() {
         >
           <span style={{ fontSize: '24px' }}>🎙️</span>
           <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস মেমো</div>
-            <div style={{ fontSize: '10px', color: '#c7d2fe' }}>মুখে বলে লাইভ মেমো</div>
+            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস বিলিং</div>
+            <div style={{ fontSize: '10px', color: '#c7d2fe' }}>মুখে বলে বিক্রি</div>
           </div>
         </Link>
 

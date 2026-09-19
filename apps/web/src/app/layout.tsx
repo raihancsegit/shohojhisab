@@ -123,16 +123,16 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
 
   const primaryTabs = [
     { href: '/', label: 'ড্যাশবোর্ড', icon: '🏠', show: true },
-    { href: '/calculator', label: 'ক্যালকুলেটর সেল', icon: '🔢', show: true },
+    { href: '/calculator', label: 'ক্যালকুলেটর', icon: '🔢', show: true },
     { href: '/pos', label: theme.posLabel, icon: theme.posIcon, show: true },
-    { href: '/pos?voice=1', label: 'ভয়েস মেমো', icon: '🎙️', show: true },
+    { href: '/pos?voice=1', label: 'ভয়েস বিলিং', icon: '🎙️', show: true },
     { href: '/khata', label: theme.khataLabel, icon: '📒', show: isFeatureEnabled('enableCustomerKhata') },
-    { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', show: isFeatureEnabled('enableInstallments') },
+    { href: '/installments', label: 'কিস্তি', icon: '📅', show: isFeatureEnabled('enableInstallments') },
     { href: '/stock', label: theme.stockLabel, icon: theme.stockIcon, show: true },
     { href: '/expiry-tracker', label: 'মেয়াদ রাডার', icon: '⏳', show: normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
-    { href: '/expenses', label: 'দোকান খরচ', icon: '💸', show: true },
+    { href: '/expenses', label: 'খরচ', icon: '💸', show: true },
     { href: '/dealers', label: theme.dealerLabel, icon: '🚚', show: isFeatureEnabled('enableDealerKhata') },
-    { href: '/day-end', label: 'ক্যাশ মিলানো', icon: '🌙', show: isFeatureEnabled('enableCashDrawer') },
+    { href: '/day-end', label: 'ক্যাশ মিল', icon: '🌙', show: isFeatureEnabled('enableCashDrawer') },
     { href: '/reports', label: theme.reportsLabel, icon: '📊', show: true },
   ].filter(t => t.show);
 
@@ -906,13 +906,13 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { href: '/khata', label: 'বাকি খাতা', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
     { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: 'ডিলার খাতা', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
-    { href: '/expenses', label: 'দৈনিক খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
-    { href: '/stock', label: 'স্টক ইনভেন্টরি', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
+    { href: '/expenses', label: 'খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
+    { href: '/stock', label: 'স্টক', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/day-end', label: 'ক্যাশ ড্রয়ার', icon: '🌙', iconBg: '#f0fdf4', iconColor: '#16a34a', show: isFeatureEnabled('enableCashDrawer') },
     { href: '/staff', label: 'কর্মচারী', icon: '👥', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'টিম' },
     { href: '/branches', label: 'শাখা', icon: '🏢', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableMultiBranch') },
     { href: '/expiry-tracker', label: 'মেয়াদ ট্র্যাকার', icon: '⏳', iconBg: '#fee2e2', iconColor: '#b91c1c', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
-    { href: '/reports', label: 'লাভ-ক্ষতি রিপোর্ট', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
+    { href: '/reports', label: 'রিপোর্ট', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/subscription', label: 'সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ' },
     { href: '/settings', label: 'সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
     { href: '/support', label: 'সাপোর্ট', icon: '🎧', iconBg: '#eef2ff', iconColor: '#4f46e5' },
@@ -1295,7 +1295,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               }}>
                 🎙️
               </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ভয়েস মেমো</span>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ভয়েস</span>
             </button>
 
             {/* 3. ক্যাটালগ POS */}
@@ -1326,7 +1326,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               }}>
                 📦
               </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ক্যাটালগ POS</span>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ক্যাটালগ</span>
             </button>
 
             {/* 2. বিক্রি রিটার্ন */}
@@ -1357,7 +1357,7 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               }}>
                 🛍️
               </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>বিক্রি রিটার্ন</span>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>রিটার্ন</span>
             </button>
 
             {/* 3. বাকি আদায় */}

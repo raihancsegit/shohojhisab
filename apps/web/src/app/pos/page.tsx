@@ -3276,7 +3276,7 @@ export default function PosPage() {
           </div>
 
           <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
-            মুখে বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
+            বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
           </div>
         </div>
 
@@ -3303,7 +3303,7 @@ export default function PosPage() {
         >
           <span style={{ fontSize: '20px' }}>{isCounterSleepActive ? '🌙' : '💤'}</span>
           <span style={{ fontSize: '11px', fontWeight: '900', marginTop: '3px', whiteSpace: 'nowrap' }}>
-            {isCounterSleepActive ? 'স্লিপ অন' : 'কাউন্টার স্লিপ'}
+            {isCounterSleepActive ? 'স্লিপ অন' : 'স্লিপ'}
           </span>
         </button>
       </div>
@@ -3339,7 +3339,7 @@ export default function PosPage() {
             transition: 'all 0.2s ease'
           }}
         >
-          <span>🛍️ ক্যাটালগ মেমো</span>
+          <span>🛍️ ক্যাটালগ</span>
         </button>
         <button
           type="button"
@@ -3384,10 +3384,10 @@ export default function PosPage() {
               <span style={{ fontSize: '22px' }}>🔢</span>
               <div>
                 <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                  ক্যালকুলেটর মেমো
+                  ক্যালকুলেটর
                 </h2>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                  সরাসরি টাকার অংকে দ্রুত বিক্রি ও বাকি হিসাব
+                  সরাসরি টাকার অংকে বিক্রি
                 </span>
               </div>
             </div>
@@ -3415,7 +3415,7 @@ export default function PosPage() {
                 title="মুখে বলে স্টক থেকে সরাসরি মেমোতে যোগ করুন (যেমন: হাফ কেজি চাল ৫০, ৩টা নাপা)"
               >
                 <span style={{ fontSize: '14px' }}>{isNumpadVoiceListening ? '🔴' : '🎙️'}</span>
-                <span>{isNumpadVoiceListening ? 'শুনছি...' : 'মুখে বলুন'}</span>
+                <span>{isNumpadVoiceListening ? 'শুনছি...' : 'ভয়েস'}</span>
               </button>
 
               {numpadItems.length > 0 && (
@@ -3508,7 +3508,7 @@ export default function PosPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <span>✨</span>
-                  <span>স্টক পণ্য ({predictedProducts.length}টি):</span>
+                  <span>পণ্য ({predictedProducts.length}):</span>
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
                   দর/টাকা: ৳{parsedPending.unitPrice || parsedPending.total}
@@ -3622,7 +3622,7 @@ export default function PosPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  + সাধারণ যোগ
+                  + যোগ
                 </button>
                 <button
                   type="button"
@@ -3638,7 +3638,7 @@ export default function PosPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  🔍 পণ্য ট্যাগ
+                  পণ্য সার্চ
                 </button>
               </div>
             </div>
@@ -3648,7 +3648,7 @@ export default function PosPage() {
           {!numpadInput && popularNumpadProducts.length > 0 && (
             <div style={{ marginBottom: '10px' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                🔥 দ্রুত স্টক পণ্য (ট্যাপ করে দর চাপুন):
+                পণ্য তালিকা:
               </div>
               <div style={{
                 display: 'flex',
@@ -3926,7 +3926,7 @@ export default function PosPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>
-                👤 কাস্টমার নির্বাচন (বাকি বিক্রির জন্য):
+                কাস্টমার:
               </label>
               <button
                 type="button"
@@ -3990,7 +3990,7 @@ export default function PosPage() {
                   fontWeight: '600'
                 }}
               >
-                <option value="none">নগদ ক্রেতা (নামহীন)</option>
+                <option value="none">নগদ ক্রেতা</option>
                 {customers.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.phone ? `(${c.phone})` : ''} {Number(c.totalDue) > 0 ? `[বাকি: ৳${c.totalDue}]` : ''}
@@ -4070,7 +4070,7 @@ export default function PosPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '18px' }}>🎙️</span>
                 <strong style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
-                  দ্রুত আইটেম যোগ
+                  আইটেম সার্চ
                 </strong>
               </div>
               <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
@@ -4525,7 +4525,7 @@ export default function PosPage() {
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          <span className="desktop-only" style={{ color: '#ffffff' }}>নতুন পণ্য</span>
+          <span className="desktop-only" style={{ color: '#ffffff' }}>+ নতুন</span>
         </button>
       </div>
 
@@ -4720,7 +4720,7 @@ export default function PosPage() {
                 gap: '4px'
               }}
             >
-              <span>➕</span> নতুন ট্যাব
+              <span>➕</span> ট্যাব
             </button>
           </div>
 
@@ -4785,8 +4785,8 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>💊</span>
-            <strong style={{ fontSize: '11.5px', color: '#065f46' }}>ফার্মেসি কাউন্টার</strong>
-            <span style={{ fontSize: '10.5px', color: '#047857' }}>• ড্রাগ ও জেনেরিক ট্র্যাকিং</span>
+            <strong style={{ fontSize: '11.5px', color: '#065f46' }}>ফার্মেসি</strong>
+            <span style={{ fontSize: '10.5px', color: '#047857' }}>• জেনেরিক</span>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <Link href="/expiry-tracker" style={{
@@ -4820,7 +4820,7 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>👗</span>
-            <strong style={{ fontSize: '11.5px', color: '#5b21b6' }}>সাইজ ফিল্টার:</strong>
+            <strong style={{ fontSize: '11.5px', color: '#5b21b6' }}>সাইজ:</strong>
           </div>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto' }}>
             {['সব', 'S', 'M', 'L', 'XL', 'XXL', 'ফ্রি সাইজ'].map(sz => {
@@ -4870,7 +4870,7 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>👞</span>
-            <strong style={{ fontSize: '11.5px', color: '#7e22ce' }}>জুতার সাইজ:</strong>
+            <strong style={{ fontSize: '11.5px', color: '#7e22ce' }}>সাইজ:</strong>
           </div>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', overflowX: 'auto' }}>
             {['সব', '৩৮', '৩৯', '৪০', '৪১', '৪২', '৪৩', '৪৪'].map(sz => {
@@ -4917,8 +4917,8 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>📱</span>
-            <strong style={{ fontSize: '11.5px', color: '#0369a1' }}>মোবাইল ও গ্যাজেট</strong>
-            <span style={{ fontSize: '10.5px', color: '#0284c7' }}>• IMEI ও ১ বছর অফিসিয়াল ওয়ারেন্টি</span>
+            <strong style={{ fontSize: '11.5px', color: '#0369a1' }}>মোবাইল</strong>
+            <span style={{ fontSize: '10.5px', color: '#0284c7' }}>• ওয়ারেন্টি</span>
           </div>
           <span style={{ background: '#0284c7', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800' }}>
             🛡️ ওয়ারেন্টি সক্রিয়
@@ -4998,7 +4998,7 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>🛒</span>
-            <strong style={{ fontSize: '11.5px', color: '#166534' }}>মুদি ও বাজার কাউন্টার</strong>
+            <strong style={{ fontSize: '11.5px', color: '#166534' }}>মুদি কাউন্টার</strong>
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <button
@@ -5204,13 +5204,13 @@ export default function PosPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>📷</span>
-                <strong style={{ fontSize: '16px' }}>ক্যামেরা বারকোড স্ক্যানার</strong>
+                <strong style={{ fontSize: '16px' }}>বারকোড স্ক্যানার</strong>
               </div>
               <button onClick={closeCameraScanner} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '16px' }}>✕</button>
             </div>
 
             <p style={{ fontSize: '12.5px', color: '#94a3b8', margin: '0 0 14px' }}>
-              পণ্যের গায়ের বারকোড ক্যামেরার সামনে ধরুন:
+              ক্যামেরার সামনে বারকোড ধরুন:
             </p>
 
             {/* Video Viewfinder Container */}
@@ -5253,7 +5253,7 @@ export default function PosPage() {
             {/* Quick Demo Barcode Buttons */}
             <div style={{ background: 'rgba(255,255,255,0.06)', padding: '10px', borderRadius: '12px', textAlign: 'left' }}>
               <span style={{ fontSize: '11px', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                ⚡ দ্রুত টেস্ট করতে বারকোডে চাপুন:
+                ক্লিক করে টেস্ট:
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {products.slice(0, 4).map(p => (
@@ -6142,7 +6142,7 @@ export default function PosPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  {showNewCustFields ? '✖ তালিকা থেকে বাছুন' : '➕ নতুন গ্রাহক'}
+                  {showNewCustFields ? '✖ তালিকা' : '➕ নতুন'}
                 </button>
               </div>
 
@@ -6163,7 +6163,7 @@ export default function PosPage() {
                   }}
                 >
                   <option value="none">
-                    {paymentMethod === 'due' ? '⚠️ গ্রাহক নির্বাচন করুন (নামহীন বাকি সম্ভব নয়)' : 'সাধারণ নগদ ক্রেতা (নামহীন)'}
+                    {paymentMethod === 'due' ? '⚠️ গ্রাহক নির্বাচন করুন (নামহীন বাকি সম্ভব নয়)' : 'নগদ ক্রেতা'}
                   </option>
                   {customers.map(c => (
                     <option key={c.id} value={c.id}>
@@ -6175,7 +6175,7 @@ export default function PosPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '2px', fontWeight: '600' }}>
-                      গ্রাহকের পুরো নাম:
+                      নাম:
                     </label>
                     <input
                       type="text"
@@ -6187,7 +6187,7 @@ export default function PosPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '2px', fontWeight: '600' }}>
-                      মোবাইল নম্বর:
+                      মোবাইল:
                     </label>
                     <input
                       type="text"
@@ -6218,27 +6218,27 @@ export default function PosPage() {
                     return (
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                          <span>পূর্বের বকেয়া হিসাব:</span>
+                          <span>পূর্বের বাকি:</span>
                           <strong>৳{prevDue.toLocaleString('en-US')}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span>বর্তমান মেমো যোগ:</span>
+                          <span>চলতি বিল:</span>
                           <strong style={{ color: '#b45309' }}>+ ৳{finalTotalCart.toLocaleString('en-US')}</strong>
                         </div>
                         <div style={{ borderTop: '1px solid #fde68a', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: '#78350f' }}>
-                          <span>খাতায় নতুন মোট বকেয়া:</span>
+                          <span>মোট বাকি:</span>
                           <span style={{ fontSize: '13.5px' }}>৳{newDue.toLocaleString('en-US')}</span>
                         </div>
                       </div>
                     );
                   })() : showNewCustFields && newCustName.trim() ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700' }}>
-                      <span>নতুন গ্রাহকের খাতে যোগ হবে:</span>
+                      <span>খাতে যোগ:</span>
                       <strong style={{ color: '#b45309' }}>৳{finalTotalCart.toLocaleString('en-US')}</strong>
                     </div>
                   ) : (
                     <div style={{ color: '#d97706', fontWeight: '600' }}>
-                      ⚠️ বাকি মেমো সংরক্ষণ করতে একজন গ্রাহক নির্বাচন করুন অথবা নতুন গ্রাহকের নাম লিখুন।
+                      ⚠️ বাকির জন্য গ্রাহক নির্বাচন করুন।
                     </div>
                   )}
                 </div>
@@ -6248,7 +6248,7 @@ export default function PosPage() {
             {/* Payment Method Selector */}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>
-                পেমেন্ট মাধ্যম:
+                পেমেন্ট:
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                 {[
@@ -6381,7 +6381,7 @@ export default function PosPage() {
             {industryId === 'cat-mobile' && (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#1e40af', marginBottom: '4px' }}>
-                  📱 মোবাইল IMEI / সিরিয়াল নম্বর:
+                  IMEI / সিরিয়াল:
                 </label>
                 <input
                   type="text"
@@ -6391,7 +6391,7 @@ export default function PosPage() {
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px', background: '#fff' }}
                 />
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#1e40af', marginBottom: '4px' }}>
-                  🛡️ অফিসিয়াল ওয়ারেন্টি মেয়াদ:
+                  ওয়ারেন্টি মেয়াদ:
                 </label>
                 <select
                   value={warrantyMonths}
@@ -6409,7 +6409,7 @@ export default function PosPage() {
             {industryId === 'cat-furniture' && (
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
-                  🚚 ফার্নিচার ডেলিভারি ঠিকানা ও নোট:
+                  ডেলিভারি ঠিকানা:
                 </label>
                 <input
                   type="text"
@@ -6424,7 +6424,7 @@ export default function PosPage() {
             {industryId === 'cat-bakery' && (
               <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#9a3412', marginBottom: '4px' }}>
-                  🎂 কেকের শুভেচ্ছা বার্তা:
+                  কেকের বার্তা:
                 </label>
                 <input
                   type="text"
@@ -6440,7 +6440,7 @@ export default function PosPage() {
             {paymentMethod === 'cash' && (
               <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '16px', padding: '14px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#166534', display: 'block', marginBottom: '8px' }}>
-                  💵 কাস্টমার কত টাকা দিল? (দ্রুত নোট চাপুন):
+                  💵 প্রাপ্ত টাকা:
                 </span>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '10px' }}>
@@ -6506,7 +6506,7 @@ export default function PosPage() {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                   }}>
-                    <strong style={{ fontSize: '13px' }}>গ্রাহককে ফেরত দিন:</strong>
+                    <strong style={{ fontSize: '13px' }}>ফেরত দিন:</strong>
                     <span className="num-font" style={{ fontSize: '20px', fontWeight: '900' }}>
                       ৳{changeToReturn.toLocaleString('en-US')}
                     </span>
@@ -6531,7 +6531,7 @@ export default function PosPage() {
                 boxShadow: cart.length === 0 ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.4)'
               }}
             >
-              {submitting ? 'বিল হচ্ছে...' : cart.length === 0 ? '⚠️ ব্যাগে পণ্য যোগ করুন' : '✓ বিক্রি সম্পন্ন ও ক্যাশ রসিদ'}
+              {submitting ? 'বিল হচ্ছে...' : cart.length === 0 ? '⚠️ ব্যাগে পণ্য যোগ করুন' : '✓ বিক্রি সম্পন্ন ➔'}
             </button>
           </div>
         </div>
@@ -7031,7 +7031,7 @@ export default function PosPage() {
                     gap: '6px'
                   }}
                 >
-                  <span>💬</span> WhatsApp-এ মেমো পাঠান
+                  <span>💬</span> WhatsApp মেমো
                 </button>
               )}
 
@@ -7049,7 +7049,7 @@ export default function PosPage() {
                   cursor: 'pointer'
                 }}
               >
-                ✓ সম্পন্ন (নতুন বিক্রি)
+                ✓ নতুন বিক্রি
               </button>
             </div>
           </div>
@@ -7072,7 +7072,7 @@ export default function PosPage() {
             </div>
 
             <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 14px' }}>
-              পণ্যটির তথ্য লিখুন। এটি বর্তমান মেমোতে যোগ হবে এবং স্থায়ীভাবে দোকানে সেভ হয়ে যাবে।
+              পণ্যের তথ্য লিখুন:
             </p>
 
             <form onSubmit={handleQuickAddProduct} style={{ display: 'grid', gap: '10px' }}>
@@ -7216,7 +7216,7 @@ export default function PosPage() {
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowQuickAddModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>বাতিল</button>
                 <button type="submit" style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
-                  ✓ মেমোতে যোগ করুন ➔
+                  ✓ যোগ করুন
                 </button>
               </div>
             </form>
@@ -7470,7 +7470,7 @@ export default function PosPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '24px' }}>⚖️</span>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                  টাকার হিসাবে গ্রাম ক্যালকুলেটর
+                  টাকা ➔ গ্রাম
                 </h3>
               </div>
               <button
@@ -7732,7 +7732,7 @@ export default function PosPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      + মেমোতে নিন
+                      + নিন
                     </button>
                   </div>
                 ))}

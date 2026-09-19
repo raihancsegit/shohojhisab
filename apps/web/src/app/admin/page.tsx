@@ -1891,7 +1891,7 @@ export default function SuperAdminPage() {
               <form onSubmit={handleSaveSettings} style={{ display: 'grid', gap: '16px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
                   {[
-                    { key: 'globalVoicePOS', label: '🎙️ ভয়েস মেমো ও স্মার্ট ক্যালকুলেটর' },
+                    { key: 'globalVoicePOS', label: '🎙️ ভয়েস ও ক্যালকুলেটর' },
                     { key: 'globalOcrScanner', label: '📸 চালান ফটো স্ক্যানার (OCR)' },
                     { key: 'globalThermalPrint', label: '🖨️ থার্মাল রিসিপ্ট প্রিন্টিং ইঞ্জিন (ESC/POS)' },
                     { key: 'globalMultiBranch', label: '🏢 মাল্টি-ব্রাঞ্চ ও ওয়্যারহাউস স্থানান্তর' },
