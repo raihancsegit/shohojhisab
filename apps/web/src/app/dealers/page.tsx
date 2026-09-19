@@ -263,15 +263,15 @@ export default function DealersPage() {
             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#fff',
             border: 'none',
-            padding: '7px 12px',
+            padding: '8px 14px',
             borderRadius: '10px',
             fontWeight: '800',
             fontSize: '12px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)'
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
           }}
         >
-          ➕ নতুন ডিলার
+          ➕ নতুন ডিলার ও চালান
         </button>
       </div>
 
