@@ -242,6 +242,257 @@ const INDUSTRY_SUBCATS: Record<string, Array<{ id: string; label: string; icon: 
   ]
 };
 
+
+// ⚖️ Industry-Tailored Sub-Unit & Multiplier Chip Definitions
+export interface AdaptiveSubUnitChip {
+  label: string;
+  mult: number;
+  unit?: string;
+  isTabletBreakdown?: boolean;
+  tabletCount?: number;
+}
+
+export interface AdaptiveSubUnitConfig {
+  icon: string;
+  title: string;
+  chips: AdaptiveSubUnitChip[];
+}
+
+export function getAdaptiveSubUnitChips(
+  activeItem: any | null,
+  industryId: string,
+  products: any[]
+): AdaptiveSubUnitConfig {
+  const p = activeItem?.productId ? products.find(x => x.id === activeItem.productId) : null;
+  const unit = (p?.unit || activeItem?.unit || '').trim();
+  const category = (p?.category || industryId || '').trim();
+  const cleanName = activeItem ? (p?.banglaName || p?.name || activeItem.note || '').split('(')[0].trim() : '';
+
+  // 1. Weight & Liquid Volume (কেজি, লিটার, গ্রাম, মিলি)
+  if (unit === 'কেজি' || unit === 'লিটার' || category === 'cat-grocery' || category === 'cat-meat-fish' || category === 'cat-sweet') {
+    const isLiquid = unit === 'লিটার';
+    const mainUnit = isLiquid ? 'লিটার' : 'কেজি';
+    const subUnit = isLiquid ? 'মিলি' : 'গ্রাম';
+    return {
+      icon: isLiquid ? '🛢️' : '⚖️',
+      title: cleanName ? `${cleanName} (${mainUnit}):` : `${isLiquid ? 'তরল' : 'ওজন'} ভগ্নাংশ:`,
+      chips: [
+        { label: `হাফ ${mainUnit} (০.৫×)`, mult: 0.5, unit: mainUnit },
+        { label: isLiquid ? `২৫০ ${subUnit} (০.২৫×)` : `১ পোয়া (২৫০ গ্রাম)`, mult: 0.25, unit: mainUnit },
+        { label: `১০০ ${subUnit} (০.১×)`, mult: 0.1, unit: mainUnit },
+        { label: `৫০ ${subUnit} (০.০৫×)`, mult: 0.05, unit: mainUnit },
+        { label: `দেড় ${mainUnit} (১.৫×)`, mult: 1.5, unit: mainUnit },
+        { label: `২ ${mainUnit} (২×)`, mult: 2, unit: mainUnit },
+        { label: `৫ ${mainUnit} (৫×)`, mult: 5, unit: mainUnit },
+      ]
+    };
+  }
+
+  // 2. Pharmacy Medicine (পাতা, ট্যাবলেট, ক্যাপসুল)
+  if (unit === 'পাতা' || unit === 'ট্যাবলেট' || unit === 'ক্যাপসুল' || category === 'cat-pharmacy') {
+    const ratio = (p && Number(p.conversionRatio) > 1) ? Number(p.conversionRatio) : 10;
+    return {
+      icon: '💊',
+      title: cleanName ? `${cleanName} (ঔষধ):` : 'ফার্মেসি একক:',
+      chips: [
+        { label: '১ পাতা (১×)', mult: 1, unit: 'পাতা' },
+        { label: `হাফ পাতা (${Math.round(ratio / 2)}টি)`, mult: 0.5, unit: 'পাতা' },
+        { label: '১টি ট্যাবলেট', mult: 1 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 1 },
+        { label: '২টি ট্যাবলেট', mult: 2 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 2 },
+        { label: '৩টি ট্যাবলেট', mult: 3 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 3 },
+        { label: '৫টি ট্যাবলেট', mult: 5 / ratio, unit: 'ট্যাবলেট', isTabletBreakdown: true, tabletCount: 5 },
+        { label: `${ratio}টি পাতা`, mult: 1, unit: 'পাতা' },
+      ]
+    };
+  }
+
+  // 3. Egg & Dozen Items (হালি, ডজন)
+  if (unit === 'হালি' || unit === 'ডজন') {
+    const isHali = unit === 'হালি';
+    return {
+      icon: '🥚',
+      title: cleanName ? `${cleanName}:` : 'হালি ও ডজন:',
+      chips: isHali ? [
+        { label: '১ হালি (১×)', mult: 1, unit: 'হালি' },
+        { label: '২ হালি (২×)', mult: 2, unit: 'হালি' },
+        { label: '১ ডজন (৩×)', mult: 3, unit: 'হালি' },
+        { label: '২ ডজন (৬×)', mult: 6, unit: 'হালি' },
+        { label: 'হাফ হালি (২টি)', mult: 0.5, unit: 'হালি' },
+      ] : [
+        { label: '১ ডজন (১×)', mult: 1, unit: 'ডজন' },
+        { label: 'হাফ ডজন (৬টি)', mult: 0.5, unit: 'ডজন' },
+        { label: '১ হালি (৪টি)', mult: 4 / 12, unit: 'ডজন' },
+        { label: '২ ডজন (২×)', mult: 2, unit: 'ডজন' },
+      ]
+    };
+  }
+
+  // 4. Clothing & Fabric (গজ, মিটার, থান)
+  if (unit === 'গজ' || unit === 'মিটার' || unit === 'থান' || category === 'cat-clothing') {
+    const mUnit = unit || 'গজ';
+    return {
+      icon: '✂️',
+      title: cleanName ? `${cleanName} (${mUnit}):` : 'কাপড়ের মাপ:',
+      chips: [
+        { label: `হাফ ${mUnit} (০.৫×)`, mult: 0.5, unit: mUnit },
+        { label: `১ ${mUnit} (১×)`, mult: 1, unit: mUnit },
+        { label: `দেড় ${mUnit} (১.৫×)`, mult: 1.5, unit: mUnit },
+        { label: `২ ${mUnit} (২×)`, mult: 2, unit: mUnit },
+        { label: `আড়াই ${mUnit} (২.৫×)`, mult: 2.5, unit: mUnit },
+        { label: `৩ ${mUnit} (৩×)`, mult: 3, unit: mUnit },
+      ]
+    };
+  }
+
+  // 5. Restaurant & Food (প্লেট, বাটি, সেট, গ্লাস)
+  if (unit === 'প্লেট' || unit === 'বাটি' || unit === 'সেট' || category === 'cat-restaurant') {
+    const mainUnit = unit === 'বাটি' ? 'বাটি' : (unit === 'সেট' ? 'সেট' : 'প্লেট');
+    return {
+      icon: '🍽️',
+      title: cleanName ? `${cleanName} (${mainUnit}):` : 'খাবারের মাপ:',
+      chips: [
+        { label: `হাফ ${mainUnit} (০.৫×)`, mult: 0.5, unit: mainUnit },
+        { label: `১ ${mainUnit} (১×)`, mult: 1, unit: mainUnit },
+        { label: `দেড় ${mainUnit} (১.৫×)`, mult: 1.5, unit: mainUnit },
+        { label: `২ ${mainUnit} (২×)`, mult: 2, unit: mainUnit },
+        { label: `১ পার্সেল (১×)`, mult: 1, unit: mainUnit },
+      ]
+    };
+  }
+
+  // 6. Tea, Pan & Cigarette Stall (কাপ, শলা, খিলি)
+  if (unit === 'কাপ' || unit === 'শলা' || unit === 'খিলি' || category === 'cat-tea') {
+    return {
+      icon: '☕',
+      title: cleanName ? `${cleanName}:` : 'চা, পান ও শলা:',
+      chips: [
+        { label: '১ কাপ (১×)', mult: 1, unit: 'কাপ' },
+        { label: '২ কাপ (২×)', mult: 2, unit: 'কাপ' },
+        { label: '৩ কাপ (৩×)', mult: 3, unit: 'কাপ' },
+        { label: '১ শলা (১×)', mult: 1, unit: 'শলা' },
+        { label: '২ শলা (২×)', mult: 2, unit: 'শলা' },
+        { label: '১ খিলি পান (১×)', mult: 1, unit: 'খিলি' },
+      ]
+    };
+  }
+
+  // 7. Hardware & Construction (ফুট, মিটার, কেজি, পিস)
+  if (unit === 'ফুট' || category === 'cat-hardware') {
+    return {
+      icon: '🔧',
+      title: cleanName ? `${cleanName}:` : 'হার্ডওয়্যার একক:',
+      chips: [
+        { label: '১ ফুট (১×)', mult: 1, unit: 'ফুট' },
+        { label: '২ ফুট (২×)', mult: 2, unit: 'ফুট' },
+        { label: '৫ ফুট (৫×)', mult: 5, unit: 'ফুট' },
+        { label: '১০ ফুট (১০×)', mult: 10, unit: 'ফুট' },
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '১ সেট (১×)', mult: 1, unit: 'সেট' },
+      ]
+    };
+  }
+
+  // 8. Shoes & Footwear (জোড়া)
+  if (unit === 'জোড়া' || category === 'cat-shoes') {
+    return {
+      icon: '👟',
+      title: cleanName ? `${cleanName}:` : 'জুতা একক:',
+      chips: [
+        { label: '১ জোড়া (১×)', mult: 1, unit: 'জোড়া' },
+        { label: '২ জোড়া (২×)', mult: 2, unit: 'জোড়া' },
+        { label: '৩ জোড়া (৩×)', mult: 3, unit: 'জোড়া' },
+        { label: 'হাফ ডজন (৬×)', mult: 6, unit: 'জোড়া' },
+      ]
+    };
+  }
+
+  // 9. Bakery & Confectionery (পিস, পাউন্ড, প্যাকেট)
+  if (category === 'cat-bakery') {
+    return {
+      icon: '🧁',
+      title: cleanName ? `${cleanName}:` : 'বেকারি একক:',
+      chips: [
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '২ পিস (২×)', mult: 2, unit: 'পিস' },
+        { label: 'হাফ পাউন্ড (০.৫×)', mult: 0.5, unit: 'পাউন্ড' },
+        { label: '১ পাউন্ড (১×)', mult: 1, unit: 'পাউন্ড' },
+        { label: '২ পাউন্ড (২×)', mult: 2, unit: 'পাউন্ড' },
+        { label: '১ প্যাকেট (১×)', mult: 1, unit: 'প্যাকেট' },
+      ]
+    };
+  }
+
+  // 10. Stationery & Books (দিস্তা, রিম, পিস, ডজন)
+  if (category === 'cat-stationery') {
+    return {
+      icon: '📚',
+      title: cleanName ? `${cleanName}:` : 'স্টেশনারি একক:',
+      chips: [
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '১ দিস্তা (১×)', mult: 1, unit: 'দিস্তা' },
+        { label: '১ রিম (১×)', mult: 1, unit: 'রিম' },
+        { label: '১ ডজন (১×)', mult: 1, unit: 'ডজন' },
+        { label: '১ প্যাকেট (১×)', mult: 1, unit: 'প্যাকেট' },
+      ]
+    };
+  }
+
+  // 11. Cosmetics (পিস, বক্স, সেট)
+  if (category === 'cat-cosmetics') {
+    return {
+      icon: '💄',
+      title: cleanName ? `${cleanName}:` : 'কসমেটিক্স একক:',
+      chips: [
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '২ পিস (২×)', mult: 2, unit: 'পিস' },
+        { label: '১ বক্স (১×)', mult: 1, unit: 'বক্স' },
+        { label: '১ সেট (১×)', mult: 1, unit: 'সেট' },
+        { label: '১ ডজন (১২×)', mult: 12, unit: 'পিস' },
+      ]
+    };
+  }
+
+  // 12. Mobile & Gadgets (পিস, সেট)
+  if (category === 'cat-mobile') {
+    return {
+      icon: '📱',
+      title: cleanName ? `${cleanName}:` : 'মোবাইল ও গ্যাজেট:',
+      chips: [
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '১ সেট (১×)', mult: 1, unit: 'সেট' },
+        { label: '১ বক্স (১×)', mult: 1, unit: 'বক্স' },
+      ]
+    };
+  }
+
+  // 13. Furniture (পিস, সেট, জোড়া)
+  if (category === 'cat-furniture') {
+    return {
+      icon: '🪑',
+      title: cleanName ? `${cleanName}:` : 'আসবাবপত্র একক:',
+      chips: [
+        { label: '১ পিস (১×)', mult: 1, unit: 'পিস' },
+        { label: '১ সেট (১×)', mult: 1, unit: 'সেট' },
+        { label: '১ জোড়া (১×)', mult: 1, unit: 'জোড়া' },
+      ]
+    };
+  }
+
+  // 14. Universal default fallback
+  return {
+    icon: '⚡',
+    title: cleanName ? `${cleanName}:` : 'দ্রুত মাপ / গুণক:',
+    chips: [
+      { label: '১টি (১×)', mult: 1, unit: unit || 'পিস' },
+      { label: '২টি (২×)', mult: 2, unit: unit || 'পিস' },
+      { label: '৩টি (৩×)', mult: 3, unit: unit || 'পিস' },
+      { label: '৫টি (৫×)', mult: 5, unit: unit || 'পিস' },
+      { label: '১০টি (১০×)', mult: 10, unit: unit || 'পিস' },
+      { label: 'হাফ (০.৫×)', mult: 0.5, unit: unit || 'পিস' },
+    ]
+  };
+}
+
 export default function PosPage() {
   const { tenant, activeRoleMode, currentStaffUser, triggerHaptic, speakAnnouncement } = useAuth();
   const currentTenantId = tenant?.id;
@@ -279,6 +530,7 @@ export default function PosPage() {
   // 🔢 Amar Dokan Style Fast Numpad POS Mode
   const [posMode, setPosMode] = useState<'catalog' | 'numpad'>('catalog');
   const [numpadInput, setNumpadInput] = useState('');
+  const [activeNumpadItemId, setActiveNumpadItemId] = useState<string | null>(null);
   const [numpadItems, setNumpadItems] = useState<Array<{
     id: string;
     amount: number;
@@ -869,9 +1121,64 @@ export default function PosPage() {
     setNumpadInput(prev => prev + digit);
   };
 
-  const handleNumpadMultiplier = (mult: number) => {
+  const handleNumpadMultiplier = (chip: AdaptiveSubUnitChip | number) => {
     playBeep(900);
     triggerHaptic('light');
+    const mult = typeof chip === 'number' ? chip : chip.mult;
+    const chipUnit = typeof chip === 'object' ? chip.unit : undefined;
+    const isTabletBreakdown = typeof chip === 'object' ? chip.isTabletBreakdown : false;
+    const tabletCount = typeof chip === 'object' ? chip.tabletCount : undefined;
+
+    // Check if there is an active item in numpadItems to apply directly!
+    const activeItem = numpadItems.find(i => i.id === activeNumpadItemId) || (numpadItems.length > 0 ? numpadItems[numpadItems.length - 1] : null);
+
+    if (activeItem) {
+      const prod = activeItem.productId ? products.find(p => p.id === activeItem.productId) : null;
+      const baseUnitPrice = activeItem.unitPrice || (prod ? Number(prod.sellingPrice) : (activeItem.amount / (activeItem.quantity || 1))) || activeItem.amount;
+
+      let newQty = mult;
+      let newUnitPrice = baseUnitPrice;
+      let newUnit = chipUnit || activeItem.unit || prod?.unit || 'পিস';
+
+      // Special pharmacy tablet breakdown handling
+      if (isTabletBreakdown && prod && Number(prod.conversionRatio) > 1) {
+        const ratio = Number(prod.conversionRatio);
+        const perTabletPrice = Math.round((baseUnitPrice / ratio) * 100) / 100;
+        newUnitPrice = perTabletPrice;
+        newQty = tabletCount || 1;
+        newUnit = prod.subUnit || 'ট্যাবলেট';
+      }
+
+      const newAmt = Math.round(newQty * newUnitPrice * 100) / 100;
+      const cleanProdName = prod ? (prod.banglaName || prod.name) : (activeItem.note ? activeItem.note.replace(/\s*\([^)]+\)/g, '').trim() : 'আইটেম');
+      const newNote = `${cleanProdName} (${newQty} ${newUnit})`;
+
+      setNumpadItems(prev => prev.map(it => {
+        if (it.id !== activeItem.id) return it;
+        return {
+          ...it,
+          quantity: newQty,
+          unitPrice: newUnitPrice,
+          amount: newAmt,
+          unit: newUnit,
+          note: newNote
+        };
+      }));
+
+      setActiveNumpadItemId(activeItem.id);
+      setNumpadVoiceNotice(`✓ ${cleanProdName}: ${newQty} ${newUnit} = ৳${newAmt}`);
+      setTimeout(() => setNumpadVoiceNotice(''), 3500);
+      return;
+    }
+
+    // If no active item, handle typed input in numpadInput
+    if (numpadInput && !isNaN(Number(numpadInput))) {
+      const typed = Number(numpadInput);
+      const calculated = Math.round(typed * mult * 100) / 100;
+      setNumpadInput(String(calculated));
+      return;
+    }
+
     if (!numpadInput) {
       setNumpadInput(`${mult}×`);
     } else if (numpadInput.includes('×')) {
@@ -889,6 +1196,7 @@ export default function PosPage() {
       setNumpadInput('');
     } else {
       setNumpadItems([]);
+      setActiveNumpadItemId(null);
       setNumpadSelectedProduct(null);
       setNumpadNote('');
       setShowNumpadProductDropdown(false);
@@ -918,10 +1226,11 @@ export default function PosPage() {
       ? `${p.banglaName || p.name} (${pill.badgeText})`
       : `${p.banglaName || p.name}${qty !== 1 ? ` (${qty} ${uUnit})` : ''}`;
 
+    const newItemId = 'np-' + Date.now() + Math.random().toString(36).slice(2, 6);
     setNumpadItems(prev => [
       ...prev,
       {
-        id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+        id: newItemId,
         amount: totAmt,
         note: itemNote,
         productId: p.id,
@@ -931,6 +1240,7 @@ export default function PosPage() {
         purchasePrice: Number(p.purchasePrice) || Math.round(uPrice * 0.85)
       }
     ]);
+    setActiveNumpadItemId(newItemId);
 
     setNumpadInput('');
     setNumpadNote('');
@@ -1053,24 +1363,38 @@ export default function PosPage() {
     }
   };
 
-  // Increment or Decrement Numpad Item Quantity
+  // Increment or Decrement Numpad Item Quantity (Fractional Aware)
   const updateNumpadItemQuantity = (id: string, delta: number) => {
     playBeep(950);
     triggerHaptic('light');
     setNumpadItems(prev => prev.map(item => {
       if (item.id !== id) return item;
       const currentQty = item.quantity || 1;
-      const newQty = Math.max(1, currentQty + delta);
+      let newQty: number;
+      if (delta > 0) {
+        if (currentQty < 0.25) newQty = 0.25;
+        else if (currentQty < 0.5) newQty = 0.5;
+        else if (currentQty < 1) newQty = 1;
+        else newQty = Math.round((currentQty + delta) * 100) / 100;
+      } else {
+        if (currentQty > 1) newQty = Math.round((currentQty + delta) * 100) / 100;
+        else if (currentQty > 0.5) newQty = 0.5;
+        else if (currentQty > 0.25) newQty = 0.25;
+        else if (currentQty > 0.1) newQty = 0.1;
+        else newQty = 0.05;
+      }
+      newQty = Math.max(0.05, Math.round(newQty * 100) / 100);
       const unitP = item.unitPrice || (item.amount / currentQty);
       const newAmt = Math.round(newQty * unitP * 100) / 100;
-      const cleanNote = item.note ? item.note.replace(/\s*\(\d+\s*[^)]+\)/g, '').trim() : '';
+      const cleanNote = item.note ? item.note.replace(/\s*\([^)]+\)/g, '').trim() : 'আইটেম';
       return {
         ...item,
         quantity: newQty,
         amount: newAmt,
-        note: cleanNote ? `${cleanNote}${newQty > 1 ? ` (${newQty} ${item.unit || 'পিস'})` : ''}` : ''
+        note: cleanNote ? `${cleanNote} (${newQty} ${item.unit || 'পিস'})` : ''
       };
     }));
+    setActiveNumpadItemId(id);
   };
 
   const handleNumpadAddCurrent = (overrideProduct?: any) => {
@@ -1094,10 +1418,11 @@ export default function PosPage() {
     const baseNote = numpadNote.trim() || (targetProd ? (targetProd.banglaName || targetProd.name) : `আইটেম ${numpadItems.length + 1}`);
     const itemNote = `${baseNote}${qty > 1 && !baseNote.includes(`(${qty}`) ? ` (${qty} ${targetProd?.unit || 'পিস'})` : ''}`;
 
+    const currentItemId = 'np-' + Date.now() + Math.random().toString(36).slice(2, 6);
     setNumpadItems(prev => [
       ...prev,
       {
-        id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
+        id: currentItemId,
         amount: amt,
         note: itemNote,
         productId: targetProd?.id || null,
@@ -1107,6 +1432,7 @@ export default function PosPage() {
         purchasePrice: Number(targetProd?.purchasePrice) || Math.round(uPrice * 0.85)
       }
     ]);
+    setActiveNumpadItemId(currentItemId);
 
     setNumpadInput('');
     setNumpadNote('');
@@ -1134,7 +1460,13 @@ export default function PosPage() {
   const removeNumpadItem = (id: string) => {
     playBeep(600);
     triggerHaptic('light');
-    setNumpadItems(prev => prev.filter(i => i.id !== id));
+    setNumpadItems(prev => {
+      const next = prev.filter(i => i.id !== id);
+      if (activeNumpadItemId === id) {
+        setActiveNumpadItemId(next.length > 0 ? next[next.length - 1].id : null);
+      }
+      return next;
+    });
   };
 
   const handleNumpadCheckout = async (method: 'cash' | 'due') => {
@@ -1444,7 +1776,7 @@ export default function PosPage() {
     return () => window.removeEventListener('keydown', handleKeypadKey);
   }, [posMode, numpadInput, numpadItems, numpadPendingVal, numpadTotal, numpadSelectedProduct, numpadNote, currentTenantId, numpadCustomer, numpadNewCustName, numpadNewCustPhone]);
 
-  const addToCart = (product: any, qty: number = 1, unit?: string, customPrice?: number) => {
+  const addToCart = (product: any, qty: number = 1, unit?: string, customPrice?: number, isExactSet: boolean = false) => {
     playBeep(880);
     triggerHaptic('light');
 
@@ -1475,7 +1807,7 @@ export default function PosPage() {
     setCart(prev => {
       const existing = prev.find(i => i.product.id === product.id && (i.selectedUnit || primaryUnit) === itemUnit);
       if (existing) {
-        const newQty = Math.round((existing.quantity + qty) * 1000) / 1000;
+        const newQty = isExactSet ? qty : Math.round((existing.quantity + qty) * 1000) / 1000;
         const pPrice = customPrice !== undefined ? customPrice : (existing.unitPrice !== undefined ? existing.unitPrice : baseRate);
         return prev.map(i => (i.product.id === product.id && (i.selectedUnit || primaryUnit) === itemUnit) ? {
           ...i,
@@ -3288,12 +3620,15 @@ export default function PosPage() {
               paddingBottom: '6px',
               marginBottom: '12px'
             }}>
-              {numpadItems.map((it) => (
+              {numpadItems.map((it) => {
+                const isActive = it.id === activeNumpadItemId || (activeNumpadItemId === null && it.id === numpadItems[numpadItems.length - 1]?.id);
+                return (
                 <div
                   key={it.id}
+                  onClick={() => { setActiveNumpadItemId(it.id); triggerHaptic('light'); }}
                   style={{
-                    background: it.productId ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.08)',
-                    border: `1px solid ${it.productId ? 'rgba(16, 185, 129, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`,
+                    background: isActive ? 'rgba(16, 185, 129, 0.15)' : (it.productId ? 'rgba(16, 185, 129, 0.06)' : 'rgba(99, 102, 241, 0.06)'),
+                    border: isActive ? '2px solid #059669' : `1px solid ${it.productId ? 'rgba(16, 185, 129, 0.25)' : 'rgba(99, 102, 241, 0.25)'}`,
                     borderRadius: '10px',
                     padding: '6px 10px',
                     fontSize: '12px',
@@ -3301,7 +3636,9 @@ export default function PosPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '8px'
+                    gap: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
@@ -3319,6 +3656,11 @@ export default function PosPage() {
                     <span style={{ fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {it.note || 'আইটেম'}
                     </span>
+                    {isActive && (
+                      <span style={{ background: '#059669', color: '#fff', fontSize: '9px', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', flexShrink: 0 }}>
+                        ✓ সক্রিয়
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -3348,77 +3690,64 @@ export default function PosPage() {
 
                     <button
                       type="button"
-                      onClick={() => removeNumpadItem(it.id)}
+                      onClick={(e) => { e.stopPropagation(); removeNumpadItem(it.id); }}
                       style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 2px', fontSize: '13px', fontWeight: '900' }}
                     >
                       ✕
                     </button>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
-          {/* ⚖️ Quick Fractional / Sub-Unit Multipliers */}
-          <div style={{
-            display: 'flex',
-            gap: '6px',
-            marginBottom: '10px',
-            overflowX: 'auto',
-            paddingBottom: '4px',
-            alignItems: 'center'
-          }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>{industryId === 'cat-pharmacy' ? '💊' : '⚖️'}</span>
-              <span>{industryId === 'cat-pharmacy' ? 'ফার্মেসি একক:' : 'ওজন ভগ্নাংশ:'}</span>
-            </span>
-            {(industryId === 'cat-pharmacy'
-              ? [
-                  { label: '১ পাতা', mult: 1 },
-                  { label: 'হাফ পাতা (৫টি)', mult: 0.5 },
-                  { label: '১টি', mult: 1 },
-                  { label: '২টি', mult: 2 },
-                  { label: '৩টি', mult: 3 },
-                  { label: '৫টি', mult: 5 },
-                  { label: '১০টি', mult: 10 }
-                ]
-              : [
-                  { label: 'হাফ কেজি (০.৫×)', mult: 0.5 },
-                  { label: '১ পোয়া (০.২৫×)', mult: 0.25 },
-                  { label: '১০০ গ্রাম (০.১×)', mult: 0.1 },
-                  { label: 'দেড় কেজি (১.৫×)', mult: 1.5 },
-                  { label: 'আড়াই কেজি (২.৫×)', mult: 2.5 },
-                  { label: '৩ কেজি (৩×)', mult: 3 },
-                  { label: '৫ কেজি (৫×)', mult: 5 }
-                ]
-            ).map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  playBeep(920);
-                  triggerHaptic('light');
-                  handleNumpadMultiplier(chip.mult);
-                }}
-                style={{
-                  background: 'rgba(16, 185, 129, 0.08)',
-                  border: '1.5px solid rgba(16, 185, 129, 0.35)',
-                  borderRadius: '10px',
-                  padding: '5px 10px',
-                  fontSize: '11.5px',
-                  fontWeight: '800',
-                  color: '#059669',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                }}
-                title={`${chip.label} দিয়ে দর গুণ করুন`}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
+          {/* ⚖️ Dynamic Category-Tailored Sub-Units & Multipliers */}
+          {(() => {
+            const activeItem = numpadItems.find(i => i.id === activeNumpadItemId) || (numpadItems.length > 0 ? numpadItems[numpadItems.length - 1] : null);
+            const subUnitConfig = getAdaptiveSubUnitChips(activeItem, industryId, products);
+            return (
+              <div style={{
+                display: 'flex',
+                gap: '6px',
+                marginBottom: '10px',
+                overflowX: 'auto',
+                paddingBottom: '4px',
+                alignItems: 'center'
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{subUnitConfig.icon}</span>
+                  <span>{subUnitConfig.title}</span>
+                </span>
+                {subUnitConfig.chips.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      playBeep(920);
+                      triggerHaptic('light');
+                      handleNumpadMultiplier(chip);
+                    }}
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.08)',
+                      border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                      borderRadius: '10px',
+                      padding: '5px 10px',
+                      fontSize: '11.5px',
+                      fontWeight: '800',
+                      color: '#059669',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                    }}
+                    title={`${chip.label} নির্বাচন করুন`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Quick Amount Pills */}
           <div style={{
@@ -4935,21 +5264,20 @@ export default function PosPage() {
               </div>
 
               <div>
-                {/* Industry-tailored Quick Sub-unit Chips on Product Card */}
-                {p.unit === 'পাতা' ? (
+                {p.category === 'cat-pharmacy' && Number(p.conversionRatio) > 1 ? (
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 0.1)}
+                      onClick={() => addToCart(p, 1, p.subUnit || 'ট্যাবলেট', Math.round((p.sellingPrice / Number(p.conversionRatio)) * 100) / 100, true)}
                       style={{
                         flex: 1,
-                        background: '#ecfdf5',
-                        border: '1px solid #a7f3d0',
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
                         fontWeight: '800',
-                        color: '#065f46',
+                        color: '#1d4ed8',
                         cursor: 'pointer'
                       }}
                       title="১টি ট্যাবলেট বিক্রি করুন"
@@ -4958,7 +5286,25 @@ export default function PosPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 1)}
+                      onClick={() => addToCart(p, 0.5, p.unit || 'পাতা', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#fef3c7',
+                        border: '1px solid #fde68a',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#b45309',
+                        cursor: 'pointer'
+                      }}
+                      title="হাফ পাতা বিক্রি করুন"
+                    >
+                      হাফ পাতা
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.unit || 'পাতা', undefined, true)}
                       style={{
                         flex: 1,
                         background: '#f0fdf4',
@@ -4975,18 +5321,36 @@ export default function PosPage() {
                       ১ পাতা
                     </button>
                   </div>
-                ) : (p.unit === 'কেজি' || p.unit === 'লিটার') ? (
+                ) : (p.unit === 'কেজি' || p.unit === 'লিটার' || p.category === 'cat-grocery' || p.category === 'cat-meat-fish' || p.category === 'cat-sweet') ? (
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 0.25)}
+                      onClick={() => addToCart(p, 0.1, undefined, undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        padding: '2px 3px',
+                        fontSize: '9.5px',
+                        fontWeight: '800',
+                        color: '#475569',
+                        cursor: 'pointer'
+                      }}
+                      title="১০০ গ্রাম বিক্রি করুন"
+                    >
+                      ১০০ গ্রাম
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.25, undefined, undefined, true)}
                       style={{
                         flex: 1,
                         background: '#f0fdf4',
                         border: '1px solid #bbf7d0',
                         borderRadius: '6px',
-                        padding: '2px 4px',
-                        fontSize: '10px',
+                        padding: '2px 3px',
+                        fontSize: '9.5px',
                         fontWeight: '800',
                         color: '#166534',
                         cursor: 'pointer'
@@ -4997,16 +5361,16 @@ export default function PosPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 0.5)}
+                      onClick={() => addToCart(p, 0.5, undefined, undefined, true)}
                       style={{
                         flex: 1,
-                        background: '#f0fdf4',
-                        border: '1px solid #bbf7d0',
+                        background: '#ecfdf5',
+                        border: '1.5px solid #6ee7b7',
                         borderRadius: '6px',
-                        padding: '2px 4px',
-                        fontSize: '10px',
+                        padding: '2px 3px',
+                        fontSize: '9.5px',
                         fontWeight: '800',
-                        color: '#166534',
+                        color: '#065f46',
                         cursor: 'pointer'
                       }}
                       title="৫০০ গ্রাম (হাফ কেজি)"
@@ -5014,11 +5378,128 @@ export default function PosPage() {
                       হাফ কেজি
                     </button>
                   </div>
+                ) : (p.unit === 'হালি' || p.unit === 'ডজন') ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, 'হালি', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#fef3c7',
+                        border: '1px solid #fde68a',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#b45309',
+                        cursor: 'pointer'
+                      }}
+                      title="১ হালি বিক্রি করুন"
+                    >
+                      ১ হালি
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, p.unit === 'হালি' ? 3 : 1, 'ডজন', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#15803d',
+                        cursor: 'pointer'
+                      }}
+                      title="১ ডজন বিক্রি করুন"
+                    >
+                      ১ ডজন
+                    </button>
+                  </div>
+                ) : (p.unit === 'প্লেট' || p.unit === 'বাটি' || p.category === 'cat-restaurant') ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.5, p.unit || 'প্লেট', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#fff7ed',
+                        border: '1px solid #fed7aa',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#c2410c',
+                        cursor: 'pointer'
+                      }}
+                      title="হাফ প্লেট বিক্রি করুন"
+                    >
+                      হাফ প্লেট
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.unit || 'প্লেট', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#15803d',
+                        cursor: 'pointer'
+                      }}
+                      title="১ প্লেট বিক্রি করুন"
+                    >
+                      ১ প্লেট
+                    </button>
+                  </div>
+                ) : (p.unit === 'গজ' || p.category === 'cat-clothing') ? (
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 0.5, p.unit || 'গজ', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#faf5ff',
+                        border: '1px solid #e9d5ff',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#7e22ce',
+                        cursor: 'pointer'
+                      }}
+                      title="হাফ গজ বিক্রি করুন"
+                    >
+                      হাফ গজ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(p, 1, p.unit || 'গজ', undefined, true)}
+                      style={{
+                        flex: 1,
+                        background: '#f0fdf4',
+                        border: '1px solid #86efac',
+                        borderRadius: '6px',
+                        padding: '2px 4px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        color: '#15803d',
+                        cursor: 'pointer'
+                      }}
+                      title="১ গজ বিক্রি করুন"
+                    >
+                      ১ গজ
+                    </button>
+                  </div>
                 ) : p.subUnit ? (
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 1, p.unit)}
+                      onClick={() => addToCart(p, 1, p.unit, undefined, true)}
                       style={{
                         flex: 1,
                         background: '#f0fdf4',
@@ -5037,7 +5518,7 @@ export default function PosPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => addToCart(p, 1, p.subUnit)}
+                      onClick={() => addToCart(p, 1, p.subUnit, undefined, true)}
                       style={{
                         flex: 1,
                         background: '#eef2ff',
