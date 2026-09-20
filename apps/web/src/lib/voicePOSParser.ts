@@ -85,12 +85,24 @@ export function normalizeSpokenNumbers(text: string): string {
   s = s.replace(/(?<=\d|\s|^)(?:dozens?|ডজন)\b/gi, ' ডজন ');
   s = s.replace(/(?<=\d|\s|^)(?:tablets?|tabs?|ট্যাবলেট|ট্যাব)\b/gi, ' ট্যাবলেট ');
   s = s.replace(/(?<=\d|\s|^)(?:capsules?|caps?|ক্যাপসুল)\b/gi, ' ক্যাপসুল ');
+  s = s.replace(/(?<=\d|\s|^)(?:plates?|প্লেট)\b/gi, ' প্লেট ');
+  s = s.replace(/(?<=\d|\s|^)(?:cups?|কাপ)\b/gi, ' কাপ ');
+  s = s.replace(/(?<=\d|\s|^)(?:feet?|ft|ফুট)\b/gi, ' ফুট ');
+  s = s.replace(/(?<=\d|\s|^)(?:inches?|in|ইঞ্চি)\b/gi, ' ইঞ্চি ');
+  s = s.replace(/(?<=\d|\s|^)(?:yards?|গজ)\b/gi, ' গজ ');
+  s = s.replace(/(?<=\d|\s|^)(?:meters?|মিটার)\b/gi, ' মিটার ');
+  s = s.replace(/(?<=\d|\s|^)(?:pairs?|জোড়া|জোড়া)\b/gi, ' জোড়া ');
+  s = s.replace(/(?<=\d|\s|^)(?:files?|ফাইল)\b/gi, ' ফাইল ');
+  s = s.replace(/(?<=\d|\s|^)(?:vials?|ভায়াল|ভায়াল)\b/gi, ' ভায়াল ');
+  s = s.replace(/(?<=\d|\s|^)(?:bowls?|বাটি)\b/gi, ' বাটি ');
+  s = s.replace(/(?<=\d|\s|^)(?:glasses?|গ্লাস)\b/gi, ' গ্লাস ');
+  s = s.replace(/(?<=\d|\s|^)(?:rolls?|রোল)\b/gi, ' রোল ');
 
   // Strip trailing '+' or 'প্লাস' (e.g. '৫০+' or '৫০ প্লাস')
   s = s.replace(/\s*[+]\s*$/g, '');
   s = s.replace(/\s*প্লাস\s*$/g, '');
 
-  // Common Product Banglish Transliterations
+  // Common Product Banglish Transliterations (Grocery, Pharmacy, Clothing, Restaurant, Hardware)
   s = s.replace(/\b(?:chal|chaal)\b/gi, 'চাল');
   s = s.replace(/\b(?:dal|daal)\b/gi, 'ডাল');
   s = s.replace(/\b(?:tel|oill?)\b/gi, 'তেল');
@@ -104,6 +116,32 @@ export function normalizeSpokenNumbers(text: string): string {
   s = s.replace(/\b(?:shaban|saban|soaps?)\b/gi, 'সাবান');
   s = s.replace(/\b(?:dudh|dud|milk)\b/gi, 'দুধ');
   s = s.replace(/\b(?:pani|water)\b/gi, 'পানি');
+  // Pharmacy
+  s = s.replace(/\b(?:napa|naapa)\b/gi, 'নাপা');
+  s = s.replace(/\b(?:seclo|seklo)\b/gi, 'সেকলো');
+  s = s.replace(/\b(?:sergel|sarzel)\b/gi, 'সারজেল');
+  s = s.replace(/\b(?:antacid|entasid)\b/gi, 'এন্টাসিড');
+  s = s.replace(/\b(?:orsaline|saline)\b/gi, 'ওরস্যালাইন');
+  s = s.replace(/\b(?:tusca|tuska)\b/gi, 'তুসকা');
+  s = s.replace(/\b(?:cevit|ceveet)\b/gi, 'সিভিত');
+  s = s.replace(/\b(?:flagyl|flejil)\b/gi, 'ফ্ল্যাজিল');
+  // Clothing
+  s = s.replace(/\b(?:shirt|shart)\b/gi, 'শার্ট');
+  s = s.replace(/\b(?:pant|paint)\b/gi, 'প্যান্ট');
+  s = s.replace(/\b(?:panjabi|punjabi)\b/gi, 'পাঞ্জাবি');
+  s = s.replace(/\b(?:sharee|sari)\b/gi, 'শাড়ি');
+  s = s.replace(/\b(?:lungi|loongi)\b/gi, 'লুঙ্গি');
+  s = s.replace(/\b(?:three piece|threepiece)\b/gi, 'থ্রি-পিস');
+  // Restaurant
+  s = s.replace(/\b(?:biryani|biriyani)\b/gi, 'বিরিয়ানি');
+  s = s.replace(/\b(?:khichuri|khechuri)\b/gi, 'খিচুড়ি');
+  s = s.replace(/\b(?:porota|paratha)\b/gi, 'পরোটা');
+  s = s.replace(/\b(?:cha|tea)\b/gi, 'চা');
+  s = s.replace(/\b(?:coffee|kofi)\b/gi, 'কফি');
+  // Hardware
+  s = s.replace(/\b(?:pipe|paip)\b/gi, 'পাইপ');
+  s = s.replace(/\b(?:cement|siment)\b/gi, 'সিমেন্ট');
+  s = s.replace(/\b(?:bulb|balb)\b/gi, 'বাল্ব');
 
   // 1. Spoken Hundreds / Thousands
   s = s.replace(/দেড়শো|দেড়শ|দেড়শো|দেড়শ/g, '150');

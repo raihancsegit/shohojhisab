@@ -27,11 +27,31 @@ interface SpeakerVoiceEnrollModalProps {
   onProfileUpdated?: () => void;
 }
 
-const OWNER_PASSAGE =
-  'আমি এই ব্যবসা প্রতিষ্ঠানের প্রধান মালিক। আমার দোকান সহজ হিসাব। আজকের সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে হিসাব দেখাও। তেল চিনি চাল ডাল সাবান সহ সব মালের স্টক চেক করো। কাস্টমারের বাকির খাতা ও দেনাদারের ব্যালেন্স রিপোর্ট খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।';
+const INDUSTRY_ENROLL_PASSAGES: Record<string, { owner: string; staff: string }> = {
+  'cat-pharmacy': {
+    owner: 'আমি এই ফার্মেসির প্রধান মালিক। আজকের ড্রাগ ও ঔষধের সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে হিসাব দেখাও। নাপা এক্সট্রা, সেকলো ও সারজেল সহ সব মালের স্টক চেক করো। কাস্টমারের বাকির খাতা ও ডিপোর ব্যালেন্স রিপোর্ট খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।',
+    staff: 'আমি এই ফার্মেসির বিক্রয় কর্মী। প্রেসক্রিপশনের নতুন কাস্টমার মেমো তৈরি করো। নাপা এক্সট্রা দুই পাতা ও সেকলো এক পাতা বিক্রি যোগ করো। ওরস্যালাইন পঞ্চাশ প্যাকেট স্টক চেক করো। কাউন্টারের চা নাস্তা খরচ বিশ টাকা লিখে রাখো। মেমো প্রিন্ট করো।'
+  },
+  'cat-clothing': {
+    owner: 'আমি এই পোশাক শোরুমের প্রধান মালিক। আজকের পাঞ্জাবি, শার্ট ও শাড়ির সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে দেখাও। সব পোশাক ও সাইজের স্টক চেক করো। কাস্টমারের বাকির খাতা ও মহাজনের ব্যালেন্স রিপোর্ট খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।',
+    staff: 'আমি এই পোশাক শপের নিয়মিত বিক্রয় কর্মী। নতুন কাস্টমার মেমো তৈরি করো। সুতি পাঞ্জাবি একটি ও জিন্স প্যান্ট একটি বিক্রি যোগ করো। টি-শার্টের স্টক চেক করো। কাউন্টারের খরচ ত্রিশ টাকা লিখে রাখো। রসিদ প্রিন্ট করো।'
+  },
+  'cat-restaurant': {
+    owner: 'আমি এই রেস্তোরাঁর প্রধান মালিক। আজকের বিরিয়ানি, খাবার ও ক্যাফে কাউন্টারের মোট বিক্রি ও লাভ কত টাকা হয়েছে হিসাব দেখাও। কিচেন স্টক ও সাপ্লায়ারের খাতা খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।',
+    staff: 'আমি এই রেস্তোরাঁর নিয়মিত কর্মী। নতুন কিচেন টোকেন ও মেমো তৈরি করো। চিকেন বিরিয়ানি দুই প্লেট ও স্পেশাল চা চার কাপ বিক্রি যোগ করো। কাউন্টার খরচ চল্লিশ টাকা লিখে রাখো। বিল প্রিন্ট করো।'
+  },
+  'cat-hardware': {
+    owner: 'আমি এই হার্ডওয়্যার ও স্যানিটারি দোকানের প্রধান মালিক। আজকের পাইপ, তার ও সিমেন্টের সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে দেখাও। সব মালামালের স্টক চেক করো। কাস্টমারের বাকির খাতা ও কোম্পানির ব্যালেন্স খোলো। সম্পূর্ণ অ্যাক্সেস অনুমোদন।',
+    staff: 'আমি এই হার্ডওয়্যার দোকানের বিক্রয় কর্মী। নতুন কাস্টমার মেমো তৈরি করো। পিপিআর পাইপ বিশ ফুট ও এলইডি বাল্ব দুইটি বিক্রি যোগ করো। সিমেন্টের স্টক চেক করো। কাউন্টার খরচ লিখে রাখো। চালান প্রিন্ট করো।'
+  },
+  'cat-grocery': {
+    owner: 'আমি এই ব্যবসা প্রতিষ্ঠানের প্রধান মালিক। আমার দোকান সহজ হিসাব। আজকের সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে হিসাব দেখাও। তেল চিনি চাল ডাল সাবান সহ সব মালের স্টক চেক করো। কাস্টমারের বাকির খাতা ও দেনাদারের ব্যালেন্স রিপোর্ট খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।',
+    staff: 'আমি এই দোকানের নিয়মিত বিক্রয় কর্মী। নতুন কাস্টমার মেমো তৈরি করো। চাল দুই কেজি ও চিনি এক কেজি বিক্রি যোগ করো। নাপা এক্সট্রা দশ পাতা স্টক চেক করো। কাউন্টারের চা নাস্তা খরচ বিশ টাকা লিখে রাখো। বিক্রয় চালান প্রিন্ট করো।'
+  }
+};
 
-const STAFF_PASSAGE =
-  'আমি এই দোকানের নিয়মিত বিক্রয় কর্মী। নতুন কাস্টমার মেমো তৈরি করো। চাল দুই কেজি ও চিনি এক কেজি বিক্রি যোগ করো। নাপা এক্সট্রা দশ পাতা স্টক চেক করো। কাউন্টারের চা নাস্তা খরচ বিশ টাকা লিখে রাখো। বিক্রয় চালান প্রিন্ট করো।';
+const OWNER_PASSAGE = INDUSTRY_ENROLL_PASSAGES['cat-grocery'].owner;
+const STAFF_PASSAGE = INDUSTRY_ENROLL_PASSAGES['cat-grocery'].staff;
 
 const PHRASES = [
   { step: 1, title: 'পরিচয় ও দোকান', phrase: 'আমার দোকান সহজ হিসাব। আমি এই দোকানের দায়িত্বে আছি।' },
@@ -50,6 +70,7 @@ export default function SpeakerVoiceEnrollModal({
   const [activeTab, setActiveTab] = useState<'enroll' | 'list' | 'test'>('enroll');
   const [isLockEnabled, setIsLockEnabled] = useState<boolean>(true);
   const [profiles, setProfiles] = useState<SpeakerVoiceProfile[]>([]);
+  const [activeIndustry, setActiveIndustry] = useState<string>('cat-grocery');
 
   // Enrollment State
   const [speakerType, setSpeakerType] = useState<'owner' | 'staff'>('owner');
@@ -98,6 +119,15 @@ export default function SpeakerVoiceEnrollModal({
     setIsLockEnabled(locked);
     const loaded = getSpeakerVoiceProfiles(tenantId);
     setProfiles(loaded);
+
+    try {
+      const raw = localStorage.getItem('lbos_active_tenant');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const ind = parsed.industryId || parsed.industry_category_id || parsed.industryCategoryId || 'cat-grocery';
+        setActiveIndustry(ind);
+      }
+    } catch (e) {}
 
     if (staffList && staffList.length > 0) {
       setLoadedStaffList(staffList);
@@ -981,7 +1011,10 @@ export default function SpeakerVoiceEnrollModal({
                       borderRadius: '12px',
                       border: '1px solid #e2e8f0'
                     }}>
-                      &quot;{speakerType === 'owner' ? OWNER_PASSAGE : STAFF_PASSAGE}&quot;
+                      &quot;{(() => {
+                        const pack = INDUSTRY_ENROLL_PASSAGES[activeIndustry] || INDUSTRY_ENROLL_PASSAGES['cat-grocery'];
+                        return speakerType === 'owner' ? pack.owner : pack.staff;
+                      })()}&quot;
                     </div>
                     <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
                       {isRecording ? '🟢 মাইকের কাছে এসে স্বাভাবিক স্বরে উপরের সম্পূর্ণ অনুচ্ছেদটি পড়ুন' : `নিচের বোতাম চেপে ${enrollDuration} সেকেন্ডে স্বাভাবিক স্বরে উপরের লেখাটি পড়ুন`}

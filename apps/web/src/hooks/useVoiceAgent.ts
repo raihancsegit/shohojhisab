@@ -10,6 +10,7 @@ import {
   verifyCurrentVoice,
   pingVoiceVerification,
   isSpeakerLockEnabled,
+  ensureBiometricMonitoring,
   SpeakerVoiceProfile,
   SpeakerVerificationResult
 } from '../lib/speakerProfileEngine';
@@ -177,7 +178,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         if (speakerCheck.reason === 'background_noise_or_tv') {
           setFeedbackText('🛡️ ল্যাপটপ বা পেছনের শব্দ ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ বা ল্যাপটপ সাউন্ড বাতিল (শুধু নিবন্ধিত মালিক ও কর্মচারীর কথা কার্যকর হবে)');
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ বাতিল (শুধুমাত্র নিবন্ধিত মালিক বা কর্মচারীর কথা নেওয়া হবে)');
         }
 
         if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
@@ -194,6 +195,24 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       } else if (speakerCheck.role) {
         speakerRole = speakerCheck.role;
         speakerName = speakerCheck.speakerName || (speakerRole === 'owner' ? 'দোকান মালিক' : 'কর্মচারী');
+      }
+
+      // 👔 Staff Mode Permission Gate: Protect sensitive financial & owner-only metrics
+      if (speakerRole === 'staff') {
+        const isRestrictedQuery = /(লাভ|মুনাফা|প্রফিট|ব্যবসায়িক লাভ|নিট লাভ|মোট লাভ|ক্যাশ ড্রয়ার|ক্যাশ বাক্স|দিন শেষ|রিসেট|পাসওয়ার্ড|সেটিংস|ডিলিট)/i.test(query);
+        if (isRestrictedQuery) {
+          triggerHaptic?.('warning');
+          playWarningSound();
+          setFeedbackType('error');
+          setCurrentMode('staff');
+          setFeedbackText(`👔 [কর্মচারী: ${speakerName}] মুনাফা বা লাভ দেখার অনুমতি নেই। এটি শুধুমাত্র মালিক দেখতে পারবেন।`);
+          speakAnnouncement('কর্মচারী মোডে লাভ দেখার অনুমতি নেই। এটি শুধুমাত্র মালিকের জন্য।', undefined, true);
+          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+          autoDismissTimerRef.current = setTimeout(() => {
+            setFeedbackType(null);
+          }, 4000);
+          return;
+        }
       }
     }
 
@@ -493,6 +512,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     setIsProcessing(false);
 
     resetInactivityWatchdog();
+    ensureBiometricMonitoring().catch(() => {});
     spawnRecognitionInstance();
   }, [resetInactivityWatchdog, spawnRecognitionInstance, triggerHaptic]);
 

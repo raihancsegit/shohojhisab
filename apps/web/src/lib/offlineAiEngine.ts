@@ -4,6 +4,7 @@ import { getVaultData, saveVaultSnapshot } from './dataVault';
 import { queueOfflineAction } from './offlineDataLayer';
 import { cleanSpokenBengali } from './banglaSpeechUtils';
 import { parseVoicePOSCommand } from './voicePOSParser';
+import { getIndustryTheme, normalizeIndustryId, INDUSTRY_VOICE_CONFIGS } from './industryConfig';
 
 export interface OfflineAiResult {
   success: boolean;
@@ -77,13 +78,54 @@ export function executeOfflineAiShopCommand(
   let customers: any[] = vault.customers || [];
   let expenses: any[] = vault.expenses || [];
 
-  // If vault is completely empty, initialize default mock data so assistant works immediately
+  // Detect active shop industry category
+  let activeIndustryId = 'cat-grocery';
+  try {
+    const rawTenant = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
+    if (rawTenant) {
+      const parsed = JSON.parse(rawTenant);
+      activeIndustryId = parsed.industryId || parsed.industry_category_id || parsed.industryCategoryId || 'cat-grocery';
+    }
+  } catch (e) {}
+  const currentIndustry = normalizeIndustryId(activeIndustryId);
+  const indTheme = getIndustryTheme(currentIndustry);
+
+  // If vault is completely empty, initialize category-tailored default products
   if (products.length === 0) {
-    products = [
-      { id: 'p-def-1', name: 'নাপা এক্সট্রা', banglaName: 'নাপা এক্সট্রা', sellingPrice: 30, purchasePrice: 24, stock: 45, unit: 'পাতা' },
-      { id: 'p-def-2', name: 'সয়াবিন তেল', banglaName: 'সয়াবিন তেল', sellingPrice: 180, purchasePrice: 165, stock: 12, unit: 'লিটার' },
-      { id: 'p-def-3', name: 'চিনি', banglaName: 'চিনি', sellingPrice: 135, purchasePrice: 120, stock: 30, unit: 'কেজি' }
-    ];
+    if (currentIndustry === 'cat-pharmacy') {
+      products = [
+        { id: 'p-def-1', name: 'নাপা এক্সট্রা', banglaName: 'নাপা এক্সট্রা', sellingPrice: 30, purchasePrice: 24, stock: 60, unit: 'পাতা' },
+        { id: 'p-def-2', name: 'সেকলো ২০ মিগ্রা', banglaName: 'সেকলো ২০ মিগ্রা', sellingPrice: 70, purchasePrice: 58, stock: 35, unit: 'পাতা' },
+        { id: 'p-def-3', name: 'তুসকা সিরাপ', banglaName: 'তুসকা সিরাপ', sellingPrice: 95, purchasePrice: 80, stock: 15, unit: 'বোতল' },
+        { id: 'p-def-4', name: 'ওরস্যালাইন-এন', banglaName: 'ওরস্যালাইন-এন', sellingPrice: 6, purchasePrice: 5, stock: 100, unit: 'প্যাকেট' }
+      ];
+    } else if (currentIndustry === 'cat-clothing') {
+      products = [
+        { id: 'p-def-1', name: 'সুতি পাঞ্জাবি', banglaName: 'সুতি পাঞ্জাবি', sellingPrice: 950, purchasePrice: 700, stock: 20, unit: 'পিস' },
+        { id: 'p-def-2', name: 'ফরমাল শার্ট', banglaName: 'ফরমাল শার্ট', sellingPrice: 750, purchasePrice: 550, stock: 25, unit: 'পিস' },
+        { id: 'p-def-3', name: 'জিন্স প্যান্ট', banglaName: 'জিন্স প্যান্ট', sellingPrice: 1100, purchasePrice: 850, stock: 30, unit: 'পিস' }
+      ];
+    } else if (currentIndustry === 'cat-restaurant') {
+      products = [
+        { id: 'p-def-1', name: 'চিকেন বিরিয়ানি', banglaName: 'চিকেন বিরিয়ানি', sellingPrice: 180, purchasePrice: 130, stock: 40, unit: 'প্লেট' },
+        { id: 'p-def-2', name: 'স্পেশাল চা', banglaName: 'স্পেশাল চা', sellingPrice: 15, purchasePrice: 8, stock: 100, unit: 'কাপ' },
+        { id: 'p-def-3', name: 'স্পেশাল পরোটা', banglaName: 'স্পেশাল পরোটা', sellingPrice: 10, purchasePrice: 6, stock: 60, unit: 'পিস' }
+      ];
+    } else if (currentIndustry === 'cat-hardware') {
+      products = [
+        { id: 'p-def-1', name: 'পিপিআর পাইপ', banglaName: 'পিপিআর পাইপ', sellingPrice: 45, purchasePrice: 35, stock: 100, unit: 'ফুট' },
+        { id: 'p-def-2', name: 'এলইডি বাল্ব ১২W', banglaName: 'এলইডি বাল্ব ১২W', sellingPrice: 150, purchasePrice: 110, stock: 40, unit: 'পিস' },
+        { id: 'p-def-3', name: 'সিমেন্ট ফ্রেশ', banglaName: 'সিমেন্ট ফ্রেশ', sellingPrice: 520, purchasePrice: 480, stock: 50, unit: 'ব্যাগ' }
+      ];
+    } else {
+      // Default: Grocery / Super shop
+      products = [
+        { id: 'p-def-1', name: 'মিনিকেট চাল', banglaName: 'মিনিকেট চাল', sellingPrice: 72, purchasePrice: 64, stock: 100, unit: 'কেজি' },
+        { id: 'p-def-2', name: 'সয়াবিন তেল', banglaName: 'সয়াবিন তেল', sellingPrice: 180, purchasePrice: 165, stock: 25, unit: 'লিটার' },
+        { id: 'p-def-3', name: 'চিনি সাদা', banglaName: 'চিনি সাদা', sellingPrice: 135, purchasePrice: 120, stock: 50, unit: 'কেজি' },
+        { id: 'p-def-4', name: 'মসুর ডাল', banglaName: 'মসুর ডাল', sellingPrice: 140, purchasePrice: 125, stock: 40, unit: 'কেজি' }
+      ];
+    }
     saveVaultSnapshot(tenantId, { products });
   }
 
@@ -723,11 +765,14 @@ export function executeOfflineAiShopCommand(
     };
   }
 
-  // Default Fallback
+  // Default Fallback: Category-Tailored suggestions
+  const vConfig = INDUSTRY_VOICE_CONFIGS[currentIndustry] || INDUSTRY_VOICE_CONFIGS['cat-grocery'];
+  const exSuggestions = vConfig?.assistantSuggestions?.slice(0, 3)?.map(s => `• "${s}"`).join('\n') || '• "আজকের বিক্রি কত"\n• "আজকের স্টক কত"\n• "রহিম ৫০০ টাকা বাকি নিল"';
+
   return {
     success: true,
-    reply: `💡 আমি আপনার হিসাব বুঝতে প্রস্তুত।\nআপনি বলতে পারেন:\n• "আজকের বিক্রি কত"\n• "আজকের স্টক কত"\n• "রহিম ৫০০ টাকা বাকি নিল"\n• "চা ৬০ টাকা খরচ"`,
-    speech: 'দোকানের বিক্রি, বাকি, খরচ বা স্টকের হিসাব জানতে যেকোনো কিছু বলুন।',
+    reply: `💡 ${indTheme.icon} **${indTheme.name} সহকারী প্রস্তুত:**\nআপনি মুখে বলতে পারেন:\n${exSuggestions}\n• "আজকের মোট বিক্রি ও লাভ কত"`,
+    speech: `${indTheme.name} সহকারী প্রস্তুত। বিক্রি, বাকি, খরচ বা স্টকের হিসাব জানতে যেকোনো কিছু বলুন।`,
     isOffline: true
   };
 }

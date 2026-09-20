@@ -413,20 +413,6 @@ export function evaluateUtteranceSpeaker(
 
   // If fewer than 2 vocal frames were detected in lookback window:
   if (recentFrames.length < 2) {
-    // If Web Audio analyser recorded few or zero frames (mobile Chrome exclusive mic or fast speech),
-    // fallback gracefully to primary enrolled profile so legitimate shop owners aren't falsely blocked!
-    if (candidateProfiles.length > 0) {
-      const primary = candidateProfiles[0];
-      return {
-        isAuthorized: true,
-        matchedSpeaker: primary,
-        role: primary.role,
-        speakerName: primary.name,
-        confidence: 90,
-        reason: 'authorized'
-      };
-    }
-
     return {
       isAuthorized: false,
       confidence: 0,
@@ -444,22 +430,22 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
-    // Registered speaker's pitch window:
-    // Natural human pitch during shop speech stays within [pitchMin - 22, pitchMax + 28]
-    const lowerPitch = Math.max(65, profile.pitchMin - 22);
-    const upperPitch = Math.min(380, profile.pitchMax + 28);
+    // Registered speaker's calibrated pitch window:
+    // Natural human pitch stays within enrolled range ±18 Hz
+    const lowerPitch = Math.max(65, profile.pitchMin - 18);
+    const upperPitch = Math.min(380, profile.pitchMax + 22);
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
     const ratio = count / recentFrames.length;
 
-    if (count >= 2 && ratio >= 0.30) {
+    // Must have at least 2 matching vocal frames and at least 35% of speech within range
+    if (count >= 2 && ratio >= 0.35) {
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation tolerance (up to 52 Hz for owner)
-      const maxAllowedDiff = profile.role === 'owner' ? 52 : 44;
-      if (diffFromMean <= maxAllowedDiff) {
+      // Natural speech pitch variation is up to 35 Hz from enrolled mean
+      if (diffFromMean <= 35) {
         // Timbre check: Filter out sharp laptop sirens or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
@@ -468,7 +454,7 @@ export function evaluateUtteranceSpeaker(
           }
         }
 
-        let conf = Math.max(65, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 0.8))));
+        let conf = Math.max(60, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.0))));
 
         // If wake phrase or spoken text matches enrolled name/phrase, boost confidence
         if (spokenText) {
@@ -494,7 +480,8 @@ export function evaluateUtteranceSpeaker(
     }
   }
 
-  if (bestMatch && bestMatch.confidence >= 48) {
+  // Strict acceptance: Must match enrolled profile with confidence >= 50
+  if (bestMatch && bestMatch.confidence >= 50) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -505,21 +492,11 @@ export function evaluateUtteranceSpeaker(
     };
   }
 
-  // If candidate has 1 profile enrolled (owner), give benefit of the doubt so owner is not locked out
-  if (candidateProfiles.length === 1 && candidateProfiles[0].role === 'owner') {
-    const owner = candidateProfiles[0];
-    return {
-      isAuthorized: true,
-      matchedSpeaker: owner,
-      role: 'owner',
-      speakerName: owner.name,
-      confidence: 85,
-      reason: 'authorized'
-    };
-  }
+  // Strictly reject strangers, customers, laptop TV, music, or unregistered voices!
+  const overallAvgPitch = recentFrames.length > 0
+    ? Math.round(recentFrames.reduce((sum, f) => sum + f.pitch, 0) / recentFrames.length)
+    : 0;
 
-  // Not matched: laptop sound, TV dialogue, music, or other people speaking!
-  const overallAvgPitch = Math.round(recentFrames.reduce((sum, f) => sum + f.pitch, 0) / recentFrames.length);
   return {
     isAuthorized: false,
     confidence: Math.round((bestMatch?.matchRatio || 0) * 100),
