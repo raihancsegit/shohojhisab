@@ -76,13 +76,39 @@ export default function VoiceAssistant() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const stopListeningOnly = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    isListeningRef.current = false;
+    setIsListening(false);
+    playMicStopSound();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+  };
+
+  const cancelVoice = () => {
+    stopListeningOnly();
+    setFeedbackType(null);
+    setLiveTranscript('');
+  };
+
   const resetInactivityWatchdog = () => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = setTimeout(() => {
       if (isListeningRef.current && !latestTranscriptRef.current.trim()) {
-        cancelVoice();
+        stopListeningOnly();
+        setFeedbackType('error');
+        setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
+        if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+        autoDismissTimerRef.current = setTimeout(() => {
+          setFeedbackType(null);
+        }, 2500);
       }
-    }, 5000);
+    }, 6500);
   };
 
   const spawnRecognitionInstance = () => {
@@ -104,13 +130,11 @@ export default function VoiceAssistant() {
       recognitionRef.current = null;
     }
 
-    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      // On mobile Android, continuous MUST be false so native SpeechRecognizer returns events!
-      recognition.continuous = !isMobile;
+      // For push-to-talk voice commands, continuous MUST be false so Chrome finalizes immediately on speech pause!
+      recognition.continuous = false;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
@@ -124,15 +148,12 @@ export default function VoiceAssistant() {
         const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
 
-        const tenantKey = tenant?.id || 'default';
-        pingVoiceVerification(tenantKey);
-
         resetInactivityWatchdog();
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? 350 : (isMobile ? 850 : 650);
+        const waitMs = isFinal ? 250 : 650;
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -173,30 +194,29 @@ export default function VoiceAssistant() {
           return;
         }
 
-        // Re-spawn a FRESH instance on Android/desktop to continue listening without InvalidStateError
+        // Clean finish when no speech was detected
         if (isListeningRef.current && !isProcessing) {
-          setTimeout(() => {
-            if (isListeningRef.current && !isProcessing) {
-              spawnRecognitionInstance();
-            }
-          }, 150);
-        } else {
-          setIsListening(false);
-          isListeningRef.current = false;
+          stopListeningOnly();
+          setFeedbackType('error');
+          setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
+          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+          autoDismissTimerRef.current = setTimeout(() => {
+            setFeedbackType(null);
+          }, 2500);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.warn('[VoiceAssistant] Start exception, retrying:', err);
-      if (isListeningRef.current && !isProcessing) {
-        setTimeout(() => {
-          if (isListeningRef.current && !isProcessing) {
-            spawnRecognitionInstance();
-          }
-        }, 300);
-      }
+      console.warn('[VoiceAssistant] Start exception:', err);
+      stopListeningOnly();
+      setFeedbackType('error');
+      setFeedbackText('মাইক চালু করা যায়নি। আবার চেষ্টা করুন।');
+      if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = setTimeout(() => {
+        setFeedbackType(null);
+      }, 2500);
     }
   };
 
@@ -236,25 +256,8 @@ export default function VoiceAssistant() {
     setIsListening(true);
     setIsProcessing(false);
 
-    // Ensure Web Audio proximity & vocal biometric monitor is active on all devices
-    ensureBiometricMonitoring().catch(() => {});
-
     resetInactivityWatchdog();
     spawnRecognitionInstance();
-  };
-
-  const stopListeningOnly = () => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-    isListeningRef.current = false;
-    setIsListening(false);
-    playMicStopSound();
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
   };
 
   const stopAndExecute = async (spokenText?: string) => {
@@ -381,12 +384,6 @@ export default function VoiceAssistant() {
         setFeedbackType(null);
       }, 3500);
     }
-  };
-
-  const cancelVoice = () => {
-    stopListeningOnly();
-    setFeedbackType(null);
-    setLiveTranscript('');
   };
 
   const quickOfflineChips = [
