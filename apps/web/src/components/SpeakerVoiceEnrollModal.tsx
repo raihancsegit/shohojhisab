@@ -27,10 +27,16 @@ interface SpeakerVoiceEnrollModalProps {
   onProfileUpdated?: () => void;
 }
 
+const OWNER_PASSAGE =
+  'আমি এই ব্যবসা প্রতিষ্ঠানের প্রধান মালিক। আমার দোকান সহজ হিসাব। আজকের সর্বমোট বিক্রি এবং নিট লাভ কত টাকা হয়েছে হিসাব দেখাও। তেল চিনি চাল ডাল সাবান সহ সব মালের স্টক চেক করো। কাস্টমারের বাকির খাতা ও দেনাদারের ব্যালেন্স রিপোর্ট খোলো। সহজ হিসাব সম্পূর্ণ অ্যাক্সেস অনুমোদন।';
+
+const STAFF_PASSAGE =
+  'আমি এই দোকানের নিয়মিত বিক্রয় কর্মী। নতুন কাস্টমার মেমো তৈরি করো। চাল দুই কেজি ও চিনি এক কেজি বিক্রি যোগ করো। নাপা এক্সট্রা দশ পাতা স্টক চেক করো। কাউন্টারের চা নাস্তা খরচ বিশ টাকা লিখে রাখো। বিক্রয় চালান প্রিন্ট করো।';
+
 const PHRASES = [
-  { step: 1, title: 'দোকানের নাম', phrase: 'আমার দোকান সহজ হিসাব' },
-  { step: 2, title: 'পণ্য তালিকা', phrase: 'তেল চিনি চাল ডাল সাবান' },
-  { step: 3, title: 'লেনদেন', phrase: 'ক্যাশ বিক্রি পাঁচশত টাকা' }
+  { step: 1, title: 'পরিচয় ও দোকান', phrase: 'আমার দোকান সহজ হিসাব। আমি এই দোকানের দায়িত্বে আছি।' },
+  { step: 2, title: 'বিক্রয় ও স্টক', phrase: 'আজকের বিক্রি হিসাব করো এবং চাল ডাল তেল স্টক চেক করো।' },
+  { step: 3, title: 'লেনদেন ও মেমো', phrase: 'কাস্টমার ক্যাশ বিক্রি পাঁচশত টাকা এবং মেমো তৈরি করো।' }
 ];
 
 export default function SpeakerVoiceEnrollModal({
@@ -465,6 +471,9 @@ export default function SpeakerVoiceEnrollModal({
       ? Math.round(flatCentroids.reduce((a, b) => a + b, 0) / flatCentroids.length)
       : 1200;
 
+    const variance = flatPitches.reduce((a, b) => a + Math.pow(b - pitchMean, 2), 0) / flatPitches.length;
+    const pitchStdDev = Math.round(Math.sqrt(variance));
+
     const profileId = speakerType === 'owner' ? 'owner' : (selectedStaffId || `staff-${Date.now()}`);
     const name = speakerName.trim() || (speakerType === 'owner' ? 'দোকান মালিক' : 'স্টাফ');
 
@@ -476,6 +485,7 @@ export default function SpeakerVoiceEnrollModal({
       pitchMin,
       pitchMax,
       pitchMean,
+      pitchStdDev,
       centroidMean,
       samplesCollected: flatPitches.length
     };
@@ -956,25 +966,25 @@ export default function SpeakerVoiceEnrollModal({
                     textAlign: 'center',
                     marginBottom: '16px'
                   }}>
+                    <div style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '20px', background: speakerType === 'owner' ? '#eef2ff' : '#ecfdf5', color: speakerType === 'owner' ? '#4f46e5' : '#059669', fontSize: '11.5px', fontWeight: '800', marginBottom: '8px' }}>
+                      {speakerType === 'owner' ? '👑 প্রধান মালিকের কণ্ঠ ভেরিফিকেশন অনুচ্ছেদ' : '👔 বিক্রয় কর্মীর কণ্ঠ ভেরিফিকেশন অনুচ্ছেদ'}
+                    </div>
                     <div style={{
-                      fontSize: 'clamp(16px, 4.2vw, 20px)',
+                      fontSize: 'clamp(15px, 3.8vw, 18px)',
                       fontWeight: '800',
                       color: '#0f172a',
-                      lineHeight: 1.5,
-                      marginBottom: '8px'
+                      lineHeight: 1.6,
+                      marginBottom: '10px',
+                      textAlign: 'justify',
+                      background: '#ffffff',
+                      padding: '12px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0'
                     }}>
-                      {enrollDuration >= 10 ? (
-                        <span>
-                          &quot;আমার দোকান সহজ হিসাব। আজ চাল ২ কেজি, ডাল ১ কেজি, তেল ১ লিটার বিক্রি হয়েছে। রহিম ভাইয়ের বাকি খাতায় পাঁচশত টাকা জমা।&quot;
-                        </span>
-                      ) : (
-                        <span>
-                          &quot;আমার দোকান সহজ হিসাব। চাল ডাল তেল চিনি বিক্রি পাঁচশত টাকা।&quot;
-                        </span>
-                      )}
+                      &quot;{speakerType === 'owner' ? OWNER_PASSAGE : STAFF_PASSAGE}&quot;
                     </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
-                      {isRecording ? 'স্বাভাবিক গতিতে উপরের কথাগুলো স্পষ্ট করে পড়ুন' : `নিচের বোতাম চেপে ${enrollDuration} সেকেন্ডে স্বাভাবিক স্বরে উপরের লেখাটি পড়ুন`}
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                      {isRecording ? '🟢 মাইকের কাছে এসে স্বাভাবিক স্বরে উপরের সম্পূর্ণ অনুচ্ছেদটি পড়ুন' : `নিচের বোতাম চেপে ${enrollDuration} সেকেন্ডে স্বাভাবিক স্বরে উপরের লেখাটি পড়ুন`}
                     </p>
 
                     {/* Clean Audio Visualizer Bar & Live Spoken Text */}

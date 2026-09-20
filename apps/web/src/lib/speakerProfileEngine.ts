@@ -13,16 +13,21 @@ export interface SpeakerVoiceProfile {
   name: string; // 'দোকান মালিক' or 'রহিম'
   role: 'owner' | 'staff';
   enrolledAt: string;
-  pitchMin: number; // Hz (e.g. 90)
-  pitchMax: number; // Hz (e.g. 160)
+  pitchMin: number; // Hz (e.g. 85)
+  pitchMax: number; // Hz (e.g. 185)
   pitchMean: number; // Hz (e.g. 125)
+  pitchStdDev?: number; // Intonation variance
   centroidMean: number; // Spectral timbre indicator
   samplesCollected: number;
+  wakePhrase?: string; // Optional personal wake phrase
+  speechKeywords?: string[]; // Keywords recorded during enrollment
 }
 
 export interface SpeakerVerificationResult {
   isAuthorized: boolean;
   matchedSpeaker?: SpeakerVoiceProfile;
+  role?: 'owner' | 'staff';
+  speakerName?: string;
   confidence: number;
   reason?: 'authorized' | 'unauthorized_speaker' | 'background_noise_or_tv' | 'silence' | 'feature_disabled';
   pitchDetected?: number;
@@ -376,15 +381,16 @@ if (typeof window !== 'undefined') {
 export function evaluateUtteranceSpeaker(
   tenantId: string = 'default',
   targetSpeakerId?: string,
-  lookbackMs: number = 4200
+  lookbackMs: number = 4200,
+  spokenText?: string
 ): SpeakerVerificationResult {
   if (!isSpeakerLockEnabled(tenantId)) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'মালিক (লক নিষ্ক্রিয়)' };
   }
 
   const profiles = getSpeakerVoiceProfiles(tenantId);
   if (profiles.length === 0) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
 
   const now = Date.now();
@@ -425,29 +431,41 @@ export function evaluateUtteranceSpeaker(
 
   for (const profile of candidateProfiles) {
     // Registered speaker's pitch window:
-    // Natural human pitch during shop speech stays within [pitchMin - 15, pitchMax + 18]
-    const lowerPitch = Math.max(65, profile.pitchMin - 15);
-    const upperPitch = Math.min(380, profile.pitchMax + 18);
+    // Natural human pitch during shop speech stays within [pitchMin - 22, pitchMax + 28]
+    const lowerPitch = Math.max(65, profile.pitchMin - 22);
+    const upperPitch = Math.min(380, profile.pitchMax + 28);
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
     const ratio = count / recentFrames.length;
 
-    if (count >= 2 && ratio >= 0.35) {
+    if (count >= 2 && ratio >= 0.30) {
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Must be within 28 Hz of the owner's enrolled mean
-      if (diffFromMean <= 28) {
+      // Natural speech pitch variation is up to 38 Hz from enrolled mean
+      if (diffFromMean <= 38) {
         // Timbre check: Filter out sharp laptop sirens or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1300) {
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1400) {
             continue;
           }
         }
 
-        const conf = Math.max(65, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.3))));
+        let conf = Math.max(60, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.0))));
+
+        // If wake phrase or spoken text matches enrolled name/phrase, boost confidence
+        if (spokenText) {
+          const cleanText = spokenText.toLowerCase();
+          if (profile.wakePhrase && cleanText.includes(profile.wakePhrase.toLowerCase())) {
+            conf = Math.min(100, conf + 15);
+          }
+          if (profile.name && cleanText.includes(profile.name.toLowerCase())) {
+            conf = Math.min(100, conf + 10);
+          }
+        }
+
         if (!bestMatch || conf > bestMatch.confidence) {
           bestMatch = {
             profile,
@@ -461,10 +479,12 @@ export function evaluateUtteranceSpeaker(
     }
   }
 
-  if (bestMatch && bestMatch.confidence >= 60) {
+  if (bestMatch && bestMatch.confidence >= 55) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
+      role: bestMatch.profile.role,
+      speakerName: bestMatch.profile.name,
       confidence: bestMatch.confidence,
       pitchDetected: Math.round(bestMatch.avgPitch)
     };
@@ -489,12 +509,12 @@ export function verifyLiveSpeaker(
   targetSpeakerId?: string
 ): SpeakerVerificationResult {
   if (!isSpeakerLockEnabled(tenantId)) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'মালিক' };
   }
 
   const profiles = getSpeakerVoiceProfiles(tenantId);
   if (profiles.length === 0) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
 
   const sampleRate = analyserNode.context.sampleRate || 44100;
@@ -539,17 +559,19 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    const lowerPitch = Math.max(65, profile.pitchMin - 15);
-    const upperPitch = Math.min(380, profile.pitchMax + 18);
+    const lowerPitch = Math.max(65, profile.pitchMin - 22);
+    const upperPitch = Math.min(380, profile.pitchMax + 28);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      if (diff <= 28) {
-        const confidence = Math.max(70, Math.round(100 - (diff * 1.5)));
+      if (diff <= 38) {
+        const confidence = Math.max(65, Math.round(100 - (diff * 1.2)));
 
         return {
           isAuthorized: true,
           matchedSpeaker: profile,
+          role: profile.role,
+          speakerName: profile.name,
           confidence,
           pitchDetected: livePitch
         };
@@ -572,19 +594,20 @@ export function verifyLiveSpeaker(
  */
 export function verifyCurrentVoice(
   tenantId: string = 'default',
-  targetSpeakerId?: string
+  targetSpeakerId?: string,
+  spokenText?: string
 ): SpeakerVerificationResult {
   if (!isSpeakerLockEnabled(tenantId)) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'মালিক' };
   }
 
   const profiles = getSpeakerVoiceProfiles(tenantId);
   if (profiles.length === 0) {
-    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled' };
+    return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
 
   // 1. First check the rolling utterance buffer (evaluates the speech sentence just spoken)
-  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 4200);
+  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 4200, spokenText);
   if (utteranceResult.isAuthorized) {
     return utteranceResult;
   }

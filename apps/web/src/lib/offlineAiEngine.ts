@@ -53,7 +53,9 @@ function parseBengaliNumbers(str: string): string {
 export function executeOfflineAiShopCommand(
   tenantId: string,
   rawText: string,
-  assistantName = 'সহজহিসাব'
+  assistantName = 'সহজহিসাব',
+  speakerRole: 'owner' | 'staff' | string = 'owner',
+  speakerName = 'দোকান মালিক'
 ): OfflineAiResult {
   const text = cleanSpokenBengali(rawText);
   if (!text) {
@@ -203,6 +205,14 @@ export function executeOfflineAiShopCommand(
   }
 
   if (/^(সেটিংস|দোকান সেটিংস)$/i.test(normalized) || /সেটিংস.*(যাও|খোল|নিয়ে|চল|দেখা|ওপেন)/i.test(normalized)) {
+    if (speakerRole === 'staff') {
+      return {
+        success: false,
+        reply: `🛡️ **কর্মচারী মোড সীমাবদ্ধতা (${speakerName}):**\nদোকানের সেটিংস দেখার ও পরিবর্তন করার অনুমতি শুধুমাত্র প্রধান মালিকের জন্য সংরক্ষিত।`,
+        speech: 'দোকান সেটিংস শুধুমাত্র প্রধান মালিকের জন্য সংরক্ষিত।',
+        isOffline: true
+      };
+    }
     return {
       success: true,
       reply: 'দোকান সেটিংসে নিয়ে যাচ্ছি...',
@@ -226,6 +236,27 @@ export function executeOfflineAiShopCommand(
 
   // 2. Today's Sales & Profit Query (আজকের বিক্রি ও লাভ)
   if (/আজকে|আজকের/i.test(normalized) && /বিক্রি|সেল|লাভ|ইনকাম|আয়|টাকা/i.test(normalized) && !/খরচ|বাকি|স্টক/i.test(normalized)) {
+    // 🛡️ Staff mode restrictions on confidential profit calculations
+    if (speakerRole === 'staff') {
+      if (/লাভ|ইনকাম|আয়|প্রফিট|মার্জিন/i.test(normalized)) {
+        return {
+          success: false,
+          reply: `🛡️ **কর্মচারী মোড সীমাবদ্ধতা (${speakerName}):**\nদোকানের ব্যবসায়িক লাভ, নিট আয় বা গোপনীয় আর্থিক হিসাব দেখার অনুমতি শুধুমাত্র দোকান মালিকের জন্য সংরক্ষিত। আপনি কাউন্টারের বিক্রি ও মেমো দেখতে পারেন।`,
+          speech: 'কর্মচারী মোডে ব্যবসায়িক লাভ বা গোপনীয় হিসাব দেখার অনুমতি নেই। এটি শুধুমাত্র দোকান মালিকের জন্য সংরক্ষিত।',
+          isOffline: true
+        };
+      }
+      const totalSold = todaySales.reduce((acc, s) => acc + (Number(s.totalAmount || s.netTotal || s.total_amount || 0)), 0);
+      return {
+        success: true,
+        reply: `👔 **কর্মচারী মোড (${speakerName}):**\n• আজকের কাউন্টারে মোট বিক্রি: **৳${totalSold.toLocaleString('en-US')}**\n• সর্বমোট মেমো: **${todaySales.length}টি**\n\n🟢 *অফলাইন কাউন্টার রেকর্ড*`,
+        speech: `আজকে কাউন্টারে মোট বিক্রি হয়েছে ৳${totalSold} টাকা এবং মোট মেমো হয়েছে ${todaySales.length}টি।`,
+        navigateTo: '/pos',
+        actionLink: { text: 'POS কাউন্টারে যান →', href: '/pos' },
+        isOffline: true
+      };
+    }
+
     const totalSold = todaySales.reduce((acc, s) => acc + (Number(s.totalAmount || s.netTotal || s.total_amount || 0)), 0);
     const totalCash = todaySales.reduce((acc, s) => acc + (Number(s.paidAmount || s.paid_amount || 0)), 0);
     const totalExp = todayExpenses.reduce((acc, e) => acc + (Number(e.amount || 0)), 0);
@@ -234,7 +265,7 @@ export function executeOfflineAiShopCommand(
     const speech = `আজকে সর্বমোট বিক্রি ৳${totalSold.toLocaleString('en-US')} টাকা, ক্যাশ জমা ৳${totalCash.toLocaleString('en-US')} টাকা এবং আনুমানিক নিট লাভ ৳${estProfit.toLocaleString('en-US')} টাকা।`;
     return {
       success: true,
-      reply: `📊 **আজকের অফলাইন বিক্রি ও লাভ রিপোর্ট:**\n• সর্বমোট বিক্রি: ৳${totalSold.toLocaleString('en-US')}\n• ক্যাশ কালেকশন: ৳${totalCash.toLocaleString('en-US')}\n• মোট খরচ: ৳${totalExp.toLocaleString('en-US')}\n• আনুমানিক নিট লাভ: ৳${estProfit.toLocaleString('en-US')}\n• মোট মেমো: ${todaySales.length}টি\n\n🟢 *অফলাইন মেমোরি থেকে তাৎক্ষণিক প্রস্তুত*`,
+      reply: `👑 **মালিক মোড (${speakerName}):**\n• সর্বমোট বিক্রি: **৳${totalSold.toLocaleString('en-US')}**\n• ক্যাশ কালেকশন: **৳${totalCash.toLocaleString('en-US')}**\n• মোট খরচ: **৳${totalExp.toLocaleString('en-US')}**\n• আনুমানিক নিট লাভ: **৳${estProfit.toLocaleString('en-US')}**\n• মোট মেমো: ${todaySales.length}টি\n\n🟢 *অফলাইন মেমোরি থেকে তাৎক্ষণিক প্রস্তুত*`,
       speech,
       navigateTo: '/reports',
       actionLink: { text: 'আজকের বিস্তারিত রিপোর্ট →', href: '/reports' },
@@ -247,6 +278,15 @@ export function executeOfflineAiShopCommand(
     /ব্যবসা\s*কেমন|দোকান\s*কেমন|আজকের?\s*(সারাংশ|সামারি|রিপোর্ট|খবর|অবস্থা|হিসাব-নিকাশ)|সারাদিনের\s*হিসাব|দোকানের\s*খবর/i.test(normalized) &&
     !/খরচ|বাকি|স্টক/i.test(normalized)
   ) {
+    if (speakerRole === 'staff') {
+      return {
+        success: false,
+        reply: `🛡️ **কর্মচারী মোড সীমাবদ্ধতা (${speakerName}):**\nসার্বিক ব্যবসার লাভ-ক্ষতি ও ব্যালেন্স রিপোর্ট শুধুমাত্র প্রধান মালিকের জন্য সংরক্ষিত।`,
+        speech: 'সার্বিক ব্যবসার সারাংশ ও লাভ ক্ষতি শুধুমাত্র দোকান মালিকের জন্য সংরক্ষিত।',
+        isOffline: true
+      };
+    }
+
     const totalSold = todaySales.reduce((acc, s) => acc + (Number(s.totalAmount || s.netTotal || s.total_amount || 0)), 0);
     const totalCash = todaySales.reduce((acc, s) => acc + (Number(s.paidAmount || s.paid_amount || 0)), 0);
     const totalExp = todayExpenses.reduce((acc, e) => acc + (Number(e.amount || 0)), 0);
@@ -257,7 +297,7 @@ export function executeOfflineAiShopCommand(
     const speech = `আজকে মোট বিক্রি ৳${totalSold} টাকা, নগদ আদায় ৳${totalCash} টাকা, মোট খরচ ৳${totalExp} টাকা, আনুমানিক নিট লাভ ৳${estProfit} টাকা এবং বাজারে মোট বাকি ৳${marketDue} টাকা।`;
     return {
       success: true,
-      reply: `🏪 **আজকের সার্বিক ব্যবসার সারসংক্ষেপ:**\n• মোট বিক্রি (${todaySales.length}টি মেমো): **৳${totalSold.toLocaleString('en-US')}**\n• ক্যাশ কালেকশন: **৳${totalCash.toLocaleString('en-US')}**\n• মোট খরচ: **৳${totalExp.toLocaleString('en-US')}**\n• আনুমানিক নিট লাভ: **৳${estProfit.toLocaleString('en-US')}**\n• মোট বাজার বাকি: **৳${marketDue.toLocaleString('en-US')}**\n• স্টক অ্যালার্ট: **${lowStockCount}টি পণ্যের স্টক কম**\n\n🟢 *অফলাইন রিয়েলটাইম ড্যাশবোর্ড রিপোর্ট*`,
+      reply: `👑 **মালিক মোড (${speakerName}):**\n• মোট বিক্রি (${todaySales.length}টি মেমো): **৳${totalSold.toLocaleString('en-US')}**\n• ক্যাশ কালেকশন: **৳${totalCash.toLocaleString('en-US')}**\n• মোট খরচ: **৳${totalExp.toLocaleString('en-US')}**\n• আনুমানিক নিট লাভ: **৳${estProfit.toLocaleString('en-US')}**\n• মোট বাজার বাকি: **৳${marketDue.toLocaleString('en-US')}**\n• স্টক অ্যালার্ট: **${lowStockCount}টি পণ্যের স্টক কম**\n\n🟢 *অফলাইন রিয়েলটাইম ড্যাশবোর্ড রিপোর্ট*`,
       speech,
       navigateTo: '/reports',
       actionLink: { text: 'বিস্তারিত রিপোর্ট পেজ →', href: '/reports' },
