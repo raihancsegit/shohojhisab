@@ -727,15 +727,9 @@ export default function StaffManagementPage() {
           </div>
 
           {/* Staff Table Container */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '22px',
-            border: '1.5px solid #e2e8f0',
-            padding: '22px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
-          }}>
+          <div className="staff-card-container">
             {/* Search and Filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
               <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
                 <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
                 <input
@@ -755,7 +749,7 @@ export default function StaffManagementPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', width: '100%', maxWidth: '100%' }}>
                 {[
                   { id: 'all', label: 'সকল' },
                   { id: 'cashier', label: 'ক্যাশিয়ার' },
@@ -784,163 +778,361 @@ export default function StaffManagementPage() {
               </div>
             </div>
 
-            {/* Table */}
             {loading ? (
               <DataLoader type="table" count={4} text="কর্মচারী তালিকা লোড হচ্ছে..." />
             ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '12.5px', fontWeight: '800' }}>
-                    <th style={{ padding: '12px 14px' }}>কর্মচারীর নাম ও শাখা</th>
-                    <th style={{ padding: '12px 14px' }}>রোল (Role)</th>
-                    <th style={{ padding: '12px 14px' }}>মোবাইল ও পিন</th>
-                    <th style={{ padding: '12px 14px' }}>বেতন ও কমিশন</th>
-                    <th style={{ padding: '12px 14px' }}>ডিসকাউন্ট সীমা</th>
-                    <th style={{ padding: '12px 14px' }}>আজকের সেলস</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>অ্যাকশন</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStaff.map((staff) => {
-                    const roleDef = ROLE_DEFINITIONS[staff.role] || ROLE_DEFINITIONS.custom;
-                    const isVisible = showPinVisibility[staff.id];
+              <>
+                {/* 📱 Mobile View: Dedicated Clean Staff Cards */}
+                <div className="staff-mobile-view">
+                  {filteredStaff.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '6px' }}>👥</div>
+                      <div style={{ fontWeight: '800', fontSize: '14px', color: '#64748b' }}>কোনো কর্মচারী পাওয়া যায়নি</div>
+                    </div>
+                  ) : (
+                    filteredStaff.map((staff) => {
+                      const roleDef = ROLE_DEFINITIONS[staff.role] || ROLE_DEFINITIONS.custom;
+                      const isVisible = showPinVisibility[staff.id];
+                      const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
 
-                    return (
-                      <tr key={staff.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        {/* Name */}
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{
-                              width: '38px', height: '38px', borderRadius: '12px',
-                              background: roleDef.badgeBg, color: roleDef.badgeColor,
-                              display: 'grid', placeItems: 'center', fontSize: '18px', fontWeight: '900', flexShrink: 0
-                            }}>
-                              {roleDef.icon}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{staff.name}</div>
-                              <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                                <span>🏢 {staff.branchName || 'প্রধান শাখা'}</span>
-                                {(() => {
-                                  const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        triggerHaptic('light');
-                                        setVoiceEnrollStaffId(staff.id);
-                                        setShowVoiceEnrollModal(true);
-                                      }}
-                                      style={{
-                                        background: hasVoice ? '#dcfce7' : '#f1f5f9',
-                                        color: hasVoice ? '#15803d' : '#64748b',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        padding: '1px 6px',
-                                        fontSize: '10.5px',
-                                        fontWeight: '700',
-                                        cursor: 'pointer'
-                                      }}
-                                      title="ভয়েস প্রোফাইল"
-                                    >
-                                      {hasVoice ? '🎙️ ভয়েস' : '+ 🎙️'}
-                                    </button>
-                                  );
-                                })()}
+                      return (
+                        <div
+                          key={staff.id}
+                          style={{
+                            background: '#ffffff',
+                            borderRadius: '16px',
+                            padding: '14px',
+                            border: '1.5px solid #e2e8f0',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px'
+                          }}
+                        >
+                          {/* Top: Avatar, Name & Branch, Role Badge */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 auto' }}>
+                              <div style={{
+                                width: '40px', height: '40px', borderRadius: '12px',
+                                background: roleDef.badgeBg, color: roleDef.badgeColor,
+                                display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0
+                              }}>
+                                {roleDef.icon}
+                              </div>
+                              <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                                <div style={{ fontWeight: '900', fontSize: '15px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {staff.name}
+                                </div>
+                                <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                  <span>🏢 {staff.branchName || 'প্রধান শাখা'}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      triggerHaptic('light');
+                                      setVoiceEnrollStaffId(staff.id);
+                                      setShowVoiceEnrollModal(true);
+                                    }}
+                                    style={{
+                                      background: hasVoice ? '#dcfce7' : '#f1f5f9',
+                                      color: hasVoice ? '#15803d' : '#64748b',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      padding: '1px 6px',
+                                      fontSize: '10.5px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="ভয়েস বায়োমেট্রিক প্রোফাইল"
+                                  >
+                                    {hasVoice ? '🎙️ ভয়েস' : '+ 🎙️'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
 
-                        {/* Role */}
-                        <td style={{ padding: '14px' }}>
-                          <span style={{
-                            background: roleDef.badgeBg, color: roleDef.badgeColor,
-                            padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
-                          }}>
-                            <span>{roleDef.icon}</span>
-                            <span>{roleDef.label}</span>
-                          </span>
-                        </td>
-
-                        {/* Phone & PIN */}
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ fontSize: '12.5px', color: '#334155', fontWeight: '600' }} className="num-font">
-                            📱 {staff.phone || '—'}
-                          </div>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: '#f8fafc', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                            <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#4f46e5' }} className="num-font">
-                              {isVisible ? staff.pin : '••••'}
+                            {/* Role Badge */}
+                            <span style={{
+                              background: roleDef.badgeBg, color: roleDef.badgeColor,
+                              padding: '4px 10px', borderRadius: '99px', fontSize: '11.5px', fontWeight: '800',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0
+                            }}>
+                              <span>{roleDef.icon}</span>
+                              <span>{roleDef.label}</span>
                             </span>
-                            <button type="button" onClick={() => togglePin(staff.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
-                              {isVisible ? '🙈' : '👁️'}
-                            </button>
                           </div>
-                        </td>
 
-                        {/* Salary & Commission */}
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }} className="num-font">
-                            ৳ {formatPrice(staff.baseSalary || 0)}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>
-                            কমিশন: {staff.commissionPercent || 0}% (৳ {formatPrice(staff.earnedCommission || 0)})
-                          </div>
-                        </td>
-
-                        {/* Discount Limit */}
-                        <td style={{ padding: '14px' }}>
-                          <span style={{
-                            background: (staff.maxDiscountPercent || 0) > 10 ? '#fee2e2' : '#f1f5f9',
-                            color: (staff.maxDiscountPercent || 0) > 10 ? '#dc2626' : '#475569',
-                            padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '800'
+                          {/* Phone & PIN Strip */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: '#f8fafc',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            fontSize: '12px'
                           }}>
-                            সর্বোচ্চ {staff.maxDiscountPercent || 0}%
-                          </span>
-                        </td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155', fontWeight: '700' }} className="num-font">
+                              <span>📱</span>
+                              <span>{staff.phone || 'মোবাইল নেই'}</span>
+                            </div>
 
-                        {/* Sales Stats */}
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ fontWeight: '800', fontSize: '13.5px', color: '#10b981' }} className="num-font">
-                            ৳ {formatPrice(staff.todaySalesAmount || 0)}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ color: '#64748b', fontSize: '11px', fontWeight: '700' }}>PIN:</span>
+                              <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#4f46e5' }} className="num-font">
+                                {isVisible ? staff.pin : '••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePin(staff.id)}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '0 2px' }}
+                                title={isVisible ? 'পিন লুকান' : 'পিন দেখুন'}
+                              >
+                                {isVisible ? '🙈' : '👁️'}
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {staff.todaySalesCount || 0} টি মেমো (মোট: ৳ {formatPrice(staff.totalSalesAmount || 0)})
-                          </div>
-                        </td>
 
-                        {/* Actions */}
-                        <td style={{ padding: '14px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          {/* Financial & Sales Stats Strip */}
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: '6px',
+                            fontSize: '11.5px'
+                          }}>
+                            <div style={{ background: '#f1f5f9', padding: '6px 10px', borderRadius: '8px' }}>
+                              <span style={{ color: '#64748b' }}>বেতন: </span>
+                              <strong style={{ color: '#0f172a' }}>৳ {formatPrice(staff.baseSalary || 0)}</strong>
+                              {staff.commissionPercent ? <span style={{ color: '#16a34a' }}> (+{staff.commissionPercent}%)</span> : null}
+                            </div>
+                            <div style={{ background: '#ecfdf5', padding: '6px 10px', borderRadius: '8px' }}>
+                              <span style={{ color: '#047857' }}>আজকের সেল: </span>
+                              <strong style={{ color: '#047857' }}>৳ {formatPrice(staff.todaySalesAmount || 0)}</strong>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons Bar */}
+                          <div style={{ display: 'flex', gap: '8px', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
                             <button
                               onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
-                              style={{ background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                              title="আইডি ব্যাজ"
+                              style={{
+                                flex: 1,
+                                background: '#eef2ff',
+                                color: '#4f46e5',
+                                border: '1px solid #c7d2fe',
+                                padding: '8px 10px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
                             >
-                              🪪 আইডি
+                              <span>🪪</span> আইডি কার্ড
                             </button>
                             <button
                               onClick={() => handleOpenEdit(staff)}
-                              style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{
+                                flex: 1,
+                                background: '#f8fafc',
+                                color: '#334155',
+                                border: '1px solid #cbd5e1',
+                                padding: '8px 10px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
                             >
-                              ✏️
+                              <span>✏️</span> এডিট
                             </button>
                             <button
                               onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                              style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                              style={{
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                border: '1px solid #fecaca',
+                                padding: '8px 14px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="মুছে ফেলুন"
                             >
                               🗑️
                             </button>
                           </div>
-                        </td>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* 🖥️ Desktop View: Full Data Table */}
+                <div className="staff-desktop-view">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '12.5px', fontWeight: '800' }}>
+                        <th style={{ padding: '12px 14px' }}>কর্মচারীর নাম ও শাখা</th>
+                        <th style={{ padding: '12px 14px' }}>রোল (Role)</th>
+                        <th style={{ padding: '12px 14px' }}>মোবাইল ও পিন</th>
+                        <th style={{ padding: '12px 14px' }}>বেতন ও কমিশন</th>
+                        <th style={{ padding: '12px 14px' }}>ডিসকাউন্ট সীমা</th>
+                        <th style={{ padding: '12px 14px' }}>আজকের সেলস</th>
+                        <th style={{ padding: '12px 14px', textAlign: 'right' }}>অ্যাকশন</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {filteredStaff.map((staff) => {
+                        const roleDef = ROLE_DEFINITIONS[staff.role] || ROLE_DEFINITIONS.custom;
+                        const isVisible = showPinVisibility[staff.id];
+
+                        return (
+                          <tr key={staff.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            {/* Name */}
+                            <td style={{ padding: '14px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{
+                                  width: '38px', height: '38px', borderRadius: '12px',
+                                  background: roleDef.badgeBg, color: roleDef.badgeColor,
+                                  display: 'grid', placeItems: 'center', fontSize: '18px', fontWeight: '900', flexShrink: 0
+                                }}>
+                                  {roleDef.icon}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{staff.name}</div>
+                                  <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                    <span>🏢 {staff.branchName || 'প্রধান শাখা'}</span>
+                                    {(() => {
+                                      const hasVoice = enrolledVoiceProfiles.some(p => p.id === staff.id);
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            triggerHaptic('light');
+                                            setVoiceEnrollStaffId(staff.id);
+                                            setShowVoiceEnrollModal(true);
+                                          }}
+                                          style={{
+                                            background: hasVoice ? '#dcfce7' : '#f1f5f9',
+                                            color: hasVoice ? '#15803d' : '#64748b',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '1px 6px',
+                                            fontSize: '10.5px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer'
+                                          }}
+                                          title="ভয়েস প্রোফাইল"
+                                        >
+                                          {hasVoice ? '🎙️ ভয়েস' : '+ 🎙️'}
+                                        </button>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Role */}
+                            <td style={{ padding: '14px' }}>
+                              <span style={{
+                                background: roleDef.badgeBg, color: roleDef.badgeColor,
+                                padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800',
+                                display: 'inline-flex', alignItems: 'center', gap: '4px'
+                              }}>
+                                <span>{roleDef.icon}</span>
+                                <span>{roleDef.label}</span>
+                              </span>
+                            </td>
+
+                            {/* Phone & PIN */}
+                            <td style={{ padding: '14px' }}>
+                              <div style={{ fontSize: '12.5px', color: '#334155', fontWeight: '600' }} className="num-font">
+                                📱 {staff.phone || '—'}
+                              </div>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: '#f8fafc', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#4f46e5' }} className="num-font">
+                                  {isVisible ? staff.pin : '••••'}
+                                </span>
+                                <button type="button" onClick={() => togglePin(staff.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
+                                  {isVisible ? '🙈' : '👁️'}
+                                </button>
+                              </div>
+                            </td>
+
+                            {/* Salary & Commission */}
+                            <td style={{ padding: '14px' }}>
+                              <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }} className="num-font">
+                                ৳ {formatPrice(staff.baseSalary || 0)}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>
+                                কমিশন: {staff.commissionPercent || 0}% (৳ {formatPrice(staff.earnedCommission || 0)})
+                              </div>
+                            </td>
+
+                            {/* Discount Limit */}
+                            <td style={{ padding: '14px' }}>
+                              <span style={{
+                                background: (staff.maxDiscountPercent || 0) > 10 ? '#fee2e2' : '#f1f5f9',
+                                color: (staff.maxDiscountPercent || 0) > 10 ? '#dc2626' : '#475569',
+                                padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '800'
+                              }}>
+                                সর্বোচ্চ {staff.maxDiscountPercent || 0}%
+                              </span>
+                            </td>
+
+                            {/* Sales Stats */}
+                            <td style={{ padding: '14px' }}>
+                              <div style={{ fontWeight: '800', fontSize: '13.5px', color: '#10b981' }} className="num-font">
+                                ৳ {formatPrice(staff.todaySalesAmount || 0)}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                {staff.todaySalesCount || 0} টি মেমো (মোট: ৳ {formatPrice(staff.totalSalesAmount || 0)})
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ padding: '14px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button
+                                  onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
+                                  style={{ background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                                  title="আইডি ব্যাজ"
+                                >
+                                  🪪 আইডি
+                                </button>
+                                <button
+                                  onClick={() => handleOpenEdit(staff)}
+                                  style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                                  style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </>

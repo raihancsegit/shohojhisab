@@ -666,6 +666,42 @@ body {
   }
 }
 
+/* Staff Page Responsive Cards & Table */
+.staff-card-container {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1.5px solid #e2e8f0;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+@media (min-width: 640px) {
+  .staff-card-container {
+    border-radius: 22px;
+    padding: 20px;
+  }
+}
+
+.staff-mobile-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-desktop-view {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .staff-mobile-view {
+    display: none;
+  }
+  .staff-desktop-view {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
 /* Modern Stock & Inventory Search Toolbar */
 .stock-search-wrap {
   width: 100%;
