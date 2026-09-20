@@ -118,7 +118,7 @@ export default function VoiceAssistant() {
                 <span style={{ fontSize: '16px' }}>
                   {feedbackType === 'listening' ? '🎙️' : feedbackType === 'processing' ? '⚡' : feedbackType === 'success' ? '✅' : '⚠️'}
                 </span>
-                {currentMode && (
+                {currentMode && currentMode !== 'stranger' && feedbackType !== 'error' && (
                   <span style={{
                     fontSize: '11px',
                     padding: '2px 8px',
