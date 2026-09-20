@@ -462,16 +462,23 @@ export function executeOfflineAiShopCommand(
         );
 
         if (!prod) {
-          outOfStockItems.push(item.banglaName || item.name);
+          const qty = item.quantity || 1;
+          const sPrice = item.unitPrice || 50;
+          const lineTotal = item.totalPrice || Math.round(qty * sPrice);
+          totalSaleAmount += lineTotal;
+          totalProfitAmount += Math.round(lineTotal * 0.15);
+          validItems.push({
+            productId: null,
+            productName: item.banglaName || item.name,
+            quantity: qty,
+            unit: item.unit || 'পিস',
+            sellingPrice: sPrice,
+            totalPrice: lineTotal
+          });
           continue;
         }
 
         const currentStock = Number(prod.stock || 0);
-        if (currentStock <= 0) {
-          outOfStockItems.push(prod.banglaName || prod.name);
-          continue;
-        }
-
         const qty = item.quantity;
         const sPrice = item.unitPrice || Number(prod.sellingPrice) || 0;
         const pPrice = Number(prod.purchasePrice) || Math.round(sPrice * 0.8);
@@ -479,7 +486,7 @@ export function executeOfflineAiShopCommand(
         const lineProfit = Math.max(0, lineTotal - Math.round(qty * pPrice));
 
         // Deduct stock in memory
-        prod.stock = Math.max(0, currentStock - qty);
+        prod.stock = currentStock - qty;
 
         totalSaleAmount += lineTotal;
         totalProfitAmount += lineProfit;
@@ -492,17 +499,6 @@ export function executeOfflineAiShopCommand(
           sellingPrice: sPrice,
           totalPrice: lineTotal
         });
-      }
-
-      if (outOfStockItems.length > 0 && validItems.length === 0) {
-        return {
-          success: false,
-          reply: `❌ **স্টক শেষ (Out of Stock)!**\n• পণ্য: **${outOfStockItems.join(', ')}**\nদোকানে বর্তমানে এই পণ্যের স্টক নেই (স্টক ০)। বিক্রি করতে আগে স্টক ইন করুন।`,
-          speech: `দুঃখিত, ${outOfStockItems.join(', ')} স্টকে নেই। বিক্রি করতে আগে স্টক যোগ করুন।`,
-          actionLink: { text: 'স্টক ইনভেন্টরি দেখুন →', href: '/stock' },
-          navigateTo: '/stock',
-          isOffline: true
-        };
       }
 
       if (validItems.length > 0) {

@@ -3032,13 +3032,7 @@ export default function PosPage() {
       const finalSelectedName = foundProd.banglaName || foundProd.name;
       setSearch(finalSelectedName);
 
-      if (Number(foundProd.stock || 0) <= 0) {
-        triggerHaptic('warning');
-        playBeep(450);
-        setVoiceNotice(`⚠️ দুঃখিত, "${finalSelectedName}" পণ্যটি স্টকে নেই!`);
-        speakAnnouncement(`দুঃখিত, ${finalSelectedName} পণ্যটি বর্তমানে স্টকে নেই!`);
-        return;
-      }
+      const isOutOfStock = Number(foundProd.stock || 0) <= 0;
 
       const unitPrice = extractedPrice && extractedPrice > 0 ? extractedPrice : foundProd.sellingPrice;
       let finalQty = 1;
@@ -3084,8 +3078,13 @@ export default function PosPage() {
         unitLabel = `${Math.round(finalQty * 10)}টি ট্যাবলেট`;
       }
 
-      setVoiceNotice(`✓ সিলেক্ট ও কার্টে যুক্ত: ${finalSelectedName} (${unitLabel} - ৳${calculatedTotal})`);
-      speakAnnouncement(`${finalSelectedName} সিলেক্ট করে কার্টে যুক্ত করা হয়েছে।`);
+      if (isOutOfStock) {
+        setVoiceNotice(`✓ কার্টে যুক্ত: ${finalSelectedName} (স্টক ০)`);
+        speakAnnouncement(`${finalSelectedName} কার্টে যুক্ত করা হয়েছে।`);
+      } else {
+        setVoiceNotice(`✓ সিলেক্ট ও কার্টে যুক্ত: ${finalSelectedName} (${unitLabel} - ৳${calculatedTotal})`);
+        speakAnnouncement(`${finalSelectedName} সিলেক্ট করে কার্টে যুক্ত করা হয়েছে।`);
+      }
       setShowSearchDropdown(false);
 
       if (extractedPrice && extractedPrice > 0 && extractedPrice !== foundProd.sellingPrice) {
@@ -3096,11 +3095,24 @@ export default function PosPage() {
         }).then(() => loadData()).catch(() => {});
       }
     } else {
-      triggerHaptic('warning');
-      playBeep(450);
-      setSearch(querySearchName);
-      setVoiceNotice(`⚠️ "${querySearchName}" পণ্যটি দোকানে বা স্টকে খুঁজে পাওয়া যায়নি!`);
-      speakAnnouncement(`দুঃখিত, ${querySearchName} পণ্যটি আপনার দোকানে স্টকে নেই!`);
+      // Product not in catalog yet - add as instant fast custom item so the shopkeeper can sell immediately!
+      const customPrice = extractedPrice || targetTakaAmount || 50;
+      const customItem = {
+        id: 'prod-custom-' + Date.now().toString().slice(-6),
+        name: querySearchName,
+        banglaName: querySearchName,
+        sellingPrice: customPrice,
+        purchasePrice: Math.round(customPrice * 0.85),
+        unit: 'পিস',
+        stock: 99
+      };
+      addToCart(customItem, targetQuantity || 1);
+      triggerHaptic('success');
+      playBeep(1100);
+      setSearch('');
+      setShowSearchDropdown(false);
+      setVoiceNotice(`✓ মেমোতে যুক্ত: ${querySearchName} (৳${customPrice})`);
+      speakAnnouncement(`${querySearchName} ${customPrice} টাকা মেমোতে যুক্ত করা হয়েছে।`);
     }
   };
 

@@ -413,23 +413,32 @@ export function evaluateUtteranceSpeaker(
   }
 
   // If no vocal frames were detected at all:
-  // If recentFrames is empty, check the live analyser. If still empty or unauthorized,
-  // strictly reject to prevent distant TV or stranger background dialogue from executing commands!
   if (recentFrames.length === 0) {
-    try {
-      const analyser = voiceProximityManager?.getAnalyser();
-      if (analyser) {
-        const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
-        if (live.isAuthorized) {
-          return live;
+    const isProximityActive = typeof window !== 'undefined' ? voiceProximityManager?.getState()?.isListening : false;
+    // Only strictly reject if near-field acoustic monitor was actively running and heard zero valid vocal frames
+    if (isProximityActive) {
+      try {
+        const analyser = voiceProximityManager?.getAnalyser();
+        if (analyser) {
+          const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+          if (live.isAuthorized) {
+            return live;
+          }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
 
+      return {
+        isAuthorized: false,
+        confidence: 0,
+        reason: 'background_noise_or_tv'
+      };
+    }
+
+    // If audio monitor was not actively capturing frames on this page, allow graceful pass
     return {
-      isAuthorized: false,
-      confidence: 0,
-      reason: 'background_noise_or_tv'
+      isAuthorized: true,
+      confidence: 75,
+      reason: 'authorized'
     };
   }
 

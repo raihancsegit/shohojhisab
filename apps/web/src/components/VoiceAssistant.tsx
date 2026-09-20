@@ -122,7 +122,7 @@ export default function VoiceAssistant() {
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? 450 : (isMobile ? 1100 : 800);
+        const waitMs = isFinal ? 350 : (isMobile ? 850 : 650);
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -153,16 +153,14 @@ export default function VoiceAssistant() {
           setFeedbackText('ভয়েস নেটওয়ার্ক ড্রপ করেছে। আবার বলুন বা লিখুন।');
           return;
         }
-        // 'no-speech' is expected when user is thinking/pausing; onend will seamlessly restart!
       };
 
       recognition.onend = () => {
-        // If we already have a spoken phrase and user paused
-        if (latestTranscriptRef.current.trim() && isMobile) {
-          if (!silenceTimerRef.current) {
-            stopAndExecute(latestTranscriptRef.current.trim());
-            return;
-          }
+        // If we already have a spoken phrase and user paused/stopped speaking, EXECUTE IMMEDIATELY!
+        if (latestTranscriptRef.current.trim()) {
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          stopAndExecute(latestTranscriptRef.current.trim());
+          return;
         }
 
         // Re-spawn a FRESH instance on Android/desktop to continue listening without InvalidStateError

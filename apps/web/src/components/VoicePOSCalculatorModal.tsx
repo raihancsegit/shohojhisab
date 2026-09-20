@@ -342,23 +342,25 @@ export default function VoicePOSCalculatorModal({
           });
         }
 
-        // Check if completely missing from shop catalog
+        // If not in catalog, still add as dynamic item so the merchant can bill immediately!
         if (!prod) {
-          notFoundNames.push(item.banglaName || item.name);
-          setUnrecognizedSpokenItems(prev => {
-            const exists = prev.some(p => (p.banglaName || p.name) === (item.banglaName || item.name));
-            return exists ? prev : [...prev, item];
+          const defaultPrice = item.unitPrice || item.totalPrice || 50;
+          validInStockItems.push({
+            ...item,
+            productId: null,
+            name: item.name,
+            banglaName: item.banglaName || item.name,
+            unit: item.unit || 'পিস',
+            unitPrice: defaultPrice,
+            totalPrice: item.totalPrice || Math.round(defaultPrice * item.quantity * 100) / 100,
+            stock: 99,
+            isExistingProduct: false
           });
           continue;
         }
 
-        // Check if out of stock
+        // Product found in catalog - add to memo directly!
         const currentStock = Number(prod.stock ?? 0);
-        if (currentStock <= 0) {
-          outOfStockNames.push(prod.banglaName || prod.name);
-          continue;
-        }
-
         const resolvedUnitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : (Number(prod.sellingPrice) || 0);
         const resolvedTotalPrice = item.totalPrice && item.totalPrice > 0 ? item.totalPrice : Math.round(resolvedUnitPrice * item.quantity * 100) / 100;
 
@@ -373,23 +375,6 @@ export default function VoicePOSCalculatorModal({
           stock: currentStock,
           isExistingProduct: true
         });
-      }
-
-      // If items not found or out of stock, announce clearly with loud voice feedback!
-      if (outOfStockNames.length > 0) {
-        triggerHaptic('warning');
-        playBeep(450);
-        const nameList = outOfStockNames.join(', ');
-        speakFeedback(`দুঃখিত, ${nameList} পণ্যটির স্টক শেষ বা নেই!`);
-        setLastActionMessage(`⚠️ দুঃখিত, "${nameList}" পণ্যটি স্টকে নেই!`);
-      }
-
-      if (notFoundNames.length > 0) {
-        triggerHaptic('warning');
-        playBeep(450);
-        const nameList = notFoundNames.join(', ');
-        speakFeedback(`দুঃখিত, ${nameList} পণ্যটি স্টকে পাওয়া যায়নি। নিচে ১-ট্যাপে মেমোতে যোগ করতে পারেন।`);
-        setLastActionMessage(`⚠️ "${nameList}" স্টকে পাওয়া যায়নি (নিচে বাটন চেপে মেমোতে যোগ করুন)`);
       }
 
       // Only add verified items that actually exist in stock!
