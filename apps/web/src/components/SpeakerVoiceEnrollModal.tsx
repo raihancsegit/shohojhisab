@@ -76,13 +76,41 @@ export default function SpeakerVoiceEnrollModal({
   const animFrameRef = useRef<number | null>(null);
   const timerRef = useRef<any>(null);
 
-  // Load profiles on open
+  const [loadedStaffList, setLoadedStaffList] = useState<StaffOption[]>(staffList);
+  const [isCustomStaff, setIsCustomStaff] = useState<boolean>(false);
+
+  // Load profiles and staff on open
   useEffect(() => {
     if (!isOpen) return;
     const locked = isSpeakerLockEnabled(tenantId);
     setIsLockEnabled(locked);
     const loaded = getSpeakerVoiceProfiles(tenantId);
     setProfiles(loaded);
+
+    if (staffList && staffList.length > 0) {
+      setLoadedStaffList(staffList);
+    } else {
+      const effectiveTenant = tenantId !== 'default' ? tenantId : (() => {
+        try {
+          const raw = localStorage.getItem('lbos_active_tenant');
+          if (raw) return JSON.parse(raw)?.id || 'default';
+        } catch (e) {}
+        return 'default';
+      })();
+
+      fetch(`/api/staff?tenantId=${effectiveTenant}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setLoadedStaffList(data.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              role: s.role
+            })));
+          }
+        })
+        .catch(() => {});
+    }
 
     if (preSelectedStaffId) {
       setSpeakerType('staff');
@@ -152,12 +180,10 @@ export default function SpeakerVoiceEnrollModal({
       return await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: false,
-          autoGainControl: false
+          noiseSuppression: true
         }
       });
     } catch (e) {
-      // Fallback for devices that reject autoGainControl: false
       return await navigator.mediaDevices.getUserMedia({ audio: true });
     }
   };
@@ -698,67 +724,123 @@ export default function SpeakerVoiceEnrollModal({
                 </div>
               ) : (
                 <div>
-                  {/* Select Person (Clean & Compact) */}
+                  {/* Select Person (Clean & Multi-Employee Ready) */}
                   <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#64748b', marginBottom: '5px' }}>
-                      কার কণ্ঠ রেজিস্টার করবেন?
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '6px' }}>
+                      কার কণ্ঠ রেজিস্টার করবেন? (মালিক বা নির্দিষ্ট কর্মচারী নির্বাচন করুন)
                     </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         type="button"
                         onClick={() => {
                           setSpeakerType('owner');
+                          setIsCustomStaff(false);
                           setSpeakerName('দোকান মালিক');
                         }}
                         style={{
                           flex: 1,
-                          padding: '7px 10px',
-                          borderRadius: '8px',
-                          border: speakerType === 'owner' ? '1.5px solid #4f46e5' : '1px solid #e2e8f0',
+                          minWidth: '120px',
+                          padding: '8px 12px',
+                          borderRadius: '10px',
+                          border: speakerType === 'owner' ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
                           background: speakerType === 'owner' ? '#eef2ff' : '#ffffff',
                           color: speakerType === 'owner' ? '#4f46e5' : '#475569',
                           fontWeight: '800',
-                          fontSize: '12px',
-                          cursor: 'pointer'
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
                         }}
                       >
                         👑 দোকান মালিক
                       </button>
 
-                      {staffList.length > 0 && (
+                      {loadedStaffList.length > 0 && (
                         <select
-                          value={speakerType === 'staff' ? selectedStaffId : ''}
+                          value={speakerType === 'staff' && !isCustomStaff ? selectedStaffId : ''}
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (val) {
+                            if (val === '__custom__') {
                               setSpeakerType('staff');
+                              setIsCustomStaff(true);
+                              setSelectedStaffId(`staff-${Date.now()}`);
+                              setSpeakerName('');
+                            } else if (val) {
+                              setSpeakerType('staff');
+                              setIsCustomStaff(false);
                               setSelectedStaffId(val);
-                              const s = staffList.find(x => x.id === val);
-                              if (s) setSpeakerName(s.name);
+                              const s = loadedStaffList.find(x => x.id === val);
+                              if (s) setSpeakerName(`${s.name} (${s.role || 'স্টাফ'})`);
                             }
                           }}
                           style={{
-                            flex: 1.2,
-                            padding: '7px 10px',
-                            borderRadius: '8px',
-                            border: speakerType === 'staff' ? '1.5px solid #4f46e5' : '1px solid #e2e8f0',
-                            background: speakerType === 'staff' ? '#eef2ff' : '#ffffff',
-                            color: speakerType === 'staff' ? '#4f46e5' : '#475569',
+                            flex: 1.4,
+                            minWidth: '160px',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            border: speakerType === 'staff' && !isCustomStaff ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                            background: speakerType === 'staff' && !isCustomStaff ? '#eef2ff' : '#ffffff',
+                            color: speakerType === 'staff' && !isCustomStaff ? '#4f46e5' : '#475569',
                             fontWeight: '800',
-                            fontSize: '12px',
+                            fontSize: '12.5px',
                             cursor: 'pointer',
                             outline: 'none'
                           }}
                         >
-                          <option value="">👔 কর্মচারী নির্বাচন...</option>
-                          {staffList.map(s => (
+                          <option value="">👔 কর্মচারী নির্বাচন করুন...</option>
+                          {loadedStaffList.map(s => (
                             <option key={s.id} value={s.id}>
                               {s.name} ({s.role || 'স্টাফ'})
                             </option>
                           ))}
+                          <option value="__custom__">➕ নতুন কর্মচারীর নাম লিখুন...</option>
                         </select>
                       )}
+
+                      {(!loadedStaffList.length || isCustomStaff) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSpeakerType('staff');
+                            setIsCustomStaff(true);
+                            setSelectedStaffId(`staff-${Date.now()}`);
+                            setSpeakerName('');
+                          }}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '10px',
+                            border: isCustomStaff ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                            background: isCustomStaff ? '#eef2ff' : '#ffffff',
+                            color: isCustomStaff ? '#4f46e5' : '#475569',
+                            fontWeight: '800',
+                            fontSize: '12.5px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ➕ কর্মচারী
+                        </button>
+                      )}
                     </div>
+
+                    {isCustomStaff && (
+                      <div style={{ marginTop: '10px' }}>
+                        <input
+                          type="text"
+                          placeholder="কর্মচারীর নাম ও পদবী (যেমন: সাকিব হাসান - ক্যাশিয়ার)"
+                          value={speakerName}
+                          onChange={(e) => setSpeakerName(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '9px 14px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #4f46e5',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Clean Step Counter */}

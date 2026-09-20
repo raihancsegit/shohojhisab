@@ -181,11 +181,7 @@ export default function AiAssistantPage() {
       recognitionRef.current = recognition;
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
-        if (isDistantNoise) {
-          setLiveTranscript('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হচ্ছে (কাছে বলুন)...');
-          return;
-        }
+        const { fullTranscript } = extractTranscriptFromEvent(event);
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
 
         const tenantKey = currentTenantId || 'default';
@@ -205,9 +201,9 @@ export default function AiAssistantPage() {
               triggerHaptic('warning');
               playWarningSound();
               if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLiveTranscript('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার করা হয়েছে (বাতিল)');
+                setLiveTranscript('🛡️ টিভি বা পেছনের শব্দ ফিল্টার করা হয়েছে (বাতিল)');
               } else {
-                setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু আপনার কণ্ঠ গ্রহণযোগ্য)');
+                setLiveTranscript('🛡️ অননুমোদিত কণ্ঠ শনাক্ত (বাতিল - শুধু মালিক ও স্টাফদের কণ্ঠ গ্রহণযোগ্য)');
               }
               setTimeout(() => setLiveTranscript(''), 3500);
               return;

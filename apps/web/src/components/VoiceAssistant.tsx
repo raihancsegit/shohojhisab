@@ -111,12 +111,7 @@ export default function VoiceAssistant() {
       };
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript, isFinal, isDistantNoise } = extractTranscriptFromEvent(event);
-        if (isDistantNoise) {
-          setFeedbackType('listening');
-          setFeedbackText('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হচ্ছে (কাছে এসে বলুন)...');
-          return;
-        }
+        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
 
         const tenantKey = tenant?.id || 'default';
@@ -127,7 +122,7 @@ export default function VoiceAssistant() {
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? (isMobile ? 550 : 450) : (isMobile ? 1200 : 900);
+        const waitMs = isFinal ? 450 : (isMobile ? 1100 : 800);
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -268,6 +263,8 @@ export default function VoiceAssistant() {
     }
 
     const tenantKey = tenant?.id || 'default';
+    let identifiedSpeakerName: string | null = null;
+
     if (isSpeakerLockEnabled(tenantKey)) {
       const speakerCheck = verifyCurrentVoice(tenantKey);
       if (!speakerCheck.isAuthorized) {
@@ -275,21 +272,24 @@ export default function VoiceAssistant() {
         playWarningSound();
         setFeedbackType('error');
         if (speakerCheck.reason === 'background_noise_or_tv') {
-          setFeedbackText('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হয়েছে (বাতিল)');
+          setFeedbackText('🛡️ টিভি বা পেছনের শব্দ ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু আপনার কণ্ঠ শুনবে)');
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ (শুধু নিবন্ধিত মালিক ও কর্মচারীদের কণ্ঠ চলবে)');
         }
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);
         }, 3500);
         return;
       }
+      if (speakerCheck.matchedSpeaker?.name) {
+        identifiedSpeakerName = speakerCheck.matchedSpeaker.name;
+      }
     }
 
     setLastSpoken(query);
     setIsProcessing(true);
     setFeedbackType('processing');
-    setFeedbackText(`"${query}" প্রসেস হচ্ছে...`);
+    setFeedbackText(identifiedSpeakerName ? `[${identifiedSpeakerName}] "${query}" প্রসেস হচ্ছে...` : `"${query}" প্রসেস হচ্ছে...`);
     triggerHaptic?.('medium');
 
     try {
