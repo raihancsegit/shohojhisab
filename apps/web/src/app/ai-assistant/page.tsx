@@ -7,7 +7,7 @@ import { extractTranscriptFromEvent, cleanSpokenBengali, isEchoedTTSResponse } f
 import { playMicStartSound, playSuccessChime, playWarningSound, playMicStopSound } from '../../lib/audioFeedbackUtils';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { executeOfflineAiShopCommand } from '../../lib/offlineAiEngine';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, ensureBiometricMonitoring } from '../../lib/speakerProfileEngine';
 
 export default function AiAssistantPage() {
   const router = useRouter();
@@ -170,7 +170,7 @@ export default function AiAssistantPage() {
     playMicStartSound();
     setLiveTranscript('');
     setIsListening(true);
-    voiceProximityManager.start().catch((err) => console.warn('Proximity start err:', err));
+    ensureBiometricMonitoring().catch((err) => console.warn('Proximity start err:', err));
 
     try {
       const recognition = new SpeechRecognition();
@@ -183,7 +183,7 @@ export default function AiAssistantPage() {
       recognition.onresult = (event: any) => {
         const { fullTranscript, isDistantNoise } = extractTranscriptFromEvent(event);
         if (isDistantNoise) {
-          setLiveTranscript('⚠️ দূরের আওয়াজ/টিভি ফিল্টার হয়েছে (কাছে বলুন)');
+          setLiveTranscript('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হচ্ছে (কাছে বলুন)...');
           return;
         }
         if (!fullTranscript || isEchoedTTSResponse(fullTranscript)) return;
@@ -205,9 +205,9 @@ export default function AiAssistantPage() {
               triggerHaptic('warning');
               playWarningSound();
               if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLiveTranscript('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
+                setLiveTranscript('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার করা হয়েছে (বাতিল)');
               } else {
-                setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ গ্রহণযোগ্য)');
+                setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু আপনার কণ্ঠ গ্রহণযোগ্য)');
               }
               setTimeout(() => setLiveTranscript(''), 3500);
               return;

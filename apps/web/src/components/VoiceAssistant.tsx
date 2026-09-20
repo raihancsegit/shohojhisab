@@ -111,15 +111,23 @@ export default function VoiceAssistant() {
       };
 
       recognition.onresult = (event: any) => {
-        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        const { fullTranscript, isFinal, isDistantNoise } = extractTranscriptFromEvent(event);
+        if (isDistantNoise) {
+          setFeedbackType('listening');
+          setFeedbackText('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হচ্ছে (কাছে এসে বলুন)...');
+          return;
+        }
         if (!fullTranscript) return;
+
+        const tenantKey = tenant?.id || 'default';
+        pingVoiceVerification(tenantKey);
 
         resetInactivityWatchdog();
         latestTranscriptRef.current = fullTranscript;
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? (isMobile ? 450 : 400) : (isMobile ? 1100 : 800);
+        const waitMs = isFinal ? (isMobile ? 550 : 450) : (isMobile ? 1200 : 900);
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             stopAndExecute(latestTranscriptRef.current.trim());
@@ -225,15 +233,8 @@ export default function VoiceAssistant() {
     setIsListening(true);
     setIsProcessing(false);
 
-    // On mobile devices, ensure proximity monitor / Web Audio is stopped so SpeechRecognition has 100% exclusive mic access
-    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (isMobile) {
-      try {
-        voiceProximityManager.stop();
-      } catch (e) {}
-    } else {
-      ensureBiometricMonitoring().catch(() => {});
-    }
+    // Ensure Web Audio proximity & vocal biometric monitor is active on all devices
+    ensureBiometricMonitoring().catch(() => {});
 
     resetInactivityWatchdog();
     spawnRecognitionInstance();
@@ -274,9 +275,9 @@ export default function VoiceAssistant() {
         playWarningSound();
         setFeedbackType('error');
         if (speakerCheck.reason === 'background_noise_or_tv') {
-          setFeedbackText('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার হয়েছে (বাতিল)');
+          setFeedbackText('🛡️ পেছনের টিভি বা দূরের আওয়াজ ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু নিবন্ধিত কণ্ঠ)');
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার হয়েছে (শুধু আপনার কণ্ঠ শুনবে)');
         }
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);

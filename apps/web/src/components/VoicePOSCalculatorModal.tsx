@@ -199,7 +199,8 @@ export default function VoicePOSCalculatorModal({
         }
         if (isTTSActiveRef.current && isSpeakingReal) return;
 
-        const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
+        const { fullTranscript, isFinal, isDistantNoise } = extractTranscriptFromEvent(event);
+        if (isDistantNoise) return;
         const currentSaid = fullTranscript.trim();
         if (!currentSaid) return;
 
@@ -739,14 +740,9 @@ export default function VoicePOSCalculatorModal({
         }
       }
 
-      // If biometric lock is enabled, start proximity manager, otherwise keep mic free for SpeechRecognition
+      // If biometric lock is enabled, start proximity & biometric monitor on all devices
       if (isVoiceLockOn) {
-        const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-        if (isMobile) {
-          try { voiceProximityManager.stop(); } catch (e) {}
-        } else {
-          voiceProximityManager.start().catch(() => {});
-        }
+        ensureBiometricMonitoring().catch(() => {});
       }
 
       spawnRecognitionInstance();

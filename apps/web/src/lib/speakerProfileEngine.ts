@@ -1,4 +1,5 @@
 'use client';
+import { voiceProximityManager } from './voiceProximityGate';
 
 /**
  * Multi-User Speaker Voice Biometrics & TV/Noise Shield Engine
@@ -100,12 +101,26 @@ export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): 
 export function isSpeakerLockEnabled(tenantId: string = 'default'): boolean {
   if (typeof window === 'undefined') return false;
   try {
+    const profiles = getSpeakerVoiceProfiles(tenantId);
+    // If no profiles registered anywhere, lock cannot be active
+    if (profiles.length === 0) return false;
+
     const val = localStorage.getItem(`${TOGGLE_KEY_PREFIX}${tenantId}`);
     if (val !== null) return val === 'true';
+
     const defVal = localStorage.getItem(`${TOGGLE_KEY_PREFIX}default`);
     if (defVal !== null) return defVal === 'true';
-    // Safe default: voice lock is OFF by default so user speech is NEVER blocked unintentionally
-    return false;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(TOGGLE_KEY_PREFIX)) {
+        const item = localStorage.getItem(key);
+        if (item !== null) return item === 'true';
+      }
+    }
+
+    // Default: If profiles exist on this device, lock MUST BE ON by default to filter TV/strangers!
+    return true;
   } catch (e) {
     return false;
   }
@@ -326,7 +341,6 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
 export async function ensureBiometricMonitoring(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    const { voiceProximityManager } = require('./voiceProximityGate');
     if (voiceProximityManager) {
       return await voiceProximityManager.start();
     }
@@ -337,7 +351,6 @@ export async function ensureBiometricMonitoring(): Promise<boolean> {
 // Automatically subscribe to voiceProximityManager frames on load
 if (typeof window !== 'undefined') {
   try {
-    const { voiceProximityManager } = require('./voiceProximityGate');
     voiceProximityManager?.onFrame?.((analyser: AnalyserNode, sRate: number) => {
       recordLiveVocalFrame(analyser, sRate);
     });
@@ -346,7 +359,7 @@ if (typeof window !== 'undefined') {
 
 /**
  * Evaluate the entire recent speech utterance against enrolled biometric profiles.
- * Analyzes all pitch frames recorded during the speech window (last ~3.8 seconds).
+ * Analyzes all pitch frames recorded during the speech window (last ~3.8-5.5 seconds).
  * Strictly filters laptop videos, TV news/natok, and other customers' voices.
  */
 export function evaluateUtteranceSpeaker(
@@ -365,16 +378,20 @@ export function evaluateUtteranceSpeaker(
 
   const now = Date.now();
   const cutoff = now - lookbackMs;
-  const recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= cutoff);
+  let recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= cutoff);
 
-  // If fewer than 2 harmonic vocal frames were recorded:
-  // On mobile browsers or when Web Speech API holds exclusive hardware microphone lock,
-  // Web Audio analyser may have 0 or few frames. We MUST NOT falsely block genuine speech.
+  // If fewer than 2 frames in lookback window, check wider window (up to 5.5s)
+  if (recentFrames.length < 2) {
+    recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= now - 5500);
+  }
+
+  // Strict Rejection: If speaker lock is enabled and no harmonic near-field vocal frames were captured,
+  // this speech arrived from distant TV or background chatter below speaking energy threshold!
   if (recentFrames.length < 2) {
     return {
-      isAuthorized: true,
-      confidence: 85,
-      reason: 'authorized'
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
     };
   }
 
@@ -566,14 +583,13 @@ export function verifyCurrentVoice(
   }
 
   // 1. First check the rolling utterance buffer (evaluates the speech sentence just spoken)
-  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 3800);
+  const utteranceResult = evaluateUtteranceSpeaker(tenantId, targetSpeakerId, 4200);
   if (utteranceResult.isAuthorized) {
     return utteranceResult;
   }
 
   // 2. If utterance didn't authorize, check if live frame matches right now
   try {
-    const { voiceProximityManager } = require('./voiceProximityGate');
     const analyser = voiceProximityManager?.getAnalyser();
     if (analyser) {
       const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
@@ -583,15 +599,7 @@ export function verifyCurrentVoice(
     }
   } catch (e) {}
 
-  // 3. Graceful fallback if mobile Android exclusive hardware mic lock prevented audio analyser frames
-  if (typeof window !== 'undefined') {
-    const isMobile = /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (isMobile && rollingVoicedFrames.length < 2) {
-      return { isAuthorized: true, confidence: 85, reason: 'authorized' };
-    }
-  }
-
-  // Strict Rejection: If lock is enabled, strangers / mismatched voices are STRICTLY REJECTED!
+  // Strict Rejection: If lock is enabled, strangers / mismatched voices / TV audio are STRICTLY REJECTED!
   return utteranceResult;
 }
 
@@ -600,7 +608,6 @@ export function verifyCurrentVoice(
  */
 export function pingVoiceVerification(tenantId: string = 'default'): void {
   try {
-    const { voiceProximityManager } = require('./voiceProximityGate');
     const analyser = voiceProximityManager?.getAnalyser();
     if (analyser) {
       const sampleRate = analyser.context.sampleRate || 44100;

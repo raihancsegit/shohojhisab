@@ -103,7 +103,12 @@ class VoiceProximityManager {
    * Starts the near-field audio monitor with autoGainControl disabled
    */
   public async start(): Promise<boolean> {
-    if (this.isActive) return true;
+    if (this.isActive && this.audioContext) {
+      if (this.audioContext.state === 'suspended') {
+        try { await this.audioContext.resume(); } catch (e) {}
+      }
+      return true;
+    }
     if (typeof window === 'undefined') return false;
 
     try {
@@ -175,8 +180,8 @@ class VoiceProximityManager {
           this.lastNearSpeechTime = now;
           this.isGateOpen = true;
         } else {
-          // Gate holds open for 650ms after near speech to catch trailing syllables
-          if (now - this.lastNearSpeechTime > 650) {
+          // Gate holds open for 850ms after near speech to catch trailing syllables
+          if (now - this.lastNearSpeechTime > 850) {
             this.isGateOpen = false;
           }
         }

@@ -2,6 +2,7 @@
  * Universal Bengali Speech Cleaner & Parser Utilities
  * Handles mobile Android/Chrome SpeechRecognition quirks, deduplication, and TTS echo suppression
  */
+import { voiceProximityManager } from './voiceProximityGate';
 
 /**
  * Universal phrase and word deduplication for Bengali speech recognition
@@ -51,7 +52,7 @@ export function isEchoedTTSResponse(text: string): boolean {
  * Guaranteed not to duplicate tokens across interim and final results
  */
 export function extractTranscriptFromEvent(event: any): { fullTranscript: string; isFinal: boolean; isDistantNoise?: boolean } {
-  if (!event || !event.results) return { fullTranscript: '', isFinal: false };
+  if (!event || !event.results) return { fullTranscript: '', isFinal: false, isDistantNoise: false };
 
   let finalTranscript = '';
   let interimTranscript = '';
@@ -78,11 +79,26 @@ export function extractTranscriptFromEvent(event: any): { fullTranscript: string
     : (finalTranscript || interimTranscript);
 
   if (!rawCombined) {
-    return { fullTranscript: '', isFinal: false };
+    return { fullTranscript: '', isFinal: false, isDistantNoise: false };
+  }
+
+  // 🛡️ Near-Field Acoustic Proximity Shield:
+  // Detects if this audio arrived while user is not speaking into phone (e.g. distant TV or crowd chatter)
+  let isDistantNoise = false;
+  if (typeof window !== 'undefined' && voiceProximityManager) {
+    try {
+      const prox = voiceProximityManager.getState();
+      if (prox.isListening && !prox.isGateOpen) {
+        // If gate is closed and no close speech occurred within the last 900ms
+        if (Date.now() - prox.lastNearSpeechTime > 900) {
+          isDistantNoise = true;
+        }
+      }
+    } catch (e) {}
   }
 
   const cleaned = cleanSpokenBengali(rawCombined);
-  return { fullTranscript: cleaned, isFinal: hasFinal };
+  return { fullTranscript: cleaned, isFinal: hasFinal, isDistantNoise };
 }
 
 /**
