@@ -286,21 +286,12 @@ export default function SpeakerVoiceEnrollModal({
         if (now - lastCheck > 40) {
           lastCheck = now;
           const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
-          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 420) {
+          if (pitchRes && pitchRes.pitch >= 65 && pitchRes.pitch <= 380) {
             setLivePitch(pitchRes.pitch);
             recordedPitches.push(pitchRes.pitch);
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) recordedCentroids.push(centroid);
             setCollectedFrameCount(recordedPitches.length);
-          } else if (rms > 0.8) {
-            const centroid = extractSpectralCentroid(freqData, sampleRate);
-            if (centroid > 0) {
-              recordedCentroids.push(centroid);
-              const approxPitch = centroid > 1500 ? 195 : 130;
-              recordedPitches.push(approxPitch);
-              setLivePitch(approxPitch);
-              setCollectedFrameCount(recordedPitches.length);
-            }
           }
         }
         animFrameRef.current = requestAnimationFrame(loop);
@@ -317,9 +308,9 @@ export default function SpeakerVoiceEnrollModal({
           timerRef.current = null;
           stopAudio();
 
-          if (recordedPitches.length === 0) {
-            const fallbackP = recordedCentroids.length > 0 && (recordedCentroids[0] || 0) > 1500 ? 195 : 135;
-            recordedPitches.push(fallbackP - 10, fallbackP, fallbackP + 10);
+          if (recordedPitches.length < 5) {
+            alert('কণ্ঠস্বর স্পষ্টভাবে শনাক্ত হয়নি। দয়া করে মাইকের কাছে এসে আরেকবার স্পষ্ট স্বরে লেখাটি পড়ুন।');
+            return;
           }
 
           finalizeEnrollment([recordedPitches], [recordedCentroids.length > 0 ? recordedCentroids : [1200]]);
@@ -409,19 +400,11 @@ export default function SpeakerVoiceEnrollModal({
         if (now - lastPitchCheck > 50) {
           lastPitchCheck = now;
           const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
-          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 420) {
+          if (pitchRes && pitchRes.pitch >= 65 && pitchRes.pitch <= 380) {
             setLivePitch(pitchRes.pitch);
             stepPitches.push(pitchRes.pitch);
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) stepCentroids.push(centroid);
-          } else if (rms > 1.0) {
-            const centroid = extractSpectralCentroid(freqData, sampleRate);
-            if (centroid > 0) {
-              stepCentroids.push(centroid);
-              const approxPitch = centroid > 1500 ? 195 : 125;
-              stepPitches.push(approxPitch);
-              setLivePitch(approxPitch);
-            }
           }
         }
 
@@ -438,13 +421,10 @@ export default function SpeakerVoiceEnrollModal({
         if (remaining <= 0) {
           clearInterval(timerRef.current);
           timerRef.current = null;
-          // If pitch samples are empty or low, supply graceful vocal baseline
-          if (stepPitches.length === 0) {
-            const fallbackP = stepCentroids.length > 0 && (stepCentroids[0] || 0) > 1500 ? 190 : 130;
-            stepPitches.push(fallbackP, fallbackP + 10, fallbackP - 10);
-          } else if (stepPitches.length < 3) {
-            const fallbackPitch = stepPitches[0] || 135;
-            stepPitches.push(fallbackPitch, fallbackPitch + 5, fallbackPitch - 5);
+          if (stepPitches.length < 2) {
+            alert('কণ্ঠস্বর স্পষ্টভাবে শনাক্ত হয়নি। আরেকবার পড়ুন।');
+            stopAudio();
+            return;
           }
 
           const updatedPitches = [...collectedPitches];
@@ -464,19 +444,17 @@ export default function SpeakerVoiceEnrollModal({
 
     } catch (err: any) {
       console.warn('Microphone permission issue:', err);
-      // Fallback voice calibration
-      const fallbackPitches = [[125, 135, 145], [], []];
-      setCollectedPitches(fallbackPitches);
-      finalizeEnrollment(fallbackPitches, [[1200]]);
+      alert('মাইক্রোফোন চালু করা যায়নি: ' + (err.message || 'অনুমতি নিশ্চিত করুন'));
     }
   };
 
   const finalizeEnrollment = (pitches: number[][], centroids: number[][]) => {
-    let flatPitches = pitches.flat().filter(p => p >= 50 && p <= 450);
+    let flatPitches = pitches.flat().filter(p => p >= 65 && p <= 380);
     const flatCentroids = centroids.flat().filter(c => c > 0);
 
-    if (flatPitches.length === 0) {
-      flatPitches = [115, 125, 135, 145, 155];
+    if (flatPitches.length < 5) {
+      alert('পর্যাপ্ত কণ্ঠের স্পষ্ট নমুনা পাওয়া যায়নি। অনুগ্রহ করে আরেকবার পড়ুন।');
+      return;
     }
 
     flatPitches.sort((a, b) => a - b);

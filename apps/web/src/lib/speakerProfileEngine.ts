@@ -168,8 +168,10 @@ export function setSpeakerLockEnabled(tenantId: string, enabled: boolean): void 
 }
 
 /**
- * Autocorrelation Algorithm to extract Fundamental Frequency (Pitch / F0 in Hz)
- * Range: 75 Hz to 350 Hz (Standard human vocal range)
+ * High-Precision Autocorrelation Algorithm with Parabolic Interpolation
+ * Accurately extracts Fundamental Frequency (Pitch / F0 in Hz) for human vocal recognition
+ * Rejects fan hum, room reverberation, and unvoiced laptop audio.
+ * Human vocal fundamental frequency range: 65 Hz to 380 Hz.
  */
 export function extractPitchFromTimeDomain(
   timeDomainData: Float32Array,
@@ -179,29 +181,29 @@ export function extractPitchFromTimeDomain(
 
   // 1. Calculate Root Mean Square (RMS) energy
   let sum = 0;
-  for (let i = 0; i < bufferSize; i += 2) {
+  for (let i = 0; i < bufferSize; i++) {
     const val = timeDomainData[i];
     sum += val * val;
   }
-  const rms = Math.sqrt(sum / (bufferSize / 2));
+  const rms = Math.sqrt(sum / bufferSize);
 
-  // If energy is too low (complete silence / ambient mic noise floor), reject
-  if (rms < 0.001) {
+  // Reject silence or low ambient mic noise floor (< 0.005)
+  if (rms < 0.005) {
     return null;
   }
 
-  // 2. Normalized Autocorrelation (human vocal pitch: 60 Hz to 420 Hz)
-  const minLag = Math.floor(sampleRate / 420);
-  const maxLag = Math.floor(sampleRate / 60);
+  // 2. Normalized Autocorrelation across human vocal lags (65 Hz to 380 Hz)
+  const minLag = Math.floor(sampleRate / 380);
+  const maxLag = Math.floor(sampleRate / 65);
 
   let bestLag = -1;
   let maxNormCorr = -1;
 
-  for (let lag = minLag; lag <= maxLag; lag += 2) {
+  for (let lag = minLag; lag <= maxLag; lag++) {
     let corr = 0;
     let normX = 0;
     let normY = 0;
-    for (let i = 0; i < bufferSize - lag; i += 4) {
+    for (let i = 0; i < bufferSize - lag; i += 2) {
       const x = timeDomainData[i];
       const y = timeDomainData[i + lag];
       corr += x * y;
@@ -209,28 +211,8 @@ export function extractPitchFromTimeDomain(
       normY += y * y;
     }
     const denom = Math.sqrt(normX * normY);
-    const score = denom > 0.0001 ? corr / denom : 0;
-    if (score > maxNormCorr) {
-      maxNormCorr = score;
-      bestLag = lag;
-    }
-  }
-
-  // Fine refinement pass around bestLag
-  if (bestLag > minLag && bestLag < maxLag) {
-    for (let lag = Math.max(minLag, bestLag - 2); lag <= Math.min(maxLag, bestLag + 2); lag++) {
-      let corr = 0;
-      let normX = 0;
-      let normY = 0;
-      for (let i = 0; i < bufferSize - lag; i += 2) {
-        const x = timeDomainData[i];
-        const y = timeDomainData[i + lag];
-        corr += x * y;
-        normX += x * x;
-        normY += y * y;
-      }
-      const denom = Math.sqrt(normX * normY);
-      const score = denom > 0.0001 ? corr / denom : 0;
+    if (denom > 0.0001) {
+      const score = corr / denom;
       if (score > maxNormCorr) {
         maxNormCorr = score;
         bestLag = lag;
@@ -238,33 +220,36 @@ export function extractPitchFromTimeDomain(
     }
   }
 
-  // Octave Subharmonic Correction
-  if (bestLag > 0 && maxNormCorr >= 0.20) {
-    for (const div of [4, 3, 2]) {
-      const subLag = Math.round(bestLag / div);
-      if (subLag >= minLag) {
-        let corr = 0;
-        let normX = 0;
-        let normY = 0;
-        for (let i = 0; i < bufferSize - subLag; i += 2) {
+  // A genuine, nearby human voice exhibits strong periodic autocorrelation (clarity >= 0.38)
+  // Laptop music / TV chatter / distant reflections have lower correlation (< 0.30)
+  if (bestLag > 0 && maxNormCorr >= 0.38) {
+    // Parabolic interpolation for sub-sample accuracy
+    let delta = 0;
+    if (bestLag > minLag && bestLag < maxLag) {
+      const getScore = (l: number) => {
+        let c = 0, nx = 0, ny = 0;
+        for (let i = 0; i < bufferSize - l; i += 2) {
           const x = timeDomainData[i];
-          const y = timeDomainData[i + subLag];
-          corr += x * y;
-          normX += x * x;
-          normY += y * y;
+          const y = timeDomainData[i + l];
+          c += x * y;
+          nx += x * x;
+          ny += y * y;
         }
-        const denom = Math.sqrt(normX * normY);
-        const subScore = denom > 0.0001 ? corr / denom : 0;
-        if (subScore >= maxNormCorr * 0.72 && subScore >= 0.18) {
-          bestLag = subLag;
-          maxNormCorr = subScore;
-          break;
-        }
+        const d = Math.sqrt(nx * ny);
+        return d > 0.0001 ? c / d : 0;
+      };
+      const alpha = getScore(bestLag - 1);
+      const beta = maxNormCorr;
+      const gamma = getScore(bestLag + 1);
+      const denom = 2 * (alpha - 2 * beta + gamma);
+      if (Math.abs(denom) > 0.00001) {
+        delta = (alpha - gamma) / denom;
       }
     }
 
-    const pitch = sampleRate / bestLag;
-    if (pitch >= 60 && pitch <= 420) {
+    const trueLag = bestLag + delta;
+    const pitch = sampleRate / trueLag;
+    if (pitch >= 65 && pitch <= 380) {
       return { pitch: Math.round(pitch), clarity: Math.min(1, Math.max(0.1, maxNormCorr)) };
     }
   }
@@ -279,24 +264,23 @@ export function extractSpectralCentroid(
   frequencyData: Uint8Array,
   sampleRate: number
 ): number {
-  let numerator = 0;
-  let denominator = 0;
-  const binSize = (sampleRate / 2) / frequencyData.length;
+  let num = 0;
+  let den = 0;
+  const binCount = frequencyData.length;
+  const binSize = (sampleRate / 2) / binCount;
 
-  for (let i = 0; i < frequencyData.length; i++) {
-    const magnitude = frequencyData[i];
+  for (let i = 0; i < binCount; i++) {
+    const mag = frequencyData[i];
     const freq = i * binSize;
-    numerator += freq * magnitude;
-    denominator += magnitude;
+    num += freq * mag;
+    den += mag;
   }
 
-  if (denominator === 0) return 0;
-  return Math.round(numerator / denominator);
+  return den > 0 ? Math.round(num / den) : 0;
 }
 
 /**
- * Core Live Verifier:
- * Checks whether live audio strictly belongs to enrolled shopkeeper/staff
+ * Real-time Speech Frame Profile
  * Rejects laptop audio, TV dialogue, music, and other people speaking.
  */
 export interface VoicedFrame {
@@ -309,7 +293,7 @@ export interface VoicedFrame {
 
 // Circular buffer of voiced frames collected continuously during live microphone audio
 const rollingVoicedFrames: VoicedFrame[] = [];
-const BUFFER_WINDOW_MS = 4500; // keep frames from the last 4.5 seconds
+const BUFFER_WINDOW_MS = 5000; // keep frames from the last 5.0 seconds
 let lastPitchFrameTime = 0;
 
 /**
@@ -328,17 +312,17 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
 
     // Compute RMS
     let sum = 0;
-    for (let i = 0; i < timeData.length; i += 4) {
+    for (let i = 0; i < timeData.length; i += 2) {
       sum += timeData[i] * timeData[i];
     }
-    const rms = Math.sqrt(sum / (timeData.length / 4));
+    const rms = Math.sqrt(sum / (timeData.length / 2));
 
-    // Reject low ambient hum / silence
-    if (rms < 0.001) return;
+    // Reject faint background hum / laptop fan noise (RMS threshold 0.005)
+    if (rms < 0.005) return;
 
     // Detect pitch
     const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
-    if (!pitchRes || pitchRes.pitch < 60 || pitchRes.pitch > 420) return;
+    if (!pitchRes || pitchRes.pitch < 65 || pitchRes.pitch > 380) return;
 
     const freqData = new Uint8Array(analyserNode.frequencyBinCount);
     analyserNode.getByteFrequencyData(freqData);
@@ -412,13 +396,13 @@ export function evaluateUtteranceSpeaker(
     recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= now - 5500);
   }
 
-  // If no vocal frames were detected at all:
-  if (recentFrames.length === 0) {
+  // If fewer than 2 vocal frames were detected at all:
+  // Reject immediately! (Laptop sound was cancelled by AEC or audio was ambient noise/silence)
+  if (recentFrames.length < 2) {
     return {
-      isAuthorized: true,
-      confidence: 85,
-      reason: 'authorized',
-      matchedSpeaker: profiles[0]
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
     };
   }
 
@@ -440,47 +424,44 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
-    // Natural human speech inflection during conversational Bengali commands varies +-45 to 60 Hz around mean
-    const pitchMargin = 60;
-    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 20, profile.pitchMean - pitchMargin));
-    const upperPitch = Math.min(420, Math.max(profile.pitchMax + 30, profile.pitchMean + pitchMargin));
+    // Registered speaker's pitch window:
+    // Natural human pitch during shop speech stays within [pitchMin - 15, pitchMax + 18]
+    const lowerPitch = Math.max(65, profile.pitchMin - 15);
+    const upperPitch = Math.min(380, profile.pitchMax + 18);
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
     const ratio = count / recentFrames.length;
 
-    if (count > 0) {
+    if (count >= 2 && ratio >= 0.35) {
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Timbre check: Only filter out extreme synthetic/alien frequencies (e.g. sharp TV sirens)
-      if (profile.centroidMean && profile.centroidMean > 0) {
-        const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1600) {
-          continue;
+      // Must be within 28 Hz of the owner's enrolled mean
+      if (diffFromMean <= 28) {
+        // Timbre check: Filter out sharp laptop sirens or metallic reflections
+        if (profile.centroidMean && profile.centroidMean > 0) {
+          const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1300) {
+            continue;
+          }
         }
-      }
 
-      // Allow natural expressive pitch inflection up to 55 Hz
-      if (diffFromMean > 55) {
-        continue;
-      }
-
-      const conf = Math.max(50, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean))));
-
-      if (!bestMatch || ratio > bestMatch.matchRatio || (ratio === bestMatch.matchRatio && count > bestMatch.matchingCount)) {
-        bestMatch = {
-          profile,
-          matchingCount: count,
-          matchRatio: ratio,
-          avgPitch,
-          confidence: conf
-        };
+        const conf = Math.max(65, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.3))));
+        if (!bestMatch || conf > bestMatch.confidence) {
+          bestMatch = {
+            profile,
+            matchingCount: count,
+            matchRatio: ratio,
+            avgPitch,
+            confidence: conf
+          };
+        }
       }
     }
   }
 
-  if (bestMatch && bestMatch.matchingCount >= 1 && (bestMatch.matchRatio >= 0.18 || recentFrames.length <= 3)) {
+  if (bestMatch && bestMatch.confidence >= 60) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -489,22 +470,8 @@ export function evaluateUtteranceSpeaker(
     };
   }
 
-  // Graceful tolerance for registered owner/staff: if overall spoken pitch is near an enrolled user
+  // Not matched: laptop sound, TV dialogue, music, or other people speaking!
   const overallAvgPitch = Math.round(recentFrames.reduce((sum, f) => sum + f.pitch, 0) / recentFrames.length);
-  const closestProfile = candidateProfiles.reduce((prev, curr) => {
-    return Math.abs(curr.pitchMean - overallAvgPitch) < Math.abs(prev.pitchMean - overallAvgPitch) ? curr : prev;
-  }, candidateProfiles[0]);
-
-  if (closestProfile && Math.abs(closestProfile.pitchMean - overallAvgPitch) <= 65) {
-    return {
-      isAuthorized: true,
-      matchedSpeaker: closestProfile,
-      confidence: 75,
-      pitchDetected: overallAvgPitch
-    };
-  }
-
-  // Unauthorized: stranger, laptop video, or TV audio outside enrolled profiles!
   return {
     isAuthorized: false,
     confidence: Math.round((bestMatch?.matchRatio || 0) * 100),
@@ -538,12 +505,12 @@ export function verifyLiveSpeaker(
 
   // 1. Check Energy Level (Near-field vs distant TV/laptop audio)
   let sum = 0;
-  for (let i = 0; i < timeData.length; i += 4) {
+  for (let i = 0; i < timeData.length; i += 2) {
     sum += timeData[i] * timeData[i];
   }
-  const rms = Math.sqrt(sum / (timeData.length / 4));
+  const rms = Math.sqrt(sum / (timeData.length / 2));
 
-  if (rms < 0.0035) {
+  if (rms < 0.005) {
     return {
       isAuthorized: false,
       confidence: 0,
@@ -572,19 +539,21 @@ export function verifyLiveSpeaker(
   }
 
   for (const profile of candidateProfiles) {
-    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 20, profile.pitchMean - 45));
-    const upperPitch = Math.min(380, Math.max(profile.pitchMax + 25, profile.pitchMean + 45));
+    const lowerPitch = Math.max(65, profile.pitchMin - 15);
+    const upperPitch = Math.min(380, profile.pitchMax + 18);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      const confidence = Math.max(70, Math.round(100 - (diff * 1.5)));
+      if (diff <= 28) {
+        const confidence = Math.max(70, Math.round(100 - (diff * 1.5)));
 
-      return {
-        isAuthorized: true,
-        matchedSpeaker: profile,
-        confidence,
-        pitchDetected: livePitch
-      };
+        return {
+          isAuthorized: true,
+          matchedSpeaker: profile,
+          confidence,
+          pitchDetected: livePitch
+        };
+      }
     }
   }
 

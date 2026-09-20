@@ -88,6 +88,9 @@ export default function VoiceAssistant() {
       } catch (e) {}
       recognitionRef.current = null;
     }
+    try {
+      voiceProximityManager.stop();
+    } catch (e) {}
   };
 
   const cancelVoice = () => {
@@ -147,6 +150,9 @@ export default function VoiceAssistant() {
       recognition.onresult = (event: any) => {
         const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
+
+        const tenantKey = tenant?.id || 'default';
+        pingVoiceVerification(tenantKey);
 
         resetInactivityWatchdog();
         latestTranscriptRef.current = fullTranscript;
@@ -256,6 +262,9 @@ export default function VoiceAssistant() {
     setIsListening(true);
     setIsProcessing(false);
 
+    // Ensure Web Audio proximity & vocal biometric monitor is active with clean AEC to cancel laptop speaker playback
+    ensureBiometricMonitoring().catch(() => {});
+
     resetInactivityWatchdog();
     spawnRecognitionInstance();
   };
@@ -283,9 +292,9 @@ export default function VoiceAssistant() {
         playWarningSound();
         setFeedbackType('error');
         if (speakerCheck.reason === 'background_noise_or_tv') {
-          setFeedbackText('🛡️ টিভি বা পেছনের শব্দ ফিল্টার হয়েছে (বাতিল)');
+          setFeedbackText('🛡️ ল্যাপটপ বা পেছনের শব্দ ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ (শুধু নিবন্ধিত মালিক ও কর্মচারীদের কণ্ঠ চলবে)');
+          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ বা ল্যাপটপ সাউন্ড বাতিল (শুধু নিবন্ধিত মালিকের কথা চলবে)');
         }
         autoDismissTimerRef.current = setTimeout(() => {
           setFeedbackType(null);

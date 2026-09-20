@@ -122,13 +122,12 @@ class VoiceProximityManager {
         await this.audioContext.resume();
       }
 
-      // Safe getUserMedia: Try disabling autoGainControl for near-field precision; fallback to standard if device rejects
+      // Clean getUserMedia with Echo Cancellation (cancels laptop speaker audio) and Noise Suppression
       try {
         this.mediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: false
+            noiseSuppression: true
           }
         });
       } catch (e) {
