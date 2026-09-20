@@ -454,20 +454,21 @@ export default function ShopkeeperDashboard() {
             background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
             color: '#ffffff',
             borderRadius: '16px',
-            padding: '11px 13px',
+            padding: '11px 12px',
             textDecoration: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '9px',
             boxShadow: '0 4px 12px rgba(5, 150, 105, 0.18)',
-            transition: 'transform 0.15s ease'
+            transition: 'transform 0.15s ease',
+            minWidth: 0
           }}
           className="clickable-card"
         >
-          <span style={{ fontSize: '24px' }}>🔢</span>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>ক্যালকুলেটর</div>
-            <div style={{ fontSize: '10px', color: '#a7f3d0' }}>টাকা দিয়ে বিক্রি</div>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}>🔢</span>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontWeight: '900', fontSize: '12.5px', whiteSpace: 'nowrap' }}>ক্যালকুলেটর</div>
+            <div style={{ fontSize: '10px', color: '#a7f3d0', whiteSpace: 'nowrap' }}>টাকা দিয়ে বিক্রি</div>
           </div>
         </Link>
 
@@ -478,20 +479,21 @@ export default function ShopkeeperDashboard() {
             background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
             color: '#ffffff',
             borderRadius: '16px',
-            padding: '11px 13px',
+            padding: '11px 12px',
             textDecoration: 'none',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '9px',
             boxShadow: '0 4px 12px rgba(79, 70, 229, 0.18)',
-            transition: 'transform 0.15s ease'
+            transition: 'transform 0.15s ease',
+            minWidth: 0
           }}
           className="clickable-card"
         >
-          <span style={{ fontSize: '24px' }}>🎙️</span>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>ভয়েস বিলিং</div>
-            <div style={{ fontSize: '10px', color: '#c7d2fe' }}>মুখে বলে বিক্রি</div>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}>🎙️</span>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontWeight: '900', fontSize: '12.5px', whiteSpace: 'nowrap' }}>ভয়েস বিলিং</div>
+            <div style={{ fontSize: '10px', color: '#c7d2fe', whiteSpace: 'nowrap' }}>মুখে বলে বিক্রি</div>
           </div>
         </Link>
 
@@ -506,20 +508,21 @@ export default function ShopkeeperDashboard() {
             border: '1.5px solid #10b981',
             color: '#065f46',
             borderRadius: '16px',
-            padding: '11px 13px',
+            padding: '11px 12px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '9px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            textAlign: 'left'
+            textAlign: 'left',
+            minWidth: 0
           }}
           className="clickable-card"
         >
-          <span style={{ fontSize: '24px' }}>🛡️</span>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '13px' }}>কণ্ঠ রেজিস্টার ও লক</div>
-            <div style={{ fontSize: '10px', color: '#059669' }}>টিভি ও নয়েজ শিল্ড</div>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}>🛡️</span>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontWeight: '900', fontSize: '12px', whiteSpace: 'nowrap' }}>কণ্ঠ ও ভয়েস লক</div>
+            <div style={{ fontSize: '10px', color: '#059669', whiteSpace: 'nowrap' }}>টিভি ও নয়েজ শিল্ড</div>
           </div>
         </button>
 
@@ -534,20 +537,21 @@ export default function ShopkeeperDashboard() {
             color: '#38bdf8',
             border: '1.5px solid #1e293b',
             borderRadius: '16px',
-            padding: '11px 13px',
+            padding: '11px 12px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '9px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            textAlign: 'left'
+            textAlign: 'left',
+            minWidth: 0
           }}
           className="clickable-card"
         >
-          <span style={{ fontSize: '24px' }}>🌙</span>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '13px', color: '#ffffff' }}>কাউন্টার স্লিপ মোড</div>
-            <div style={{ fontSize: '10px', color: '#38bdf8' }}>স্ক্রিন অফে শুনবে</div>
+          <span style={{ fontSize: '22px', flexShrink: 0 }}>🌙</span>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div style={{ fontWeight: '900', fontSize: '12px', color: '#ffffff', whiteSpace: 'nowrap' }}>কাউন্টার স্লিপ মোড</div>
+            <div style={{ fontSize: '10px', color: '#38bdf8', whiteSpace: 'nowrap' }}>স্ক্রিন অফে শুনবে</div>
           </div>
         </button>
       </div>

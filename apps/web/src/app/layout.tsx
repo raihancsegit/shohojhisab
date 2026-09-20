@@ -204,21 +204,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
               <button
                 type="button"
                 onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
-                  borderRadius: '11px',
-                  width: '36px',
-                  height: '36px',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '18px',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                  backdropFilter: 'blur(8px)'
-                }}
+                className="header-hamburger-btn"
                 title="মেনু ড্রয়ার খুলুন"
               >
                 ☰
@@ -226,7 +212,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
             )}
 
             {userRole === 'shopkeeper' && tenant ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: '1 1 auto' }}>
                 <button
                   type="button"
                   onClick={() => { triggerHaptic('light'); setShowShopSwitchModal(true); }}
@@ -237,34 +223,25 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '9px',
+                    gap: '7px',
                     textAlign: 'left',
-                    color: 'inherit'
+                    color: 'inherit',
+                    minWidth: 0,
+                    flex: '1 1 auto'
                   }}
                   title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
                 >
-                  <div style={{
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '11px',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '19px',
-                    color: '#4f46e5',
-                    boxShadow: '0 3px 10px rgba(0,0,0,0.18)',
-                    flexShrink: 0
-                  }}>
+                  <div className="header-shop-icon">
                     {theme.icon}
                   </div>
                   <div className="header-shop-text">
-                    <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>{tenant.shopName || 'সহজ হিসাব'}</span>
-                      <span style={{ fontSize: '9px', opacity: 0.75, color: '#93c5fd' }}>▼</span>
+                      <span style={{ fontSize: '8px', opacity: 0.75, color: '#93c5fd' }}>▼</span>
                     </h1>
                     <div className="header-shop-meta">
                       <span className="header-shop-badge">
-                        <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px', boxShadow: '0 0 4px #4ade80' }}></span>
+                        <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '3px', boxShadow: '0 0 4px #4ade80' }}></span>
                         {theme.name}
                       </span>
                       <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
@@ -275,8 +252,8 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 </button>
               </div>
             ) : userRole === 'admin' ? (
-              <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, overflow: 'hidden' }}>
-                <div style={{ background: '#ffffff', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', fontSize: '19px', color: '#e11d48', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+              <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ background: '#ffffff', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', fontSize: '17px', color: '#e11d48', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
                   👑
                 </div>
                 <div className="header-shop-text">
@@ -285,8 +262,8 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 </div>
               </Link>
             ) : (
-              <Link href="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, overflow: 'hidden' }}>
-                <div style={{ background: '#ffffff', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', fontSize: '19px', color: '#4f46e5', fontWeight: '900', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+              <Link href="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ background: '#ffffff', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', fontSize: '17px', color: '#4f46e5', fontWeight: '900', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
                   S
                 </div>
                 <div className="header-shop-text">
@@ -313,16 +290,16 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   className={`header-role-btn ${activeRoleMode === 'owner' ? 'owner-mode' : ''}`}
                   title="ক্যাশিয়ার বা ব্যবহারকারী শিফট পরিবর্তন করুন"
                 >
-                  <span style={{ fontSize: '13px' }}>{activeRoleMode === 'owner' ? '👑' : '👤'}</span>
+                  <span style={{ fontSize: '12px' }}>{activeRoleMode === 'owner' ? '👑' : '👤'}</span>
                   <span>{currentStaffUser && !currentStaffUser.isOwner ? currentStaffUser.name.split(' ')[0] : (activeRoleMode === 'owner' ? 'মালিক' : 'স্টাফ')}</span>
-                  <span style={{ fontSize: '8.5px', opacity: 0.8 }}>▼</span>
+                  <span style={{ fontSize: '8px', opacity: 0.8 }}>▼</span>
                 </button>
 
-                {/* Soundbox Voice Announcer Toggle */}
+                {/* Soundbox Voice Announcer Toggle (Desktop Only) */}
                 <button
                   type="button"
                   onClick={toggleSoundbox}
-                  className="header-icon-btn"
+                  className="header-icon-btn desktop-only"
                   style={{
                     background: isSoundboxEnabled
                       ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(79, 70, 229, 0.5) 100%)'
@@ -337,14 +314,14 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   {isSoundboxEnabled ? '🔊' : '🔈'}
                 </button>
 
-                {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button */}
+                {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button (Desktop Only) */}
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
                     setShowVoiceEnrollModal(true);
                   }}
-                  className="header-icon-btn"
+                  className="header-icon-btn desktop-only"
                   style={{
                     background: 'rgba(16, 185, 129, 0.18)',
                     border: '1px solid rgba(52, 211, 153, 0.45)',
@@ -364,8 +341,8 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   🔔
                   <span style={{
                     position: 'absolute',
-                    top: '5px',
-                    right: '5px',
+                    top: '4px',
+                    right: '4px',
                     width: '6px',
                     height: '6px',
                     borderRadius: '50%',
