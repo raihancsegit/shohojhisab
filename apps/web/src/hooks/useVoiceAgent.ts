@@ -345,7 +345,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      recognition.continuous = false; // Fast finalization on speech pause
+      recognition.continuous = true; // Continuous listening: don't abort on 1-second pause
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
@@ -367,7 +367,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? 220 : 600;
+        const waitMs = isFinal ? 400 : 850;
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
             executeCommand(latestTranscriptRef.current.trim());
@@ -416,15 +416,21 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
           return;
         }
 
-        // If no speech was detected, reset cleanly
+        // If user is still listening (e.g. mobile Chrome auto-stopped before user began talking),
+        // seamlessly restart recognition so it doesn't give up after 1-2 seconds of quietness!
         if (isListeningRef.current && !isProcessing) {
-          stopListeningOnly();
-          setFeedbackType('error');
-          setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
-          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
-          autoDismissTimerRef.current = setTimeout(() => {
-            setFeedbackType(null);
-          }, 2500);
+          try {
+            recognition.start();
+            return;
+          } catch (e) {
+            stopListeningOnly();
+            setFeedbackType('error');
+            setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
+            if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+            autoDismissTimerRef.current = setTimeout(() => {
+              setFeedbackType(null);
+            }, 2500);
+          }
         }
       };
 

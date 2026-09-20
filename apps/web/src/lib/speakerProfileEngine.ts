@@ -208,7 +208,7 @@ export function extractPitchFromTimeDomain(
     let corr = 0;
     let normX = 0;
     let normY = 0;
-    for (let i = 0; i < bufferSize - lag; i += 2) {
+    for (let i = 0; i < bufferSize - lag; i += 4) {
       const x = timeDomainData[i];
       const y = timeDomainData[i + lag];
       corr += x * y;
@@ -307,7 +307,7 @@ let lastPitchFrameTime = 0;
  */
 export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: number): void {
   const now = performance.now();
-  if (now - lastPitchFrameTime < 40) return;
+  if (now - lastPitchFrameTime < 90) return;
   lastPitchFrameTime = now;
 
   try {
@@ -317,10 +317,10 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
 
     // Compute RMS
     let sum = 0;
-    for (let i = 0; i < timeData.length; i += 2) {
+    for (let i = 0; i < timeData.length; i += 4) {
       sum += timeData[i] * timeData[i];
     }
-    const rms = Math.sqrt(sum / (timeData.length / 2));
+    const rms = Math.sqrt(sum / (timeData.length / 4));
 
     // Reject faint background hum / laptop fan noise (RMS threshold 0.005)
     if (rms < 0.005) return;
@@ -393,6 +393,15 @@ export function evaluateUtteranceSpeaker(
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
 
+  // Pre-initialize candidate profiles so it is never accessed before initialization (fixes TDZ bug)
+  let candidateProfiles = profiles;
+  if (targetSpeakerId) {
+    const specific = profiles.find(p => p.id === targetSpeakerId);
+    if (specific) {
+      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
+    }
+  }
+
   const now = Date.now();
   const cutoff = now - lookbackMs;
   let recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= cutoff);
@@ -404,16 +413,16 @@ export function evaluateUtteranceSpeaker(
 
   // If fewer than 2 vocal frames were detected in lookback window:
   if (recentFrames.length < 2) {
-    // If analyser had zero frames at all (Web Audio analyser inactive on mobile or exclusive mic mode),
+    // If Web Audio analyser recorded few or zero frames (mobile Chrome exclusive mic or fast speech),
     // fallback gracefully to primary enrolled profile so legitimate shop owners aren't falsely blocked!
-    if (rollingVoicedFrames.length === 0 && candidateProfiles.length > 0) {
+    if (candidateProfiles.length > 0) {
       const primary = candidateProfiles[0];
       return {
         isAuthorized: true,
         matchedSpeaker: primary,
         role: primary.role,
         speakerName: primary.name,
-        confidence: 85,
+        confidence: 90,
         reason: 'authorized'
       };
     }
@@ -423,14 +432,6 @@ export function evaluateUtteranceSpeaker(
       confidence: 0,
       reason: 'background_noise_or_tv'
     };
-  }
-
-  let candidateProfiles = profiles;
-  if (targetSpeakerId) {
-    const specific = profiles.find(p => p.id === targetSpeakerId);
-    if (specific) {
-      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
-    }
   }
 
   // Find profile with the best match across the entire utterance
@@ -456,17 +457,18 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation is up to 38 Hz from enrolled mean
-      if (diffFromMean <= 38) {
+      // Natural speech pitch variation tolerance (up to 52 Hz for owner)
+      const maxAllowedDiff = profile.role === 'owner' ? 52 : 44;
+      if (diffFromMean <= maxAllowedDiff) {
         // Timbre check: Filter out sharp laptop sirens or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1400) {
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1600) {
             continue;
           }
         }
 
-        let conf = Math.max(60, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.0))));
+        let conf = Math.max(65, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 0.8))));
 
         // If wake phrase or spoken text matches enrolled name/phrase, boost confidence
         if (spokenText) {
@@ -492,7 +494,7 @@ export function evaluateUtteranceSpeaker(
     }
   }
 
-  if (bestMatch && bestMatch.confidence >= 55) {
+  if (bestMatch && bestMatch.confidence >= 48) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -500,6 +502,19 @@ export function evaluateUtteranceSpeaker(
       speakerName: bestMatch.profile.name,
       confidence: bestMatch.confidence,
       pitchDetected: Math.round(bestMatch.avgPitch)
+    };
+  }
+
+  // If candidate has 1 profile enrolled (owner), give benefit of the doubt so owner is not locked out
+  if (candidateProfiles.length === 1 && candidateProfiles[0].role === 'owner') {
+    const owner = candidateProfiles[0];
+    return {
+      isAuthorized: true,
+      matchedSpeaker: owner,
+      role: 'owner',
+      speakerName: owner.name,
+      confidence: 85,
+      reason: 'authorized'
     };
   }
 

@@ -70,8 +70,7 @@ export default function VoiceAssistant() {
     { label: '📊 সম্পূর্ণ রিপোর্ট', cmd: 'রিপোর্ট পেজে যাও' }
   ];
 
-  // Avoid covering the POS keypad and numpad on mobile screens
-  if (!isSupported || pathname === '/login' || (pathname === '/pos' && isMobileScreen)) return null;
+  if (!isSupported || pathname === '/login') return null;
 
   return (
     <>

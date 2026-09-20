@@ -28,6 +28,7 @@ class VoiceProximityManager {
   private currentVolume: number = 0;
   private isGateOpen: boolean = false;
   private lastNearSpeechTime: number = 0;
+  private lastNotifyTime: number = 0;
   private isActive: boolean = false;
 
   // Calibrated RMS energy thresholds (0 - 100 scale)
@@ -175,6 +176,7 @@ class VoiceProximityManager {
         const threshold = this.getThreshold();
         const now = Date.now();
 
+        const prevGate = this.isGateOpen;
         if (rms >= threshold) {
           this.lastNearSpeechTime = now;
           this.isGateOpen = true;
@@ -193,7 +195,10 @@ class VoiceProximityManager {
           }
         }
 
-        this.notify();
+        if (this.isGateOpen !== prevGate || now - this.lastNotifyTime >= 120) {
+          this.lastNotifyTime = now;
+          this.notify();
+        }
         this.animationFrameId = requestAnimationFrame(loop);
       };
 
