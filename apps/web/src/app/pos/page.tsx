@@ -3407,10 +3407,10 @@ export default function PosPage() {
   };
 
   return (
-    <div className="app-container" style={{ paddingBottom: '160px' }}>
+    <div className="app-container" style={{ paddingBottom: '160px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
       
       {/* 🎙️ ULTIMATE HANDS-FREE VOICE POS & 🌙 COUNTER SLEEP BANNER */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'stretch', maxWidth: '100%', minWidth: 0 }}>
         <div
           onClick={() => {
             triggerHaptic('medium');
@@ -3418,43 +3418,45 @@ export default function PosPage() {
           }}
           style={{
             flex: 1,
+            minWidth: 0,
             background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
             color: '#ffffff',
             borderRadius: '16px',
-            padding: '11px 14px',
+            padding: '10px 12px',
             cursor: 'pointer',
             boxShadow: '0 4px 14px rgba(5, 150, 105, 0.22)',
-            transition: 'transform 0.15s ease'
+            transition: 'transform 0.15s ease',
+            overflow: 'hidden'
           }}
           className="clickable-card"
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px', flexWrap: 'nowrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1, overflow: 'hidden' }}>
               <div style={{
-                width: '32px',
-                height: '32px',
+                width: '30px',
+                height: '30px',
                 borderRadius: '50%',
                 background: '#ffffff',
                 color: '#059669',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: '16px',
+                fontSize: '15px',
                 flexShrink: 0,
-                boxShadow: '0 0 0 4px rgba(255, 255, 255, 0.2)'
+                boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.2)'
               }}>
                 🎙️
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-                <strong style={{ fontSize: 'clamp(13px, 3.8vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+                <strong style={{ fontSize: 'clamp(12px, 3.5vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
                   ভয়েস মেমো
                 </strong>
-                <span style={{ fontSize: '9.5px', background: '#fef08a', color: '#854d0e', padding: '1px 6px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
+                <span style={{ fontSize: '9px', background: '#fef08a', color: '#854d0e', padding: '1px 5px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
                   লাইভ মেমো
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={(e) => {
@@ -3466,14 +3468,14 @@ export default function PosPage() {
                   background: 'rgba(255, 255, 255, 0.25)',
                   color: '#ffffff',
                   border: '1px solid rgba(255, 255, 255, 0.45)',
-                  padding: '4px 9px',
+                  padding: '4px 8px',
                   borderRadius: '8px',
                   fontWeight: '900',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '3px',
                   whiteSpace: 'nowrap'
                 }}
                 title="ভয়েস টেস্ট ল্যাব ও মাইক্রোফোন পরীক্ষণ"
@@ -3485,15 +3487,15 @@ export default function PosPage() {
                 style={{
                   background: '#ffffff',
                   color: '#047857',
-                  padding: '5px 11px',
+                  padding: '4px 9px',
                   borderRadius: '8px',
                   fontWeight: '900',
-                  fontSize: '11.5px',
+                  fontSize: '11px',
                   flexShrink: 0,
                   boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '3px',
                   whiteSpace: 'nowrap'
                 }}
               >
@@ -3501,7 +3503,7 @@ export default function PosPage() {
               </span>
             </div>
           </div>
-          <div style={{ fontSize: '11.5px', color: '#a7f3d0', paddingLeft: '40px', lineHeight: 1.35 }}>
+          <div style={{ fontSize: '11px', color: '#a7f3d0', paddingLeft: '36px', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             বলুন: <em>&quot;{getIndustryVoiceConfig(tenant?.industryId).quickSaleBannerHint}&quot;</em>
           </div>
         </div>
@@ -3515,20 +3517,21 @@ export default function PosPage() {
             color: isCounterSleepActive ? '#38bdf8' : '#334155',
             border: isCounterSleepActive ? '1.5px solid #38bdf8' : '1.5px solid #cbd5e1',
             borderRadius: '16px',
-            padding: '8px 12px',
+            padding: '6px 10px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            minWidth: '82px',
+            minWidth: '70px',
+            flexShrink: 0,
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             transition: 'all 0.2s ease'
           }}
           title="কাউন্টার স্লিপ মোড (স্ক্রিন কালো হলেও শুনবে)"
         >
-          <span style={{ fontSize: '20px' }}>{isCounterSleepActive ? '🌙' : '💤'}</span>
-          <span style={{ fontSize: '11px', fontWeight: '900', marginTop: '3px', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '18px' }}>{isCounterSleepActive ? '🌙' : '💤'}</span>
+          <span style={{ fontSize: '10.5px', fontWeight: '900', marginTop: '2px', whiteSpace: 'nowrap' }}>
             {isCounterSleepActive ? 'স্লিপ অন' : 'স্লিপ'}
           </span>
         </button>
@@ -3543,20 +3546,31 @@ export default function PosPage() {
         gap: '6px',
         marginBottom: '10px',
         background: '#ffffff',
-        padding: '6px 12px',
+        padding: '6px 10px',
         borderRadius: '14px',
         border: '1.5px solid #e2e8f0',
         boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-        flexWrap: 'wrap'
+        maxWidth: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '15px' }}>👥</span>
-          <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#334155', whiteSpace: 'nowrap' }}>
-            কাউন্টার স্লট:
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+          <span style={{ fontSize: '14px' }}>👥</span>
+          <span style={{ fontSize: '11px', fontWeight: '900', color: '#334155', whiteSpace: 'nowrap' }}>
+            কাউন্টার:
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', alignItems: 'center' }}>
+        <div style={{
+          display: 'flex',
+          gap: '5px',
+          overflowX: 'auto',
+          alignItems: 'center',
+          minWidth: 0,
+          flex: 1,
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           {[1, 2, 3, 4].map(slotId => {
             const isActive = activeCounterId === slotId;
             const slotData = counterSlots[slotId];
@@ -3570,18 +3584,19 @@ export default function PosPage() {
                 type="button"
                 onClick={() => switchCounterSlot(slotId)}
                 style={{
-                  padding: '5px 11px',
+                  padding: '4px 9px',
                   borderRadius: '10px',
                   border: isActive ? '1.5px solid #059669' : '1px solid #cbd5e1',
                   background: isActive ? '#ecfdf5' : '#ffffff',
                   color: isActive ? '#065f46' : '#64748b',
-                  fontSize: '11.5px',
+                  fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '4px',
                   whiteSpace: 'nowrap',
+                  flexShrink: 0,
                   boxShadow: isActive ? '0 2px 6px rgba(5, 150, 105, 0.18)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
@@ -3592,8 +3607,8 @@ export default function PosPage() {
                   <span style={{
                     background: isActive ? '#059669' : '#64748b',
                     color: '#ffffff',
-                    fontSize: '10px',
-                    padding: '1px 6px',
+                    fontSize: '9.5px',
+                    padding: '1px 5px',
                     borderRadius: '99px',
                     fontWeight: '900'
                   }}>

@@ -66,13 +66,23 @@ export default function VoiceAssistant() {
     };
   }, []);
 
+  const [isMobileScreen, setIsMobileScreen] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileScreen(typeof window !== 'undefined' && window.innerWidth < 900);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const resetInactivityWatchdog = () => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = setTimeout(() => {
       if (isListeningRef.current && !latestTranscriptRef.current.trim()) {
         cancelVoice();
       }
-    }, 14000);
+    }, 5000);
   };
 
   const spawnRecognitionInstance = () => {
@@ -390,13 +400,28 @@ export default function VoiceAssistant() {
     { label: '📊 সম্পূর্ণ রিপোর্ট', cmd: 'রিপোর্ট পেজে যাও' }
   ];
 
-  if (!isSupported || pathname === '/login') return null;
+  // On POS page on mobile screens, avoid covering the POS keypad and numpad actions
+  if (!isSupported || pathname === '/login' || (pathname === '/pos' && isMobileScreen)) return null;
 
   return (
-    <div className="floating-voice-widget">
-      {/* 💬 Live Transcript / Feedback Pop-up */}
+    <>
+      {/* Tap outside to dismiss active listening/feedback popup */}
       {feedbackType && (
-        <div style={{
+        <div
+          onClick={cancelVoice}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9998,
+            background: 'rgba(0, 0, 0, 0.2)'
+          }}
+        />
+      )}
+
+      <div className="floating-voice-widget">
+        {/* 💬 Live Transcript / Feedback Pop-up */}
+        {feedbackType && (
+          <div style={{
           background: feedbackType === 'error'
             ? 'linear-gradient(135deg, #991b1b, #7f1d1d)'
             : feedbackType === 'success'
@@ -640,5 +665,6 @@ export default function VoiceAssistant() {
         </span>
       </button>
     </div>
+    </>
   );
 }

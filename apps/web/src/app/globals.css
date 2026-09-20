@@ -69,6 +69,13 @@ html.dark, body.dark, .dark {
   color-scheme: dark;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
+}
+
 html.dark body, body.dark {
   background-color: #090d16 !important;
   color: #f8fafc !important;
@@ -376,16 +383,22 @@ body {
 /* Responsive App Container */
 .app-container {
   max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
   min-height: calc(100vh - 120px);
   position: relative;
   padding: 24px 20px 80px 20px;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 @media (max-width: 899px) {
   .app-container {
     max-width: 100%;
-    padding: 14px 12px 90px 12px;
+    width: 100%;
+    padding: 14px 10px 90px 10px;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
   .desktop-nav-menu {
     display: none !important;

@@ -381,29 +381,39 @@ export default function VoicePOSCalculatorModal({
       if (validInStockItems.length > 0) {
         playBeep(1100);
         triggerHaptic('success');
-        const newItems = [...itemsRef.current];
+        let nextTotal = 0;
 
-        validInStockItems.forEach((item) => {
-          const existingIdx = newItems.findIndex(i =>
-            (item.productId && i.productId === item.productId) ||
-            ((i.banglaName || i.name).toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
-          );
-          if (existingIdx >= 0) {
-            newItems[existingIdx].quantity += item.quantity;
-            newItems[existingIdx].totalPrice = Math.round(newItems[existingIdx].quantity * newItems[existingIdx].unitPrice * 100) / 100;
-          } else {
-            newItems.push({
-              ...item,
-              id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
-            });
-          }
+        setItems(prevItems => {
+          const updated = [...prevItems];
+          validInStockItems.forEach((item) => {
+            const existingIdx = updated.findIndex(i =>
+              (item.productId && i.productId === item.productId) ||
+              ((i.banglaName || i.name).toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
+            );
+            if (existingIdx >= 0) {
+              const current = updated[existingIdx];
+              const newQty = current.quantity + item.quantity;
+              updated[existingIdx] = {
+                ...current,
+                quantity: newQty,
+                totalPrice: Math.round(newQty * current.unitPrice * 100) / 100
+              };
+            } else {
+              updated.push({
+                ...item,
+                id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
+              });
+            }
+          });
+          itemsRef.current = updated;
+          nextTotal = updated.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
+          return updated;
         });
 
-        setItems(newItems);
-        const newTotal = newItems.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
         const spokenSummary = validInStockItems.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
+        const displayTotal = nextTotal > 0 ? nextTotal : validInStockItems.reduce((acc, i) => acc + i.totalPrice, 0);
 
-        setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${newTotal})`);
+        setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${displayTotal})`);
         speakFeedback(`${spokenSummary} মেমোতে যোগ হয়েছে।`);
       }
       return;
@@ -485,6 +495,7 @@ export default function VoicePOSCalculatorModal({
       if (itemsRef.current.length > 0) {
         const removed = itemsRef.current[itemsRef.current.length - 1];
         const updated = itemsRef.current.slice(0, -1);
+        itemsRef.current = updated;
         setItems(updated);
         playBeep(700);
         triggerHaptic('medium');
@@ -513,6 +524,7 @@ export default function VoicePOSCalculatorModal({
         }
         const updated = [...itemsRef.current];
         updated[lastIdx] = target;
+        itemsRef.current = updated;
         setItems(updated);
         playBeep(1100);
         triggerHaptic('success');
@@ -530,6 +542,7 @@ export default function VoicePOSCalculatorModal({
     if (result.type === 'remove_item' && result.removeItemName) {
       const searchRem = result.removeItemName.toLowerCase();
       const updated = itemsRef.current.filter(i => !i.banglaName.toLowerCase().includes(searchRem) && !i.name.toLowerCase().includes(searchRem));
+      itemsRef.current = updated;
       setItems(updated);
       playBeep(700);
       triggerHaptic('medium');
@@ -756,12 +769,14 @@ export default function VoicePOSCalculatorModal({
     const newQty = Math.max(0.1, Math.round((item.quantity + delta) * 100) / 100);
     item.quantity = newQty;
     item.totalPrice = Math.round(newQty * item.unitPrice * 100) / 100;
+    itemsRef.current = newItems;
     setItems(newItems);
     triggerHaptic('light');
   };
 
   const removeItem = (index: number) => {
     const updated = items.filter((_, i) => i !== index);
+    itemsRef.current = updated;
     setItems(updated);
     triggerHaptic('medium');
     playBeep(700);

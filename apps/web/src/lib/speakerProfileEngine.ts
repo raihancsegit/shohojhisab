@@ -460,10 +460,13 @@ export function evaluateUtteranceSpeaker(
   } | null = null;
 
   for (const profile of candidateProfiles) {
+    const isHighPrecisionProfile = (profile.samplesCollected || 0) >= 15;
+    
     // Calibrated Pitch window for human speaker identity:
-    // Natural human speech inflection during spoken Bengali varies +-45 Hz around mean
-    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 15, profile.pitchMean - 45));
-    const upperPitch = Math.min(420, Math.max(profile.pitchMax + 20, profile.pitchMean + 45));
+    // Natural human speech inflection during spoken Bengali varies +-32 to 42 Hz around mean
+    const pitchMargin = isHighPrecisionProfile ? 35 : 45;
+    const lowerPitch = Math.max(55, Math.min(profile.pitchMin - 10, profile.pitchMean - pitchMargin));
+    const upperPitch = Math.min(420, Math.max(profile.pitchMax + 15, profile.pitchMean + pitchMargin));
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
@@ -473,12 +476,18 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Timbre check: if spectral centroid differs by > 1200 Hz, it's a loudspeaker/TV or another person!
+      // Timbre check: TV / Laptop / distant acoustics have unnatural treble/bass centroid divergence
+      const maxCentroidDiff = isHighPrecisionProfile ? 850 : 1200;
       if (profile.centroidMean && profile.centroidMean > 0) {
         const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1200) {
+        if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > maxCentroidDiff) {
           continue;
         }
+      }
+
+      // If average pitch is too far from this enrolled person's mean, skip
+      if (isHighPrecisionProfile && diffFromMean > 32) {
+        continue;
       }
 
       const conf = Math.max(50, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean))));
@@ -496,8 +505,9 @@ export function evaluateUtteranceSpeaker(
   }
 
   // Strict Authorization Rule:
-  // Must match at least 1 valid sample of the enrolled owner/employee
-  if (bestMatch && bestMatch.matchingCount >= 1 && (bestMatch.matchRatio >= 0.18 || recentFrames.length <= 3)) {
+  // For high-precision profiles, at least 32% of spoken frames must strictly match
+  const minRequiredRatio = (bestMatch?.profile?.samplesCollected || 0) >= 15 ? 0.32 : 0.22;
+  if (bestMatch && bestMatch.matchingCount >= 1 && (bestMatch.matchRatio >= minRequiredRatio || recentFrames.length <= 2)) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,

@@ -56,6 +56,8 @@ export default function SpeakerVoiceEnrollModal({
   const [livePitch, setLivePitch] = useState<number>(0);
   const [collectedPitches, setCollectedPitches] = useState<number[][]>([[], [], []]);
   const [collectedCentroids, setCollectedCentroids] = useState<number[][]>([[], [], []]);
+  const [enrollDuration, setEnrollDuration] = useState<number>(10);
+  const [collectedFrameCount, setCollectedFrameCount] = useState<number>(0);
   const [enrollSuccess, setEnrollSuccess] = useState<boolean>(false);
   const [lastSavedStats, setLastSavedStats] = useState<{ pitchMean: number; pitchMin: number; pitchMax: number } | null>(null);
 
@@ -206,10 +208,12 @@ export default function SpeakerVoiceEnrollModal({
     }
   };
 
-  // ⚡ Fast 1-Tap 4-Second Voice Enrollment
-  const startQuickEnrollment = async () => {
+  // ⚡ Flexible 10-Second / 15-Second / 4-Second Biometric Voice Enrollment
+  const startFullVoiceEnrollment = async (customDuration?: number) => {
     stopAudio();
     setLiveSpokenText('');
+    setCollectedFrameCount(0);
+    const targetDuration = customDuration || enrollDuration || 10;
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx || !navigator.mediaDevices?.getUserMedia) {
@@ -233,7 +237,7 @@ export default function SpeakerVoiceEnrollModal({
       source.connect(analyser);
 
       setIsRecording(true);
-      setCountdown(4);
+      setCountdown(targetDuration);
 
       // Start live speech recognizer so spoken Bengali words appear live on screen!
       const SpeechRec = typeof window !== 'undefined'
@@ -244,7 +248,7 @@ export default function SpeakerVoiceEnrollModal({
           const rec = new SpeechRec();
           rec.lang = 'bn-BD';
           rec.interimResults = true;
-          rec.continuous = false;
+          rec.continuous = true;
           rec.onresult = (evt: any) => {
             let text = '';
             for (let i = evt.resultIndex; i < evt.results.length; i++) {
@@ -279,7 +283,7 @@ export default function SpeakerVoiceEnrollModal({
         setLiveVolume(Math.min(100, Math.round(rms * 6)));
 
         const now = performance.now();
-        if (now - lastCheck > 45) {
+        if (now - lastCheck > 40) {
           lastCheck = now;
           const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
           if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 420) {
@@ -287,6 +291,7 @@ export default function SpeakerVoiceEnrollModal({
             recordedPitches.push(pitchRes.pitch);
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) recordedCentroids.push(centroid);
+            setCollectedFrameCount(recordedPitches.length);
           } else if (rms > 0.8) {
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) {
@@ -294,6 +299,7 @@ export default function SpeakerVoiceEnrollModal({
               const approxPitch = centroid > 1500 ? 195 : 130;
               recordedPitches.push(approxPitch);
               setLivePitch(approxPitch);
+              setCollectedFrameCount(recordedPitches.length);
             }
           }
         }
@@ -302,7 +308,7 @@ export default function SpeakerVoiceEnrollModal({
 
       animFrameRef.current = requestAnimationFrame(loop);
 
-      let remaining = 4;
+      let remaining = targetDuration;
       timerRef.current = setInterval(() => {
         remaining -= 1;
         setCountdown(remaining);
@@ -917,41 +923,80 @@ export default function SpeakerVoiceEnrollModal({
                     )}
                   </div>
 
-                  {/* Clean Step Counter */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '10px'
-                  }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#4f46e5', background: '#eef2ff', padding: '2px 8px', borderRadius: '6px' }}>
-                      ধাপ {currentStepIndex + 1} / ৩: {PHRASES[currentStepIndex].title}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      স্বাভাবিক স্বরে পড়ুন
-                    </span>
+                  {/* Duration Selector Tabs */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#475569', marginBottom: '6px' }}>
+                      রেকর্ডিংয়ের ব্যাপ্তিকাল নির্বাচন করুন:
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                      {[
+                        { sec: 10, label: '১০ সেকেন্ড', badge: 'প্রস্তাবিত ও নির্ভুল' },
+                        { sec: 15, label: '১৫ সেকেন্ড', badge: 'গোলমাল পরিবেশের জন্য' },
+                        { sec: 4, label: '৪ সেকেন্ড', badge: 'দ্রুত স্যাম্পল' }
+                      ].map(opt => (
+                        <button
+                          key={opt.sec}
+                          type="button"
+                          disabled={isRecording}
+                          onClick={() => setEnrollDuration(opt.sec)}
+                          style={{
+                            padding: '8px 6px',
+                            borderRadius: '10px',
+                            border: enrollDuration === opt.sec ? '2px solid #059669' : '1.5px solid #e2e8f0',
+                            background: enrollDuration === opt.sec ? '#ecfdf5' : '#ffffff',
+                            color: enrollDuration === opt.sec ? '#065f46' : '#64748b',
+                            fontWeight: '800',
+                            fontSize: '12px',
+                            cursor: isRecording ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', fontWeight: '900' }}>{opt.label}</span>
+                          <span style={{
+                            fontSize: '9.5px',
+                            fontWeight: '700',
+                            color: enrollDuration === opt.sec ? '#047857' : '#94a3b8',
+                            lineHeight: 1.2
+                          }}>
+                            {opt.badge}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {/* Large Spoken Phrase Box (Spacious, Beautiful, No Clutter) */}
+                  {/* Large Spoken Script Box (Natural Bengali Shop Paragraph) */}
                   <div style={{
                     background: '#f8fafc',
                     border: '1.5px solid #e2e8f0',
                     borderRadius: '16px',
-                    padding: '24px 16px',
+                    padding: '20px 16px',
                     textAlign: 'center',
                     marginBottom: '16px'
                   }}>
                     <div style={{
-                      fontSize: 'clamp(20px, 5vw, 24px)',
-                      fontWeight: '900',
+                      fontSize: 'clamp(16px, 4.2vw, 20px)',
+                      fontWeight: '800',
                       color: '#0f172a',
-                      marginBottom: '6px',
-                      letterSpacing: '-0.3px'
+                      lineHeight: 1.5,
+                      marginBottom: '8px'
                     }}>
-                      "{PHRASES[currentStepIndex].phrase}"
+                      {enrollDuration >= 10 ? (
+                        <span>
+                          &quot;আমার দোকান সহজ হিসাব। আজ চাল ২ কেজি, ডাল ১ কেজি, তেল ১ লিটার বিক্রি হয়েছে। রহিম ভাইয়ের বাকি খাতায় পাঁচশত টাকা জমা।&quot;
+                        </span>
+                      ) : (
+                        <span>
+                          &quot;আমার দোকান সহজ হিসাব। চাল ডাল তেল চিনি বিক্রি পাঁচশত টাকা।&quot;
+                        </span>
+                      )}
                     </div>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                      মাইকে ট্যাপ করে ৩ সেকেন্ডের মধ্যে বাক্যটি পড়ুন
+                    <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                      {isRecording ? 'স্বাভাবিক গতিতে উপরের কথাগুলো স্পষ্ট করে পড়ুন' : `নিচের বোতাম চেপে ${enrollDuration} সেকেন্ডে স্বাভাবিক স্বরে উপরের লেখাটি পড়ুন`}
                     </p>
 
                     {/* Clean Audio Visualizer Bar & Live Spoken Text */}
@@ -964,15 +1009,28 @@ export default function SpeakerVoiceEnrollModal({
                               style={{
                                 width: '4px',
                                 borderRadius: '4px',
-                                background: '#4f46e5',
+                                background: '#059669',
                                 height: `${Math.max(6, Math.min(24, (liveVolume / 4) * (i % 2 === 0 ? 1.2 : 0.8)))}px`,
                                 transition: 'height 0.1s ease'
                               }}
                             />
                           ))}
                         </div>
-                        <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4f46e5', marginTop: '6px' }}>
-                          ⏳ কথা শুনছি ({countdown}s)... {livePitch ? `${livePitch} Hz` : ''}
+
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '12px',
+                          flexWrap: 'wrap',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          color: '#047857',
+                          marginTop: '8px'
+                        }}>
+                          <span>⏳ সময় বাকি: {countdown} সেকেন্ড</span>
+                          <span>📊 সংগৃহীত স্বর নমুনা: {collectedFrameCount} টি</span>
+                          {livePitch > 0 && <span>🔊 ফ্রিকোয়েন্সি: {livePitch} Hz</span>}
                         </div>
 
                         {liveSpokenText ? (
@@ -987,16 +1045,16 @@ export default function SpeakerVoiceEnrollModal({
                             color: '#065f46',
                             display: 'inline-block'
                           }}>
-                            🗣️ আপনি বলছেন: "{liveSpokenText}"
+                            🗣️ শনাক্তকৃত কণ্ঠস্বর: &quot;{liveSpokenText}&quot;
                           </div>
                         ) : (
                           <div style={{
                             marginTop: '6px',
                             fontSize: '11px',
-                            color: '#6366f1',
+                            color: '#059669',
                             fontWeight: '700'
                           }}>
-                            🎙️ মাইকে কথা বলুন... কণ্ঠের ফ্রিকোয়েন্সি মাপা হচ্ছে
+                            🎙️ মাইকে কথা বলুন... কণ্ঠের বায়োমেট্রিক ফ্রেম রেকর্ড হচ্ছে
                           </div>
                         )}
                       </div>
@@ -1008,12 +1066,12 @@ export default function SpeakerVoiceEnrollModal({
                     <button
                       type="button"
                       disabled={isRecording}
-                      onClick={startQuickEnrollment}
+                      onClick={() => startFullVoiceEnrollment(enrollDuration)}
                       style={{
                         background: isRecording ? '#dc2626' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                         color: '#ffffff',
                         border: 'none',
-                        padding: '14px 28px',
+                        padding: '14px 24px',
                         borderRadius: '14px',
                         fontSize: '14px',
                         fontWeight: '900',
@@ -1027,7 +1085,11 @@ export default function SpeakerVoiceEnrollModal({
                         justifyContent: 'center'
                       }}
                     >
-                      <span>{isRecording ? `⏳ কণ্ঠ শুনছি ও মাপছি (${countdown}s)...` : '⚡ ৪ সেকেন্ডে দ্রুত রেকর্ড ও ভয়েস লক'}</span>
+                      <span>
+                        {isRecording
+                          ? `⏳ কণ্ঠ শুনছি ও মাপছি (${countdown}s - ${collectedFrameCount}টি নমুনা)...`
+                          : `🎙️ ${enrollDuration} সেকেন্ড বিস্তারিত কণ্ঠ রেকর্ড ও বায়োমেট্রিক লক করুন`}
+                      </span>
                     </button>
 
                     <button
@@ -1048,11 +1110,11 @@ export default function SpeakerVoiceEnrollModal({
                         gap: '6px'
                       }}
                     >
-                      <span>🎙️ ৩-ধাপের বিস্তারিত উইজার্ড (ধাপ {currentStepIndex + 1}/৩)</span>
+                      <span>🎙️ বিকল্প: ৩-ধাপের উইজার্ড (ধাপ {currentStepIndex + 1}/৩)</span>
                     </button>
 
                     <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748b' }}>
-                      স্বাভাবিক স্বরে উপরের বাক্যটি পড়ুন। আপনার কণ্ঠের নিখুঁত ফ্রিকোয়েন্সি রেকর্ড হবে।
+                      {enrollDuration >= 10 ? '১০-১৫ সেকেন্ডের বিস্তারিত রেকর্ডিংয়ে কণ্ঠস্বরের নিখুঁত বায়োমেট্রিক প্রোফাইল তৈরি হয়।' : 'স্বাভাবিক স্বরে উপরের বাক্যটি পড়ুন। আপনার কণ্ঠের নিখুঁত ফ্রিকোয়েন্সি রেকর্ড হবে।'}
                     </p>
                   </div>
                 </div>
