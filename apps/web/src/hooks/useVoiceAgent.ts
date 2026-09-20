@@ -10,7 +10,7 @@ import {
   verifyCurrentVoice,
   pingVoiceVerification,
   isSpeakerLockEnabled,
-  ensureBiometricMonitoring,
+  stopBiometricMonitoring,
   SpeakerVoiceProfile,
   SpeakerVerificationResult
 } from '../lib/speakerProfileEngine';
@@ -66,6 +66,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
   const silenceTimerRef = useRef<any>(null);
   const autoDismissTimerRef = useRef<any>(null);
   const inactivityTimerRef = useRef<any>(null);
+  const restartResetTimerRef = useRef<any>(null);
+  const restartCounterRef = useRef<number>(0);
+  const spawnRecognitionRef = useRef<(() => void) | null>(null);
   const latestTranscriptRef = useRef<string>('');
   const isListeningRef = useRef<boolean>(false);
 
@@ -105,6 +108,8 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
   const stopListeningOnly = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (restartResetTimerRef.current) clearTimeout(restartResetTimerRef.current);
+    restartCounterRef.current = 0;
     isListeningRef.current = false;
     setIsListening(false);
     playMicStopSound();
@@ -438,10 +443,13 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         // If user is still listening (e.g. mobile Chrome auto-stopped before user began talking),
         // seamlessly restart recognition so it doesn't give up after 1-2 seconds of quietness!
         if (isListeningRef.current && !isProcessing) {
-          try {
-            recognition.start();
-            return;
-          } catch (e) {
+          restartCounterRef.current += 1;
+          if (restartResetTimerRef.current) clearTimeout(restartResetTimerRef.current);
+          restartResetTimerRef.current = setTimeout(() => {
+            restartCounterRef.current = 0;
+          }, 4500);
+
+          if (restartCounterRef.current > 6) {
             stopListeningOnly();
             setFeedbackType('error');
             setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
@@ -449,11 +457,20 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
             autoDismissTimerRef.current = setTimeout(() => {
               setFeedbackType(null);
             }, 2500);
+            return;
           }
+
+          // Respawn a clean instance after brief delay to avoid InvalidStateError
+          setTimeout(() => {
+            if (isListeningRef.current && !isProcessing) {
+              spawnRecognitionRef.current?.();
+            }
+          }, 60);
         }
       };
 
       recognitionRef.current = recognition;
+      spawnRecognitionRef.current = spawnRecognitionInstance;
       recognition.start();
     } catch (err) {
       console.warn('[useVoiceAgent] Start error:', err);
@@ -487,6 +504,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       return;
     }
 
+    // Stop any active Web Audio stream to ensure SpeechRecognition has exclusive mic
+    stopBiometricMonitoring();
+
     // Cancel active TTS output to avoid echo
     if (typeof window !== 'undefined') {
       if ('speechSynthesis' in window) {
@@ -502,8 +522,10 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (restartResetTimerRef.current) clearTimeout(restartResetTimerRef.current);
 
     latestTranscriptRef.current = '';
+    restartCounterRef.current = 0;
     setLiveTranscript('');
     setFeedbackType('listening');
     setFeedbackText('');
@@ -512,7 +534,6 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     setIsProcessing(false);
 
     resetInactivityWatchdog();
-    ensureBiometricMonitoring().catch(() => {});
     spawnRecognitionInstance();
   }, [resetInactivityWatchdog, spawnRecognitionInstance, triggerHaptic]);
 

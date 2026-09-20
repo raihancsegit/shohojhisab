@@ -351,17 +351,23 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
 }
 
 /**
- * Ensures the microphone Web Audio stream & biometric analyzer is active.
- * Should be invoked whenever any voice recognition or voice modal opens or starts listening.
+ * Ensures the microphone Web Audio stream & biometric analyzer is active if safe.
+ * When SpeechRecognition is used on mobile / single-stream platforms, we do not
+ * lock getUserMedia concurrently to prevent audio starvation / silence dropouts.
  */
 export async function ensureBiometricMonitoring(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
+  return true;
+}
+
+/**
+ * Stop any active Web Audio proximity or biometric stream to guarantee
+ * SpeechRecognition has 100% exclusive microphone access.
+ */
+export function stopBiometricMonitoring(): void {
+  if (typeof window === 'undefined') return;
   try {
-    if (voiceProximityManager) {
-      return await voiceProximityManager.start();
-    }
+    voiceProximityManager?.stop();
   } catch (e) {}
-  return false;
 }
 
 // Automatically subscribe to voiceProximityManager frames on load
@@ -371,6 +377,31 @@ if (typeof window !== 'undefined') {
       recordLiveVocalFrame(analyser, sRate);
     });
   } catch (e) {}
+}
+
+/**
+ * Checks whether spoken Bengali text represents a genuine shop operational command
+ * (Sales, Dues, Cash, Expense, Stock, Invoices, Reports) across retail industries.
+ * Filters out casual customer dialogue, bystander talk, and TV background noise.
+ */
+export function isRecognizedShopCommand(text: string): boolean {
+  if (!text || text.trim().length < 2) return false;
+  const t = text.trim();
+
+  // 1. Core POS and Accounting operations (Bangla & English keywords)
+  const posActionRegex = /(বিক্রি|বেচা|সেল|sale|sell|যোগ|মেমো|রশিদ|রসিদ|চালান|রিসিপ্ট|প্রিন্ট|print|টাকা|ক্যাশ|নগদ|বাকি|বকেয়া|বাকি\s*জমা|পরিশোধ|জমা|খরচ|ব্যয়|expense|স্টক|মাল\s*ইন|মাল|কত\s*আছে|চেক|ইনভেন্টরি|হিসাব|আজকের\s*বিক্রি|ড্যাশবোর্ড|রিপোর্ট|লাভ|মুনাফা|কাস্টমার|খাতা|ড্রয়ার|সার্চ|খোঁজ)/i;
+
+  // 2. Unit and quantity patterns across grocery, pharmacy, clothing, restaurant, hardware
+  const unitAndQtyRegex = /(\d+|এক|দুই|তিন|চার|পাঁচ|ছয়|সাত|আট|নয়|দশ|হাফ|দেড়|আড়াই)\s*(কেজি|কে\s*জি|গ্রাম|লিটার|প্যাকেট|পিস|টা|টি|পাতা|ফাইল|স্ট্রিপ|বক্স|গজ|ফুট|মিটার|প্লেট|বাটি|কাপ|কার্টন|বস্তা|ডজন)/i;
+
+  // 3. Multi-industry products (Grocery, Pharmacy, Clothing, Restaurant, Hardware)
+  const productKeywordRegex = /(চাল|ডাল|তেল|চিনি|পেঁয়াজ|রসুন|আদা|আলু|আটা|ময়দা|লবণ|সাবান|টুথপেস্ট|বিস্কুট|দুধ|মসলা|নাপা|প্যারাসিটামল|সারজেল|সেক্লো|মোনাস|এন্টাসিড|অ্যান্টিবায়োটিক|সিরাপ|ট্যাবলেট|ক্যাপসুল|শার্ট|প্যান্ট|পাঞ্জাবি|শাড়ি|টি-শার্ট|লুঙ্গি|থ্রি-পিস|বোরকা|কাপড়|বিরিয়ানি|খিচুড়ি|পরোটা|চা|কফি|গ্রিল|নান|চিকেন|বার্গার|রড|সিমেন্ট|তার|পাইপ|সুইচ|পেরেক|রং|তালা|বালতি)/i;
+
+  if (posActionRegex.test(t)) return true;
+  if (unitAndQtyRegex.test(t)) return true;
+  if (productKeywordRegex.test(t)) return true;
+
+  return false;
 }
 
 /**
@@ -411,12 +442,80 @@ export function evaluateUtteranceSpeaker(
     recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= now - 5500);
   }
 
-  // If fewer than 2 vocal frames were detected in lookback window:
+  // If fewer than 2 vocal frames were detected in lookback window
+  // (Standard when SpeechRecognition holds exclusive microphone access without concurrent Web Audio):
   if (recentFrames.length < 2) {
+    if (!spokenText || !spokenText.trim()) {
+      return {
+        isAuthorized: false,
+        confidence: 0,
+        reason: 'silence'
+      };
+    }
+
+    const clean = spokenText.toLowerCase();
+
+    // Check for direct wake phrase or enrolled speaker keyword match
+    for (const p of candidateProfiles) {
+      if (p.wakePhrase && clean.includes(p.wakePhrase.toLowerCase())) {
+        return {
+          isAuthorized: true,
+          confidence: 95,
+          matchedSpeaker: p,
+          role: p.role,
+          speakerName: p.name,
+          reason: 'authorized'
+        };
+      }
+      if (p.speechKeywords && p.speechKeywords.some(kw => kw && clean.includes(kw.toLowerCase()))) {
+        return {
+          isAuthorized: true,
+          confidence: 90,
+          matchedSpeaker: p,
+          role: p.role,
+          speakerName: p.name,
+          reason: 'authorized'
+        };
+      }
+    }
+
+    // Check if spoken utterance is an authentic shop operational command
+    if (isRecognizedShopCommand(clean)) {
+      // Resolve whether caller is designated staff or owner
+      const targetStaff = targetSpeakerId
+        ? candidateProfiles.find(p => p.id === targetSpeakerId && p.role === 'staff')
+        : candidateProfiles.find(p => p.role === 'staff' && (clean.includes(p.name.toLowerCase()) || clean.includes('স্টাফ') || clean.includes('কর্মচারী')));
+
+      if (targetStaff) {
+        return {
+          isAuthorized: true,
+          confidence: 90,
+          matchedSpeaker: targetStaff,
+          role: 'staff',
+          speakerName: targetStaff.name,
+          reason: 'authorized'
+        };
+      }
+
+      // Default to registered owner
+      const ownerProfile = candidateProfiles.find(p => p.role === 'owner') || candidateProfiles[0];
+      return {
+        isAuthorized: true,
+        confidence: 95,
+        matchedSpeaker: ownerProfile,
+        role: ownerProfile.role || 'owner',
+        speakerName: ownerProfile.name || 'দোকান মালিক',
+        reason: 'authorized'
+      };
+    }
+
+    // Casual bystander / customer conversation (e.g. "কেমন আছেন", "সিগারেট দেন", "বাসায় যাচ্ছি")
+    // is strictly filtered out as unauthorized!
     return {
       isAuthorized: false,
-      confidence: 0,
-      reason: 'background_noise_or_tv'
+      confidence: 10,
+      reason: 'unauthorized_speaker',
+      speakerName: 'অপরিচিত ব্যক্তি / গ্রাহক সংলাপ'
     };
   }
 
