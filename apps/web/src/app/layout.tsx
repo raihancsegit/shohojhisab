@@ -137,235 +137,288 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   ].filter(t => t.show);
 
   return (
-    <header style={{
-      background: authTheme === 'dark'
-        ? 'rgba(9, 13, 22, 0.95)'
-        : 'linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #312e81 100%)',
-      backdropFilter: 'blur(16px)',
-      color: '#ffffff',
-      borderBottom: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.1)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-      boxShadow: authTheme === 'dark' ? '0 4px 20px -2px rgba(0, 0, 0, 0.6)' : '0 4px 20px -2px rgba(15, 23, 42, 0.25)'
-    }}>
-      {/* Offline Status & Pending Sync Indicator */}
-      {(!isOnline || pendingSyncCount > 0) && (
+    <>
+      <header style={{
+        background: authTheme === 'dark'
+          ? 'rgba(9, 13, 22, 0.96)'
+          : 'linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #312e81 100%)',
+        backdropFilter: 'blur(16px)',
+        color: '#ffffff',
+        borderBottom: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.12)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        boxShadow: authTheme === 'dark' ? '0 4px 24px -2px rgba(0, 0, 0, 0.65)' : '0 4px 20px -2px rgba(15, 23, 42, 0.28)'
+      }}>
+        {/* Offline Status & Pending Sync Indicator */}
+        {(!isOnline || pendingSyncCount > 0) && (
+          <div style={{
+            background: !isOnline ? '#065f46' : 'linear-gradient(90deg, #1e1b4b 0%, #312e81 100%)',
+            color: '#ecfdf5',
+            padding: '4px 14px',
+            fontSize: '11px',
+            fontWeight: '800',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.15)',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: !isOnline ? '#4ade80' : '#38bdf8' }} />
+              <span>{!isOnline ? '🟢 অফলাইন মোড সক্রিয় (ইন্টারনেট ছাড়াও ১০০% বিক্রয়, স্টক ও খাতা চলবে)' : '✓ অনলাইন মোড সক্রিয়'}</span>
+            </div>
+            {pendingSyncCount > 0 && (
+              <button
+                onClick={() => { if (tenant?.id) syncOfflineOutbox(tenant.id); }}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                🔄 {pendingSyncCount}টি পেন্ডিং ডাটা সিঙ্ক করুন
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Top Main Bar */}
         <div style={{
-          background: !isOnline ? '#065f46' : 'linear-gradient(90deg, #1e1b4b 0%, #312e81 100%)',
-          color: '#ecfdf5',
-          padding: '4px 14px',
-          fontSize: '11px',
-          fontWeight: '800',
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '7px 12px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid rgba(255,255,255,0.15)',
-          animation: 'fadeIn 0.2s ease'
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: !isOnline ? '#4ade80' : '#38bdf8' }} />
-            <span>{!isOnline ? '🟢 অফলাইন মোড সক্রিয় (ইন্টারনেট ছাড়াও ১০০% বিক্রয়, স্টক ও খাতা চলবে)' : '✓ অনলাইন মোড সক্রিয়'}</span>
-          </div>
-          {pendingSyncCount > 0 && (
-            <button
-              onClick={() => { if (tenant?.id) syncOfflineOutbox(tenant.id); }}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                color: '#fff',
-                border: 'none',
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontSize: '10px',
-                fontWeight: '800',
-                cursor: 'pointer'
-              }}
-            >
-              🔄 {pendingSyncCount}টি পেন্ডিং ডাটা সিঙ্ক করুন
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Top Main Bar */}
-      <div style={{
-        maxWidth: '1280px',
-        margin: '0 auto',
-        padding: '8px 12px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        {/* Left: Hamburger & Shop Name / Logo */}
-        <div className="header-shop-container">
-          {userRole === 'shopkeeper' && (
-            <button
-              type="button"
-              onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                borderRadius: '10px',
-                width: '34px',
-                height: '34px',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '18px',
-                color: '#ffffff',
-                cursor: 'pointer',
-                flexShrink: 0,
-                transition: 'all 0.15s ease'
-              }}
-              title="মেনু ড্রয়ার খুলুন"
-            >
-              ☰
-            </button>
-          )}
-
-          {userRole === 'shopkeeper' && tenant ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          {/* Left: Hamburger & Shop Name / Logo */}
+          <div className="header-shop-container">
+            {userRole === 'shopkeeper' && (
               <button
                 type="button"
-                onClick={() => { triggerHaptic('light'); setShowShopSwitchModal(true); }}
+                onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  textAlign: 'left',
-                  color: 'inherit'
-                }}
-                title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
-              >
-                <div style={{
-                  background: '#ffffff',
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: '11px',
+                  width: '36px',
+                  height: '36px',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '18px',
-                  color: '#4f46e5',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                  flexShrink: 0
-                }}>
-                  {theme.icon}
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease',
+                  backdropFilter: 'blur(8px)'
+                }}
+                title="মেনু ড্রয়ার খুলুন"
+              >
+                ☰
+              </button>
+            )}
+
+            {userRole === 'shopkeeper' && tenant ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('light'); setShowShopSwitchModal(true); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '9px',
+                    textAlign: 'left',
+                    color: 'inherit'
+                  }}
+                  title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
+                >
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '11px',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '19px',
+                    color: '#4f46e5',
+                    boxShadow: '0 3px 10px rgba(0,0,0,0.18)',
+                    flexShrink: 0
+                  }}>
+                    {theme.icon}
+                  </div>
+                  <div className="header-shop-text">
+                    <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <span>{tenant.shopName || 'সহজ হিসাব'}</span>
+                      <span style={{ fontSize: '9px', opacity: 0.75, color: '#93c5fd' }}>▼</span>
+                    </h1>
+                    <div className="header-shop-meta">
+                      <span className="header-shop-badge">
+                        <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px', boxShadow: '0 0 4px #4ade80' }}></span>
+                        {theme.name}
+                      </span>
+                      <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
+                        • {tenant.location || 'বাজার'}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            ) : userRole === 'admin' ? (
+              <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ background: '#ffffff', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', fontSize: '19px', color: '#e11d48', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+                  👑
                 </div>
                 <div className="header-shop-text">
-                  <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>{tenant.shopName || 'সহজ হিসাব'}</span>
-                    <span style={{ fontSize: '9px', opacity: 0.8, color: '#93c5fd' }}>▼</span>
-                  </h1>
-                  <div className="header-shop-meta">
-                    <span className="header-shop-badge">
-                      <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>
-                      {theme.name}
-                    </span>
-                    <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
-                      • {tenant.location || 'বাজার'}
-                    </span>
-                  </div>
+                  <h1 className="header-shop-title">ShohojHisab</h1>
+                  <p className="header-shop-meta" style={{ color: '#fecdd3' }}>সুপার অ্যাডমিন প্ল্যাটফর্ম</p>
                 </div>
-              </button>
-            </div>
-          ) : userRole === 'admin' ? (
-            <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-              <div style={{ background: '#ffffff', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', fontSize: '18px', color: '#e11d48', flexShrink: 0 }}>
-                👑
-              </div>
-              <div className="header-shop-text">
-                <h1 className="header-shop-title">ShohojHisab</h1>
-                <p className="header-shop-meta" style={{ color: '#fecdd3' }}>সুপার অ্যাডমিন প্ল্যাটফর্ম</p>
-              </div>
-            </Link>
-          ) : (
-            <Link href="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-              <div style={{ background: '#ffffff', width: '34px', height: '34px', borderRadius: '10px', display: 'grid', placeItems: 'center', fontSize: '18px', color: '#4f46e5', fontWeight: '900', flexShrink: 0 }}>
-                S
-              </div>
-              <div className="header-shop-text">
-                <h1 className="header-shop-title">ShohojHisab</h1>
-                <p className="header-shop-meta">স্মার্ট দোকান সফটওয়্যার</p>
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {/* Right: Clean Action Controls */}
-        <div className="header-controls">
-          {userRole === 'shopkeeper' && (
-            <>
-              {/* Role Mode Badge */}
-              <button
-                onClick={() => {
-                  setPinInput('');
-                  setModeError('');
-                  setShowModeModal(true);
-                  triggerHaptic('light');
-                }}
-                className="header-role-btn"
-                title="ক্যাশিয়ার বা ব্যবহারকারী শিফট পরিবর্তন করুন"
-              >
-                <span>{activeRoleMode === 'owner' ? '👑' : '👤'}</span>
-                <span>{currentStaffUser && !currentStaffUser.isOwner ? currentStaffUser.name.split(' ')[0] : (activeRoleMode === 'owner' ? 'মালিক' : 'স্টাফ')}</span>
-                <span style={{ fontSize: '8px', opacity: 0.7 }}>▼</span>
-              </button>
-
-              {/* Soundbox Voice Announcer Toggle */}
-              <button
-                onClick={toggleSoundbox}
-                className="header-icon-btn"
-                style={{
-                  background: isSoundboxEnabled ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.1)',
-                  border: isSoundboxEnabled ? '1px solid rgba(165, 180, 252, 0.5)' : '1px solid rgba(255, 255, 255, 0.14)',
-                }}
-                title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু (ভয়েস সক্রিয়)' : 'সাউন্ডবক্স বন্ধ'}
-              >
-                {isSoundboxEnabled ? '🔊' : '🔈'}
-              </button>
-
-              {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowVoiceEnrollModal(true);
-                }}
-                className="header-icon-btn"
-                style={{
-                  background: 'rgba(16, 185, 129, 0.25)',
-                  border: '1px solid rgba(52, 211, 153, 0.5)',
-                  color: '#34d399'
-                }}
-                title="কণ্ঠ রেজিস্টার ও ভয়েস লক ফিল্টার"
-              >
-                🎙️
-              </button>
-
-              {/* Notification Bell */}
-              <Link
-                href="/notifications"
-                className="header-icon-btn"
-                title="বিজ্ঞপ্তি"
-              >
-                🔔
-                <span style={{
-                  position: 'absolute',
-                  top: '5px',
-                  right: '5px',
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: '#f43f5e',
-                  boxShadow: '0 0 4px #f43f5e'
-                }} />
               </Link>
+            ) : (
+              <Link href="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ background: '#ffffff', width: '36px', height: '36px', borderRadius: '11px', display: 'grid', placeItems: 'center', fontSize: '19px', color: '#4f46e5', fontWeight: '900', flexShrink: 0, boxShadow: '0 3px 10px rgba(0,0,0,0.18)' }}>
+                  S
+                </div>
+                <div className="header-shop-text">
+                  <h1 className="header-shop-title">ShohojHisab</h1>
+                  <p className="header-shop-meta">স্মার্ট দোকান সফটওয়্যার</p>
+                </div>
+              </Link>
+            )}
+          </div>
 
-              {/* Instant Dark / Light Mode Toggle */}
+          {/* Right: Clean Action Controls */}
+          <div className="header-controls">
+            {userRole === 'shopkeeper' && (
+              <>
+                {/* Role Mode Badge ("মালিক" / "স্টাফ") */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinInput('');
+                    setModeError('');
+                    setShowModeModal(true);
+                    triggerHaptic('light');
+                  }}
+                  className={`header-role-btn ${activeRoleMode === 'owner' ? 'owner-mode' : ''}`}
+                  title="ক্যাশিয়ার বা ব্যবহারকারী শিফট পরিবর্তন করুন"
+                >
+                  <span style={{ fontSize: '13px' }}>{activeRoleMode === 'owner' ? '👑' : '👤'}</span>
+                  <span>{currentStaffUser && !currentStaffUser.isOwner ? currentStaffUser.name.split(' ')[0] : (activeRoleMode === 'owner' ? 'মালিক' : 'স্টাফ')}</span>
+                  <span style={{ fontSize: '8.5px', opacity: 0.8 }}>▼</span>
+                </button>
+
+                {/* Soundbox Voice Announcer Toggle */}
+                <button
+                  type="button"
+                  onClick={toggleSoundbox}
+                  className="header-icon-btn"
+                  style={{
+                    background: isSoundboxEnabled
+                      ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(79, 70, 229, 0.5) 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: isSoundboxEnabled
+                      ? '1px solid rgba(165, 180, 252, 0.6)'
+                      : '1px solid rgba(255, 255, 255, 0.16)',
+                    boxShadow: isSoundboxEnabled ? '0 0 10px rgba(99, 102, 241, 0.4)' : 'none'
+                  }}
+                  title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু (ভয়েস সক্রিয়)' : 'সাউন্ডবক্স বন্ধ'}
+                >
+                  {isSoundboxEnabled ? '🔊' : '🔈'}
+                </button>
+
+                {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowVoiceEnrollModal(true);
+                  }}
+                  className="header-icon-btn"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.18)',
+                    border: '1px solid rgba(52, 211, 153, 0.45)',
+                    color: '#34d399'
+                  }}
+                  title="কণ্ঠ রেজিস্টার ও ভয়েস লক ফিল্টার"
+                >
+                  🎙️
+                </button>
+
+                {/* Notification Bell */}
+                <Link
+                  href="/notifications"
+                  className="header-icon-btn"
+                  title="বিজ্ঞপ্তি"
+                >
+                  🔔
+                  <span style={{
+                    position: 'absolute',
+                    top: '5px',
+                    right: '5px',
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#f43f5e',
+                    boxShadow: '0 0 4px #f43f5e'
+                  }} />
+                </Link>
+
+                {/* Instant Dark / Light Mode Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    toggleTheme();
+                  }}
+                  className="header-icon-btn"
+                  style={{
+                    background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.4)' : '1px solid rgba(255, 255, 255, 0.16)',
+                    color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                  }}
+                  title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন (Light Mode)' : 'ডার্ক মোড চালু করুন (Dark Mode)'}
+                  aria-label="Toggle Theme Mode"
+                >
+                  {authTheme === 'dark' ? '☀️' : '🌙'}
+                </button>
+
+                {/* Primary Fast POS Button (Desktop Only) */}
+                <Link
+                  href="/pos"
+                  className="desktop-only"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    padding: '7px 16px',
+                    borderRadius: '99px',
+                    fontSize: '12.5px',
+                    fontWeight: '900',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                    flexShrink: 0,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>⚡</span> POS বিক্রি
+                </Link>
+              </>
+            )}
+
+            {userRole !== 'shopkeeper' && (
               <button
                 type="button"
                 onClick={() => {
@@ -374,154 +427,150 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 }}
                 className="header-icon-btn"
                 style={{
-                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                  border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.35)' : '1px solid rgba(255, 255, 255, 0.14)',
+                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
                   color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                  fontSize: '15px'
                 }}
-                title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন (Light Mode)' : 'ডার্ক মোড চালু করুন (Dark Mode)'}
-                aria-label="Toggle Theme Mode"
+                title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন' : 'ডার্ক মোড চালু করুন'}
               >
                 {authTheme === 'dark' ? '☀️' : '🌙'}
               </button>
+            )}
 
-              {/* Primary Fast POS Button (Desktop Only) */}
-              <Link
-                href="/pos"
-                className="desktop-only"
+            {userRole === 'admin' && (
+              <button
+                onClick={logout}
                 style={{
-                  background: '#ffffff',
-                  color: '#4f46e5',
-                  padding: '6px 14px',
-                  borderRadius: '99px',
-                  fontSize: '12.5px',
+                  background: '#fee2e2',
+                  color: '#be123c',
+                  border: '1px solid #fecaca',
+                  padding: '5px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
                   fontWeight: '800',
-                  textDecoration: 'none',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
                   flexShrink: 0
                 }}
               >
-                <span>⚡</span> POS বিক্রি
-              </Link>
-            </>
-          )}
-
-          {userRole !== 'shopkeeper' && (
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                toggleTheme();
-              }}
-              className="header-icon-btn"
-              style={{
-                background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
-                color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
-                fontSize: '15px'
-              }}
-              title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন' : 'ডার্ক মোড চালু করুন'}
-            >
-              {authTheme === 'dark' ? '☀️' : '🌙'}
-            </button>
-          )}
-
-          {userRole === 'admin' && (
-            <button
-              onClick={logout}
-              style={{
-                background: '#fee2e2',
-                color: '#be123c',
-                border: '1px solid #fecaca',
-                padding: '5px 12px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                flexShrink: 0
-              }}
-            >
-              🚪 লগআউট
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Secondary Clean Horizontal Sub-Nav (Desktop/Tablet Only) */}
-      {userRole === 'shopkeeper' && (
-        <div className="desktop-nav-menu" style={{
-          background: authTheme === 'dark' ? '#0d1424' : '#f8fafc',
-          borderTop: authTheme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
-          padding: '0 18px'
-        }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            overflowX: 'auto'
-          }}>
-            {primaryTabs.map(item => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  style={{
-                    padding: '9px 14px',
-                    fontSize: '13px',
-                    fontWeight: active ? '800' : '600',
-                    color: active ? (authTheme === 'dark' ? '#818cf8' : theme.primaryColor) : (authTheme === 'dark' ? '#94a3b8' : '#475569'),
-                    textDecoration: 'none',
-                    borderBottom: active ? `2.5px solid ${authTheme === 'dark' ? '#818cf8' : theme.primaryColor}` : '2.5px solid transparent',
-                    background: active ? (authTheme === 'dark' ? '#131b2e' : '#ffffff') : 'transparent',
-                    borderRadius: '8px 8px 0 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '15px' }}>{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
+                🚪 লগআউট
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Role Mode & Fast Cashier Switch Modal */}
+        {/* Secondary Clean Horizontal Sub-Nav (Desktop/Tablet Only) */}
+        {userRole === 'shopkeeper' && (
+          <div className="desktop-nav-menu" style={{
+            background: authTheme === 'dark' ? '#0d1424' : '#f8fafc',
+            borderTop: authTheme === 'dark' ? '1px solid #1e293b' : '1px solid #e2e8f0',
+            padding: '0 18px'
+          }}>
+            <div style={{
+              maxWidth: '1280px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              overflowX: 'auto'
+            }}>
+              {primaryTabs.map(item => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      padding: '9px 14px',
+                      fontSize: '13px',
+                      fontWeight: active ? '800' : '600',
+                      color: active ? (authTheme === 'dark' ? '#818cf8' : theme.primaryColor) : (authTheme === 'dark' ? '#94a3b8' : '#475569'),
+                      textDecoration: 'none',
+                      borderBottom: active ? `2.5px solid ${authTheme === 'dark' ? '#818cf8' : theme.primaryColor}` : '2.5px solid transparent',
+                      background: active ? (authTheme === 'dark' ? '#131b2e' : '#ffffff') : 'transparent',
+                      borderRadius: '8px 8px 0 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '15px' }}>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Role Mode & Fast Cashier Switch Modal (Rendered outside header to avoid backdrop-filter trapping) */}
       {showModeModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
-          zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.72)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          animation: 'backdropFadeIn 0.2s ease-out'
         }}>
-          <div style={{ background: '#fff', borderRadius: '24px', padding: '24px', width: '100%', maxWidth: '380px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          {/* Click outside backdrop to close */}
+          <div style={{ position: 'absolute', inset: 0 }} onClick={() => setShowModeModal(false)} />
+
+          <div style={{
+            position: 'relative',
+            background: authTheme === 'dark' ? '#111827' : '#ffffff',
+            color: authTheme === 'dark' ? '#f8fafc' : '#0f172a',
+            borderRadius: '24px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '400px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+            border: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.06)',
+            animation: 'modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: authTheme === 'dark' ? '#ffffff' : '#0f172a' }}>
                   🔄 ক্যাশিয়ার / স্টাফ সুইচ
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#64748b' }}>
-                  বর্তমান: <strong style={{ color: '#4f46e5' }}>{currentStaffUser?.name || (activeRoleMode === 'owner' ? 'দোকান মালিক' : 'কর্মচারী')}</strong>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: authTheme === 'dark' ? '#94a3b8' : '#64748b' }}>
+                  বর্তমান: <strong style={{ color: '#6366f1' }}>{currentStaffUser?.name || (activeRoleMode === 'owner' ? 'দোকান মালিক' : 'কর্মচারী')}</strong>
                 </p>
               </div>
-              <button onClick={() => setShowModeModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+              <button
+                onClick={() => setShowModeModal(false)}
+                style={{
+                  background: authTheme === 'dark' ? 'rgba(255,255,255,0.1)' : '#f1f5f9',
+                  color: authTheme === 'dark' ? '#ffffff' : '#64748b',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '14px',
+                  transition: 'all 0.15s ease'
+                }}
+                title="বন্ধ করুন"
+              >✕</button>
             </div>
 
             {modeError && (
-              <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', marginBottom: '12px' }}>
+              <div style={{ background: '#fee2e2', color: '#dc2626', padding: '8px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', marginBottom: '14px', border: '1px solid #fecaca' }}>
                 ⚠️ {modeError}
               </div>
             )}
 
             {/* 4-Digit PIN Input for Instant Switch */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: authTheme === 'dark' ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                 মালিক বা কর্মচারীর ৪-ডিজিট পিন (PIN) দিন:
               </label>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -536,12 +585,13 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   style={{
                     flex: 1,
                     padding: '10px 14px',
-                    borderRadius: '10px',
-                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    border: authTheme === 'dark' ? '1.5px solid #374151' : '1.5px solid #cbd5e1',
                     fontSize: '18px',
                     letterSpacing: '4px',
                     outline: 'none',
-                    background: '#f8fafc',
+                    background: authTheme === 'dark' ? '#1f2937' : '#f8fafc',
+                    color: authTheme === 'dark' ? '#ffffff' : '#0f172a',
                     boxSizing: 'border-box'
                   }}
                   onKeyDown={(e) => {
@@ -551,14 +601,15 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                 <button
                   onClick={() => handlePinSubmit(pinInput)}
                   style={{
-                    background: '#4f46e5',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                     color: '#fff',
                     border: 'none',
-                    padding: '0 16px',
-                    borderRadius: '10px',
+                    padding: '0 18px',
+                    borderRadius: '12px',
                     fontWeight: '800',
-                    fontSize: '13px',
-                    cursor: 'pointer'
+                    fontSize: '13.5px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)'
                   }}
                 >
                   প্রবেশ
@@ -569,10 +620,10 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
             {/* Quick Staff Shift Switcher List */}
             {availableStaff.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: authTheme === 'dark' ? '#94a3b8' : '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   ⚡ ১-ক্লিকে শিফট পরিবর্তন:
                 </div>
-                <div style={{ display: 'grid', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '2px' }}>
                   {/* Owner Option */}
                   <button
                     onClick={() => handlePinSubmit('1234')}
@@ -580,22 +631,27 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      background: activeRoleMode === 'owner' ? '#eef2ff' : '#f8fafc',
-                      border: activeRoleMode === 'owner' ? '1.5px solid #4f46e5' : '1px solid #e2e8f0',
-                      borderRadius: '10px',
+                      padding: '10px 12px',
+                      background: activeRoleMode === 'owner'
+                        ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#eef2ff')
+                        : (authTheme === 'dark' ? '#1f2937' : '#f8fafc'),
+                      border: activeRoleMode === 'owner'
+                        ? '1.5px solid #6366f1'
+                        : (authTheme === 'dark' ? '1px solid #374151' : '1px solid #e2e8f0'),
+                      borderRadius: '12px',
                       cursor: 'pointer',
-                      textAlign: 'left'
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '16px' }}>👑</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '18px' }}>👑</span>
                       <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a' }}>দোকান মালিক (Owner)</div>
-                        <div style={{ fontSize: '10.5px', color: '#64748b' }}>সম্পূর্ণ এক্সেস ও নিট লাভ</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: authTheme === 'dark' ? '#ffffff' : '#0f172a' }}>দোকান মালিক (Owner)</div>
+                        <div style={{ fontSize: '11px', color: authTheme === 'dark' ? '#94a3b8' : '#64748b' }}>সম্পূর্ণ এক্সেস ও নিট লাভ</div>
                       </div>
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#4f46e5' }}>PIN: 1234</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#6366f1' }}>PIN: 1234</span>
                   </button>
 
                   {/* Registered Staff Members */}
@@ -607,26 +663,31 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        background: currentStaffUser?.id === staff.id ? '#dcfce7' : '#f8fafc',
-                        border: currentStaffUser?.id === staff.id ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        background: currentStaffUser?.id === staff.id
+                          ? (authTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#dcfce7')
+                          : (authTheme === 'dark' ? '#1f2937' : '#f8fafc'),
+                        border: currentStaffUser?.id === staff.id
+                          ? '1.5px solid #16a34a'
+                          : (authTheme === 'dark' ? '1px solid #374151' : '1px solid #e2e8f0'),
+                        borderRadius: '12px',
                         cursor: 'pointer',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '18px' }}>
                           {staff.role === 'cashier' ? '🛒' : staff.role === 'manager' ? '💼' : staff.role === 'pharmacist' ? '💊' : '👔'}
                         </span>
                         <div>
-                          <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a' }}>{staff.name}</div>
-                          <div style={{ fontSize: '10.5px', color: '#64748b' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: authTheme === 'dark' ? '#ffffff' : '#0f172a' }}>{staff.name}</div>
+                          <div style={{ fontSize: '11px', color: authTheme === 'dark' ? '#94a3b8' : '#64748b' }}>
                             {staff.role === 'cashier' ? 'ক্যাশিয়ার' : staff.role === 'manager' ? 'ম্যানেজার' : staff.role === 'pharmacist' ? 'ফার্মাসিস্ট' : 'সেলসম্যান'}
                           </div>
                         </div>
                       </div>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#16a34a' }} className="num-font">PIN: {staff.pin}</span>
+                      <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#16a34a' }} className="num-font">PIN: {staff.pin}</span>
                     </button>
                   ))}
                 </div>
@@ -640,13 +701,14 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
               style={{
                 display: 'block',
                 textAlign: 'center',
-                background: '#f1f5f9',
-                color: '#4f46e5',
-                padding: '10px',
-                borderRadius: '10px',
+                background: authTheme === 'dark' ? '#1f2937' : '#f1f5f9',
+                color: authTheme === 'dark' ? '#818cf8' : '#4f46e5',
+                padding: '11px',
+                borderRadius: '12px',
                 fontSize: '12.5px',
                 fontWeight: '800',
-                textDecoration: 'none'
+                textDecoration: 'none',
+                transition: 'all 0.15s ease'
               }}
             >
               👥 সকল কর্মচারী ও পারমিশন ম্যানেজ করুন →
@@ -658,36 +720,63 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
       {/* 🏬 Multi-Shop Instant Switcher Modal */}
       {showShopSwitchModal && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(5px)',
-          zIndex: 130, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          animation: 'backdropFadeIn 0.2s ease-out'
         }}>
+          {/* Backdrop click outside to close */}
+          <div style={{ position: 'absolute', inset: 0 }} onClick={() => setShowShopSwitchModal(false)} />
+
           <div style={{
+            position: 'relative',
             background: authTheme === 'dark' ? '#1e293b' : '#ffffff',
             color: authTheme === 'dark' ? '#ffffff' : '#0f172a',
-            borderRadius: '24px', padding: '22px', width: '100%', maxWidth: '400px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-            border: authTheme === 'dark' ? '1px solid #334155' : 'none'
+            borderRadius: '24px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
+            border: authTheme === 'dark' ? '1px solid #334155' : '1px solid rgba(0, 0, 0, 0.06)',
+            animation: 'modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900' }}>
                   🏬 দোকান ও ক্যাটাগরি সুইচ
                 </h3>
-                <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#64748b' }}>
-                  বর্তমান: <strong style={{ color: '#4f46e5' }}>{tenant?.shopName}</strong> ({theme.name})
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                  বর্তমান: <strong style={{ color: '#6366f1' }}>{tenant?.shopName}</strong> ({theme.name})
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowShopSwitchModal(false)}
-                style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontSize: '14px', color: 'inherit' }}
+                style={{
+                  background: authTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: 'inherit',
+                  display: 'grid',
+                  placeItems: 'center',
+                  transition: 'all 0.15s ease'
+                }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: 'grid', gap: '8px', maxHeight: '280px', overflowY: 'auto', marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gap: '8px', maxHeight: '280px', overflowY: 'auto', marginBottom: '16px' }}>
               {availableShops.map((s) => {
                 const sTheme = getIndustryTheme(s.industryId, s.shopName);
                 const isCurrent = s.id === tenant?.id;
@@ -700,25 +789,36 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '10px 14px',
-                      background: isCurrent ? (authTheme === 'dark' ? '#1e1b4b' : '#eef2ff') : (authTheme === 'dark' ? '#0f172a' : '#f8fafc'),
-                      border: isCurrent ? '2px solid #4f46e5' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
+                      padding: '11px 14px',
+                      background: isCurrent
+                        ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.25)' : '#eef2ff')
+                        : (authTheme === 'dark' ? '#0f172a' : '#f8fafc'),
+                      border: isCurrent
+                        ? '1.5px solid #6366f1'
+                        : (authTheme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'),
+                      borderRadius: '14px',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      color: 'inherit'
+                      color: 'inherit',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '20px' }}>{sTheme.icon}</span>
+                      <span style={{ fontSize: '22px' }}>{sTheme.icon}</span>
                       <div>
                         <div style={{ fontSize: '13.5px', fontWeight: '800' }}>{s.shopName}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>{sTheme.name} • {s.location || 'বাজার'}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          {sTheme.name} • {s.location || 'বাজার'}
+                        </div>
                       </div>
                     </div>
-                    {isCurrent && (
-                      <span style={{ background: '#4f46e5', color: '#fff', fontSize: '10.5px', fontWeight: '800', padding: '2px 8px', borderRadius: '99px' }}>
-                        সক্রিয় ✓
+                    {isCurrent ? (
+                      <span style={{ fontSize: '11px', background: '#4f46e5', color: '#fff', padding: '3px 8px', borderRadius: '99px', fontWeight: '800' }}>
+                        সক্রিয়
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        সুইচ →
                       </span>
                     )}
                   </button>
@@ -726,6 +826,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
               })}
             </div>
 
+            {/* Quick Actions */}
             <div style={{ display: 'flex', gap: '8px' }}>
               <Link
                 href="/settings"
@@ -773,7 +874,7 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
           onClose={() => setShowVoiceEnrollModal(false)}
         />
       )}
-    </header>
+    </>
   );
 }
 
