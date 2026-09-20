@@ -39,27 +39,16 @@ export function getSpeakerVoiceProfiles(tenantId: string = 'default'): SpeakerVo
   try {
     // 1. Try specific tenant
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tenantId}`);
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
     // 2. Try default fallback
     if (tenantId !== 'default') {
       const defRaw = localStorage.getItem(`${STORAGE_KEY_PREFIX}default`);
-      if (defRaw) {
+      if (defRaw !== null) {
         const parsed = JSON.parse(defRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    }
-    // 3. Scan any enrolled profile on this machine
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
-        const item = localStorage.getItem(key);
-        if (item) {
-          const parsed = JSON.parse(item);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
+        if (Array.isArray(parsed)) return parsed;
       }
     }
     return [];
@@ -77,21 +66,61 @@ export function saveSpeakerVoiceProfile(tenantId: string, profile: SpeakerVoiceP
     const existing = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profile.id);
     existing.push(profile);
     const serialized = JSON.stringify(existing);
+
+    // Save across all relevant keys
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, serialized);
     localStorage.setItem(`${STORAGE_KEY_PREFIX}default`, serialized);
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        localStorage.setItem(key, serialized);
+      }
+    }
+    setSpeakerLockEnabled(tenantId, true);
+    setSpeakerLockEnabled('default', true);
   } catch (e) {}
 }
 
 /**
- * Remove a speaker voice profile
+ * Remove a speaker voice profile or reset all
  */
 export function deleteSpeakerVoiceProfile(tenantId: string, profileId: string): void {
   if (typeof window === 'undefined') return;
   try {
+    if (profileId === 'all') {
+      // Complete wipe of all speaker profile and lock toggle keys
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith(STORAGE_KEY_PREFIX) || key.startsWith(TOGGLE_KEY_PREFIX))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, JSON.stringify([]));
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}default`, JSON.stringify([]));
+      return;
+    }
+
     const remaining = getSpeakerVoiceProfiles(tenantId).filter(p => p.id !== profileId);
     const serialized = JSON.stringify(remaining);
+
+    // Update all profile keys across localStorage
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${tenantId}`, serialized);
     localStorage.setItem(`${STORAGE_KEY_PREFIX}default`, serialized);
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        localStorage.setItem(key, serialized);
+      }
+    }
+
+    if (remaining.length === 0) {
+      setSpeakerLockEnabled(tenantId, false);
+      setSpeakerLockEnabled('default', false);
+    }
   } catch (e) {}
 }
 
@@ -384,14 +413,23 @@ export function evaluateUtteranceSpeaker(
   }
 
   // If no vocal frames were detected at all:
-  // If the user's phone had quiet mic gain or browser starved analyser frames during Web Speech API,
-  // we check candidate profiles with best match fallback.
+  // If recentFrames is empty, check the live analyser. If still empty or unauthorized,
+  // strictly reject to prevent distant TV or stranger background dialogue from executing commands!
   if (recentFrames.length === 0) {
-    // If profiles are registered, allow graceful pass if lock was recently verified
+    try {
+      const analyser = voiceProximityManager?.getAnalyser();
+      if (analyser) {
+        const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+        if (live.isAuthorized) {
+          return live;
+        }
+      }
+    } catch (e) {}
+
     return {
-      isAuthorized: true,
-      confidence: 75,
-      reason: 'authorized'
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv'
     };
   }
 

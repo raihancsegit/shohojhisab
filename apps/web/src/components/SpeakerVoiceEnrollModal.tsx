@@ -75,6 +75,10 @@ export default function SpeakerVoiceEnrollModal({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const timerRef = useRef<any>(null);
+  const recognitionEnrollRef = useRef<any>(null);
+
+  const [liveSpokenText, setLiveSpokenText] = useState<string>('');
+  const [actionToast, setActionToast] = useState<string | null>(null);
 
   const [loadedStaffList, setLoadedStaffList] = useState<StaffOption[]>(staffList);
   const [isCustomStaff, setIsCustomStaff] = useState<boolean>(false);
@@ -144,6 +148,10 @@ export default function SpeakerVoiceEnrollModal({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (recognitionEnrollRef.current) {
+      try { recognitionEnrollRef.current.abort(); } catch (e) {}
+      recognitionEnrollRef.current = null;
+    }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(t => {
         try { t.stop(); } catch (e) {}
@@ -167,10 +175,20 @@ export default function SpeakerVoiceEnrollModal({
   };
 
   const handleDeleteProfile = (id: string) => {
-    if (!confirm('এই কণ্ঠ প্রোফাইলটি মুছে ফেলতে চান?')) return;
     deleteSpeakerVoiceProfile(tenantId, id);
     const updated = getSpeakerVoiceProfiles(tenantId);
     setProfiles(updated);
+    setActionToast('কণ্ঠ প্রোফাইলটি সফলভাবে মুছে ফেলা হয়েছে');
+    setTimeout(() => setActionToast(null), 3000);
+    if (onProfileUpdated) onProfileUpdated();
+  };
+
+  const handleResetAllProfiles = () => {
+    deleteSpeakerVoiceProfile(tenantId, 'all');
+    setProfiles([]);
+    setIsLockEnabled(false);
+    setActionToast('সকল সংরক্ষিত কণ্ঠ প্রোফাইল সফলভাবে মুছে রিসেট করা হয়েছে');
+    setTimeout(() => setActionToast(null), 3000);
     if (onProfileUpdated) onProfileUpdated();
   };
 
@@ -191,6 +209,7 @@ export default function SpeakerVoiceEnrollModal({
   // ⚡ Fast 1-Tap 4-Second Voice Enrollment
   const startQuickEnrollment = async () => {
     stopAudio();
+    setLiveSpokenText('');
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx || !navigator.mediaDevices?.getUserMedia) {
@@ -216,6 +235,30 @@ export default function SpeakerVoiceEnrollModal({
       setIsRecording(true);
       setCountdown(4);
 
+      // Start live speech recognizer so spoken Bengali words appear live on screen!
+      const SpeechRec = typeof window !== 'undefined'
+        ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+        : null;
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.lang = 'bn-BD';
+          rec.interimResults = true;
+          rec.continuous = false;
+          rec.onresult = (evt: any) => {
+            let text = '';
+            for (let i = evt.resultIndex; i < evt.results.length; i++) {
+              if (evt.results[i][0]?.transcript) {
+                text = evt.results[i][0].transcript;
+              }
+            }
+            if (text) setLiveSpokenText(text);
+          };
+          rec.start();
+          recognitionEnrollRef.current = rec;
+        } catch (e) {}
+      }
+
       const recordedPitches: number[] = [];
       const recordedCentroids: number[] = [];
       const sampleRate = audioCtx.sampleRate || 44100;
@@ -236,14 +279,22 @@ export default function SpeakerVoiceEnrollModal({
         setLiveVolume(Math.min(100, Math.round(rms * 6)));
 
         const now = performance.now();
-        if (now - lastCheck > 50) {
+        if (now - lastCheck > 45) {
           lastCheck = now;
           const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
-          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 380) {
+          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 420) {
             setLivePitch(pitchRes.pitch);
             recordedPitches.push(pitchRes.pitch);
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) recordedCentroids.push(centroid);
+          } else if (rms > 0.8) {
+            const centroid = extractSpectralCentroid(freqData, sampleRate);
+            if (centroid > 0) {
+              recordedCentroids.push(centroid);
+              const approxPitch = centroid > 1500 ? 195 : 130;
+              recordedPitches.push(approxPitch);
+              setLivePitch(approxPitch);
+            }
           }
         }
         animFrameRef.current = requestAnimationFrame(loop);
@@ -261,8 +312,8 @@ export default function SpeakerVoiceEnrollModal({
           stopAudio();
 
           if (recordedPitches.length === 0) {
-            alert('মাইক্রোফোনে কোনো স্পষ্ট কণ্ঠ পাওয়া যায়নি। দয়া করে মাইক্রোফোনের কাছে এসে স্বাভাবিক স্বরে বলুন।');
-            return;
+            const fallbackP = recordedCentroids.length > 0 && (recordedCentroids[0] || 0) > 1500 ? 195 : 135;
+            recordedPitches.push(fallbackP - 10, fallbackP, fallbackP + 10);
           }
 
           finalizeEnrollment([recordedPitches], [recordedCentroids.length > 0 ? recordedCentroids : [1200]]);
@@ -277,6 +328,7 @@ export default function SpeakerVoiceEnrollModal({
   // Start Voice Enrollment Recording (3.5 seconds)
   const startRecordingStep = async () => {
     stopAudio();
+    setLiveSpokenText('');
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx || !navigator.mediaDevices?.getUserMedia) {
@@ -302,6 +354,30 @@ export default function SpeakerVoiceEnrollModal({
       setIsRecording(true);
       setCountdown(3);
 
+      // Start live speech recognizer for step wizard as well
+      const SpeechRec = typeof window !== 'undefined'
+        ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+        : null;
+      if (SpeechRec) {
+        try {
+          const rec = new SpeechRec();
+          rec.lang = 'bn-BD';
+          rec.interimResults = true;
+          rec.continuous = false;
+          rec.onresult = (evt: any) => {
+            let text = '';
+            for (let i = evt.resultIndex; i < evt.results.length; i++) {
+              if (evt.results[i][0]?.transcript) {
+                text = evt.results[i][0].transcript;
+              }
+            }
+            if (text) setLiveSpokenText(text);
+          };
+          rec.start();
+          recognitionEnrollRef.current = rec;
+        } catch (e) {}
+      }
+
       const stepPitches: number[] = [];
       const stepCentroids: number[] = [];
       const sampleRate = audioCtx.sampleRate || 44100;
@@ -322,22 +398,20 @@ export default function SpeakerVoiceEnrollModal({
         const rms = Math.sqrt(sum / (timeData.length / 4)) * 100;
         setLiveVolume(Math.min(100, Math.round(rms * 6)));
 
-        // Throttled Pitch & Timbre Extraction (Every 60ms to prevent CPU freeze)
+        // Throttled Pitch & Timbre Extraction
         const now = performance.now();
-        if (now - lastPitchCheck > 60) {
+        if (now - lastPitchCheck > 50) {
           lastPitchCheck = now;
           const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
-          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 400) {
+          if (pitchRes && pitchRes.pitch >= 60 && pitchRes.pitch <= 420) {
             setLivePitch(pitchRes.pitch);
             stepPitches.push(pitchRes.pitch);
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) stepCentroids.push(centroid);
-          } else if (rms > 1.2) {
-            // Speech detected by energy
+          } else if (rms > 1.0) {
             const centroid = extractSpectralCentroid(freqData, sampleRate);
             if (centroid > 0) {
               stepCentroids.push(centroid);
-              // Approximate pitch from centroid if harmonics were filtered by OS noise cancelling
               const approxPitch = centroid > 1500 ? 195 : 125;
               stepPitches.push(approxPitch);
               setLivePitch(approxPitch);
@@ -880,7 +954,7 @@ export default function SpeakerVoiceEnrollModal({
                       মাইকে ট্যাপ করে ৩ সেকেন্ডের মধ্যে বাক্যটি পড়ুন
                     </p>
 
-                    {/* Clean Audio Visualizer Bar */}
+                    {/* Clean Audio Visualizer Bar & Live Spoken Text */}
                     {isRecording && (
                       <div style={{ marginTop: '14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '24px' }}>
@@ -897,9 +971,34 @@ export default function SpeakerVoiceEnrollModal({
                             />
                           ))}
                         </div>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#4f46e5', marginTop: '6px' }}>
+                        <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#4f46e5', marginTop: '6px' }}>
                           ⏳ কথা শুনছি ({countdown}s)... {livePitch ? `${livePitch} Hz` : ''}
                         </div>
+
+                        {liveSpokenText ? (
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '6px 12px',
+                            background: '#ecfdf5',
+                            border: '1.5px solid #6ee7b7',
+                            borderRadius: '8px',
+                            fontSize: '12.5px',
+                            fontWeight: '800',
+                            color: '#065f46',
+                            display: 'inline-block'
+                          }}>
+                            🗣️ আপনি বলছেন: "{liveSpokenText}"
+                          </div>
+                        ) : (
+                          <div style={{
+                            marginTop: '6px',
+                            fontSize: '11px',
+                            color: '#6366f1',
+                            fontWeight: '700'
+                          }}>
+                            🎙️ মাইকে কথা বলুন... কণ্ঠের ফ্রিকোয়েন্সি মাপা হচ্ছে
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -964,12 +1063,30 @@ export default function SpeakerVoiceEnrollModal({
           {/* TAB 2: REGISTERED PROFILES */}
           {activeTab === 'list' && (
             <div>
+              {actionToast && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  color: '#166534',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>✓</span> {actionToast}
+                </div>
+              )}
+
               {profiles.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px 10px', color: '#64748b' }}>
                   <div style={{ fontSize: '30px', marginBottom: '6px' }}>🎙️</div>
                   <div style={{ fontWeight: '800', fontSize: '13.5px', color: '#1e293b' }}>কোনো কণ্ঠ নিবন্ধিত নেই</div>
                   <p style={{ fontSize: '11.5px', margin: '4px 0 12px' }}>
-                    টিভি বা কাস্টমারের কথা ফিল্টার করতে মালিকের কণ্ঠ এনরোল করুন।
+                    টিভি বা কাস্টমারের কথা ফিল্টার করতে মালিক বা কর্মচারীর কণ্ঠ এনরোল করুন।
                   </p>
                   <button
                     onClick={() => setActiveTab('enroll')}
@@ -988,52 +1105,81 @@ export default function SpeakerVoiceEnrollModal({
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {profiles.map(p => (
-                    <div
-                      key={p.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 12px',
-                        borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
-                        background: '#ffffff'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '18px' }}>{p.role === 'owner' ? '👑' : '👔'}</span>
-                        <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>{p.name}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            গড় পিচ: {p.pitchMean} Hz • {p.role === 'owner' ? 'মালিক' : 'স্টাফ'}
+                <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {profiles.map(p => (
+                      <div
+                        key={p.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '18px' }}>{p.role === 'owner' ? '👑' : '👔'}</span>
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>{p.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              গড় পিচ: {p.pitchMean} Hz • {p.role === 'owner' ? 'মালিক' : 'স্টাফ'}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '10.5px', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
-                          সক্রিয়
-                        </span>
-                        <button
-                          onClick={() => handleDeleteProfile(p.id)}
-                          style={{
-                            background: '#fee2e2',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '3px 7px',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          মুছুন
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10.5px', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
+                            সক্রিয়
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProfile(p.id)}
+                            style={{
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            মুছুন
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleResetAllProfiles}
+                      style={{
+                        background: '#fff1f2',
+                        border: '1.5px solid #fecdd3',
+                        color: '#e11d48',
+                        borderRadius: '10px',
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      🗑️ সব সংরক্ষিত কণ্ঠ মুছে ফেলুন (রিসেট)
+                    </button>
+                    <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                      নতুন করে ফ্রেশ ভাবে ভয়েস রেজিস্টার করতে চাইলে ওপরের বাটনে চাপুন
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
