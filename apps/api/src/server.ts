@@ -1224,6 +1224,29 @@ try {
   }
 } catch (e) {}
 
+// Auto-deactivate and mark expired tenants (Trial or Regular Subscription)
+export function checkAndDeactivateExpiredTenants() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    db.prepare(`
+      UPDATE tenants 
+      SET status = 'expired' 
+      WHERE paid_till IS NOT NULL 
+        AND paid_till != '' 
+        AND paid_till != '2027-12-31' 
+        AND paid_till != '2028-12-31' 
+        AND paid_till < ? 
+        AND status IN ('active', 'trial')
+    `).run(today);
+  } catch (e: any) {
+    console.warn('[AutoExpiry] Error checking tenant expiry:', e.message);
+  }
+}
+
+// Run expiry check on startup and periodically every hour
+checkAndDeactivateExpiredTenants();
+setInterval(checkAndDeactivateExpiredTenants, 60 * 60 * 1000);
+
 // Routes
 fastify.get('/api/health', async () => ({ status: 'healthy', time: new Date().toISOString() }));
 
@@ -1262,14 +1285,11 @@ fastify.post('/api/auth/register', async (request, reply) => {
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   
-  // Calculate paidTill based on billingCycle
-  const paidTillDate = new Date(now);
-  if (billingCycle === 'yearly') {
-    paidTillDate.setDate(paidTillDate.getDate() + 365);
-  } else {
-    paidTillDate.setDate(paidTillDate.getDate() + 30);
-  }
-  const paidTillStr = paidTillDate.toISOString().slice(0, 10);
+  // 7-Day Free Trial by default on registration!
+  const trialDays = 7;
+  const trialExpDate = new Date(now);
+  trialExpDate.setDate(trialExpDate.getDate() + trialDays);
+  const trialPaidTillStr = trialExpDate.toISOString().slice(0, 10);
 
   const categoryId = normalizeIndustryCategory(industryCategoryId);
   const featuresJson = getPlanFeaturesJson(planId);
@@ -1281,7 +1301,7 @@ fastify.post('/api/auth/register', async (request, reply) => {
       INSERT INTO tenants (
         id, shop_name, owner_name, phone, bazaar_location, industry_category_id,
         plan_id, pin, status, billing_cycle, monthly_fee, start_date, paid_till, sms_balance, features, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', ?, ?, ?, ?, 50, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', 'trial', 0, ?, ?, 50, ?, ?)
     `).run(
       id,
       shopName.trim(),
@@ -1291,10 +1311,8 @@ fastify.post('/api/auth/register', async (request, reply) => {
       categoryId,
       planId,
       safePin,
-      billingCycle === 'yearly' ? 'yearly' : 'monthly',
-      billingCycle === 'yearly' ? 1499 : 149,
       todayStr,
-      paidTillStr,
+      trialPaidTillStr,
       featuresJson,
       now.toISOString()
     );
@@ -1313,13 +1331,15 @@ fastify.post('/api/auth/register', async (request, reply) => {
     return {
       success: true,
       isPendingApproval: true,
+      isTrial: true,
+      trialDays: 7,
       tenantId: id,
       shopName: shopName.trim(),
       phone: cleanPhone,
-      billingCycle,
+      billingCycle: 'trial',
       startDate: todayStr,
-      paidTill: paidTillStr,
-      message: 'আপনার রেজিস্ট্রেশন সফল হয়েছে! অ্যাডমিন অনুমোদন (Approval) প্রদান করলেই আপনি লগইন করতে পারবেন।'
+      paidTill: trialPaidTillStr,
+      message: 'আপনার রেজিস্ট্রেশন সফল হয়েছে! আপনাকে ৭ দিনের ফ্রি ট্রায়াল দেওয়া হচ্ছে। অ্যাডমিন অনুমোদন (Approval) প্রদান করলেই আপনি ৭ দিন ফ্রিতে সমস্ত ফিচার ব্যবহার করতে পারবেন।'
     };
   } catch (err: any) {
     return reply.status(500).send({ success: false, error: err.message || 'রেজিস্ট্রেশন সম্পন্ন করা যায়নি' });
@@ -1373,6 +1393,12 @@ fastify.post('/api/auth/login', async (request, reply) => {
     return reply.status(401).send({ success: false, error: 'এই মোবাইল নাম্বারে কোনো দোকান বা স্টাফ অ্যাকাউন্ট পাওয়া যায়নি!' });
   }
 
+  // Run auto-expiry check
+  checkAndDeactivateExpiredTenants();
+
+  // Re-fetch latest tenant record
+  tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenant.id) as any;
+
   // Check if Pending Admin Approval
   if (tenant.status === 'pending_approval' || tenant.status === 'pending') {
     return reply.status(403).send({
@@ -1381,7 +1407,7 @@ fastify.post('/api/auth/login', async (request, reply) => {
       shopName: tenant.shop_name,
       ownerName: tenant.owner_name,
       phone: tenant.phone,
-      error: 'আপনার দোকান অ্যাকাউন্টটি অ্যাডমিন অনুমোদনের অপেক্ষায় (Pending Approval) রয়েছে। অ্যাডমিন অনুমোদন প্রদান করার সাথে সাথে আপনি লগইন করতে পারবেন। জরুরি সহায়তার জন্য আমাদের হেল্পলাইনে যোগাযোগ করতে পারেন।'
+      error: 'আপনার দোকান অ্যাকাউন্টটি অ্যাডমিন অনুমোদনের অপেক্ষায় (Pending Approval) রয়েছে। অ্যাডমিন অনুমোদন প্রদান করার সাথে সাথে আপনার ৭ দিনের ফ্রি ট্রায়াল শুরু হবে।'
     });
   }
 
@@ -1390,6 +1416,26 @@ fastify.post('/api/auth/login', async (request, reply) => {
       success: false,
       isSuspended: true,
       error: 'আপনার দোকান অ্যাকাউন্টটি সাময়িকভাবে স্থগিত (Suspended) আছে। দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।'
+    });
+  }
+
+  // Check Expiry (Trial Expiry or Paid Subscription Expiry)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isTrial = tenant.billing_cycle === 'trial';
+  const isPastPaidTill = tenant.paid_till && !['2027-12-31', '2028-12-31'].includes(tenant.paid_till) && tenant.paid_till < todayStr;
+  
+  if (tenant.status === 'expired' || tenant.status === 'deactivated' || isPastPaidTill) {
+    return reply.status(403).send({
+      success: false,
+      isExpired: true,
+      isTrialExpired: isTrial,
+      shopName: tenant.shop_name,
+      ownerName: tenant.owner_name,
+      phone: tenant.phone,
+      paidTill: tenant.paid_till,
+      error: isTrial 
+        ? 'আপনার ৭ দিনের ফ্রি ট্রায়াল মেয়াদ শেষ হয়ে গেছে! সফটওয়্যারটি নিয়মিত ব্যবহার চালিয়ে যেতে দয়া করে সাবস্ক্রিপশন ফি (মাসিক ৳১৪৯ বা বাৎসরিক ৳১৪৯৯) পরিশোধ করুন অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।'
+        : 'আপনার সাবস্ক্রিপশনের মেয়াদ শেষ হয়ে গেছে! সফটওয়্যারটি সচল রাখতে দয়া করে নবায়ন করুন।'
     });
   }
 
@@ -1488,30 +1534,40 @@ fastify.get('/api/auth/me', async (request, reply) => {
 fastify.put('/api/admin/tenants/:id/status', async (request, reply) => {
   const { id } = request.params as any;
   const { status } = request.body as any;
-  if (!['active', 'suspended', 'pending_approval', 'pending'].includes(status)) {
+  if (!['active', 'trial', 'suspended', 'expired', 'deactivated', 'pending_approval', 'pending'].includes(status)) {
     return reply.status(400).send({ error: 'Invalid status' });
   }
   db.prepare('UPDATE tenants SET status = ? WHERE id = ?').run(status, id);
   return {
     success: true,
     status,
-    message: `দোকানের স্ট্যাটাস ${status === 'active' ? 'সক্রিয় (Active)' : status === 'suspended' ? 'স্থগিত (Suspended)' : 'অনুমোদন পেন্ডিং'} করা হয়েছে!`
+    message: `দোকানের স্ট্যাটাস ${status === 'active' ? 'সক্রিয় (Active)' : status === 'trial' ? 'ফ্রি ট্রায়াল (Trial)' : status === 'suspended' ? 'স্থগিত (Suspended)' : status === 'expired' ? 'মেয়াদোত্তীর্ণ (Expired)' : 'অনুমোদন পেন্ডিং'} করা হয়েছে!`
   };
 });
 
-// Admin Approve Shop (1-Click Approval with Dynamic Duration)
+// Admin Approve Shop (1-Click Approval with 7-Day Trial or Paid Subscription)
 fastify.put('/api/admin/tenants/:id/approve', async (request, reply) => {
   const { id } = request.params as any;
   const body = (request.body as any) || {};
-  const { billingCycle, planId, durationDays } = body;
+  const { billingCycle, planId, durationDays, mode } = body;
 
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
   if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const cycle = billingCycle || tenant.billing_cycle || 'monthly';
-  const days = durationDays ? Number(durationDays) : (cycle === 'yearly' ? 365 : 30);
+  
+  let cycle = billingCycle || tenant.billing_cycle || 'trial';
+  let days: number;
+
+  if (mode === 'paid' || cycle === 'yearly' || cycle === 'monthly') {
+    cycle = cycle === 'yearly' ? 'yearly' : 'monthly';
+    days = durationDays ? Number(durationDays) : (cycle === 'yearly' ? 365 : 30);
+  } else {
+    // Default: 7-Day Free Trial
+    cycle = 'trial';
+    days = durationDays ? Number(durationDays) : 7;
+  }
 
   const expDate = new Date(now);
   expDate.setDate(expDate.getDate() + days);
@@ -1521,15 +1577,111 @@ fastify.put('/api/admin/tenants/:id/approve', async (request, reply) => {
     UPDATE tenants
     SET status = 'active', start_date = ?, paid_till = ?, billing_cycle = ?, plan_id = COALESCE(?, plan_id)
     WHERE id = ?
-  `).run(todayStr, paidTillStr, cycle, planId || null, id);
+  `).run(todayStr, paidTillStr, cycle, planId || 'plan-pro', id);
 
   return {
     success: true,
-    message: `দোকান "${tenant.shop_name}" সফলভাবে অনুমোদন করা হয়েছে! মেয়াদ: ${paidTillStr} পর্যন্ত`,
+    message: cycle === 'trial'
+      ? `দোকান "${tenant.shop_name}" সফলভাবে ৭ দিনের ফ্রি ট্রায়ালে অনুমোদন করা হয়েছে! মেয়াদ: ${paidTillStr} পর্যন্ত`
+      : `দোকান "${tenant.shop_name}" সফলভাবে অনুমোদন করা হয়েছে! মেয়াদ: ${paidTillStr} পর্যন্ত`,
     status: 'active',
     startDate: todayStr,
     paidTill: paidTillStr,
-    billingCycle: cycle
+    billingCycle: cycle,
+    isTrial: cycle === 'trial'
+  };
+});
+
+// Admin Give/Extend Trial Days (+7 days, etc.)
+fastify.put('/api/admin/tenants/:id/trial', async (request, reply) => {
+  const { id } = request.params as any;
+  const body = (request.body as any) || {};
+  const { days = 7 } = body;
+
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  
+  let baseDate = now;
+  if (tenant.paid_till && !['2027-12-31', '2028-12-31'].includes(tenant.paid_till)) {
+    const curExp = new Date(tenant.paid_till);
+    if (!isNaN(curExp.getTime()) && curExp > now) {
+      baseDate = curExp;
+    }
+  }
+
+  const newExp = new Date(baseDate);
+  newExp.setDate(newExp.getDate() + Number(days));
+  const newPaidTill = newExp.toISOString().slice(0, 10);
+
+  db.prepare(`
+    UPDATE tenants
+    SET status = 'active', billing_cycle = 'trial', start_date = COALESCE(start_date, ?), paid_till = ?
+    WHERE id = ?
+  `).run(todayStr, newPaidTill, id);
+
+  return {
+    success: true,
+    message: `দোকান "${tenant.shop_name}" এর ফ্রি ট্রায়াল ${days} দিন বৃদ্ধি করা হয়েছে! নতুন মেয়াদ: ${newPaidTill}`,
+    startDate: tenant.start_date || todayStr,
+    paidTill: newPaidTill,
+    billingCycle: 'trial',
+    status: 'active'
+  };
+});
+
+// Admin Extend Validity (Months or Days)
+fastify.put('/api/admin/tenants/:id/extend', async (request, reply) => {
+  const { id } = request.params as any;
+  const body = (request.body as any) || {};
+  const { months, days } = body;
+
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  let baseDate = now;
+
+  if (tenant.paid_till && !['2027-12-31', '2028-12-31'].includes(tenant.paid_till)) {
+    const curExp = new Date(tenant.paid_till);
+    if (!isNaN(curExp.getTime()) && curExp > now) {
+      baseDate = curExp;
+    }
+  }
+
+  const expDate = new Date(baseDate);
+  let cycle = tenant.billing_cycle || 'monthly';
+
+  if (days) {
+    expDate.setDate(expDate.getDate() + Number(days));
+  } else {
+    const m = Number(months) || 1;
+    if (m >= 12) {
+      cycle = 'yearly';
+      expDate.setDate(expDate.getDate() + 365);
+    } else {
+      cycle = 'monthly';
+      expDate.setDate(expDate.getDate() + (m * 30));
+    }
+  }
+  const newPaidTill = expDate.toISOString().slice(0, 10);
+
+  db.prepare(`
+    UPDATE tenants
+    SET billing_cycle = ?, paid_till = ?, start_date = COALESCE(start_date, ?), status = 'active'
+    WHERE id = ?
+  `).run(cycle, newPaidTill, todayStr, id);
+
+  return {
+    success: true,
+    message: `দোকান "${tenant.shop_name}" এর মেয়াদ সফলভাবে বৃদ্ধি করা হয়েছে! নতুন মেয়াদ: ${newPaidTill}`,
+    billingCycle: cycle,
+    startDate: tenant.start_date || todayStr,
+    paidTill: newPaidTill,
+    status: 'active'
   };
 });
 
@@ -1965,6 +2117,8 @@ fastify.get('/api/tenants/:id/subscription-status', async (request, reply) => {
 // ==========================================
 
 fastify.get('/api/admin/tenants', async () => {
+  checkAndDeactivateExpiredTenants();
+
   const tenants = db.prepare('SELECT * FROM tenants ORDER BY created_at DESC').all() as any[];
   const categories = db.prepare('SELECT * FROM categories').all() as any[];
   const plans = db.prepare('SELECT * FROM subscription_plans').all() as any[];
@@ -1975,8 +2129,10 @@ fastify.get('/api/admin/tenants', async () => {
   return {
     summary: {
       totalShops: tenants.length,
-      activeShops: tenants.filter(t => t.status === 'active').length,
-      suspendedShops: tenants.filter(t => t.status === 'suspended').length,
+      activeShops: tenants.filter(t => t.status === 'active' && t.billing_cycle !== 'trial').length,
+      trialShops: tenants.filter(t => (t.billing_cycle === 'trial' || t.status === 'trial') && t.status !== 'suspended' && t.status !== 'expired').length,
+      pendingShops: tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length,
+      expiredShops: tenants.filter(t => t.status === 'expired' || t.status === 'suspended').length,
       monthlyRevenue: tenants.reduce((acc, t) => acc + (t.status === 'active' ? Number(t.monthly_fee || 0) : 0), 0)
     },
     tenants: tenants.map(t => {
@@ -1999,6 +2155,9 @@ fastify.get('/api/admin/tenants', async () => {
         industryIcon: cat ? cat.icon : '📦',
         monthlyFee: t.monthly_fee,
         status: t.status,
+        billingCycle: t.billing_cycle || 'monthly',
+        isTrial: t.billing_cycle === 'trial' || t.status === 'trial',
+        startDate: t.start_date || t.created_at?.slice(0, 10),
         planId: t.plan_id,
         planName: plan ? plan.name : 'প্রো শপ',
         paidTill: t.paid_till,

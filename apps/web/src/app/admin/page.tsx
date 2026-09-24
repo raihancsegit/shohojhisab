@@ -32,7 +32,7 @@ export default function SuperAdminPage() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending_approval' | 'active' | 'suspended'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending_approval' | 'trial' | 'active' | 'expired' | 'suspended'>('all');
   const [filterCategory, setFilterCategory] = useState('all');
 
   // Modals
@@ -107,7 +107,7 @@ export default function SuperAdminPage() {
     basicPlanMonthly: '99',
     proPlanMonthly: '149',
     enterprisePlanMonthly: '299',
-    freeTrialDays: '14',
+    freeTrialDays: '7',
     gracePeriodDays: '7',
     yearlyDiscountPercent: '20',
     allowTrialWithoutCard: 'true',
@@ -273,18 +273,19 @@ export default function SuperAdminPage() {
     } catch (e) {}
   };
 
-  // Approve Pending Shop
-  const handleApproveShop = async (shopId: string) => {
+  // Approve Pending Shop (Trial or Paid)
+  const handleApproveShop = async (shopId: string, mode: 'trial' | 'paid' = 'trial') => {
     triggerHaptic('success');
     try {
       const res = await fetch(`/api/admin/tenants/${shopId}/approve`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, durationDays: mode === 'trial' ? 7 : 30 })
       });
       if (res.ok) {
         const d = await res.json();
         await loadAdminData();
-        setNotice(`✓ ${d.message || 'দোকান অনুমোদন করা হয়েছে এবং মেয়াদ সক্রিয় করা হয়েছে!'}`);
+        setNotice(`✓ ${d.message || 'দোকান অনুমোদন করা হয়েছে!'}`);
         setTimeout(() => setNotice(''), 4000);
       } else {
         const err = await res.json();
@@ -293,6 +294,24 @@ export default function SuperAdminPage() {
     } catch (e) {
       setNotice('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
     }
+  };
+
+  // Extend 7-Day Free Trial
+  const handleExtendTrial = async (shopId: string, days = 7) => {
+    triggerHaptic('medium');
+    try {
+      const res = await fetch(`/api/admin/tenants/${shopId}/trial`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        await loadAdminData();
+        setNotice(`✓ ${d.message}`);
+        setTimeout(() => setNotice(''), 3500);
+      }
+    } catch (e) {}
   };
 
   // Toggle Shop Status (Active vs Suspended)
@@ -692,6 +711,10 @@ export default function SuperAdminPage() {
       ? true
       : filterStatus === 'pending_approval'
       ? (t.status === 'pending_approval' || t.status === 'pending')
+      : filterStatus === 'trial'
+      ? (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+      : filterStatus === 'expired'
+      ? (t.status === 'expired')
       : t.status === filterStatus;
     const matchCat = filterCategory === 'all' || t.industryId === filterCategory;
     return matchQ && matchStatus && matchCat;
@@ -894,7 +917,9 @@ export default function SuperAdminPage() {
             >
               <option value="all">সব স্ট্যাটাস ({tenants.length})</option>
               <option value="pending_approval">⏳ অনুমোদন অপেক্ষমাণ ({tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length})</option>
-              <option value="active">চালু দোকান ({tenants.filter(t => t.status === 'active').length})</option>
+              <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল ({tenants.filter(t => t.billingCycle === 'trial' || t.isTrial || t.status === 'trial').length})</option>
+              <option value="active">চালু পেইড দোকান ({tenants.filter(t => t.status === 'active' && t.billingCycle !== 'trial').length})</option>
+              <option value="expired">⚠️ মেয়াদোত্তীর্ণ ({tenants.filter(t => t.status === 'expired').length})</option>
               <option value="suspended">স্থগিত দোকান ({tenants.filter(t => t.status === 'suspended').length})</option>
             </select>
           </div>
@@ -950,13 +975,21 @@ export default function SuperAdminPage() {
                           borderRadius: '99px',
                           background: (t.status === 'pending_approval' || t.status === 'pending')
                             ? '#fef3c7'
+                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+                            ? '#f3e8ff'
                             : t.status === 'active' ? '#ecfdf5' : '#fee2e2',
                           color: (t.status === 'pending_approval' || t.status === 'pending')
                             ? '#b45309'
+                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+                            ? '#7e22ce'
                             : t.status === 'active' ? '#059669' : '#dc2626',
-                          border: `1px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
+                          border: `1px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial') ? '#d8b4fe' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
                         }}>
-                          {(t.status === 'pending_approval' || t.status === 'pending') ? '⏳ অনুমোদন অপেক্ষমাণ' : t.status === 'active' ? '● সক্রিয়' : '● স্থগিত'}
+                          {(t.status === 'pending_approval' || t.status === 'pending')
+                            ? '⏳ অনুমোদন অপেক্ষমাণ'
+                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+                            ? '🎁 ৭ দিনের ফ্রি ট্রায়াল'
+                            : t.status === 'active' ? '● সক্রিয়' : t.status === 'expired' ? '⚠️ মেয়াদোত্তীর্ণ' : '● স্থগিত'}
                         </span>
                       </div>
 
@@ -967,8 +1000,8 @@ export default function SuperAdminPage() {
                         <span>•</span>
                         <span>📍 {t.location}</span>
                         <span>•</span>
-                        <span style={{ color: '#4f46e5', fontWeight: '800' }}>
-                          প্যাকেজ: {t.billingCycle === 'yearly' ? '🚀 বাৎসরিক (১ বছর)' : '🌟 মাসিক (৩০ দিন)'}
+                        <span style={{ color: t.billingCycle === 'trial' ? '#7e22ce' : '#4f46e5', fontWeight: '800' }}>
+                          প্যাকেজ: {t.billingCycle === 'trial' ? '🎁 ৭ দিনের ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '🚀 বাৎসরিক (১ বছর)' : '🌟 মাসিক (৩০ দিন)'}
                         </span>
                         {t.startDate && (
                           <>
@@ -990,10 +1023,10 @@ export default function SuperAdminPage() {
                       textAlign: 'right'
                     }}>
                       <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700' }}>বর্তমান প্ল্যান ও মেয়াদ</div>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: '#4f46e5' }}>
-                        {t.planName || t.planId || 'প্রো শপ'} ({t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
+                      <div style={{ fontSize: '14px', fontWeight: '900', color: t.billingCycle === 'trial' ? '#7e22ce' : '#4f46e5' }}>
+                        {t.planName || t.planId || 'প্রো শপ'} ({t.billingCycle === 'trial' ? 'ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
                       </div>
-                      <div style={{ fontSize: '11px', color: (t.status === 'pending_approval' || t.status === 'pending') ? '#b45309' : '#059669', fontWeight: '800' }}>
+                      <div style={{ fontSize: '11px', color: (t.status === 'pending_approval' || t.status === 'pending') ? '#b45309' : (t.status === 'expired' ? '#dc2626' : '#059669'), fontWeight: '800' }}>
                         {(t.status === 'pending_approval' || t.status === 'pending')
                           ? 'অনুমোদনের পর সক্রিয় হবে'
                           : `মেয়াদ: ${t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত`}
@@ -1001,25 +1034,46 @@ export default function SuperAdminPage() {
                     </div>
 
                     {(t.status === 'pending_approval' || t.status === 'pending') ? (
-                      <button
-                        onClick={() => handleApproveShop(t.id)}
-                        style={{
-                          background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '11px 20px',
-                          borderRadius: '12px',
-                          fontWeight: '900',
-                          fontSize: '13.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
-                        }}
-                      >
-                        <span>✅ অনুমোদন ও অ্যাক্টিভ করুন</span>
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => handleApproveShop(t.id, 'trial')}
+                          style={{
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '10px 16px',
+                            borderRadius: '12px',
+                            fontWeight: '900',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)'
+                          }}
+                        >
+                          <span>🎁 ৭ দিনের ফ্রি ট্রায়াল অনুমোদন</span>
+                        </button>
+                        <button
+                          onClick={() => handleApproveShop(t.id, 'paid')}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '10px 16px',
+                            borderRadius: '12px',
+                            fontWeight: '900',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
+                          }}
+                        >
+                          <span>✅ সরাসরি পেইড অনুমোদন</span>
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => handleImpersonateShop(t)}
@@ -1079,8 +1133,14 @@ export default function SuperAdminPage() {
                   </div>
 
                   {/* Extend Validity Quick Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>মেয়াদ বৃদ্ধি:</span>
+                    <button
+                      onClick={() => handleExtendTrial(t.id, 7)}
+                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#f3e8ff', border: '1px solid #d8b4fe', color: '#7e22ce', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                    >
+                      🎁 +৭ দিন ট্রায়াল
+                    </button>
                     <button
                       onClick={() => handleExtendValidity(t.id, 1)}
                       style={{ padding: '5px 10px', borderRadius: '8px', background: '#ffffff', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}

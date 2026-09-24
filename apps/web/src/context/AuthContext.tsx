@@ -69,7 +69,7 @@ interface AuthContextType {
   isOnline: boolean;
   pendingSyncCount: number;
   saveOfflineAction: (actionType: string, payload: any) => void;
-  loginShop: (phone: string, pin: string) => Promise<{ success: boolean; error?: string; isPendingApproval?: boolean }>;
+  loginShop: (phone: string, pin: string) => Promise<{ success: boolean; error?: string; isPendingApproval?: boolean; isExpired?: boolean; isTrialExpired?: boolean }>;
   loginAdmin: (passcode: string) => Promise<{ success: boolean; error?: string }>;
   loginWithPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -574,7 +574,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return {
           success: false,
           error: data.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!',
-          isPendingApproval: Boolean(data.isPendingApproval)
+          isPendingApproval: Boolean(data.isPendingApproval),
+          isExpired: Boolean(data.isExpired),
+          isTrialExpired: Boolean(data.isTrialExpired)
         };
       }
     } catch (err: any) {

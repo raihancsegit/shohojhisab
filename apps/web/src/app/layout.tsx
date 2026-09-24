@@ -1011,18 +1011,19 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     }
     start.setHours(0, 0, 0, 0);
 
+    const isTrial = tenant?.billingCycle === 'trial' || tenant?.status === 'trial';
+    const days = tenant?.billingCycle === 'yearly' ? 365 : (isTrial ? 7 : 30);
+
     // 2. Determine clean Expiry Date:
     let expiry: Date;
     if (tenant?.paidTill && !isNaN(new Date(tenant.paidTill).getTime())) {
       // If legacy hardcoded dummy placeholder (2027-12-31 or 2028-12-31) was present on account created this year:
       if ((tenant.paidTill === '2027-12-31' || tenant.paidTill === '2028-12-31') && start.getTime() > 0) {
-        const days = tenant.billingCycle === 'yearly' ? 365 : 30;
         expiry = new Date(start.getTime() + days * 86400000);
       } else {
         expiry = new Date(tenant.paidTill);
       }
     } else {
-      const days = tenant?.billingCycle === 'yearly' ? 365 : 30;
       expiry = new Date(start.getTime() + days * 86400000);
     }
     expiry.setHours(0, 0, 0, 0);
@@ -1035,17 +1036,17 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     let badgeText = '';
     let badgeColor = '#10b981';
     if (isExpired) {
-      badgeText = 'মেয়াদ উত্তীর্ণ';
+      badgeText = isTrial ? 'ট্রায়াল মেয়াদ শেষ' : 'মেয়াদ উত্তীর্ণ';
       badgeColor = '#ef4444';
     } else if (diffDays === 1) {
       badgeText = 'আজই শেষ দিন';
       badgeColor = '#f59e0b';
-    } else if (diffDays <= 5) {
-      badgeText = `আর ${toBn(diffDays)} দিন বাকি`;
+    } else if (diffDays <= 3) {
+      badgeText = isTrial ? `ট্রায়াল: ${toBn(diffDays)} দিন বাকি` : `আর ${toBn(diffDays)} দিন বাকি`;
       badgeColor = '#f59e0b';
     } else {
-      badgeText = `আর ${toBn(diffDays)} দিন বাকি`;
-      badgeColor = '#10b981';
+      badgeText = isTrial ? `ট্রায়াল: ${toBn(diffDays)} দিন বাকি` : `আর ${toBn(diffDays)} দিন বাকি`;
+      badgeColor = isTrial ? '#8b5cf6' : '#10b981';
     }
 
     return {
@@ -1054,8 +1055,13 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       badgeText,
       badgeColor,
       isExpired,
+      isTrial,
       percentage,
-      planLabel: tenant.billingCycle === 'yearly' ? 'বাৎসরিক প্যাকেজ (১ বছর)' : 'মাসিক প্যাকেজ (৩০ দিন)'
+      planLabel: isTrial 
+        ? '🎁 ৭ দিনের ফ্রি ট্রায়াল' 
+        : tenant?.billingCycle === 'yearly' 
+        ? 'বাৎসরিক প্যাকেজ (১ বছর)' 
+        : 'মাসিক প্যাকেজ (৩০ দিন)'
     };
   })();
 
