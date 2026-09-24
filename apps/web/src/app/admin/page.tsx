@@ -416,7 +416,14 @@ export default function SuperAdminPage() {
           ownerName: editModalShop.ownerName,
           phone: editModalShop.phone,
           location: editModalShop.location,
-          monthlyFee: Number(editModalShop.monthlyFee) || 149
+          industryCategoryId: editModalShop.industryId || editModalShop.industryCategoryId,
+          planId: editModalShop.planId,
+          pin: editModalShop.pin,
+          status: editModalShop.status,
+          billingCycle: editModalShop.billingCycle,
+          paidTill: editModalShop.paidTill,
+          monthlyFee: Number(editModalShop.monthlyFee) || 0,
+          smsBalance: Number(editModalShop.smsBalance) || 0
         })
       });
       if (res.ok) {
@@ -424,8 +431,13 @@ export default function SuperAdminPage() {
         setNotice('✓ দোকানের তথ্য সফলভাবে আপডেট হয়েছে!');
         setEditModalShop(null);
         setTimeout(() => setNotice(''), 3500);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'আপডেট করতে সমস্যা হয়েছে!');
       }
-    } catch (e) {}
+    } catch (e) {
+      alert('সার্ভার এরর!');
+    }
   };
 
   // Delete Shop
@@ -2476,6 +2488,210 @@ export default function SuperAdminPage() {
                   পিন পরিবর্তন করুন
                 </button>
                 <button type="button" onClick={() => setResetPinShop(null)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                  বাতিল
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Edit Shop Details */}
+      {editModalShop && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '520px', width: '100%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                ✏️ দোকানের তথ্য সম্পাদনা
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditModalShop(null)}
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditShop} style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>দোকানের নাম</label>
+                <input
+                  type="text"
+                  value={editModalShop.shopName || ''}
+                  onChange={(e) => setEditModalShop({ ...editModalShop, shopName: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>মালিকের নাম</label>
+                <input
+                  type="text"
+                  value={editModalShop.ownerName || ''}
+                  onChange={(e) => setEditModalShop({ ...editModalShop, ownerName: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>মোবাইল নম্বর</label>
+                  <input
+                    type="tel"
+                    value={editModalShop.phone || ''}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, phone: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>৪-ডিজিট পিন</label>
+                  <input
+                    type="text"
+                    value={editModalShop.pin || ''}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, pin: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', textAlign: 'center' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>বাজার / লোকেশন</label>
+                  <input
+                    type="text"
+                    value={editModalShop.location || ''}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, location: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>ব্যবসার ধরন</label>
+                  <select
+                    value={editModalShop.industryId || editModalShop.industryCategoryId || 'cat-grocery'}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, industryId: e.target.value, industryCategoryId: e.target.value })}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.icon || '📦'} {c.banglaName || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>প্ল্যান</label>
+                  <select
+                    value={editModalShop.planId || 'plan-pro'}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, planId: e.target.value })}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  >
+                    <option value="plan-basic">বেসিক দোকান (৳৯৯)</option>
+                    <option value="plan-pro">প্রো শপ (৳১৪৯)</option>
+                    <option value="plan-enterprise">মাল্টি-ব্রাঞ্চ Enterprise (৳২৯৯)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>প্যাকেজ / সাইকেল</label>
+                  <select
+                    value={editModalShop.billingCycle || 'monthly'}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, billingCycle: e.target.value })}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  >
+                    <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল</option>
+                    <option value="monthly">🌟 মাসিক প্যাকেজ</option>
+                    <option value="yearly">🚀 বাৎসরিক প্যাকেজ</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>মেয়াদ শেষ (Paid Till)</label>
+                  <input
+                    type="date"
+                    value={editModalShop.paidTill || ''}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, paidTill: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>মাসিক ফি (৳)</label>
+                  <input
+                    type="number"
+                    value={editModalShop.monthlyFee ?? 149}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, monthlyFee: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>স্ট্যাটাস</label>
+                  <select
+                    value={editModalShop.status || 'active'}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, status: e.target.value })}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                  >
+                    <option value="active">✅ সক্রিয় (Active)</option>
+                    <option value="trial">🎁 ফ্রি ট্রায়াল (Trial)</option>
+                    <option value="pending_approval">⏳ অনুমোদনের অপেক্ষায় (Pending)</option>
+                    <option value="suspended">⏸ স্থগিত (Suspended)</option>
+                    <option value="expired">⚠️ মেয়াদোত্তীর্ণ (Expired)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>SMS ব্যালেন্স</label>
+                  <input
+                    type="number"
+                    value={editModalShop.smsBalance ?? 50}
+                    onChange={(e) => setEditModalShop({ ...editModalShop, smsBalance: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    background: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '11px',
+                    borderRadius: '10px',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✓ তথ্য সংরক্ষণ করুন
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditModalShop(null)}
+                  style={{
+                    padding: '11px 18px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
                   বাতিল
                 </button>
               </div>

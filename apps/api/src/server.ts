@@ -2208,6 +2208,7 @@ fastify.get('/api/admin/tenants', async () => {
         planId: t.plan_id,
         planName: plan ? plan.name : 'প্রো শপ',
         paidTill: t.paid_till,
+        pin: t.pin || '1234',
         smsBalance: t.sms_balance || 0,
         productCount: prodCount,
         salesCount: salesCount,
@@ -2361,26 +2362,102 @@ fastify.put('/api/admin/tenants/:id/plan', async (request, reply) => {
   return { success: true, message: `দোকানের প্ল্যান সফলভাবে পরিবর্তন করে "${plan.name}" করা হয়েছে!` };
 });
 
-fastify.put('/api/admin/tenants/:id/extend', async (request, reply) => {
+// Admin Update Shop (General Edit)
+fastify.put('/api/admin/tenants/:id', async (request, reply) => {
   const { id } = request.params as any;
-  const { months, paidTill } = request.body as any;
+  const body = (request.body as any) || {};
 
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
-  if (!tenant) return reply.status(404).send({ error: 'Shop not found' });
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
 
-  let newPaidTill = '';
-  if (paidTill) {
-    newPaidTill = paidTill;
-  } else {
-    const baseDate = tenant.paid_till ? new Date(tenant.paid_till) : new Date();
-    const addMonths = Number(months) || 1;
-    baseDate.setMonth(baseDate.getMonth() + addMonths);
-    newPaidTill = baseDate.toISOString().slice(0, 10);
+  const shopName = body.shopName !== undefined ? String(body.shopName).trim() : tenant.shop_name;
+  const ownerName = body.ownerName !== undefined ? String(body.ownerName).trim() : tenant.owner_name;
+  const phone = body.phone !== undefined ? String(body.phone).trim() : tenant.phone;
+  const location = body.location !== undefined ? String(body.location).trim() : tenant.bazaar_location;
+  const categoryId = body.industryCategoryId ? normalizeIndustryCategory(body.industryCategoryId) : (body.industryId ? normalizeIndustryCategory(body.industryId) : tenant.industry_category_id);
+  const planId = body.planId || tenant.plan_id;
+  const pin = body.pin ? String(body.pin).trim() : tenant.pin;
+  const status = body.status || tenant.status;
+  const billingCycle = body.billingCycle || tenant.billing_cycle || 'monthly';
+  const monthlyFee = body.monthlyFee !== undefined ? Number(body.monthlyFee) : tenant.monthly_fee;
+  const paidTill = body.paidTill || tenant.paid_till;
+  const smsBalance = body.smsBalance !== undefined ? Number(body.smsBalance) : tenant.sms_balance;
+
+  db.prepare(`
+    UPDATE tenants
+    SET shop_name = ?, owner_name = ?, phone = ?, bazaar_location = ?,
+        industry_category_id = ?, plan_id = ?, pin = ?, status = ?,
+        billing_cycle = ?, monthly_fee = ?, paid_till = ?, sms_balance = ?
+    WHERE id = ?
+  `).run(
+    shopName, ownerName, phone, location,
+    categoryId, planId, pin, status,
+    billingCycle, monthlyFee, paidTill, smsBalance,
+    id
+  );
+
+  return {
+    success: true,
+    message: `দোকান "${shopName}" এর তথ্য সফলভাবে আপডেট হয়েছে!`,
+    tenant: {
+      id,
+      shopName,
+      ownerName,
+      phone,
+      location,
+      industryId: categoryId,
+      planId,
+      status,
+      billingCycle,
+      paidTill,
+      monthlyFee,
+      smsBalance
+    }
+  };
+});
+
+// Admin Delete Shop & Associated Data
+fastify.delete('/api/admin/tenants/:id', async (request, reply) => {
+  const { id } = request.params as any;
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  try {
+    db.prepare('DELETE FROM products WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM sales WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM customers WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM expenses WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM staff_users WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM branches WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM subscription_transactions WHERE tenant_id = ?').run(id);
+    db.prepare('DELETE FROM tenants WHERE id = ?').run(id);
+
+    return { success: true, message: `দোকান "${tenant.shop_name}" সফলভাবে ডিলিট করা হয়েছে!` };
+  } catch (err: any) {
+    console.error('Error deleting tenant:', err);
+    return reply.status(500).send({ error: 'দোকান ডিলিট করতে সমস্যা হয়েছে: ' + err.message });
+  }
+});
+
+// Admin Reset Shop PIN
+fastify.post('/api/admin/tenants/:id/reset-pin', async (request, reply) => {
+  const { id } = request.params as any;
+  const { pin } = (request.body as any) || {};
+
+  if (!pin || String(pin).trim().length < 4) {
+    return reply.status(400).send({ error: 'সঠিক ৪-ডিজিট পিন নম্বর দিন' });
   }
 
-  db.prepare("UPDATE tenants SET paid_till = ?, status = 'active' WHERE id = ?").run(newPaidTill, id);
+  const cleanPin = String(pin).trim();
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
 
-  return { success: true, message: `দোকানের লাইসেন্সের মেয়াদ বাড়িয়ে ${newPaidTill} পর্যন্ত করা হয়েছে!`, paidTill: newPaidTill };
+  db.prepare('UPDATE tenants SET pin = ? WHERE id = ?').run(cleanPin, id);
+
+  return {
+    success: true,
+    message: `দোকান "${tenant.shop_name}" এর পিন পরিবর্তন করে "${cleanPin}" করা হয়েছে!`
+  };
 });
 
 fastify.put('/api/admin/tenants/:id/features', async (request, reply) => {

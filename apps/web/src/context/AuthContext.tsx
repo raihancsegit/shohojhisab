@@ -693,13 +693,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateActiveTenant = (tenantData: ShopTenant) => {
+  const updateActiveTenant = (tenantData: ShopTenant, role: 'shopkeeper' | 'admin' = 'shopkeeper') => {
     if (tenantData) {
       tenantData.industryId = tenantData.industryId || (tenantData as any).industry_category_id || (tenantData as any).industryCategoryId || (tenantData.shopName?.toLowerCase().includes('pharma') ? 'cat-pharmacy' : 'cat-grocery');
     }
     setTenant(tenantData);
+    setUserRole(role);
+    setActiveRoleMode('owner');
+    localStorage.setItem('lbos_user_role', role);
     localStorage.setItem('lbos_active_tenant', JSON.stringify(tenantData));
     localStorage.setItem('lbos_active_tenant_id', tenantData.id);
+    localStorage.setItem('lbos_role_mode', 'owner');
   };
 
   // Check if subscription plan has access to a tier
