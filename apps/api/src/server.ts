@@ -579,6 +579,18 @@ try {
   db.prepare("UPDATE tenants SET start_date = COALESCE(start_date, substr(created_at, 1, 10), date('now')) WHERE start_date IS NULL OR start_date = ''").run();
 } catch (e) {}
 
+// Normalize any Bengali digits in paid_till to standard YYYY-MM-DD
+try {
+  const bnToEnMap: Record<string, string> = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+  const allTenantsWithBn = db.prepare("SELECT id, paid_till FROM tenants WHERE paid_till IS NOT NULL").all() as any[];
+  for (const t of allTenantsWithBn) {
+    if (t.paid_till && /[০-৯]/.test(t.paid_till)) {
+      const normalized = t.paid_till.replace(/[০-৯]/g, (d: string) => bnToEnMap[d] || d).slice(0, 10);
+      db.prepare("UPDATE tenants SET paid_till = ? WHERE id = ?").run(normalized, t.id);
+    }
+  }
+} catch (e) {}
+
 // Fix dummy legacy 2027-12-31/2028-12-31 values to align with real subscription start_date
 try {
   db.prepare(`
@@ -2380,7 +2392,9 @@ fastify.put('/api/admin/tenants/:id', async (request, reply) => {
   const status = body.status || tenant.status;
   const billingCycle = body.billingCycle || tenant.billing_cycle || 'monthly';
   const monthlyFee = body.monthlyFee !== undefined ? Number(body.monthlyFee) : tenant.monthly_fee;
-  const paidTill = body.paidTill || tenant.paid_till;
+  const rawPaidTill = body.paidTill || tenant.paid_till;
+  const bnToEn: Record<string, string> = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+  const paidTill = rawPaidTill ? String(rawPaidTill).replace(/[০-৯]/g, d => bnToEn[d] || d).slice(0, 10) : tenant.paid_till;
   const smsBalance = body.smsBalance !== undefined ? Number(body.smsBalance) : tenant.sms_balance;
 
   db.prepare(`

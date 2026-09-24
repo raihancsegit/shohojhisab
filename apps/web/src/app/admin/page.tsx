@@ -23,6 +23,12 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat-general', banglaName: 'সাধারণ রিটেইল ব্যবসা (General Retail)', icon: '🏪' }
 ];
 
+const toEnglishDigits = (str: any): string => {
+  if (!str) return '';
+  const bnToEn: Record<string, string> = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+  return String(str).replace(/[০-৯]/g, (d) => bnToEn[d] || d);
+};
+
 export default function SuperAdminPage() {
   const { userRole, loginAdmin, logout, updateActiveTenant, triggerHaptic } = useAuth();
   const router = useRouter();
@@ -408,6 +414,7 @@ export default function SuperAdminPage() {
     triggerHaptic('medium');
 
     try {
+      const cleanDate = toEnglishDigits(editModalShop.paidTill || '').slice(0, 10);
       const res = await fetch(`/api/admin/tenants/${editModalShop.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -421,7 +428,7 @@ export default function SuperAdminPage() {
           pin: editModalShop.pin,
           status: editModalShop.status,
           billingCycle: editModalShop.billingCycle,
-          paidTill: editModalShop.paidTill,
+          paidTill: cleanDate,
           monthlyFee: Number(editModalShop.monthlyFee) || 0,
           smsBalance: Number(editModalShop.smsBalance) || 0
         })
@@ -432,7 +439,7 @@ export default function SuperAdminPage() {
         setEditModalShop(null);
         setTimeout(() => setNotice(''), 3500);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         alert(err.error || 'আপডেট করতে সমস্যা হয়েছে!');
       }
     } catch (e) {
@@ -1460,7 +1467,33 @@ export default function SuperAdminPage() {
                     }}>
                       {/* 1. EDIT BUTTON - PROMINENT & HIGH-CONTRAST */}
                       <button
-                        onClick={() => setEditModalShop(t)}
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          triggerHaptic('light');
+
+                          const rawDate = t.paidTill || t.paid_till || '';
+                          const enDate = toEnglishDigits(rawDate);
+                          const cleanDate = enDate ? enDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+                          setEditModalShop({
+                            id: t.id,
+                            shopName: t.shopName || t.shop_name || '',
+                            ownerName: t.ownerName || t.owner_name || '',
+                            phone: t.phone || '',
+                            pin: t.pin || '1234',
+                            location: t.location || t.bazaar_location || 'স্থানীয় বাজার',
+                            industryId: t.industryId || t.industry_category_id || 'cat-grocery',
+                            industryCategoryId: t.industryId || t.industry_category_id || 'cat-grocery',
+                            planId: t.planId || t.plan_id || 'plan-pro',
+                            billingCycle: t.billingCycle || t.billing_cycle || 'monthly',
+                            paidTill: cleanDate,
+                            monthlyFee: t.monthlyFee !== undefined && t.monthlyFee !== null ? Number(t.monthlyFee) : (t.monthly_fee !== undefined ? Number(t.monthly_fee) : 149),
+                            status: t.status || 'active',
+                            smsBalance: t.smsBalance !== undefined && t.smsBalance !== null ? Number(t.smsBalance) : (t.sms_balance !== undefined ? Number(t.sms_balance) : 50)
+                          });
+                        }}
                         style={{
                           background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
                           color: '#ffffff',
@@ -2627,7 +2660,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: SMS Recharge */}
       {smsRechargeShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '400px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>📩 SMS ব্যালেন্স রিচার্জ</h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
@@ -2679,7 +2712,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Add Coupon */}
       {showCouponModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '440px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>🎟️ নতুন প্রোমো কুপন তৈরি</h3>
             <form onSubmit={handleCreateCoupon} style={{ display: 'grid', gap: '12px' }}>
@@ -2757,7 +2790,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Feature Toggles */}
       {featureModalShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '520px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
               ⚙️ বিশেষ ফিচার পারমিশন: {featureModalShop.shopName}
@@ -2804,7 +2837,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Reset PIN */}
       {resetPinShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '400px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>🔑 পিন রিসেট করুন</h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
@@ -2835,8 +2868,8 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Edit Shop Details */}
       {editModalShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px', borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px', borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.45)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>✏️</span>
@@ -2918,9 +2951,9 @@ export default function SuperAdminPage() {
                     onChange={(e) => setEditModalShop({ ...editModalShop, industryId: e.target.value, industryCategoryId: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13.5px' }}
                   >
-                    {categories.map(c => (
+                    {(categories || []).map(c => (
                       <option key={c.id} value={c.id}>
-                        {c.icon || '📦'} {c.banglaName || c.name}
+                        {c.icon || '📦'} {c.banglaName || c.bangla_name || c.name || c.id}
                       </option>
                     ))}
                   </select>
@@ -2960,7 +2993,7 @@ export default function SuperAdminPage() {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>মেয়াদ শেষ (Paid Till)</label>
                   <input
                     type="date"
-                    value={editModalShop.paidTill || ''}
+                    value={toEnglishDigits(editModalShop.paidTill || '').slice(0, 10)}
                     onChange={(e) => setEditModalShop({ ...editModalShop, paidTill: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px' }}
                     required
@@ -3045,7 +3078,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Create New Shop */}
       {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '480px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>➕ নতুন দোকান তৈরি ও সক্রিয়করণ</h3>
             <form onSubmit={handleCreateShop} style={{ display: 'grid', gap: '12px' }}>
@@ -3190,7 +3223,7 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Inspect Shop */}
       {inspectShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', zIndex: 99999, padding: '16px' }}>
           <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
             <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
               🔍 দোকানের বিস্তারিত মনিটরিং
