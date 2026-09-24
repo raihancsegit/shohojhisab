@@ -18,10 +18,10 @@ function LoginFormContent() {
     ? 'register'
     : 'shop';
   const [tab, setTab] = useState<'shop' | 'register' | 'admin' | 'dealer'>(initialRole);
-  const [phone, setPhone] = useState('01986233234');
+  const [phone, setPhone] = useState('');
   
   // 4-box PIN states
-  const [pinDigits, setPinDigits] = useState(['1', '2', '3', '4']);
+  const [pinDigits, setPinDigits] = useState(['', '', '', '']);
   const pinInputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -29,7 +29,7 @@ function LoginFormContent() {
     useRef<HTMLInputElement>(null)
   ];
 
-  const [adminPasscode, setAdminPasscode] = useState('admin');
+  const [adminPasscode, setAdminPasscode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -55,7 +55,6 @@ function LoginFormContent() {
       setTab('admin');
     } else if (searchParams.get('role') === 'dealer' || searchParams.get('dealer') === 'true') {
       setTab('dealer');
-      setPhone('01899112233');
     } else if (searchParams.get('tab') === 'register' || searchParams.get('register') === 'true') {
       setTab('register');
     }
@@ -226,25 +225,6 @@ function LoginFormContent() {
     }
   };
 
-  const handleQuickDemoLogin = async (demoPhone: string, demoPin: string[]) => {
-    triggerHaptic('medium');
-    setPhone(demoPhone);
-    setPinDigits(demoPin);
-    setError('');
-    setLoading(true);
-    const pinStr = demoPin.join('');
-    const res = await loginShop(demoPhone, pinStr);
-    if (res.success) {
-      window.location.href = '/pos';
-    } else {
-      setError(res.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!');
-      setLoading(false);
-    }
-  };
-
-  const fillDemoLogin = (demoPhone: string, demoPin: string[]) => {
-    handleQuickDemoLogin(demoPhone, demoPin);
-  };
 
   return (
     <div style={{
@@ -991,148 +971,6 @@ function LoginFormContent() {
               </button>
             </form>
 
-            {/* Quick Multi-Category Demo Logins */}
-            <div style={{
-              marginTop: '18px',
-              paddingTop: '14px',
-              borderTop: '1px dashed #e2e8f0',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#94a3b8', textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
-                ⚡ ১-ক্লিকে যেকোনো দোকান টেস্ট করুন:
-              </div>
-
-              {/* Category Pills */}
-              <div style={{ display: 'grid', gap: '6px', width: '100%', boxSizing: 'border-box' }}>
-                {/* 1. Grocery Shop */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '5px 8px',
-                  borderRadius: '10px',
-                  gap: '4px',
-                  boxSizing: 'border-box'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                    <span style={{ fontSize: '14px' }}>🛒</span>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>মুদি শপ</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01986233234', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      মালিক (1234)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01986233234', ['2', '2', '2', '2'])}
-                      style={{ background: '#dcfce7', color: '#15803d', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      স্টাফ (2222)
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Pharmacy */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '5px 8px',
-                  borderRadius: '10px',
-                  gap: '4px',
-                  boxSizing: 'border-box'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                    <span style={{ fontSize: '14px' }}>💊</span>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>ফার্মেসি</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01711223344', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      মালিক (1234)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01711223344', ['4', '4', '4', '4'])}
-                      style={{ background: '#fef3c7', color: '#b45309', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      স্টাফ (4444)
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. Clothing Shop */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '5px 8px',
-                  borderRadius: '10px',
-                  gap: '4px',
-                  boxSizing: 'border-box'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                    <span style={{ fontSize: '14px' }}>👗</span>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>ফ্যাশন/কাপড়</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01722334455', ['1', '2', '3', '4'])}
-                      style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      মালিক (1234)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoLogin('01722334455', ['3', '3', '3', '3'])}
-                      style={{ background: '#fae8ff', color: '#86198f', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      ম্যানেজার (3333)
-                    </button>
-                  </div>
-                </div>
-
-                {/* 4. Electronics & Hardware */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '5px 8px',
-                  borderRadius: '10px',
-                  gap: '4px',
-                  boxSizing: 'border-box'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                    <span style={{ fontSize: '14px' }}>⚡</span>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap' }}>হার্ডওয়্যার</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => fillDemoLogin('01733445566', ['1', '2', '3', '4'])}
-                    style={{ background: '#e0e7ff', color: '#4338ca', border: 'none', padding: '3px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', flexShrink: 0 }}
-                  >
-                    মালিক (1234)
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Subtle Footer Admin Portal Link */}
             <div style={{ textAlign: 'center', marginTop: '14px' }}>
@@ -1271,69 +1109,6 @@ function LoginFormContent() {
               </button>
             </form>
 
-            {/* Quick Demo Dealer Login */}
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '14px',
-              padding: '10px 12px',
-              marginTop: '16px'
-            }}>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                ⚡ ডেমো ডিলার দিয়ে এক ক্লিকে টেস্ট করুন:
-              </span>
-              <div style={{ display: 'grid', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhone('01711998877');
-                    setPinDigits(['1', '2', '3', '4']);
-                    triggerHaptic('light');
-                  }}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    cursor: 'pointer',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    color: '#0f172a'
-                  }}
-                >
-                  <span>🏢 মেঘনা গ্রুপ (01711998877)</span>
-                  <span style={{ color: '#0284c7', fontWeight: '800' }}>পিন: 1234</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhone('01933776655');
-                    setPinDigits(['1', '2', '3', '4']);
-                    triggerHaptic('light');
-                  }}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    cursor: 'pointer',
-                    fontSize: '11.5px',
-                    fontWeight: '700',
-                    color: '#0f172a'
-                  }}
-                >
-                  <span>🏢 স্কয়ার ফার্মা (01933776655)</span>
-                  <span style={{ color: '#0284c7', fontWeight: '800' }}>পিন: 1234</span>
-                </button>
-              </div>
-            </div>
 
             <div style={{ textAlign: 'center', marginTop: '14px' }}>
               <Link
@@ -1388,7 +1163,7 @@ function LoginFormContent() {
                 type="password"
                 value={adminPasscode}
                 onChange={(e) => setAdminPasscode(e.target.value)}
-                placeholder="অ্যাডমিন পাসকোড (admin)"
+                placeholder="অ্যাডমিন পাসকোড দিন"
                 required
                 style={{
                   width: '100%',

@@ -171,11 +171,6 @@ export default function DealerPortalPage() {
     setLoginPin('');
   };
 
-  // Quick Demo Login for instant testing
-  const handleQuickDemo = (ph: string, pn: string) => {
-    setLoginPhone(ph);
-    setLoginPin(pn);
-  };
 
   // Handle Adding Item Row
   const addItemRow = () => {
@@ -445,7 +440,7 @@ export default function DealerPortalPage() {
                 maxLength={8}
                 value={loginPin}
                 onChange={e => setLoginPin(e.target.value)}
-                placeholder="ডিফল্ট পিন: 1234"
+                placeholder="৪-ডিজিটের পিন কোড দিন"
                 required
                 style={{
                   width: '100%',
@@ -458,9 +453,6 @@ export default function DealerPortalPage() {
                   outline: 'none'
                 }}
               />
-              <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginTop: '6px' }}>
-                💡 প্রাথমিক অবস্থায় আপনার পিন হলো <strong>1234</strong>
-              </span>
             </div>
 
             <button
@@ -486,31 +478,6 @@ export default function DealerPortalPage() {
               {loginSubmitting ? 'লগইন হচ্ছে...' : 'লগইন করুন ➔'}
             </button>
           </form>
-
-          {/* Quick Demo Pill */}
-          <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '10px' }}>
-              ⚡ টেস্ট করার জন্য দ্রুত ডেমো ডিলার নির্বাচন করুন:
-            </span>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('01711998877', '1234')}
-                style={{
-                  background: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  color: '#166534',
-                  padding: '6px 12px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                🚚 প্রাণ-আরএফএল (01711998877 / 1234)
-              </button>
-            </div>
-          </div>
 
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
             <Link href="/login" style={{ fontSize: '13px', color: '#0284c7', textDecoration: 'none', fontWeight: '600' }}>
