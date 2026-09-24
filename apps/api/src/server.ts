@@ -572,6 +572,28 @@ try { db.prepare("ALTER TABLE tenants ADD COLUMN features TEXT").run(); } catch 
 try { db.prepare("ALTER TABLE tenants ADD COLUMN sms_balance INTEGER DEFAULT 50").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE tenants ADD COLUMN paid_till TEXT DEFAULT '2027-12-31'").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE tenants ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE tenants ADD COLUMN start_date TEXT").run(); } catch (e) {}
+
+// Normalize start_date for all existing tenants to their actual creation date or today
+try {
+  db.prepare("UPDATE tenants SET start_date = COALESCE(start_date, substr(created_at, 1, 10), date('now')) WHERE start_date IS NULL OR start_date = ''").run();
+} catch (e) {}
+
+// Fix dummy legacy 2027-12-31/2028-12-31 values to align with real subscription start_date
+try {
+  db.prepare(`
+    UPDATE tenants
+    SET paid_till = date(start_date, '+30 days')
+    WHERE (paid_till = '2027-12-31' OR paid_till = '2028-12-31') AND (billing_cycle = 'monthly' OR billing_cycle IS NULL)
+  `).run();
+} catch (e) {}
+try {
+  db.prepare(`
+    UPDATE tenants
+    SET paid_till = date(start_date, '+365 days')
+    WHERE (paid_till = '2027-12-31' OR paid_till = '2028-12-31') AND billing_cycle = 'yearly'
+  `).run();
+} catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN tenant_id TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN company_name TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN representative_name TEXT").run(); } catch (e) {}
@@ -1659,9 +1681,9 @@ fastify.post('/api/subscriptions/upgrade', async (request, reply) => {
   const finalAmount = Math.max(0, basePrice - discountAmount);
   const now = new Date();
   
-  // Calculate new paid_till
+  // Calculate new paid_till and start_date
   let paidTillDate = new Date();
-  if (tenant.paid_till) {
+  if (tenant.paid_till && !['2027-12-31', '2028-12-31'].includes(tenant.paid_till)) {
     const existingDate = new Date(tenant.paid_till);
     if (existingDate > now) {
       paidTillDate = existingDate;
@@ -1674,6 +1696,7 @@ fastify.post('/api/subscriptions/upgrade', async (request, reply) => {
     paidTillDate.setDate(paidTillDate.getDate() + 30);
   }
   const paidTillStr = paidTillDate.toISOString().slice(0, 10);
+  const startDateStr = now.toISOString().slice(0, 10);
 
   const featuresJson = getPlanFeaturesJson(targetPlan.id);
 
@@ -1702,11 +1725,13 @@ fastify.post('/api/subscriptions/upgrade', async (request, reply) => {
     UPDATE tenants SET
       plan_id = ?,
       paid_till = ?,
+      billing_cycle = ?,
+      start_date = COALESCE(start_date, ?),
       features = ?,
       monthly_fee = ?,
       status = 'active'
     WHERE id = ?
-  `).run(targetPlan.id, paidTillStr, featuresJson, targetPlan.monthly_price, tenantId);
+  `).run(targetPlan.id, paidTillStr, billingCycle || 'monthly', startDateStr, featuresJson, targetPlan.monthly_price, tenantId);
 
   // Log in Audit
   db.prepare(`
@@ -1738,9 +1763,12 @@ fastify.post('/api/subscriptions/upgrade', async (request, reply) => {
       industryName: cat ? cat.bangla_name : 'সাধারণ',
       industryIcon: cat ? cat.icon : '🏪',
       planId: updatedTenant.plan_id,
+      planName: targetPlan.name,
       status: updatedTenant.status,
-      monthlyFee: updatedTenant.monthly_fee,
+      billingCycle: updatedTenant.billing_cycle || billingCycle || 'monthly',
+      startDate: updatedTenant.start_date || startDateStr,
       paidTill: updatedTenant.paid_till,
+      monthlyFee: updatedTenant.monthly_fee,
       smsBalance: updatedTenant.sms_balance,
       features: updatedTenant.features ? JSON.parse(updatedTenant.features) : null
     },
@@ -1784,9 +1812,10 @@ fastify.post('/api/subscriptions/instant-checkout', async (request, reply) => {
   const autoTrxId = (selectedGateway === 'bkash' ? 'BKX' : 'NGD') + Math.floor(10000000 + Math.random() * 90000000);
   const now = new Date();
 
-  // Extend validity
+  // Extend validity or set new subscription dates
+  const startDateStr = now.toISOString().slice(0, 10);
   let currentPaidTill = now;
-  if (tenant.paid_till) {
+  if (tenant.paid_till && !['2027-12-31', '2028-12-31'].includes(tenant.paid_till)) {
     const parsed = new Date(tenant.paid_till);
     if (!isNaN(parsed.getTime()) && parsed > now) {
       currentPaidTill = parsed;
@@ -1813,7 +1842,7 @@ fastify.post('/api/subscriptions/instant-checkout', async (request, reply) => {
     trxRecordId,
     tenantId,
     targetPlan.id,
-    billingCycle || 'yearly',
+    billingCycle || (isYearly ? 'yearly' : 'monthly'),
     finalAmount,
     selectedGateway,
     phoneNumber || tenant.phone,
@@ -1830,12 +1859,14 @@ fastify.post('/api/subscriptions/instant-checkout', async (request, reply) => {
     UPDATE tenants SET
       plan_id = ?,
       paid_till = ?,
+      billing_cycle = ?,
+      start_date = COALESCE(start_date, ?),
       features = ?,
       monthly_fee = ?,
       sms_balance = sms_balance + ?,
       status = 'active'
     WHERE id = ?
-  `).run(targetPlan.id, paidTillStr, featuresJson, targetPlan.monthly_price, bonusSms, tenantId);
+  `).run(targetPlan.id, paidTillStr, isYearly ? 'yearly' : 'monthly', startDateStr, featuresJson, targetPlan.monthly_price, bonusSms, tenantId);
 
   // Audit Log
   db.prepare(`
@@ -1871,9 +1902,12 @@ fastify.post('/api/subscriptions/instant-checkout', async (request, reply) => {
       industryName: cat ? cat.bangla_name : 'সাধারণ',
       industryIcon: cat ? cat.icon : '🏪',
       planId: updatedTenant.plan_id,
+      planName: targetPlan.name,
       status: updatedTenant.status,
-      monthlyFee: updatedTenant.monthly_fee,
+      billingCycle: updatedTenant.billing_cycle || (isYearly ? 'yearly' : 'monthly'),
+      startDate: updatedTenant.start_date || startDateStr,
       paidTill: updatedTenant.paid_till,
+      monthlyFee: updatedTenant.monthly_fee,
       smsBalance: updatedTenant.sms_balance,
       features: updatedTenant.features ? JSON.parse(updatedTenant.features) : null
     }
@@ -1910,7 +1944,9 @@ fastify.get('/api/tenants/:id/subscription-status', async (request, reply) => {
     status: tenant.status,
     isActive: tenant.status === 'active' && diffDays > 0,
     daysRemaining: diffDays,
+    startDate: tenant.start_date || tenant.created_at?.slice(0, 10) || now.toISOString().slice(0, 10),
     paidTill: tenant.paid_till,
+    billingCycle: tenant.billing_cycle || 'monthly',
     smsBalance: tenant.sms_balance || 0,
     limits: {
       maxProducts: plan ? plan.max_products : -1,

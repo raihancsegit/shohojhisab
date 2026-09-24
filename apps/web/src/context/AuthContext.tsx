@@ -489,7 +489,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     industryName: freshTenant.industryName || prev.industryName,
                     industryIcon: freshTenant.industryIcon || prev.industryIcon,
                     planId: freshTenant.planId || prev.planId,
-                    status: freshTenant.status || prev.status
+                    planName: freshTenant.planName || prev.planName,
+                    status: freshTenant.status || prev.status,
+                    startDate: freshTenant.startDate || prev.startDate,
+                    paidTill: freshTenant.paidTill || prev.paidTill,
+                    billingCycle: freshTenant.billingCycle || prev.billingCycle
                   };
                   localStorage.setItem('lbos_active_tenant', JSON.stringify(updated));
                   return updated;
@@ -504,17 +508,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .then(res => res.json())
           .then(statusData => {
             if (statusData && statusData.shopId) {
-              setTenant(prev => prev ? {
-                ...prev,
-                status: statusData.status,
-                planId: statusData.planId,
-                planName: statusData.planName,
-                startDate: statusData.startDate || prev.startDate,
-                paidTill: statusData.paidTill,
-                billingCycle: statusData.billingCycle || prev.billingCycle,
-                smsBalance: statusData.smsBalance,
-                features: statusData.features
-              } : null);
+              setTenant(prev => {
+                if (!prev) return prev;
+                const updated = {
+                  ...prev,
+                  status: statusData.status,
+                  planId: statusData.planId,
+                  planName: statusData.planName,
+                  startDate: statusData.startDate || prev.startDate,
+                  paidTill: statusData.paidTill || prev.paidTill,
+                  billingCycle: statusData.billingCycle || prev.billingCycle,
+                  smsBalance: statusData.smsBalance,
+                  features: statusData.features
+                };
+                localStorage.setItem('lbos_active_tenant', JSON.stringify(updated));
+                return updated;
+              });
             }
           })
           .catch(() => {});

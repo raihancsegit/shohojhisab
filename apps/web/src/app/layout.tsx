@@ -998,13 +998,36 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const expiry = new Date(tenant.paidTill);
+
+    // 1. Determine clean Start Date:
+    // ALWAYS prioritize tenant.startDate, then created_at, fallback to today. NEVER back-calculate from paidTill!
+    let start: Date;
+    if (tenant?.startDate && !isNaN(new Date(tenant.startDate).getTime())) {
+      start = new Date(tenant.startDate);
+    } else if ((tenant as any)?.created_at || (tenant as any)?.createdAt) {
+      start = new Date((tenant as any).created_at || (tenant as any).createdAt);
+    } else {
+      start = new Date();
+    }
+    start.setHours(0, 0, 0, 0);
+
+    // 2. Determine clean Expiry Date:
+    let expiry: Date;
+    if (tenant?.paidTill && !isNaN(new Date(tenant.paidTill).getTime())) {
+      // If legacy hardcoded dummy placeholder (2027-12-31 or 2028-12-31) was present on account created this year:
+      if ((tenant.paidTill === '2027-12-31' || tenant.paidTill === '2028-12-31') && start.getTime() > 0) {
+        const days = tenant.billingCycle === 'yearly' ? 365 : 30;
+        expiry = new Date(start.getTime() + days * 86400000);
+      } else {
+        expiry = new Date(tenant.paidTill);
+      }
+    } else {
+      const days = tenant?.billingCycle === 'yearly' ? 365 : 30;
+      expiry = new Date(start.getTime() + days * 86400000);
+    }
     expiry.setHours(0, 0, 0, 0);
 
     const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const start = tenant.startDate ? new Date(tenant.startDate) : new Date(expiry.getTime() - (tenant.billingCycle === 'yearly' ? 365 : 30) * 86400000);
-    start.setHours(0, 0, 0, 0);
-
     const totalDays = Math.max(1, Math.round((expiry.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
     const percentage = Math.max(0, Math.min(100, Math.round((diffDays / totalDays) * 100)));
     const isExpired = diffDays <= 0;
