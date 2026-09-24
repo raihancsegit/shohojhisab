@@ -743,6 +743,53 @@ try {
   console.error('Error seeding subscription plans', e);
 }
 
+// Seed Default 16 Industry Categories if empty
+try {
+  const catCount = (db.prepare('SELECT COUNT(*) as c FROM categories').get() as any)?.c || 0;
+  if (catCount === 0) {
+    const insertCat = db.prepare(`
+      INSERT OR REPLACE INTO categories (id, name, bangla_name, icon, color, description, fields_schema, units, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const now = new Date().toISOString();
+    const defaultCategories = [
+      { id: 'cat-grocery', name: 'Grocery & Super Shop', bangla_name: 'মুদি ও সুপার শপ', icon: '🛒', color: '#10b981', desc: 'দৈনন্দিন মুদি, ডাল, চাল, তেল ও জেনারেল স্টোর' },
+      { id: 'cat-pharmacy', name: 'Pharmacy & Medicine', bangla_name: 'ফার্মেসি ও ওষুধ', icon: '💊', color: '#06b6d4', desc: 'ওষুধ, সিরাপ, প্রেসক্রিপশন ও ফার্মাসিউটিক্যালস' },
+      { id: 'cat-cosmetics', name: 'Cosmetics & Beauty', bangla_name: 'কসমেটিক্স ও সাজসজ্জা', icon: '💄', color: '#ec4899', desc: 'প্রসাধন সামগ্রী, মেকআপ, ত্বকের যত্ন ও পারফিউম' },
+      { id: 'cat-clothing', name: 'Clothing & Fashion', bangla_name: 'পোশাক ও ফ্যাশন শপ', icon: '👗', color: '#8b5cf6', desc: 'রেডিমেড পোশাক, শাড়ি, পাঞ্জাবি ও ফ্যাশন ওয়্যার' },
+      { id: 'cat-shoes', name: 'Shoes & Footwear', bangla_name: 'জুতা ও ফুটওয়্যার', icon: '👞', color: '#f59e0b', desc: 'জুতো, স্যান্ডেল, চামড়াজাত পণ্য ও লেদার আইটেম' },
+      { id: 'cat-mobile', name: 'Mobile & Electronics', bangla_name: 'মোবাইল ও ইলেকট্রনিক্স', icon: '📱', color: '#3b82f6', desc: 'স্মার্টফোন, গ্যাজেট, এক্সেসরিজ ও ইলেকট্রনিক্স' },
+      { id: 'cat-hardware', name: 'Hardware & Sanitary', bangla_name: 'হার্ডওয়্যার ও স্যানিটারি', icon: '🔧', color: '#64748b', desc: 'রং, পাইপ, ফিটিংস, যন্ত্রপাতি ও স্যানিটারি' },
+      { id: 'cat-restaurant', name: 'Restaurant & Cafe', bangla_name: 'রেস্তোরাঁ ও ক্যাফে', icon: '🍔', color: '#ef4444', desc: 'হোটেল, ফাস্টফুড, বিরিয়ানি ও রেস্তোরাঁ' },
+      { id: 'cat-bakery', name: 'Bakery & Confectionery', bangla_name: 'বেকারি ও কনফেকশনারি', icon: '🎂', color: '#d97706', desc: 'কেক, বিস্কুট, প্যাটিস ও বেকারি খাদ্য' },
+      { id: 'cat-sweet', name: 'Sweetmeat & Desserts', bangla_name: 'মিষ্টি ও মিষ্টান্ন ভাণ্ডার', icon: '🧁', color: '#f97316', desc: 'রসগোল্লা, চমচম, দই ও ঐতিহ্যবাহী মিষ্টান্ন' },
+      { id: 'cat-stationery', name: 'Books & Stationery', bangla_name: 'বই ও স্টেশনারি', icon: '📚', color: '#14b8a6', desc: 'খাতা, কলম, বই, অফিস স্টেশনারি ও উপহার' },
+      { id: 'cat-meat-fish', name: 'Meat & Fish', bangla_name: 'মাংস ও মাছের আড়ত', icon: '🥩', color: '#e11d48', desc: 'ব্রয়লার, দেশি মুরগি, খাসি, গরুর মাংস ও মাছ' },
+      { id: 'cat-furniture', name: 'Furniture & Wood', bangla_name: 'ফার্নিচার ও আসবাবপত্র', icon: '🛋️', color: '#78350f', desc: 'খাট, সোফা, আলমারি, ডাইনিং ও কাঠের আসবাব' },
+      { id: 'cat-tea', name: 'Tea Stall & Snacks', bangla_name: 'চা স্টল ও স্ন্যাক্স বার', icon: '☕', color: '#92400e', desc: 'চা, কফি, টোস্ট, বিস্কুট ও আড্ডার দোকান' },
+      { id: 'cat-wholesale', name: 'Wholesale & Agency', bangla_name: 'পাইকারি ও ডিলার এজেন্সি', icon: '📦', color: '#475569', desc: 'পাইকারি কারবার, ডিলারশিপ ও পরিবেশক' },
+      { id: 'cat-general', name: 'General Retail', bangla_name: 'সাধারণ রিটেইল ব্যবসা', icon: '🏪', color: '#4f46e5', desc: 'অন্যান্য যেকোনো প্রকার সাধারণ ব্যবসা ও খুচরা দোকান' }
+    ];
+
+    for (const c of defaultCategories) {
+      insertCat.run(
+        c.id,
+        c.name,
+        c.bangla_name,
+        c.icon,
+        c.color,
+        c.desc,
+        '[]',
+        '["পিস", "কেজি", "লিটার"]',
+        now
+      );
+    }
+    console.log('✅ Default 16 Industry Categories seeded');
+  }
+} catch (e) {
+  console.error('Error seeding categories', e);
+}
+
 // Seed Default Promo Coupons if empty
 try {
   const couponCount = (db.prepare('SELECT COUNT(*) as c FROM coupons').get() as any).c;
@@ -2176,15 +2223,40 @@ fastify.get('/api/admin/tenants', async () => {
 fastify.post('/api/admin/tenants', async (request, reply) => {
   const body = request.body as any;
   const id = 'tenant-' + uuidv4().slice(0, 8);
-  const now = new Date().toISOString();
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
   const categoryId = normalizeIndustryCategory(body.industryCategoryId);
   const planId = body.planId || 'plan-pro';
-  const featuresJson = getPlanFeaturesJson(planId);
+  const featuresJson = getPlanFeaturesJson(planId === 'trial' ? 'plan-pro' : planId);
+
+  const isTrial = Boolean(body.isTrial || body.billingCycle === 'trial' || planId === 'trial');
+  const cycle = isTrial ? 'trial' : (body.billingCycle || (body.durationMonths >= 12 ? 'yearly' : 'monthly'));
+
+  let days = 30;
+  let fee = Number(body.monthlyFee);
+
+  if (isTrial) {
+    days = Number(body.durationDays) || 7;
+    fee = 0;
+  } else if (cycle === 'yearly') {
+    days = 365;
+    fee = isNaN(fee) || fee <= 0 ? 1499 : fee;
+  } else {
+    days = Number(body.durationDays) || 30;
+    fee = isNaN(fee) || fee <= 0 ? 149 : fee;
+  }
+
+  const expDate = new Date(now);
+  expDate.setDate(expDate.getDate() + days);
+  const paidTillStr = body.paidTill || expDate.toISOString().slice(0, 10);
 
   try {
     const stmt = db.prepare(`
-      INSERT INTO tenants (id, shop_name, owner_name, phone, bazaar_location, industry_category_id, plan_id, pin, status, monthly_fee, start_date, paid_till, sms_balance, features, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tenants (
+        id, shop_name, owner_name, phone, bazaar_location, industry_category_id,
+        plan_id, pin, status, billing_cycle, monthly_fee, start_date, paid_till,
+        sms_balance, features, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id,
@@ -2193,15 +2265,15 @@ fastify.post('/api/admin/tenants', async (request, reply) => {
       body.phone,
       body.location || 'স্থানীয় বাজার',
       categoryId,
-      planId,
+      planId === 'trial' ? 'plan-pro' : planId,
       body.pin || '1234',
-      'active',
-      Number(body.monthlyFee) || 149,
-      now.slice(0, 10),
-      body.paidTill || '2027-12-31',
+      cycle,
+      fee,
+      todayStr,
+      paidTillStr,
       Number(body.smsBalance) || 50,
       featuresJson,
-      now
+      now.toISOString()
     );
 
     // Create Main Branch for Tenant

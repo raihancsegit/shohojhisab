@@ -4,6 +4,25 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-grocery', banglaName: 'মুদি ও সুপার শপ (Grocery & Super Shop)', icon: '🛒' },
+  { id: 'cat-pharmacy', banglaName: 'ফার্মেসি ও ওষুধ (Pharmacy & Medicine)', icon: '💊' },
+  { id: 'cat-cosmetics', banglaName: 'কসমেটিক্স ও সাজসজ্জা (Cosmetics & Beauty)', icon: '💄' },
+  { id: 'cat-clothing', banglaName: 'পোশাক ও ফ্যাশন শপ (Clothing & Fashion)', icon: '👗' },
+  { id: 'cat-shoes', banglaName: 'জুতা ও ফুটওয়্যার (Shoes & Footwear)', icon: '👞' },
+  { id: 'cat-mobile', banglaName: 'মোবাইল ও ইলেকট্রনিক্স (Mobile & Electronics)', icon: '📱' },
+  { id: 'cat-hardware', banglaName: 'হার্ডওয়্যার ও স্যানিটারি (Hardware & Sanitary)', icon: '🔧' },
+  { id: 'cat-restaurant', banglaName: 'রেস্তোরাঁ ও ক্যাফে (Restaurant & Cafe)', icon: '🍔' },
+  { id: 'cat-bakery', banglaName: 'বেকারি ও কনফেকশনারি (Bakery & Confectionery)', icon: '🎂' },
+  { id: 'cat-sweet', banglaName: 'মিষ্টি ও মিষ্টান্ন ভাণ্ডার (Sweetmeat & Desserts)', icon: '🧁' },
+  { id: 'cat-stationery', banglaName: 'বই ও স্টেশনারি (Books & Stationery)', icon: '📚' },
+  { id: 'cat-meat-fish', banglaName: 'মাংস ও মাছের আড়ত (Meat & Fish)', icon: '🥩' },
+  { id: 'cat-furniture', banglaName: 'ফার্নিচার ও আসবাবপত্র (Furniture & Wood)', icon: '🛋️' },
+  { id: 'cat-tea', banglaName: 'চা স্টল ও স্ন্যাক্স বার (Tea Stall & Snacks)', icon: '☕' },
+  { id: 'cat-wholesale', banglaName: 'পাইকারি ও ডিলার এজেন্সি (Wholesale & Agency)', icon: '📦' },
+  { id: 'cat-general', banglaName: 'সাধারণ রিটেইল ব্যবসা (General Retail)', icon: '🏪' }
+];
+
 export default function SuperAdminPage() {
   const { userRole, loginAdmin, logout, updateActiveTenant, triggerHaptic } = useAuth();
   const router = useRouter();
@@ -13,7 +32,7 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<'shops' | 'coupons' | 'analytics' | 'settings'>('shops');
 
   const [tenants, setTenants] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>(DEFAULT_CATEGORIES);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [overview, setOverview] = useState<any>({
@@ -58,7 +77,8 @@ export default function SuperAdminPage() {
   const [location, setLocation] = useState('স্থানীয় বাজার');
   const [industryCategoryId, setIndustryCategoryId] = useState('cat-grocery');
   const [selectedPlanId, setSelectedPlanId] = useState('plan-pro');
-  const [monthlyFee, setMonthlyFee] = useState('149');
+  const [selectedBillingOption, setSelectedBillingOption] = useState<'trial' | 'monthly_pro' | 'yearly_pro' | 'basic' | 'enterprise'>('trial');
+  const [monthlyFee, setMonthlyFee] = useState('0');
   const [submitting, setSubmitting] = useState(false);
 
   // New Coupon Form state
@@ -167,7 +187,10 @@ export default function SuperAdminPage() {
     try {
       const catRes = await fetch('/api/categories');
       if (catRes.ok) {
-        setCategories(await catRes.json());
+        const catData = await catRes.json();
+        if (Array.isArray(catData) && catData.length > 0) {
+          setCategories(catData);
+        }
       }
     } catch (e) {}
 
@@ -556,6 +579,10 @@ export default function SuperAdminPage() {
     setSubmitting(true);
     triggerHaptic('medium');
 
+    const isTrial = selectedBillingOption === 'trial';
+    const cycle = isTrial ? 'trial' : (selectedBillingOption === 'yearly_pro' ? 'yearly' : 'monthly');
+    const fee = isTrial ? 0 : (Number(monthlyFee) || (selectedBillingOption === 'yearly_pro' ? 1499 : 149));
+
     try {
       const res = await fetch('/api/admin/tenants', {
         method: 'POST',
@@ -568,7 +595,10 @@ export default function SuperAdminPage() {
           location,
           industryCategoryId,
           planId: selectedPlanId,
-          monthlyFee: Number(monthlyFee) || 149
+          monthlyFee: fee,
+          isTrial,
+          billingCycle: cycle,
+          durationDays: isTrial ? 7 : (cycle === 'yearly' ? 365 : 30)
         })
       });
 
@@ -580,7 +610,8 @@ export default function SuperAdminPage() {
           phone,
           pin: pin || '1234',
           location,
-          monthlyFee,
+          monthlyFee: isTrial ? '০ (৭ দিন ফ্রি ট্রায়াল)' : `${fee}`,
+          billingCycle: isTrial ? 'ফ্রি ট্রায়াল (৭ দিন)' : (cycle === 'yearly' ? 'বাৎসরিক (৩৬৫ দিন)' : 'মাসিক (৩০ দিন)'),
           industryName: data.tenant?.industryName || 'সাধারণ দোকান'
         });
 
@@ -591,7 +622,9 @@ export default function SuperAdminPage() {
         setPhone('');
         setPin('1234');
         setLocation('স্থানীয় বাজার');
-        setMonthlyFee('149');
+        setSelectedBillingOption('trial');
+        setSelectedPlanId('plan-pro');
+        setMonthlyFee('0');
         triggerHaptic('success');
       } else {
         alert(data.error || 'দোকান তৈরি করতে সমস্যা হয়েছে!');
@@ -2512,32 +2545,57 @@ export default function SuperAdminPage() {
                   <select
                     value={industryCategoryId}
                     onChange={(e) => setIndustryCategoryId(e.target.value)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
                   >
                     {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.icon} {c.banglaName}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.icon || '📦'} {c.banglaName || c.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>প্ল্যান</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>প্ল্যান ও সাবস্ক্রিপশন</label>
                   <select
-                    value={selectedPlanId}
+                    value={selectedBillingOption}
                     onChange={(e) => {
-                      setSelectedPlanId(e.target.value);
-                      if (e.target.value === 'plan-basic') setMonthlyFee('99');
-                      else if (e.target.value === 'plan-pro') setMonthlyFee('149');
-                      else if (e.target.value === 'plan-enterprise') setMonthlyFee('299');
+                      const val = e.target.value as any;
+                      setSelectedBillingOption(val);
+                      if (val === 'trial') {
+                        setSelectedPlanId('plan-pro');
+                        setMonthlyFee('0');
+                      } else if (val === 'monthly_pro') {
+                        setSelectedPlanId('plan-pro');
+                        setMonthlyFee('149');
+                      } else if (val === 'yearly_pro') {
+                        setSelectedPlanId('plan-pro');
+                        setMonthlyFee('1499');
+                      } else if (val === 'basic') {
+                        setSelectedPlanId('plan-basic');
+                        setMonthlyFee('99');
+                      } else if (val === 'enterprise') {
+                        setSelectedPlanId('plan-enterprise');
+                        setMonthlyFee('299');
+                      }
                     }}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
                   >
-                    <option value="plan-basic">বেসিক (৳৯৯)</option>
-                    <option value="plan-pro">প্রো শপ (৳১৪৯)</option>
-                    <option value="plan-enterprise">মাল্টি-ব্রাঞ্চ (৳২৯৯)</option>
+                    <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল (৳০ • ৭ দিন ফ্রি)</option>
+                    <option value="monthly_pro">🌟 প্রো শপ - মাসিক (৳১৪৯ • ৩০ দিন)</option>
+                    <option value="yearly_pro">🚀 প্রো শপ - বাৎসরিক (৳১৪৯৯ • ৩৬৫ দিন)</option>
+                    <option value="basic">📦 বেসিক দোকান - মাসিক (৳৯৯ • ৩০ দিন)</option>
+                    <option value="enterprise">🏢 মাল্টি-ব্রাঞ্চ - মাসিক (৳২৯৯ • ৩০ দিন)</option>
                   </select>
                 </div>
               </div>
+
+              {selectedBillingOption === 'trial' && (
+                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 12px', fontSize: '11.5px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🎁</span>
+                  <span>দোকানটি তৈরি হলে <strong>৭ দিন সম্পূর্ণ ফ্রিতে</strong> সব প্রো ফিচার ব্যবহার করতে পারবে। ৭ দিন পর রিনিউ না করলে একাউন্ট বন্ধ হবে।</span>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                 <button type="submit" disabled={submitting} style={{ flex: 1, background: '#10b981', color: '#fff', border: 'none', padding: '11px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
