@@ -643,15 +643,22 @@ function LoginFormContent() {
                     color: '#0f172a'
                   }}
                 >
-                  <option value="cat-grocery">🛒 মুদি ও ডিপার্টমেন্টাল স্টোর</option>
-                  <option value="cat-pharmacy">💊 ফার্মেসি ও ওষুধ</option>
-                  <option value="cat-electronics">📱 মোবাইল ও ইলেকট্রনিক্স</option>
-                  <option value="cat-fashion">👗 বস্ত্র ও ফ্যাশন</option>
-                  <option value="cat-hardware">🔧 হার্ডওয়্যার ও স্যানিটারি</option>
-                  <option value="cat-restaurant">☕ রেস্তোরাঁ ও ক্যাফে</option>
-                  <option value="cat-stationery">📚 বই ও স্টেশনারি</option>
-                  <option value="cat-wholesale">📦 পাইকারি ও এজেন্সি</option>
-                  <option value="cat-general">🏪 সাধারণ ব্যবসা</option>
+                  <option value="cat-grocery">🛒 মুদি ও সুপার শপ (Grocery & Super Shop)</option>
+                  <option value="cat-pharmacy">💊 ফার্মেসি ও ওষুধ (Pharmacy & Medicine)</option>
+                  <option value="cat-cosmetics">💄 কসমেটিক্স ও সাজসজ্জা (Cosmetics & Beauty)</option>
+                  <option value="cat-clothing">👗 পোশাক ও ফ্যাশন শপ (Clothing & Fashion)</option>
+                  <option value="cat-shoes">👞 জুতা ও ফুটওয়্যার (Shoes & Footwear)</option>
+                  <option value="cat-mobile">📱 মোবাইল ও ইলেকট্রনিক্স (Mobile & Electronics)</option>
+                  <option value="cat-hardware">🔧 হার্ডওয়্যার ও স্যানিটারি (Hardware & Sanitary)</option>
+                  <option value="cat-restaurant">🍔 রেস্তোরাঁ ও ক্যাফে (Restaurant & Cafe)</option>
+                  <option value="cat-bakery">🎂 বেকারি ও কনফেকশনারি (Bakery & Confectionery)</option>
+                  <option value="cat-sweet">🧁 মিষ্টি ও মিষ্টান্ন ভাণ্ডার (Sweetmeat & Desserts)</option>
+                  <option value="cat-stationery">📚 বই ও স্টেশনারি (Books & Stationery)</option>
+                  <option value="cat-meat-fish">🥩 মাংস ও মাছের আড়ত (Meat & Fish)</option>
+                  <option value="cat-furniture">🛋️ ফার্নিচার ও আসবাবপত্র (Furniture & Wood)</option>
+                  <option value="cat-tea">☕ চা স্টল ও স্ন্যাক্স বার (Tea Stall & Snacks)</option>
+                  <option value="cat-wholesale">📦 পাইকারি ও ডিলার এজেন্সি (Wholesale & Agency)</option>
+                  <option value="cat-general">🏪 সাধারণ রিটেইল ব্যবসা (General Retail)</option>
                 </select>
               </div>
 
