@@ -138,6 +138,23 @@ export default function ShopkeeperDashboard() {
     }
   };
 
+  // ⚡ Instant Cache Hydration: Zero-delay perceived load time
+  useEffect(() => {
+    if (!tenant?.id) return;
+    try {
+      const cacheKey = `lbos_dashboard_cache_${tenant.id}`;
+      const saved = localStorage.getItem(cacheKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.metrics) setMetrics(parsed.metrics);
+        if (parsed.recentSales) setRecentSales(parsed.recentSales);
+        if (parsed.lowStockCount !== undefined) setLowStockCount(parsed.lowStockCount);
+        if (parsed.periodLabel) setPeriodLabel(parsed.periodLabel);
+        setLoading(false);
+      }
+    } catch (e) {}
+  }, [tenant?.id]);
+
   useEffect(() => {
     if (!isLoading && !tenant && userRole !== 'admin') {
       router.push('/login');
@@ -155,52 +172,72 @@ export default function ShopkeeperDashboard() {
     const eDate = endOverride !== undefined ? endOverride : customEndDate;
 
     try {
-      // 1. Fetch real Day-End / Multi-date financials for this tenant
       let queryUrl = `/api/reports/day-end?tenantId=${tenant.id}&period=${p}`;
       if (p === 'custom' && sDate && eDate) {
         queryUrl += `&startDate=${sDate}&endDate=${eDate}`;
       }
-      const repRes = await fetch(queryUrl);
-      if (repRes.ok) {
+
+      // ⚡ High-Speed Parallel Execution
+      const [repRes, prodRes, custRes, dealRes] = await Promise.all([
+        fetch(queryUrl).catch(() => null),
+        fetch(`/api/products?tenantId=${tenant.id}`).catch(() => null),
+        fetch(`/api/customers?tenantId=${tenant.id}`).catch(() => null),
+        fetch(`/api/dealers?tenantId=${tenant.id}`).catch(() => null),
+      ]);
+
+      let newMetrics = metrics;
+      let newRecentSales = recentSales;
+      let newPeriodLabel = periodLabel;
+      let newLowStock = lowStockCount;
+
+      if (repRes && repRes.ok) {
         const repData = await repRes.json();
         setMetrics(repData);
+        newMetrics = repData;
         if (repData.periodLabel) {
           setPeriodLabel(repData.periodLabel);
+          newPeriodLabel = repData.periodLabel;
         }
         if (repData.recentPeriodSales && Array.isArray(repData.recentPeriodSales)) {
-          setRecentSales(repData.recentPeriodSales.slice(0, 5));
+          const recents = repData.recentPeriodSales.slice(0, 5);
+          setRecentSales(recents);
+          newRecentSales = recents;
         }
       }
 
-      // 2. Fetch products to count low stock
-      const prodRes = await fetch(`/api/products?tenantId=${tenant.id}`);
-      if (prodRes.ok) {
+      if (prodRes && prodRes.ok) {
         const prods = await prodRes.json();
         setProducts(Array.isArray(prods) ? prods : []);
         const low = (prods || []).filter((p: any) => p.stock <= (p.lowStockThreshold || 5)).length;
         setLowStockCount(low);
+        newLowStock = low;
       }
 
-      // 3. Fetch customers
-      const custRes = await fetch(`/api/customers?tenantId=${tenant.id}`);
-      if (custRes.ok) {
+      if (custRes && custRes.ok) {
         const cList = await custRes.json();
         setCustomers(Array.isArray(cList) ? cList : []);
       }
 
-      // 4. Fetch dealers (for supplier payable metric)
-      const dealRes = await fetch(`/api/dealers?tenantId=${tenant.id}`);
-      if (dealRes.ok) {
+      if (dealRes && dealRes.ok) {
         const dList = await dealRes.json();
         setDealers(Array.isArray(dList) ? dList : []);
       }
+
+      // Persist to local cache for instant future loads
+      try {
+        localStorage.setItem(`lbos_dashboard_cache_${tenant.id}`, JSON.stringify({
+          metrics: newMetrics,
+          recentSales: newRecentSales,
+          lowStockCount: newLowStock,
+          periodLabel: newPeriodLabel,
+          timestamp: Date.now()
+        }));
+      } catch (e) {}
     } catch (e) {
       console.error('Failed to load shop data', e);
     }
     setLoading(false);
   };
-
-
 
   const sendWhatsAppDueReminder = (customer: any) => {
     triggerHaptic('success');
@@ -217,7 +254,7 @@ export default function ShopkeeperDashboard() {
     }
   }, [tenant?.id, selectedPeriod]);
 
-  if (isLoading || (loading && recentSales.length === 0)) {
+  if (isLoading || (loading && recentSales.length === 0 && metrics.totalSales === 0)) {
     return (
       <div className="app-container">
         <DataLoader

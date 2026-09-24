@@ -9,8 +9,12 @@ function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialRole = searchParams.get('role') === 'admin' || searchParams.get('admin') === 'true' ? 'admin' : 'shop';
-  const [tab, setTab] = useState<'shop' | 'admin'>(initialRole);
+  const initialRole = searchParams.get('role') === 'admin' || searchParams.get('admin') === 'true' 
+    ? 'admin' 
+    : searchParams.get('role') === 'dealer' || searchParams.get('dealer') === 'true'
+    ? 'dealer'
+    : 'shop';
+  const [tab, setTab] = useState<'shop' | 'admin' | 'dealer'>(initialRole);
   const [phone, setPhone] = useState('01986233234');
   
   // 4-box PIN states
@@ -30,6 +34,9 @@ function LoginFormContent() {
   useEffect(() => {
     if (searchParams.get('role') === 'admin' || searchParams.get('admin') === 'true') {
       setTab('admin');
+    } else if (searchParams.get('role') === 'dealer' || searchParams.get('dealer') === 'true') {
+      setTab('dealer');
+      setPhone('01899112233');
     }
   }, [searchParams]);
 
@@ -85,6 +92,33 @@ function LoginFormContent() {
         window.location.href = '/pos';
       } else {
         setError(res.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!');
+      }
+    } else if (tab === 'dealer') {
+      if (!phone.trim()) {
+        setError('দয়া করে ডিলারের মোবাইল নাম্বার দিন!');
+        setLoading(false);
+        return;
+      }
+      if (fullPin.length < 4) {
+        setError('দয়া করে ৪-ডিজিটের পিন কোড সম্পূর্ণ লিখুন!');
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/dealer/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, pin: fullPin })
+        });
+        const data = await res.json();
+        if (res.ok && data.dealer) {
+          localStorage.setItem('lbos_dealer_session', JSON.stringify(data));
+          window.location.href = '/dealer-portal';
+        } else {
+          setError(data.error || 'ভুল মোবাইল নাম্বার বা পিন!');
+        }
+      } catch (e) {
+        setError('সার্ভারে যোগাযোগ করা যায়নি');
       }
     } else {
       const res = await loginAdmin(adminPasscode);
@@ -165,6 +199,74 @@ function LoginFormContent() {
         boxSizing: 'border-box',
         position: 'relative'
       }}>
+
+        {/* Role Tabs Switcher */}
+        <div style={{
+          display: 'flex',
+          background: '#f1f5f9',
+          padding: '3px',
+          borderRadius: '12px',
+          marginBottom: '16px',
+          boxSizing: 'border-box'
+        }}>
+          <button
+            type="button"
+            onClick={() => { setTab('shop'); setError(''); triggerHaptic('light'); }}
+            style={{
+              flex: 1,
+              padding: '7px 4px',
+              borderRadius: '9px',
+              border: 'none',
+              background: tab === 'shop' ? '#ffffff' : 'transparent',
+              color: tab === 'shop' ? '#0f172a' : '#64748b',
+              fontWeight: tab === 'shop' ? '900' : '700',
+              fontSize: '12px',
+              cursor: 'pointer',
+              boxShadow: tab === 'shop' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🏬 দোকান
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTab('dealer'); setError(''); setPhone('01899112233'); triggerHaptic('light'); }}
+            style={{
+              flex: 1,
+              padding: '7px 4px',
+              borderRadius: '9px',
+              border: 'none',
+              background: tab === 'dealer' ? '#ffffff' : 'transparent',
+              color: tab === 'dealer' ? '#0284c7' : '#64748b',
+              fontWeight: tab === 'dealer' ? '900' : '700',
+              fontSize: '12px',
+              cursor: 'pointer',
+              boxShadow: tab === 'dealer' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🚚 ডিলার
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTab('admin'); setError(''); triggerHaptic('light'); }}
+            style={{
+              flex: 0.9,
+              padding: '7px 4px',
+              borderRadius: '9px',
+              border: 'none',
+              background: tab === 'admin' ? '#ffffff' : 'transparent',
+              color: tab === 'admin' ? '#be123c' : '#64748b',
+              fontWeight: tab === 'admin' ? '900' : '700',
+              fontSize: '12px',
+              cursor: 'pointer',
+              boxShadow: tab === 'admin' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            👑 অ্যাডমিন
+          </button>
+        </div>
 
         {tab === 'shop' ? (
           <>
@@ -481,6 +583,202 @@ function LoginFormContent() {
               >
                 🔐 সুপার অ্যাডমিন প্রবেশ
               </button>
+            </div>
+          </>
+        ) : tab === 'dealer' ? (
+          <>
+            {/* Dealer Portal Header */}
+            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '16px',
+                background: '#e0f2fe',
+                color: '#0284c7',
+                display: 'grid',
+                placeItems: 'center',
+                margin: '0 auto 10px',
+                fontSize: '26px'
+              }}>
+                🚚
+              </div>
+              <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 4px' }}>
+                ডিলার ও সাপ্লায়ার পোর্টাল
+              </h2>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                সরাসরি দোকানে পণ্য সরবরাহ ও চালানের হিসাবের জন্য মোবাইল ও পিন দিন
+              </p>
+            </div>
+
+            {error && (
+              <div style={{
+                background: '#fef2f2',
+                color: '#dc2626',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: '700',
+                marginBottom: '14px',
+                textAlign: 'center',
+                border: '1px solid #fecaca'
+              }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '14px', width: '100%', boxSizing: 'border-box' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '5px' }}>
+                  📱 ডিলারের মোবাইল নাম্বার:
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="01XXXXXXXXX"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '11px 12px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: '#f8fafc'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#334155', marginBottom: '6px' }}>
+                  🔒 ৪-ডিজিট ডিলার পিন কোড:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {pinDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={pinInputRefs[index]}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handlePinChange(index, e.target.value)}
+                      onKeyDown={(e) => handlePinKeyDown(index, e)}
+                      style={{
+                        height: '46px',
+                        textAlign: 'center',
+                        fontSize: '20px',
+                        fontWeight: '900',
+                        borderRadius: '12px',
+                        border: digit ? '2px solid #0284c7' : '1.5px solid #cbd5e1',
+                        background: digit ? '#f0f9ff' : '#ffffff',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '13px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '900',
+                  fontSize: '14.5px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                  marginTop: '4px'
+                }}
+              >
+                {loading ? 'লগইন হচ্ছে...' : '🚚 ডিলার পোর্টালে প্রবেশ'}
+              </button>
+            </form>
+
+            {/* Quick Demo Dealer Login */}
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '14px',
+              padding: '10px 12px',
+              marginTop: '16px'
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                ⚡ ডেমো ডিলার দিয়ে এক ক্লিকে টেস্ট করুন:
+              </span>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhone('01711998877');
+                    setPinDigits(['1', '2', '3', '4']);
+                    triggerHaptic('light');
+                  }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    color: '#0f172a'
+                  }}
+                >
+                  <span>🏢 মেঘনা গ্রুপ (01711998877)</span>
+                  <span style={{ color: '#0284c7', fontWeight: '800' }}>পিন: 1234</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhone('01933776655');
+                    setPinDigits(['1', '2', '3', '4']);
+                    triggerHaptic('light');
+                  }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    color: '#0f172a'
+                  }}
+                >
+                  <span>🏢 স্কয়ার ফার্মা (01933776655)</span>
+                  <span style={{ color: '#0284c7', fontWeight: '800' }}>পিন: 1234</span>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '14px' }}>
+              <Link
+                href="/dealer-portal"
+                style={{
+                  color: '#0284c7',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  textDecoration: 'none'
+                }}
+              >
+                🌐 সরাসরি ডিলার পোর্টাল পেজে যান →
+              </Link>
             </div>
           </>
         ) : (

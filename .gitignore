@@ -34,3 +34,7 @@ apps/api/*.db
 .env
 .env.*
 .env*.local
+
+# Build cache
+*.tsbuildinfo
+

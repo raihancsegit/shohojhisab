@@ -79,6 +79,9 @@ try {
   db.prepare('CREATE INDEX IF NOT EXISTS idx_expenses_tenant ON expenses(tenant_id, date)').run();
   db.prepare('CREATE INDEX IF NOT EXISTS idx_installments_tenant ON installments(tenant_id)').run();
   db.prepare('CREATE INDEX IF NOT EXISTS idx_stock_logs_tenant ON stock_logs(tenant_id, created_at)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_dealer_supplies_tenant ON dealer_supplies(tenant_id, created_at)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_dealer_supplies_dealer ON dealer_supplies(dealer_id, created_at)').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_dealer_supply_items_supply ON dealer_supply_items(supply_id)').run();
 } catch (e) {
   console.warn('[DB] Index creation notice:', e);
 }
@@ -520,6 +523,37 @@ db.exec(`
     is_repaid INTEGER DEFAULT 0,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS dealer_supplies (
+    id TEXT PRIMARY KEY,
+    dealer_id TEXT NOT NULL,
+    dealer_name TEXT NOT NULL,
+    dealer_phone TEXT,
+    tenant_id TEXT NOT NULL,
+    shop_name TEXT,
+    challan_no TEXT NOT NULL,
+    total_amount REAL NOT NULL,
+    paid_amount REAL NOT NULL DEFAULT 0,
+    due_amount REAL NOT NULL DEFAULT 0,
+    payment_method TEXT DEFAULT 'cash',
+    status TEXT NOT NULL DEFAULT 'delivered',
+    note TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS dealer_supply_items (
+    id TEXT PRIMARY KEY,
+    supply_id TEXT NOT NULL,
+    product_id TEXT,
+    product_name TEXT NOT NULL,
+    category TEXT,
+    quantity REAL NOT NULL,
+    unit TEXT NOT NULL DEFAULT 'পিস',
+    purchase_price REAL NOT NULL,
+    selling_price REAL,
+    total_price REAL NOT NULL,
+    FOREIGN KEY (supply_id) REFERENCES dealer_supplies(id) ON DELETE CASCADE
+  );
 `);
 
 // Add missing columns if tables were created with older schema
@@ -540,6 +574,11 @@ try { db.prepare("ALTER TABLE tenants ADD COLUMN paid_till TEXT DEFAULT '2027-12
 try { db.prepare("ALTER TABLE dealers ADD COLUMN tenant_id TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN company_name TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN representative_name TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealers ADD COLUMN pin TEXT DEFAULT '1234'").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealers ADD COLUMN email TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealers ADD COLUMN address TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealers ADD COLUMN avatar TEXT DEFAULT '🚚'").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealers ADD COLUMN status TEXT DEFAULT 'active'").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN order_day TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN delivery_day TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE audit_logs ADD COLUMN user_id TEXT").run(); } catch (e) {}
@@ -556,6 +595,13 @@ try { db.prepare("ALTER TABLE staff_users ADD COLUMN sales_target REAL DEFAULT 0
 
 try { db.prepare("ALTER TABLE products ADD COLUMN sub_unit TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE products ADD COLUMN conversion_ratio REAL DEFAULT 1").run(); } catch (e) {}
+
+// Dealer supplies schema migrations
+try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN dealer_name TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN dealer_phone TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN shop_name TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN payment_method TEXT DEFAULT 'cash'").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN note TEXT").run(); } catch (e) {}
 
 // Seed Default Subscription Plans if empty
 try {
@@ -1858,7 +1904,7 @@ fastify.put('/api/admin/tenants/:id/extend', async (request, reply) => {
     newPaidTill = baseDate.toISOString().slice(0, 10);
   }
 
-  db.prepare('UPDATE tenants SET paid_till = ?, status = "active" WHERE id = ?').run(newPaidTill, id);
+  db.prepare("UPDATE tenants SET paid_till = ?, status = 'active' WHERE id = ?").run(newPaidTill, id);
 
   return { success: true, message: `দোকানের লাইসেন্সের মেয়াদ বাড়িয়ে ${newPaidTill} পর্যন্ত করা হয়েছে!`, paidTill: newPaidTill };
 });
@@ -5959,6 +6005,11 @@ fastify.get('/api/dealers', async (request) => {
     companyName: r.company_name,
     representativeName: r.representative_name,
     phone: r.phone,
+    pin: r.pin || '1234',
+    email: r.email || '',
+    address: r.address || '',
+    avatar: r.avatar || '🚚',
+    status: r.status || 'active',
     payableDue: Number(r.payable_due) || 0,
     orderDay: r.order_day || 'প্রতি সোমবার',
     deliveryDay: r.delivery_day || 'প্রতি মঙ্গলবার',
@@ -5973,14 +6024,19 @@ fastify.post('/api/dealers', async (request, reply) => {
 
   try {
     db.prepare(`
-      INSERT INTO dealers (id, tenant_id, company_name, representative_name, phone, payable_due, order_day, delivery_day, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO dealers (id, tenant_id, company_name, representative_name, phone, pin, email, address, avatar, status, payable_due, order_day, delivery_day, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       body.tenantId,
       body.companyName,
-      body.representativeName,
+      body.representativeName || body.companyName,
       body.phone,
+      body.pin ? String(body.pin).trim() : '1234',
+      body.email || null,
+      body.address || null,
+      body.avatar || '🚚',
+      body.status || 'active',
       Number(body.payableDue) || 0,
       body.orderDay || 'প্রতি সোমবার',
       body.deliveryDay || 'প্রতি মঙ্গলবার',
@@ -6002,6 +6058,11 @@ fastify.put('/api/dealers/:id', async (request, reply) => {
         company_name = COALESCE(?, company_name),
         representative_name = COALESCE(?, representative_name),
         phone = COALESCE(?, phone),
+        pin = COALESCE(?, pin),
+        email = COALESCE(?, email),
+        address = COALESCE(?, address),
+        avatar = COALESCE(?, avatar),
+        status = COALESCE(?, status),
         payable_due = COALESCE(?, payable_due),
         order_day = COALESCE(?, order_day),
         delivery_day = COALESCE(?, delivery_day)
@@ -6010,12 +6071,29 @@ fastify.put('/api/dealers/:id', async (request, reply) => {
       body.companyName,
       body.representativeName,
       body.phone,
+      body.pin ? String(body.pin).trim() : null,
+      body.email,
+      body.address,
+      body.avatar,
+      body.status,
       body.payableDue !== undefined ? Number(body.payableDue) : null,
       body.orderDay,
       body.deliveryDay,
       id
     );
     return { success: true, message: 'ডিলার তথ্য আপডেট হয়েছে' };
+  } catch (err: any) {
+    return reply.status(400).send({ error: err.message });
+  }
+});
+
+fastify.post('/api/dealers/:id/reset-pin', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const { newPin } = (request.body as any) || {};
+  const pin = newPin ? String(newPin).trim() : '1234';
+  try {
+    db.prepare('UPDATE dealers SET pin = ? WHERE id = ?').run(pin, id);
+    return { success: true, pin, message: `✓ ডিলারের লগইন পিন সফলভাবে "${pin}" এ রিসেট হয়েছে` };
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
   }
@@ -6029,6 +6107,357 @@ fastify.delete('/api/dealers/:id', async (request, reply) => {
   } catch (err: any) {
     return reply.status(400).send({ error: err.message });
   }
+});
+
+// ----------------------------------------------------
+// 🚚 DEALER PORTAL & DIRECT SUPPLY SYSTEM
+// ----------------------------------------------------
+
+// 1. Dealer Login Endpoint
+fastify.post('/api/dealer/auth/login', async (request, reply) => {
+  const { phone, pin } = (request.body as any) || {};
+  if (!phone || !pin) {
+    return reply.status(400).send({ success: false, error: 'মোবাইল নম্বর ও পিন আবশ্যক' });
+  }
+
+  const cleanPhone = String(phone).trim().replace(/[^0-9]/g, '');
+  const searchPattern = cleanPhone.length >= 10 ? `%${cleanPhone.slice(-10)}` : `%${cleanPhone}%`;
+
+  const dealer = db.prepare(`
+    SELECT * FROM dealers 
+    WHERE (phone LIKE ? OR phone = ?) AND (pin = ? OR pin IS NULL OR pin = '') 
+    LIMIT 1
+  `).get(searchPattern, phone.trim(), String(pin).trim()) as any;
+
+  if (!dealer) {
+    return reply.status(401).send({ success: false, error: 'ভুল মোবাইল নম্বর অথবা পিন কোড' });
+  }
+
+  // Get associated primary shop
+  const shop = db.prepare('SELECT id, shop_name, owner_name, phone, bazaar_location FROM tenants WHERE id = ?').get(dealer.tenant_id) as any;
+  const allShops = db.prepare("SELECT id, shop_name, owner_name, phone, bazaar_location FROM tenants WHERE status = 'active'").all() as any[];
+
+  return {
+    success: true,
+    dealer: {
+      id: dealer.id,
+      companyName: dealer.company_name,
+      representativeName: dealer.representative_name,
+      phone: dealer.phone,
+      pin: dealer.pin || '1234',
+      email: dealer.email || '',
+      address: dealer.address || '',
+      avatar: dealer.avatar || '🚚',
+      status: dealer.status || 'active',
+      payableDue: Number(dealer.payable_due) || 0,
+      orderDay: dealer.order_day || 'প্রতি সোমবার',
+      deliveryDay: dealer.delivery_day || 'প্রতি মঙ্গলবার',
+      tenantId: dealer.tenant_id,
+      shopName: shop?.shop_name || 'সংযুক্ত দোকান',
+      shopOwner: shop?.owner_name || '',
+      shopLocation: shop?.bazaar_location || '',
+      shopPhone: shop?.phone || ''
+    },
+    shops: allShops.map(s => ({
+      id: s.id,
+      shopName: s.shop_name,
+      ownerName: s.owner_name,
+      phone: s.phone,
+      location: s.bazaar_location,
+      isPrimary: s.id === dealer.tenant_id
+    }))
+  };
+});
+
+// 2. Dealer Update PIN
+fastify.post('/api/dealer/auth/update-pin', async (request, reply) => {
+  const { dealerId, currentPin, newPin } = (request.body as any) || {};
+  if (!dealerId || !newPin || String(newPin).length < 4) {
+    return reply.status(400).send({ success: false, error: 'কমপক্ষে ৪ ডিজিটের নতুন পিন দিন' });
+  }
+  const dealer = db.prepare('SELECT * FROM dealers WHERE id = ?').get(dealerId) as any;
+  if (!dealer) return reply.status(404).send({ success: false, error: 'ডিলার পাওয়া যায়নি' });
+
+  if (dealer.pin && dealer.pin !== '1234' && dealer.pin !== String(currentPin)) {
+    return reply.status(400).send({ success: false, error: 'বর্তমান পিন ভুল হয়েছে' });
+  }
+
+  db.prepare('UPDATE dealers SET pin = ? WHERE id = ?').run(String(newPin).trim(), dealerId);
+  return { success: true, message: '✓ নতুন পিন সফলভাবে সংরক্ষিত হয়েছে' };
+});
+
+// 3. Get Shops for Dealer Portal
+fastify.get('/api/dealer/shops', async (request) => {
+  const { dealerId } = request.query as any;
+  let dealer = null;
+  if (dealerId) {
+    dealer = db.prepare('SELECT * FROM dealers WHERE id = ?').get(dealerId) as any;
+  }
+  const shops = db.prepare("SELECT id, shop_name, owner_name, phone, bazaar_location FROM tenants WHERE status = 'active' ORDER BY created_at DESC").all() as any[];
+  return shops.map(s => ({
+    id: s.id,
+    shopName: s.shop_name,
+    ownerName: s.owner_name,
+    phone: s.phone,
+    location: s.bazaar_location,
+    isPrimary: dealer ? s.id === dealer.tenant_id : false
+  }));
+});
+
+// 4. Dealer Supply Products Directly into Shop Stock (Instant Stock-In & Challan)
+fastify.post('/api/dealer/supplies', async (request, reply) => {
+  const body = request.body as any;
+  const {
+    dealerId,
+    tenantId,
+    challanNo,
+    items, // array of { productId?, productName, category?, quantity, unit, purchasePrice, sellingPrice }
+    paidAmount = 0,
+    dueAmount = 0,
+    paymentMethod = 'cash',
+    note = ''
+  } = body || {};
+
+  if (!dealerId || !tenantId || !Array.isArray(items) || items.length === 0) {
+    return reply.status(400).send({ error: 'ডিলার, দোকান এবং অন্তত একটি পণ্য আবশ্যক' });
+  }
+
+  const dealer = db.prepare('SELECT * FROM dealers WHERE id = ?').get(dealerId) as any;
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  const now = new Date().toISOString();
+  const supplyId = 'dsup-' + uuidv4().slice(0, 8);
+  const safeChallanNo = challanNo?.trim() || 'CH-' + Math.floor(1000 + Math.random() * 9000);
+  const dealerName = dealer?.company_name || dealer?.representative_name || body.dealerName || 'ডিলার';
+  const dealerPhone = dealer?.phone || body.dealerPhone || '';
+
+  // Calculate totals
+  let computedTotal = 0;
+  for (const it of items) {
+    const q = Number(it.quantity) || 0;
+    const p = Number(it.purchasePrice) || 0;
+    computedTotal += q * p;
+  }
+
+  const numPaid = Number(paidAmount) || 0;
+  const numDue = dueAmount !== undefined ? Number(dueAmount) : Math.max(0, computedTotal - numPaid);
+
+  const updatedProductsList: any[] = [];
+
+  // Atomic SQLite transaction
+  const executeSupply = db.transaction(() => {
+    // 1. Insert Dealer Supply Record
+    db.prepare(`
+      INSERT INTO dealer_supplies (id, dealer_id, dealer_name, dealer_phone, tenant_id, shop_name, challan_no, total_amount, paid_amount, due_amount, payment_method, status, note, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'delivered', ?, ?)
+    `).run(
+      supplyId,
+      dealerId,
+      dealerName,
+      dealerPhone,
+      tenantId,
+      tenant.shop_name,
+      safeChallanNo,
+      computedTotal,
+      numPaid,
+      numDue,
+      paymentMethod,
+      note || `ডিলার সরাসরি পণ্য সরবরাহ: ${dealerName}`,
+      now
+    );
+
+    // 2. Process each item: update stock in products and create stock_logs
+    const insertSupplyItem = db.prepare(`
+      INSERT INTO dealer_supply_items (id, supply_id, product_id, product_name, category, quantity, unit, purchase_price, selling_price, total_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const it of items) {
+      const itName = (it.productName || it.name || '').trim();
+      const itQty = Number(it.quantity) || 0;
+      const itUnit = (it.unit || 'পিস').trim();
+      const itPurchasePrice = Number(it.purchasePrice) || 0;
+      const itSellingPrice = it.sellingPrice ? Number(it.sellingPrice) : Math.round(itPurchasePrice * 1.25);
+      const itLineTotal = itQty * itPurchasePrice;
+
+      if (!itName || itQty <= 0) continue;
+
+      let targetProdId = it.productId;
+      let existingProd: any = null;
+
+      if (targetProdId) {
+        existingProd = db.prepare('SELECT * FROM products WHERE id = ? AND tenant_id = ?').get(targetProdId, tenantId) as any;
+      }
+      if (!existingProd) {
+        existingProd = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name = ? OR name = ?) LIMIT 1').get(tenantId, itName, itName) as any;
+      }
+
+      let newStock = itQty;
+      if (existingProd) {
+        targetProdId = existingProd.id;
+        newStock = (Number(existingProd.stock) || 0) + itQty;
+        // Update product stock and update purchase price
+        db.prepare(`
+          UPDATE products 
+          SET stock = stock + ?, 
+              purchase_price = CASE WHEN ? > 0 THEN ? ELSE purchase_price END, 
+              selling_price = CASE WHEN ? > 0 THEN ? ELSE selling_price END
+          WHERE id = ?
+        `).run(itQty, itPurchasePrice, itPurchasePrice, itSellingPrice, itSellingPrice, targetProdId);
+      } else {
+        // Create new product directly into the shop's catalog
+        targetProdId = 'prod-' + uuidv4().slice(0, 8);
+        const barcode = '880' + Math.floor(100000000 + Math.random() * 900000000);
+        db.prepare(`
+          INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, created_at)
+          VALUES (?, ?, ?, ?, ?, 'general', ?, ?, ?, ?, 5, ?)
+        `).run(targetProdId, tenantId, barcode, itName, itName, itPurchasePrice, itSellingPrice, itQty, itUnit, now);
+      }
+
+      // Record in supply line items
+      const sItemId = 'dsitem-' + uuidv4().slice(0, 8);
+      insertSupplyItem.run(
+        sItemId,
+        supplyId,
+        targetProdId,
+        itName,
+        it.category || 'সাধারণ',
+        itQty,
+        itUnit,
+        itPurchasePrice,
+        itSellingPrice,
+        itLineTotal
+      );
+
+      // Record in shop stock logs (Audit Trail)
+      const stkLogId = 'stklog-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        stkLogId,
+        tenantId,
+        targetProdId,
+        itName,
+        itQty,
+        itUnit,
+        itQty,
+        itPurchasePrice,
+        `চালান #${safeChallanNo}`,
+        `ডিলার (${dealerName}) সরাসরি মাল সরবরাহ`,
+        now
+      );
+
+      updatedProductsList.push({
+        id: targetProdId,
+        name: itName,
+        qty: itQty,
+        newStock,
+        unit: itUnit,
+        purchasePrice: itPurchasePrice,
+        sellingPrice: itSellingPrice
+      });
+    }
+
+    // 3. Update Dealer's payable_due if due remains
+    if (dealer && numDue > 0) {
+      db.prepare('UPDATE dealers SET payable_due = payable_due + ? WHERE id = ?').run(numDue, dealer.id);
+    }
+
+    // 4. If shopkeeper paid cash now, record in shop expenses
+    if (numPaid > 0) {
+      const expId = 'exp-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO expenses (id, tenant_id, title, amount, category, icon, created_at)
+        VALUES (?, ?, ?, ?, 'পণ্য ক্রয়', '🚚', ?)
+      `).run(
+        expId,
+        tenantId,
+        `ডিলার চালান পরিশোধ (${dealerName}, চালান #${safeChallanNo})`,
+        numPaid,
+        now
+      );
+    }
+  });
+
+  executeSupply();
+
+  return {
+    success: true,
+    supplyId,
+    challanNo: safeChallanNo,
+    totalAmount: computedTotal,
+    paidAmount: numPaid,
+    dueAmount: numDue,
+    productsAdded: updatedProductsList.length,
+    products: updatedProductsList,
+    message: `🎉 চালানের ${updatedProductsList.length}টি পণ্য সরাসরি দোকানে স্টকে যোগ হয়েছে এবং চালান #${safeChallanNo} সম্পন্ন হয়েছে!`
+  };
+});
+
+// 5. Get Dealer Supply History
+fastify.get('/api/dealer/supplies', async (request) => {
+  const { dealerId, tenantId } = request.query as any;
+  let query = 'SELECT * FROM dealer_supplies WHERE 1=1';
+  const params: any[] = [];
+  if (dealerId) {
+    query += ' AND dealer_id = ?';
+    params.push(dealerId);
+  }
+  if (tenantId) {
+    query += ' AND tenant_id = ?';
+    params.push(tenantId);
+  }
+  query += ' ORDER BY created_at DESC LIMIT 100';
+  const rows = db.prepare(query).all(...params) as any[];
+
+  const getItems = db.prepare('SELECT * FROM dealer_supply_items WHERE supply_id = ?');
+  return rows.map(r => ({
+    id: r.id,
+    dealerId: r.dealer_id,
+    dealerName: r.dealer_name,
+    dealerPhone: r.dealer_phone,
+    tenantId: r.tenant_id,
+    shopName: r.shop_name,
+    challanNo: r.challan_no,
+    totalAmount: Number(r.total_amount) || 0,
+    paidAmount: Number(r.paid_amount) || 0,
+    dueAmount: Number(r.due_amount) || 0,
+    paymentMethod: r.payment_method,
+    status: r.status,
+    note: r.note,
+    createdAt: r.created_at,
+    items: (getItems.all(r.id) as any[]).map(it => ({
+      id: it.id,
+      productId: it.product_id,
+      productName: it.product_name,
+      category: it.category,
+      quantity: Number(it.quantity) || 0,
+      unit: it.unit,
+      purchasePrice: Number(it.purchase_price) || 0,
+      sellingPrice: Number(it.selling_price) || 0,
+      totalPrice: Number(it.total_price) || 0
+    }))
+  }));
+});
+
+// 6. Get Single Dealer's Deliveries
+fastify.get('/api/dealers/:id/supplies', async (request) => {
+  const { id } = request.params as { id: string };
+  const rows = db.prepare('SELECT * FROM dealer_supplies WHERE dealer_id = ? ORDER BY created_at DESC LIMIT 100').all(id) as any[];
+  const getItems = db.prepare('SELECT * FROM dealer_supply_items WHERE supply_id = ?');
+  return rows.map(r => ({
+    id: r.id,
+    challanNo: r.challan_no,
+    shopName: r.shop_name,
+    totalAmount: Number(r.total_amount) || 0,
+    paidAmount: Number(r.paid_amount) || 0,
+    dueAmount: Number(r.due_amount) || 0,
+    status: r.status,
+    createdAt: r.created_at,
+    items: getItems.all(r.id)
+  }));
 });
 
 // Expenses API

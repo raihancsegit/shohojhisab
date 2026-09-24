@@ -168,17 +168,54 @@ export const expenses = sqliteTable('expenses', {
   createdAt: text('created_at').notNull()
 });
 
-// 12. Dealers / Suppliers
+// 12. Dealers / Suppliers (With Portal Login & Profile Support)
 export const dealers = sqliteTable('dealers', {
   id: text('id').primaryKey(),
   tenantId: text('tenant_id').notNull(),
   companyName: text('company_name').notNull(),
   representativeName: text('representative_name').notNull(),
   phone: text('phone').notNull(),
+  pin: text('pin').notNull().default('1234'),
+  email: text('email'),
+  address: text('address'),
+  avatar: text('avatar').default('🚚'),
+  status: text('status').notNull().default('active'),
   payableDue: real('payable_due').notNull().default(0),
   orderDay: text('order_day'),
   deliveryDay: text('delivery_day'),
   createdAt: text('created_at').notNull()
+});
+
+// 12b. Dealer Supplies / Delivery Challans
+export const dealerSupplies = sqliteTable('dealer_supplies', {
+  id: text('id').primaryKey(),
+  dealerId: text('dealer_id').notNull(),
+  dealerName: text('dealer_name').notNull(),
+  dealerPhone: text('dealer_phone'),
+  tenantId: text('tenant_id').notNull(),
+  shopName: text('shop_name'),
+  challanNo: text('challan_no').notNull(),
+  totalAmount: real('total_amount').notNull(),
+  paidAmount: real('paid_amount').notNull().default(0),
+  dueAmount: real('due_amount').notNull().default(0),
+  paymentMethod: text('payment_method').default('cash'),
+  status: text('status').notNull().default('delivered'), // 'delivered', 'pending', 'approved'
+  note: text('note'),
+  createdAt: text('created_at').notNull()
+});
+
+// 12c. Dealer Supply Line Items
+export const dealerSupplyItems = sqliteTable('dealer_supply_items', {
+  id: text('id').primaryKey(),
+  supplyId: text('supply_id').notNull(),
+  productId: text('product_id'),
+  productName: text('product_name').notNull(),
+  category: text('category'),
+  quantity: real('quantity').notNull(),
+  unit: text('unit').notNull().default('পিস'),
+  purchasePrice: real('purchase_price').notNull(),
+  sellingPrice: real('selling_price'),
+  totalPrice: real('total_price').notNull()
 });
 
 // 13. Installments (কিস্তি খাতা)

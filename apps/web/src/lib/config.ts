@@ -1,13 +1,16 @@
 // Dynamic API Base URL resolver
 export const getApiBaseUrl = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '').replace(/\/$/, '');
+    const url = process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, '').replace(/\/$/, '');
+    if (url) return url;
   }
-  // If in browser on production (e.g. Vercel) without env var, use relative path (proxied by Next.js rewrites)
-  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+
+  // If in browser, relative paths are proxied via Next.js rewrites to live API
+  if (typeof window !== 'undefined') {
     return '';
   }
-  return 'http://localhost:4005';
+
+  return 'https://shohojhisab.onrender.com';
 };
 
 export const apiUrl = (endpoint: string): string => {

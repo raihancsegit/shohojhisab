@@ -12,8 +12,10 @@ import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import CounterBlackSleepOverlay from '../components/CounterBlackSleepOverlay';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
+import { useRenderKeepAlive } from '../lib/renderKeepAlive';
 
 function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
+  useRenderKeepAlive();
   const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme, updateActiveTenant } = useAuth();
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
@@ -984,6 +986,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
     { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
     { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
+    { href: '/dealer-portal', label: 'ডিলার পোর্টাল (সরাসরি চালান)', icon: '🚚', iconBg: '#e0f2fe', iconColor: '#0284c7', badge: 'পোর্টাল', show: isFeatureEnabled('enableDealerKhata') },
     { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
     { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/day-end', label: 'ক্যাশ মিলানো ও ড্রয়ার', icon: '🌙', iconBg: '#f0fdf4', iconColor: '#16a34a', show: isFeatureEnabled('enableCashDrawer') },
@@ -2069,7 +2072,7 @@ function BackendHealthBanner() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '16px' }}>⚠️</span>
         <span>
-          <strong>ব্যাকএন্ড সার্ভার (Port 4005) বন্ধ রয়েছে!</strong> খাতা থেকে কাস্টমার ডিলিট বা স্টকে নতুন মাল তোলার জন্য টার্মিনালে <code>npm run dev</code> বা <code>npm run dev:api</code> চালু রাখুন।
+          <strong>সার্ভারের সাথে সংযোগ বিচ্ছিন্ন রয়েছে!</strong> ইন্টারনেট কানেকশন চেক করুন অথবা সার্ভার ওয়েকআপ হওয়া পর্যন্ত কয়েক সেকেন্ড অপেক্ষা করুন।
         </span>
       </div>
       <button
