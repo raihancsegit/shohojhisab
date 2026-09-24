@@ -746,9 +746,22 @@ export default function SuperAdminPage() {
     );
   }
 
+  const getRemainingDays = (paidTillStr?: string) => {
+    if (!paidTillStr) return null;
+    try {
+      const target = new Date(paidTillStr + 'T23:59:59');
+      const now = new Date();
+      const diffTime = target.getTime() - now.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } catch (e) {
+      return null;
+    }
+  };
+
   const filteredTenants = tenants.filter(t => {
-    const q = searchQuery.toLowerCase();
-    const matchQ = (t.shopName && t.shopName.toLowerCase().includes(q)) ||
+    const q = searchQuery.toLowerCase().trim();
+    const matchQ = !q ||
+                   (t.shopName && t.shopName.toLowerCase().includes(q)) ||
                    (t.ownerName && t.ownerName.toLowerCase().includes(q)) ||
                    (t.phone && t.phone.includes(q)) ||
                    (t.location && t.location.toLowerCase().includes(q));
@@ -758,10 +771,12 @@ export default function SuperAdminPage() {
       ? (t.status === 'pending_approval' || t.status === 'pending')
       : filterStatus === 'trial'
       ? (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+      : filterStatus === 'active'
+      ? (t.status === 'active' && t.billingCycle !== 'trial' && !t.isTrial)
       : filterStatus === 'expired'
       ? (t.status === 'expired')
       : t.status === filterStatus;
-    const matchCat = filterCategory === 'all' || t.industryId === filterCategory;
+    const matchCat = filterCategory === 'all' || t.industryId === filterCategory || t.industryCategoryId === filterCategory;
     return matchQ && matchStatus && matchCat;
   });
 
@@ -937,345 +952,645 @@ export default function SuperAdminPage() {
             </div>
           </div>
 
-          {/* Search & Filter Bar */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              placeholder="🔍 দোকানের নাম, মালিকের নাম বা মোবাইল দিয়ে খুঁজুন..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                flex: '1 1 240px',
-                padding: '11px 16px',
-                borderRadius: '14px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '13.5px',
-                outline: 'none',
-                background: '#fff'
-              }}
-            />
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              style={{ padding: '11px 16px', borderRadius: '14px', border: '1.5px solid #cbd5e1', fontSize: '13px', background: '#fff', outline: 'none', fontWeight: '700' }}
-            >
-              <option value="all">সব স্ট্যাটাস ({tenants.length})</option>
-              <option value="pending_approval">⏳ অনুমোদন অপেক্ষমাণ ({tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length})</option>
-              <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল ({tenants.filter(t => t.billingCycle === 'trial' || t.isTrial || t.status === 'trial').length})</option>
-              <option value="active">চালু পেইড দোকান ({tenants.filter(t => t.status === 'active' && t.billingCycle !== 'trial').length})</option>
-              <option value="expired">⚠️ মেয়াদোত্তীর্ণ ({tenants.filter(t => t.status === 'expired').length})</option>
-              <option value="suspended">স্থগিত দোকান ({tenants.filter(t => t.status === 'suspended').length})</option>
-            </select>
-          </div>
-
-          {/* Shop List Cards */}
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {filteredTenants.map(t => (
-              <div
-                key={t.id}
-                className="ui-card"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  padding: '22px 24px',
-                  border: '1px solid rgba(226, 232, 240, 0.9)',
-                  borderLeft: (t.status === 'pending_approval' || t.status === 'pending')
-                    ? '5px solid #f59e0b'
-                    : t.status === 'active' ? '5px solid #10b981' : '5px solid #ef4444',
-                  boxShadow: '0 4px 14px rgba(15, 23, 42, 0.04)'
-                }}
-              >
-                {/* Header Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                      width: '54px',
-                      height: '54px',
-                      borderRadius: '16px',
-                      background: (t.status === 'pending_approval' || t.status === 'pending')
-                        ? '#fef3c7'
-                        : t.status === 'active' ? '#ecfdf5' : '#fee2e2',
-                      color: (t.status === 'pending_approval' || t.status === 'pending')
-                        ? '#b45309'
-                        : t.status === 'active' ? '#059669' : '#dc2626',
+          {/* Search, Filter & Segmented Tabs Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '22px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {/* Search Bar */}
+              <div style={{ flex: '1 1 280px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '16px', fontSize: '16px', color: '#94a3b8', pointerEvents: 'none' }}>🔍</span>
+                <input
+                  type="text"
+                  placeholder="দোকানের নাম, মালিকের নাম, মোবাইল বা লোকেশন..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 42px 12px 44px',
+                    borderRadius: '16px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '14px',
+                      background: '#e2e8f0',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '22px',
+                      height: '22px',
                       display: 'grid',
                       placeItems: 'center',
-                      fontSize: '26px',
-                      border: `1.5px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
-                    }}>
-                      {t.industryIcon || '🏪'}
-                    </div>
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      color: '#475569'
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                          {t.shopName}
-                        </h3>
-                        <span style={{
-                          fontSize: '11.5px',
-                          fontWeight: '800',
-                          padding: '3px 10px',
-                          borderRadius: '99px',
-                          background: (t.status === 'pending_approval' || t.status === 'pending')
+              {/* Industry Category Dropdown */}
+              <div>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  style={{
+                    padding: '12px 18px',
+                    borderRadius: '16px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '13.5px',
+                    background: '#ffffff',
+                    outline: 'none',
+                    fontWeight: '700',
+                    color: '#334155',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <option value="all">📦 সব ক্যাটাগরি ({categories.length})</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.icon || '🏪'} {c.banglaName || c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Counter Badge */}
+              <div style={{
+                padding: '10px 16px',
+                borderRadius: '14px',
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                color: '#475569',
+                whiteSpace: 'nowrap'
+              }}>
+                দেখাচ্ছে: <strong style={{ color: '#0f172a' }}>{filteredTenants.length}</strong> / {tenants.length} টি
+              </div>
+            </div>
+
+            {/* Segmented Status Pills */}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {[
+                { key: 'all', label: 'সকল দোকান', count: tenants.length, icon: '🏪', color: '#0f172a' },
+                { key: 'pending_approval', label: 'অনুমোদন অপেক্ষমাণ', count: tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length, icon: '⏳', color: '#b45309', glow: true },
+                { key: 'trial', label: '৭ দিনের ফ্রি ট্রায়াল', count: tenants.filter(t => t.billingCycle === 'trial' || t.isTrial || t.status === 'trial').length, icon: '🎁', color: '#7e22ce' },
+                { key: 'active', label: 'চালু পেইড দোকান', count: tenants.filter(t => t.status === 'active' && t.billingCycle !== 'trial' && !t.isTrial).length, icon: '✅', color: '#059669' },
+                { key: 'expired', label: 'মেয়াদোত্তীর্ণ', count: tenants.filter(t => t.status === 'expired').length, icon: '⚠️', color: '#dc2626' },
+                { key: 'suspended', label: 'স্থগিত দোকান', count: tenants.filter(t => t.status === 'suspended').length, icon: '⏸', color: '#64748b' }
+              ].map(p => {
+                const isSelected = filterStatus === p.key;
+                return (
+                  <button
+                    key={p.key}
+                    onClick={() => { setFilterStatus(p.key as any); triggerHaptic('light'); }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '99px',
+                      border: isSelected ? `2px solid ${p.color}` : '1.5px solid #e2e8f0',
+                      background: isSelected ? (p.key === 'all' ? '#0f172a' : p.color + '18') : '#ffffff',
+                      color: isSelected ? (p.key === 'all' ? '#ffffff' : p.color) : '#64748b',
+                      fontSize: '13px',
+                      fontWeight: isSelected ? '900' : '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      boxShadow: isSelected ? '0 3px 10px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'all 0.18s ease'
+                    }}
+                  >
+                    <span>{p.icon}</span>
+                    <span>{p.label}</span>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '900',
+                      padding: '1px 6px',
+                      borderRadius: '99px',
+                      background: isSelected ? (p.key === 'all' ? 'rgba(255,255,255,0.2)' : p.color) : '#f1f5f9',
+                      color: isSelected ? '#ffffff' : '#64748b'
+                    }}>
+                      {p.count}
+                    </span>
+                    {p.glow && p.count > 0 && !isSelected && (
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Shop List or Empty State */}
+          {filteredTenants.length === 0 ? (
+            <div className="ui-card" style={{ textAlign: 'center', padding: '56px 20px', background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '24px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>🔍</div>
+              <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px' }}>
+                কোনো দোকান খুঁজে পাওয়া যায়নি
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#64748b', maxWidth: '420px', margin: '0 auto 18px' }}>
+                আপনার সার্চ শব্দ বা নির্বাচিত ফিল্টারের সাথে মিল রেখে কোনো দোকান পাওয়া যায়নি।
+              </p>
+              <button
+                onClick={() => { setSearchQuery(''); setFilterStatus('all'); setFilterCategory('all'); }}
+                style={{
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 22px',
+                  borderRadius: '12px',
+                  fontWeight: '800',
+                  fontSize: '13.5px',
+                  cursor: 'pointer'
+                }}
+              >
+                সব ফিল্টার রিসেট করুন
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '18px' }}>
+              {filteredTenants.map(t => {
+                const remainingDays = getRemainingDays(t.paidTill);
+                const isPending = t.status === 'pending_approval' || t.status === 'pending';
+                const isTrial = t.billingCycle === 'trial' || t.isTrial || t.status === 'trial';
+                const isActivePaid = t.status === 'active' && !isTrial;
+                const isExpired = t.status === 'expired' || (remainingDays !== null && remainingDays <= 0 && !isPending);
+
+                return (
+                  <div
+                    key={t.id}
+                    className="ui-card"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
+                      padding: '22px 24px',
+                      borderRadius: '22px',
+                      border: '1px solid rgba(226, 232, 240, 0.95)',
+                      borderLeft: isPending
+                        ? '6px solid #f59e0b'
+                        : isTrial
+                        ? '6px solid #8b5cf6'
+                        : isActivePaid
+                        ? '6px solid #10b981'
+                        : '6px solid #ef4444',
+                      boxShadow: '0 4px 18px rgba(15, 23, 42, 0.04)',
+                      background: '#ffffff',
+                      position: 'relative'
+                    }}
+                  >
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {/* Shop Avatar */}
+                        <div style={{
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: '18px',
+                          background: isPending
                             ? '#fef3c7'
-                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+                            : isTrial
                             ? '#f3e8ff'
-                            : t.status === 'active' ? '#ecfdf5' : '#fee2e2',
-                          color: (t.status === 'pending_approval' || t.status === 'pending')
+                            : isActivePaid
+                            ? '#ecfdf5'
+                            : '#fee2e2',
+                          color: isPending
                             ? '#b45309'
-                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
+                            : isTrial
                             ? '#7e22ce'
-                            : t.status === 'active' ? '#059669' : '#dc2626',
-                          border: `1px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial') ? '#d8b4fe' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
+                            : isActivePaid
+                            ? '#059669'
+                            : '#dc2626',
+                          display: 'grid',
+                          placeItems: 'center',
+                          fontSize: '28px',
+                          border: `1.5px solid ${isPending ? '#fde68a' : isTrial ? '#d8b4fe' : isActivePaid ? '#a7f3d0' : '#fca5a5'}`
                         }}>
-                          {(t.status === 'pending_approval' || t.status === 'pending')
-                            ? '⏳ অনুমোদন অপেক্ষমাণ'
-                            : (t.billingCycle === 'trial' || t.isTrial || t.status === 'trial')
-                            ? '🎁 ৭ দিনের ফ্রি ট্রায়াল'
-                            : t.status === 'active' ? '● সক্রিয়' : t.status === 'expired' ? '⚠️ মেয়াদোত্তীর্ণ' : '● স্থগিত'}
-                        </span>
+                          {t.industryIcon || '🏪'}
+                        </div>
+
+                        <div>
+                          {/* Name & Badges */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                              {t.shopName}
+                            </h3>
+
+                            {/* Status Tag */}
+                            <span style={{
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              padding: '3px 10px',
+                              borderRadius: '99px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              background: isPending
+                                ? '#fef3c7'
+                                : isTrial
+                                ? '#f3e8ff'
+                                : isActivePaid
+                                ? '#ecfdf5'
+                                : '#fee2e2',
+                              color: isPending
+                                ? '#b45309'
+                                : isTrial
+                                ? '#7e22ce'
+                                : isActivePaid
+                                ? '#059669'
+                                : '#dc2626',
+                              border: `1px solid ${isPending ? '#fde68a' : isTrial ? '#d8b4fe' : isActivePaid ? '#a7f3d0' : '#fca5a5'}`
+                            }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: isPending ? '#b45309' : isTrial ? '#7e22ce' : isActivePaid ? '#059669' : '#dc2626',
+                                display: 'inline-block'
+                              }} />
+                              {isPending
+                                ? '⏳ অনুমোদন অপেক্ষমাণ'
+                                : isTrial
+                                ? '🎁 ৭ দিনের ফ্রি ট্রায়াল'
+                                : isActivePaid
+                                ? '● সক্রিয় পেইড'
+                                : isExpired
+                                ? '⚠️ মেয়াদোত্তীর্ণ'
+                                : '● স্থগিত'}
+                            </span>
+
+                            {/* Trial Countdown or Validity Days Badge */}
+                            {isTrial && (
+                              <span style={{
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                padding: '3px 10px',
+                                borderRadius: '99px',
+                                background: remainingDays !== null && remainingDays > 0 ? '#faf5ff' : '#fee2e2',
+                                color: remainingDays !== null && remainingDays > 0 ? '#6b21a8' : '#b91c1c',
+                                border: `1px solid ${remainingDays !== null && remainingDays > 0 ? '#e9d5ff' : '#fca5a5'}`
+                              }}>
+                                {remainingDays !== null && remainingDays > 0
+                                  ? `⏳ আর ${remainingDays} দিন ফ্রি`
+                                  : '⚠️ ট্রায়াল শেষ!'}
+                              </span>
+                            )}
+
+                            {isActivePaid && remainingDays !== null && (
+                              <span style={{
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                padding: '3px 10px',
+                                borderRadius: '99px',
+                                background: remainingDays > 0 ? '#f0fdf4' : '#fee2e2',
+                                color: remainingDays > 0 ? '#15803d' : '#b91c1c',
+                                border: `1px solid ${remainingDays > 0 ? '#bbf7d0' : '#fca5a5'}`
+                              }}>
+                                {remainingDays > 0 ? `✅ ${remainingDays} দিন বাকি` : '⚠️ মেয়াদ শেষ'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Metadata Chips */}
+                          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{ background: '#f8fafc', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                              👤 <strong>{t.ownerName}</strong>
+                            </span>
+                            <span style={{ background: '#f8fafc', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} className="num-font">
+                              📱 <strong style={{ color: '#0f172a' }}>{t.phone}</strong>
+                            </span>
+                            <span style={{ background: '#f8fafc', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                              📍 {t.location || 'স্থানীয় বাজার'}
+                            </span>
+                            <span style={{ background: '#f8fafc', padding: '2px 8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                              🏷️ {t.industryName || 'ব্যবসা'}
+                            </span>
+                            <span style={{ background: '#fffbeb', color: '#92400e', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fde68a', fontWeight: '800' }}>
+                              🔑 পিন: <strong>{t.pin || '1234'}</strong>
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <span>👤 মালিক: <strong>{t.ownerName}</strong></span>
-                        <span>•</span>
-                        <span className="num-font" style={{ fontWeight: '700', color: '#334155' }}>📱 {t.phone}</span>
-                        <span>•</span>
-                        <span>📍 {t.location}</span>
-                        <span>•</span>
-                        <span style={{ color: t.billingCycle === 'trial' ? '#7e22ce' : '#4f46e5', fontWeight: '800' }}>
-                          প্যাকেজ: {t.billingCycle === 'trial' ? '🎁 ৭ দিনের ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '🚀 বাৎসরিক (১ বছর)' : '🌟 মাসিক (৩০ দিন)'}
-                        </span>
-                        {t.startDate && (
-                          <>
-                            <span>•</span>
-                            <span>শুরু: {t.startDate}</span>
-                          </>
+                      {/* Right Plan & Validity Info + Primary Button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          padding: '8px 14px',
+                          borderRadius: '14px',
+                          textAlign: 'right'
+                        }}>
+                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>প্ল্যান ও মেয়াদ</div>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: isTrial ? '#7e22ce' : '#4f46e5' }}>
+                            {t.planName || t.planId || 'প্রো শপ'} ({isTrial ? 'ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
+                          </div>
+                          <div style={{ fontSize: '11px', color: isPending ? '#b45309' : (isExpired ? '#dc2626' : '#059669'), fontWeight: '800' }}>
+                            {isPending
+                              ? 'অনুমোদনের পর সক্রিয় হবে'
+                              : `মেয়াদ: ${t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত`}
+                          </div>
+                        </div>
+
+                        {/* Approval or Launch Button */}
+                        {isPending ? (
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => handleApproveShop(t.id, 'trial')}
+                              style={{
+                                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '10px 16px',
+                                borderRadius: '12px',
+                                fontWeight: '900',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)'
+                              }}
+                            >
+                              <span>🎁 ৭ দিন ফ্রি ট্রায়াল অনুমোদন</span>
+                            </button>
+                            <button
+                              onClick={() => handleApproveShop(t.id, 'paid')}
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '10px 16px',
+                                borderRadius: '12px',
+                                fontWeight: '900',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
+                              }}
+                            >
+                              <span>✅ সরাসরি পেইড অনুমোদন</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleImpersonateShop(t)}
+                            style={{
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              color: '#fff',
+                              border: 'none',
+                              padding: '11px 20px',
+                              borderRadius: '14px',
+                              fontWeight: '900',
+                              fontSize: '13.5px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                              transition: 'transform 0.15s ease'
+                            }}
+                          >
+                            <span>🚀 দোকানে প্রবেশ করুন</span>
+                          </button>
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Plan & Validity Badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Subscription, Extension & SMS Control Bar */}
                     <div style={{
                       background: '#f8fafc',
-                      border: '1px solid #cbd5e1',
-                      padding: '8px 14px',
-                      borderRadius: '12px',
-                      textAlign: 'right'
+                      borderRadius: '16px',
+                      padding: '12px 18px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      border: '1px solid #e2e8f0'
                     }}>
-                      <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700' }}>বর্তমান প্ল্যান ও মেয়াদ</div>
-                      <div style={{ fontSize: '14px', fontWeight: '900', color: t.billingCycle === 'trial' ? '#7e22ce' : '#4f46e5' }}>
-                        {t.planName || t.planId || 'প্রো শপ'} ({t.billingCycle === 'trial' ? 'ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
+                      {/* Plan Switcher */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>প্ল্যান পরিবর্তন:</span>
+                        <select
+                          value={t.planId || 'plan-pro'}
+                          onChange={(e) => handleChangeShopPlan(t.id, e.target.value)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '12.5px',
+                            fontWeight: '800',
+                            background: '#ffffff',
+                            color: '#0f172a',
+                            outline: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="plan-basic">বেসিক দোকান (৳৯৯/মা)</option>
+                          <option value="plan-pro">প্রো শপ (৳১৪৯/মা)</option>
+                          <option value="plan-enterprise">মাল্টি-ব্রাঞ্চ Enterprise (৳২৯৯/মা)</option>
+                        </select>
                       </div>
-                      <div style={{ fontSize: '11px', color: (t.status === 'pending_approval' || t.status === 'pending') ? '#b45309' : (t.status === 'expired' ? '#dc2626' : '#059669'), fontWeight: '800' }}>
-                        {(t.status === 'pending_approval' || t.status === 'pending')
-                          ? 'অনুমোদনের পর সক্রিয় হবে'
-                          : `মেয়াদ: ${t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত`}
+
+                      {/* Extend Validity Quick Buttons */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>মেয়াদ বৃদ্ধি:</span>
+                        <button
+                          onClick={() => handleExtendTrial(t.id, 7)}
+                          style={{ padding: '6px 12px', borderRadius: '10px', background: '#f3e8ff', border: '1px solid #d8b4fe', color: '#7e22ce', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                        >
+                          🎁 +৭ দিন ট্রায়াল
+                        </button>
+                        <button
+                          onClick={() => handleExtendValidity(t.id, 1)}
+                          style={{ padding: '6px 12px', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                          +১ মাস
+                        </button>
+                        <button
+                          onClick={() => handleExtendValidity(t.id, 6)}
+                          style={{ padding: '6px 12px', borderRadius: '10px', background: '#ffffff', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                          +৬ মাস
+                        </button>
+                        <button
+                          onClick={() => handleExtendValidity(t.id, 12)}
+                          style={{ padding: '6px 12px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #86efac', color: '#065f46', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                        >
+                          +১ বছর 🔥
+                        </button>
+                      </div>
+
+                      {/* SMS Balance & Recharge */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>
+                          📩 SMS: <strong>{t.smsBalance || 0}</strong>
+                        </span>
+                        <button
+                          onClick={() => setSmsRechargeShop(t)}
+                          style={{ padding: '6px 12px', borderRadius: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                          + রিচার্জ
+                        </button>
                       </div>
                     </div>
 
-                    {(t.status === 'pending_approval' || t.status === 'pending') ? (
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => handleApproveShop(t.id, 'trial')}
-                          style={{
-                            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '10px 16px',
-                            borderRadius: '12px',
-                            fontWeight: '900',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)'
-                          }}
-                        >
-                          <span>🎁 ৭ দিনের ফ্রি ট্রায়াল অনুমোদন</span>
-                        </button>
-                        <button
-                          onClick={() => handleApproveShop(t.id, 'paid')}
-                          style={{
-                            background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '10px 16px',
-                            borderRadius: '12px',
-                            fontWeight: '900',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
-                          }}
-                        >
-                          <span>✅ সরাসরি পেইড অনুমোদন</span>
-                        </button>
-                      </div>
-                    ) : (
+                    {/* Bottom Action Toolbar - Highlighted & Categorized */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      paddingTop: '6px',
+                      borderTop: '1px solid #f1f5f9'
+                    }}>
+                      {/* 1. EDIT BUTTON - PROMINENT & HIGH-CONTRAST */}
                       <button
-                        onClick={() => handleImpersonateShop(t)}
+                        onClick={() => setEditModalShop(t)}
                         style={{
-                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                          color: '#fff',
+                          background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                          color: '#ffffff',
                           border: 'none',
-                          padding: '10px 18px',
-                          borderRadius: '12px',
-                          fontWeight: '800',
-                          fontSize: '13px',
+                          padding: '8px 16px',
+                          borderRadius: '11px',
+                          fontWeight: '900',
+                          fontSize: '12.5px',
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
-                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                          boxShadow: '0 3px 10px rgba(79, 70, 229, 0.28)'
                         }}
                       >
-                        <span>🚀 দোকানে প্রবেশ করুন</span>
+                        <span>✏️</span>
+                        <span>দোকান এডিট</span>
                       </button>
-                    )}
+
+                      {/* 2. RESET PIN */}
+                      <button
+                        onClick={() => { setResetPinShop(t); setNewPinInput(''); }}
+                        style={{
+                          background: '#fffbeb',
+                          color: '#b45309',
+                          border: '1.5px solid #fde68a',
+                          padding: '8px 14px',
+                          borderRadius: '11px',
+                          fontWeight: '800',
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🔑</span>
+                        <span>পিন রিসেট</span>
+                      </button>
+
+                      {/* 3. FEATURE PERMISSIONS */}
+                      <button
+                        onClick={() => openFeatureModal(t)}
+                        style={{
+                          background: '#f5f3ff',
+                          color: '#6d28d9',
+                          border: '1.5px solid #ddd6fe',
+                          padding: '8px 14px',
+                          borderRadius: '11px',
+                          fontWeight: '800',
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>⚙️</span>
+                        <span>ফিচার পারমিশন</span>
+                      </button>
+
+                      {/* 4. DETAILS / AUDIT */}
+                      <button
+                        onClick={() => handleOpenInspect(t)}
+                        style={{
+                          background: '#f0f9ff',
+                          color: '#0369a1',
+                          border: '1.5px solid #bae6fd',
+                          padding: '8px 14px',
+                          borderRadius: '11px',
+                          fontWeight: '800',
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🔍</span>
+                        <span>বিস্তারিত অডিট</span>
+                      </button>
+
+                      {/* 5. SUSPEND / ACTIVATE */}
+                      <button
+                        onClick={() => toggleShopStatus(t.id, t.status)}
+                        style={{
+                          background: t.status === 'active' ? '#fff1f2' : '#f0fdf4',
+                          color: t.status === 'active' ? '#e11d48' : '#16a34a',
+                          border: `1.5px solid ${t.status === 'active' ? '#fecdd3' : '#bbf7d0'}`,
+                          padding: '8px 14px',
+                          borderRadius: '11px',
+                          fontWeight: '800',
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>{t.status === 'active' ? '⏸' : '▶'}</span>
+                        <span>{t.status === 'active' ? 'স্থগিত করুন' : 'সক্রিয় করুন'}</span>
+                      </button>
+
+                      {/* 6. DELETE BUTTON */}
+                      <button
+                        onClick={() => handleDeleteShop(t)}
+                        style={{
+                          background: '#ffffff',
+                          color: '#dc2626',
+                          border: '1.5px solid #fecaca',
+                          padding: '8px 14px',
+                          borderRadius: '11px',
+                          fontWeight: '800',
+                          fontSize: '12.5px',
+                          cursor: 'pointer',
+                          marginLeft: 'auto',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>🗑️</span>
+                        <span>ডিলিট</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Subscription & Resource Controls Bar */}
-                <div style={{
-                  background: '#f8fafc',
-                  borderRadius: '14px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  {/* Plan Switcher */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>প্ল্যান পরিবর্তন:</span>
-                    <select
-                      value={t.planId || 'plan-pro'}
-                      onChange={(e) => handleChangeShopPlan(t.id, e.target.value)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        border: '1.5px solid #cbd5e1',
-                        fontSize: '12.5px',
-                        fontWeight: '800',
-                        background: '#ffffff',
-                        color: '#0f172a'
-                      }}
-                    >
-                      <option value="plan-basic">বেসিক দোকান (৳৯৯/মা)</option>
-                      <option value="plan-pro">প্রো শপ (৳১৪৯/মা)</option>
-                      <option value="plan-enterprise">মাল্টি-ব্রাঞ্চ Enterprise (৳২৯৯/মা)</option>
-                    </select>
-                  </div>
-
-                  {/* Extend Validity Quick Buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>মেয়াদ বৃদ্ধি:</span>
-                    <button
-                      onClick={() => handleExtendTrial(t.id, 7)}
-                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#f3e8ff', border: '1px solid #d8b4fe', color: '#7e22ce', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
-                    >
-                      🎁 +৭ দিন ট্রায়াল
-                    </button>
-                    <button
-                      onClick={() => handleExtendValidity(t.id, 1)}
-                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#ffffff', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      +১ মাস
-                    </button>
-                    <button
-                      onClick={() => handleExtendValidity(t.id, 6)}
-                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#ffffff', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      +৬ মাস
-                    </button>
-                    <button
-                      onClick={() => handleExtendValidity(t.id, 12)}
-                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#ecfdf5', border: '1px solid #86efac', color: '#065f46', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
-                    >
-                      +১ বছর 🔥
-                    </button>
-                  </div>
-
-                  {/* SMS Balance & Recharge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#475569' }}>
-                      📩 SMS ব্যালেন্স: <strong>{t.smsBalance || 0}</strong>
-                    </span>
-                    <button
-                      onClick={() => setSmsRechargeShop(t)}
-                      style={{ padding: '5px 10px', borderRadius: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      + SMS রিচার্জ
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bottom Action Buttons */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <button
-                    onClick={() => handleOpenInspect(t)}
-                    style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    🔍 বিস্তারিত তথ্য
-                  </button>
-
-                  <button
-                    onClick={() => openFeatureModal(t)}
-                    style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', padding: '6px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    ⚙️ ফিচার পারমিশন
-                  </button>
-
-                  <button
-                    onClick={() => { setResetPinShop(t); setNewPinInput(''); }}
-                    style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', padding: '6px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    🔑 পিন রিসেট
-                  </button>
-
-                  <button
-                    onClick={() => setEditModalShop(t)}
-                    style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    ✏️ এডিট
-                  </button>
-
-                  <button
-                    onClick={() => toggleShopStatus(t.id, t.status)}
-                    style={{
-                      background: t.status === 'active' ? '#fff1f2' : '#f0fdf4',
-                      color: t.status === 'active' ? '#e11d48' : '#16a34a',
-                      border: `1px solid ${t.status === 'active' ? '#fecdd3' : '#bbf7d0'}`,
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      fontWeight: '800',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {t.status === 'active' ? '⏸ স্থগিত করুন' : '▶ সক্রিয় করুন'}
-                  </button>
-
-                  <button
-                    onClick={() => handleDeleteShop(t)}
-                    style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer', marginLeft: 'auto' }}
-                  >
-                    🗑️ ডিলিট
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2312,26 +2627,48 @@ export default function SuperAdminPage() {
 
       {/* MODAL: SMS Recharge */}
       {smsRechargeShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '380px', width: '100%', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900' }}>📩 SMS রিচার্জ</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '400px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>📩 SMS ব্যালেন্স রিচার্জ</h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
               <strong>{smsRechargeShop.shopName}</strong> এ এসএমএস ব্যালেন্স যোগ করুন
             </p>
             <form onSubmit={handleSmsRecharge} style={{ display: 'grid', gap: '14px' }}>
+              {/* Quick Select Pills */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['50', '100', '200', '500', '1000'].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setSmsCountInput(val)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: smsCountInput === val ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                      background: smsCountInput === val ? '#eff6ff' : '#f8fafc',
+                      color: smsCountInput === val ? '#1d4ed8' : '#475569',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    +{val} SMS
+                  </button>
+                ))}
+              </div>
               <input
                 type="number"
                 value={smsCountInput}
                 onChange={(e) => setSmsCountInput(e.target.value)}
                 placeholder="এসএমএস সংখ্যা (যেমন: ১০০)"
-                style={{ padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                style={{ padding: '11px 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
                 required
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={{ flex: 1, background: '#2563eb', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
-                  রিচার্জ করুন
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}>
+                  রিচার্জ নিশ্চিত করুন
                 </button>
-                <button type="button" onClick={() => setSmsRechargeShop(null)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                <button type="button" onClick={() => setSmsRechargeShop(null)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
                   বাতিল
                 </button>
               </div>
@@ -2342,9 +2679,9 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Add Coupon */}
       {showCouponModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '420px', width: '100%', padding: '26px' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900' }}>🎟️ নতুন প্রোমো কুপন তৈরি</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '440px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>🎟️ নতুন প্রোমো কুপন তৈরি</h3>
             <form onSubmit={handleCreateCoupon} style={{ display: 'grid', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>কুপন কোড</label>
@@ -2353,7 +2690,7 @@ export default function SuperAdminPage() {
                   placeholder="যেমন: EID2026, SUMMER20"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', textTransform: 'uppercase' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', textTransform: 'uppercase', fontSize: '14px', fontWeight: '800' }}
                   required
                 />
               </div>
@@ -2364,7 +2701,7 @@ export default function SuperAdminPage() {
                   <select
                     value={couponDiscountType}
                     onChange={(e) => setCouponDiscountType(e.target.value as any)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
                   >
                     <option value="percentage">শতাংশ (%)</option>
                     <option value="fixed">টাকা (৳)</option>
@@ -2377,7 +2714,7 @@ export default function SuperAdminPage() {
                     type="number"
                     value={couponDiscountValue}
                     onChange={(e) => setCouponDiscountValue(e.target.value)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
                     required
                   />
                 </div>
@@ -2390,7 +2727,7 @@ export default function SuperAdminPage() {
                     type="number"
                     value={couponMaxUses}
                     onChange={(e) => setCouponMaxUses(e.target.value)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
                   />
                 </div>
 
@@ -2400,16 +2737,16 @@ export default function SuperAdminPage() {
                     type="date"
                     value={couponExpiry}
                     onChange={(e) => setCouponExpiry(e.target.value)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <button type="submit" style={{ flex: 1, background: '#4f46e5', color: '#fff', border: 'none', padding: '11px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)' }}>
                   কুপন সেভ করুন
                 </button>
-                <button type="button" onClick={() => setShowCouponModal(false)} style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                <button type="button" onClick={() => setShowCouponModal(false)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
                   বাতিল
                 </button>
               </div>
@@ -2420,20 +2757,20 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Feature Toggles */}
       {featureModalShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '520px', width: '100%', padding: '26px' }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '520px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
               ⚙️ বিশেষ ফিচার পারমিশন: {featureModalShop.shopName}
             </h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
-              এই দোকানের জন্য প্রয়োজনীয় বিশেষ ফিচারগুলো অন বা অফ করুন
+              এই দোকানের জন্য প্রয়োজনীয় বিশেষ ফিচারগুলো সক্রিয় অথবা নিষ্ক্রিয় করুন
             </p>
 
             <form onSubmit={handleSaveShopFeatures} style={{ display: 'grid', gap: '10px' }}>
               {[
                 { key: 'enableMultiBranch', label: 'মাল্টি-ব্রাঞ্চ (Multi-Branch Support)' },
                 { key: 'enableChallanOcr', label: 'চালান ক্যামেরা স্ক্যানার (OCR Memo Reader)' },
-                { key: 'enableInstallments', label: 'বাকির কিস্তি' },
+                { key: 'enableInstallments', label: 'বাকির কিস্তি সুবিধা' },
                 { key: 'enableExpiryTracker', label: 'মেয়াদ রাডার (Expiry Date Tracker)' },
                 { key: 'enableBarcodePrinter', label: 'বারকোড ও স্টিকার প্রিন্টার' },
                 { key: 'enableDealerKhata', label: 'ডিলার ও মহাজন খাতা' },
@@ -2446,17 +2783,17 @@ export default function SuperAdminPage() {
                     type="checkbox"
                     checked={Boolean(shopFeatures[f.key])}
                     onChange={(e) => setShopFeatures({ ...shopFeatures, [f.key]: e.target.checked })}
-                    style={{ width: '18px', height: '18px' }}
+                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed' }}
                   />
                   <span>{f.label}</span>
                 </label>
               ))}
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                <button type="submit" style={{ flex: 1, background: '#059669', color: '#fff', border: 'none', padding: '11px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)' }}>
                   সংরক্ষণ করুন
                 </button>
-                <button type="button" onClick={() => setFeatureModalShop(null)} style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                <button type="button" onClick={() => setFeatureModalShop(null)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
                   বাতিল
                 </button>
               </div>
@@ -2467,9 +2804,9 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Reset PIN */}
       {resetPinShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '380px', width: '100%', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900' }}>🔑 পিন রিসেট করুন</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '400px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>🔑 পিন রিসেট করুন</h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
               <strong>{resetPinShop.shopName}</strong> এর নতুন ৪-ডিজিটের গোপন পিন দিন
             </p>
@@ -2480,14 +2817,14 @@ export default function SuperAdminPage() {
                 onChange={(e) => setNewPinInput(e.target.value)}
                 placeholder="নতুন পিন (যেমন: 5678)"
                 maxLength={6}
-                style={{ padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', textAlign: 'center', fontSize: '18px', letterSpacing: '4px' }}
+                style={{ padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', textAlign: 'center', fontSize: '20px', letterSpacing: '6px', fontWeight: '900' }}
                 required
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={{ flex: 1, background: '#b45309', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
-                  পিন পরিবর্তন করুন
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)' }}>
+                  পিন পরিবর্তন নিশ্চিত করুন
                 </button>
-                <button type="button" onClick={() => setResetPinShop(null)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                <button type="button" onClick={() => setResetPinShop(null)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
                   বাতিল
                 </button>
               </div>
@@ -2498,16 +2835,19 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Edit Shop Details */}
       {editModalShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '520px', width: '100%', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
-                ✏️ দোকানের তথ্য সম্পাদনা
-              </h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px', borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>✏️</span>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
+                  দোকানের তথ্য সম্পাদনা
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setEditModalShop(null)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
+                style={{ background: '#f1f5f9', border: 'none', width: '28px', height: '28px', borderRadius: '50%', fontSize: '14px', cursor: 'pointer', color: '#64748b', display: 'grid', placeItems: 'center' }}
               >
                 ✕
               </button>
@@ -2520,7 +2860,7 @@ export default function SuperAdminPage() {
                   type="text"
                   value={editModalShop.shopName || ''}
                   onChange={(e) => setEditModalShop({ ...editModalShop, shopName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
                   required
                 />
               </div>
@@ -2531,7 +2871,7 @@ export default function SuperAdminPage() {
                   type="text"
                   value={editModalShop.ownerName || ''}
                   onChange={(e) => setEditModalShop({ ...editModalShop, ownerName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px' }}
                   required
                 />
               </div>
@@ -2543,7 +2883,7 @@ export default function SuperAdminPage() {
                     type="tel"
                     value={editModalShop.phone || ''}
                     onChange={(e) => setEditModalShop({ ...editModalShop, phone: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
                     required
                   />
                 </div>
@@ -2554,7 +2894,7 @@ export default function SuperAdminPage() {
                     type="text"
                     value={editModalShop.pin || ''}
                     onChange={(e) => setEditModalShop({ ...editModalShop, pin: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', textAlign: 'center' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', textAlign: 'center', fontSize: '16px', fontWeight: '900', letterSpacing: '2px' }}
                     required
                   />
                 </div>
@@ -2567,7 +2907,7 @@ export default function SuperAdminPage() {
                     type="text"
                     value={editModalShop.location || ''}
                     onChange={(e) => setEditModalShop({ ...editModalShop, location: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px' }}
                   />
                 </div>
 
@@ -2576,7 +2916,7 @@ export default function SuperAdminPage() {
                   <select
                     value={editModalShop.industryId || editModalShop.industryCategoryId || 'cat-grocery'}
                     onChange={(e) => setEditModalShop({ ...editModalShop, industryId: e.target.value, industryCategoryId: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13.5px' }}
                   >
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>
@@ -2593,7 +2933,7 @@ export default function SuperAdminPage() {
                   <select
                     value={editModalShop.planId || 'plan-pro'}
                     onChange={(e) => setEditModalShop({ ...editModalShop, planId: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13px' }}
                   >
                     <option value="plan-basic">বেসিক দোকান (৳৯৯)</option>
                     <option value="plan-pro">প্রো শপ (৳১৪৯)</option>
@@ -2606,7 +2946,7 @@ export default function SuperAdminPage() {
                   <select
                     value={editModalShop.billingCycle || 'monthly'}
                     onChange={(e) => setEditModalShop({ ...editModalShop, billingCycle: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13px' }}
                   >
                     <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল</option>
                     <option value="monthly">🌟 মাসিক প্যাকেজ</option>
@@ -2622,7 +2962,7 @@ export default function SuperAdminPage() {
                     type="date"
                     value={editModalShop.paidTill || ''}
                     onChange={(e) => setEditModalShop({ ...editModalShop, paidTill: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px' }}
                     required
                   />
                 </div>
@@ -2633,7 +2973,7 @@ export default function SuperAdminPage() {
                     type="number"
                     value={editModalShop.monthlyFee ?? 149}
                     onChange={(e) => setEditModalShop({ ...editModalShop, monthlyFee: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px' }}
                   />
                 </div>
               </div>
@@ -2644,7 +2984,7 @@ export default function SuperAdminPage() {
                   <select
                     value={editModalShop.status || 'active'}
                     onChange={(e) => setEditModalShop({ ...editModalShop, status: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13.5px' }}
                   >
                     <option value="active">✅ সক্রিয় (Active)</option>
                     <option value="trial">🎁 ফ্রি ট্রায়াল (Trial)</option>
@@ -2660,23 +3000,25 @@ export default function SuperAdminPage() {
                     type="number"
                     value={editModalShop.smsBalance ?? 50}
                     onChange={(e) => setEditModalShop({ ...editModalShop, smsBalance: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                 <button
                   type="submit"
                   style={{
                     flex: 1,
-                    background: '#10b981',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
                     border: 'none',
-                    padding: '11px',
-                    borderRadius: '10px',
-                    fontWeight: '800',
-                    cursor: 'pointer'
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
                   }}
                 >
                   ✓ তথ্য সংরক্ষণ করুন
@@ -2685,10 +3027,11 @@ export default function SuperAdminPage() {
                   type="button"
                   onClick={() => setEditModalShop(null)}
                   style={{
-                    padding: '11px 18px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #cbd5e1',
                     background: '#fff',
+                    fontWeight: '800',
                     cursor: 'pointer'
                   }}
                 >
@@ -2702,9 +3045,9 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Create New Shop */}
       {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '460px', width: '100%', padding: '26px' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900' }}>➕ নতুন দোকান তৈরি ও সক্রিয়করণ</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '480px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>➕ নতুন দোকান তৈরি ও সক্রিয়করণ</h3>
             <form onSubmit={handleCreateShop} style={{ display: 'grid', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '4px' }}>দোকানের নাম</label>
@@ -2713,7 +3056,7 @@ export default function SuperAdminPage() {
                   placeholder="যেমন: ভাই ভাই স্টোর"
                   value={shopName}
                   onChange={(e) => setShopName(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
                   required
                 />
               </div>
@@ -2725,7 +3068,7 @@ export default function SuperAdminPage() {
                   placeholder="যেমন: মোঃ রফিকুল ইসলাম"
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px' }}
                   required
                 />
               </div>
@@ -2738,7 +3081,7 @@ export default function SuperAdminPage() {
                     placeholder="017XXXXXXXX"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', fontWeight: '700' }}
                     required
                   />
                 </div>
@@ -2749,7 +3092,7 @@ export default function SuperAdminPage() {
                     type="text"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', textAlign: 'center' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', textAlign: 'center', fontSize: '16px', fontWeight: '900', letterSpacing: '2px' }}
                     required
                   />
                 </div>
@@ -2761,7 +3104,7 @@ export default function SuperAdminPage() {
                   <select
                     value={industryCategoryId}
                     onChange={(e) => setIndustryCategoryId(e.target.value)}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13.5px' }}
                   >
                     {categories.map(c => (
                       <option key={c.id} value={c.id}>
@@ -2795,7 +3138,7 @@ export default function SuperAdminPage() {
                         setMonthlyFee('299');
                       }
                     }}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontWeight: '700' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontWeight: '700', fontSize: '13px' }}
                   >
                     <option value="trial">🎁 ৭ দিনের ফ্রি ট্রায়াল (৳০ • ৭ দিন ফ্রি)</option>
                     <option value="monthly_pro">🌟 প্রো শপ - মাসিক (৳১৪৯ • ৩০ দিন)</option>
@@ -2807,17 +3150,36 @@ export default function SuperAdminPage() {
               </div>
 
               {selectedBillingOption === 'trial' && (
-                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 12px', fontSize: '11.5px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>🎁</span>
                   <span>দোকানটি তৈরি হলে <strong>৭ দিন সম্পূর্ণ ফ্রিতে</strong> সব প্রো ফিচার ব্যবহার করতে পারবে। ৭ দিন পর রিনিউ না করলে একাউন্ট বন্ধ হবে।</span>
                 </div>
               )}
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <button type="submit" disabled={submitting} style={{ flex: 1, background: '#10b981', color: '#fff', border: 'none', padding: '11px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '900',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                  }}
+                >
                   {submitting ? 'তৈরি হচ্ছে...' : 'দোকান সক্রিয় করুন'}
                 </button>
-                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  style={{ padding: '12px 20px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: '800', cursor: 'pointer' }}
+                >
                   বাতিল
                 </button>
               </div>
@@ -2828,9 +3190,9 @@ export default function SuperAdminPage() {
 
       {/* MODAL: Inspect Shop */}
       {inspectShop && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
-          <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px' }}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '16px' }}>
+          <div className="ui-card" style={{ maxWidth: '540px', width: '100%', padding: '26px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)' }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
               🔍 দোকানের বিস্তারিত মনিটরিং
             </h3>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px' }}>
@@ -2839,34 +3201,40 @@ export default function SuperAdminPage() {
 
             {inspectData ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '13px' }}>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>প্ল্যান:</span> <strong>{inspectData.planName}</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>প্ল্যান:</span>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{inspectData.planName}</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>মেয়াদ বাকি:</span> <strong>{inspectData.daysRemaining} দিন</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>মেয়াদ বাকি:</span>
+                  <strong style={{ fontSize: '14px', color: '#059669' }}>{inspectData.daysRemaining} দিন</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>পণ্য সংখ্যা:</span> <strong>{inspectData.limits?.currentProducts || 0} টি</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>পণ্য সংখ্যা:</span>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{inspectData.limits?.currentProducts || 0} টি</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>শাখা সংখ্যা:</span> <strong>{inspectData.limits?.currentBranches || 1} টি</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>শাখা সংখ্যা:</span>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{inspectData.limits?.currentBranches || 1} টি</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>স্টাফ সংখ্যা:</span> <strong>{inspectData.limits?.currentStaff || 0} জন</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>স্টাফ সংখ্যা:</span>
+                  <strong style={{ fontSize: '14px', color: '#0f172a' }}>{inspectData.limits?.currentStaff || 0} জন</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                  <span style={{ color: '#64748b' }}>এসএমএস ব্যালেন্স:</span> <strong>{inspectData.smsBalance || 0}</strong>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>এসএমএস ব্যালেন্স:</span>
+                  <strong style={{ fontSize: '14px', color: '#2563eb' }}>{inspectData.smsBalance || 0}</strong>
                 </div>
               </div>
             ) : (
-              <div>লোড হচ্ছে...</div>
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#64748b' }}>লোড হচ্ছে...</div>
             )}
 
-            <div style={{ marginTop: '16px', textAlign: 'right' }}>
+            <div style={{ marginTop: '18px', textAlign: 'right' }}>
               <button
                 type="button"
                 onClick={() => setInspectShop(null)}
-                style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '800', cursor: 'pointer' }}
+                style={{ padding: '10px 22px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: '800', cursor: 'pointer' }}
               >
                 বন্ধ করুন
               </button>
