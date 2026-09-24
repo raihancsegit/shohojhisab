@@ -43,11 +43,13 @@ export interface ShopTenant {
   industryId: string;
   industryName: string;
   industryIcon: string;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'pending_approval' | 'pending';
   monthlyFee?: number;
   planId?: string;
   planName?: string;
+  startDate?: string;
   paidTill?: string;
+  billingCycle?: 'monthly' | 'yearly';
   smsBalance?: number;
   bkashNumber?: string;
   nagadNumber?: string;
@@ -67,7 +69,7 @@ interface AuthContextType {
   isOnline: boolean;
   pendingSyncCount: number;
   saveOfflineAction: (actionType: string, payload: any) => void;
-  loginShop: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  loginShop: (phone: string, pin: string) => Promise<{ success: boolean; error?: string; isPendingApproval?: boolean }>;
   loginAdmin: (passcode: string) => Promise<{ success: boolean; error?: string }>;
   loginWithPin: (pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -507,7 +509,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 status: statusData.status,
                 planId: statusData.planId,
                 planName: statusData.planName,
+                startDate: statusData.startDate || prev.startDate,
                 paidTill: statusData.paidTill,
+                billingCycle: statusData.billingCycle || prev.billingCycle,
                 smsBalance: statusData.smsBalance,
                 features: statusData.features
               } : null);
@@ -558,7 +562,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: true };
       } else {
         triggerHaptic('warning');
-        return { success: false, error: data.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!' };
+        return {
+          success: false,
+          error: data.error || 'মোবাইল নাম্বার বা পিন ভুল হয়েছে!',
+          isPendingApproval: Boolean(data.isPendingApproval)
+        };
       }
     } catch (err: any) {
       triggerHaptic('warning');

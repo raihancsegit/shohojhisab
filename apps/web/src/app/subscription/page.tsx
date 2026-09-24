@@ -250,11 +250,17 @@ export default function SubscriptionPage() {
           }}>
             <span>🏬 দোকান: <strong>{tenant.shopName}</strong></span>
             <span>•</span>
-            <span>প্ল্যান: <strong style={{ color: '#4f46e5' }}>{tenant.planName || tenant.planId || 'প্রো শপ'}</strong></span>
+            <span>প্ল্যান: <strong style={{ color: '#4f46e5' }}>{tenant.planName || tenant.planId || 'প্রো শপ'} ({tenant.billingCycle === 'yearly' ? 'বাৎসরিক ১-বছর' : 'মাসিক'})</strong></span>
+            {tenant.startDate && (
+              <>
+                <span>•</span>
+                <span>শুরু: <strong>{tenant.startDate}</strong></span>
+              </>
+            )}
             {tenant.paidTill && (
               <>
                 <span>•</span>
-                <span>মেয়াদ: <strong>{tenant.paidTill}</strong></span>
+                <span>মেয়াদ শেষ: <strong style={{ color: '#059669' }}>{tenant.paidTill}</strong></span>
               </>
             )}
           </div>

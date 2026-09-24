@@ -25,7 +25,8 @@ export const tenants = sqliteTable('tenants', {
   industryCategoryId: text('industry_category_id').notNull(),
   planId: text('plan_id').notNull().default('pro'), // 'basic', 'pro', 'enterprise'
   pin: text('pin').notNull().default('1234'),
-  status: text('status').notNull().default('active'), // 'active', 'suspended'
+  status: text('status').notNull().default('active'), // 'active', 'suspended', 'pending_approval'
+  billingCycle: text('billing_cycle').notNull().default('monthly'), // 'monthly', 'yearly'
   monthlyFee: real('monthly_fee').notNull().default(149),
   startDate: text('start_date').notNull(),
   paidTill: text('paid_till').notNull(),

@@ -571,6 +571,7 @@ try { db.prepare("ALTER TABLE subscription_plans ADD COLUMN is_active INTEGER DE
 try { db.prepare("ALTER TABLE tenants ADD COLUMN features TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE tenants ADD COLUMN sms_balance INTEGER DEFAULT 50").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE tenants ADD COLUMN paid_till TEXT DEFAULT '2027-12-31'").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE tenants ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN tenant_id TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN company_name TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE dealers ADD COLUMN representative_name TEXT").run(); } catch (e) {}
@@ -1204,6 +1205,105 @@ try {
 // Routes
 fastify.get('/api/health', async () => ({ status: 'healthy', time: new Date().toISOString() }));
 
+// ==========================================
+// REGISTRATION (Public Shop Registration with Admin Approval)
+// ==========================================
+fastify.post('/api/auth/register', async (request, reply) => {
+  const body = request.body as any;
+  const {
+    shopName,
+    ownerName,
+    phone,
+    location,
+    bazaarLocation,
+    industryCategoryId = 'cat-grocery',
+    pin = '1234',
+    planId = 'plan-pro',
+    billingCycle = 'monthly' // 'monthly' or 'yearly'
+  } = body || {};
+
+  if (!shopName || !ownerName || !phone) {
+    return reply.status(400).send({ success: false, error: 'দোকানের নাম, মালিকের নাম এবং মোবাইল নম্বর অবশ্যই পূরণ করতে হবে!' });
+  }
+
+  const cleanPhone = String(phone).trim().replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 11) {
+    return reply.status(400).send({ success: false, error: 'সঠিক ১১-ডিজিটের মোবাইল নম্বর দিন (যেমন: 017XXXXXXXX)!' });
+  }
+
+  const existing = db.prepare('SELECT id FROM tenants WHERE phone = ?').get(cleanPhone) as any;
+  if (existing) {
+    return reply.status(400).send({ success: false, error: 'এই মোবাইল নম্বরে ইতোমধ্যে একটি দোকান অ্যাকাউন্ট রয়েছে! দয়া করে লগইন করুন।' });
+  }
+
+  const id = 'tenant-' + uuidv4().slice(0, 8);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  
+  // Calculate paidTill based on billingCycle
+  const paidTillDate = new Date(now);
+  if (billingCycle === 'yearly') {
+    paidTillDate.setDate(paidTillDate.getDate() + 365);
+  } else {
+    paidTillDate.setDate(paidTillDate.getDate() + 30);
+  }
+  const paidTillStr = paidTillDate.toISOString().slice(0, 10);
+
+  const categoryId = normalizeIndustryCategory(industryCategoryId);
+  const featuresJson = getPlanFeaturesJson(planId);
+  const safeLocation = (location || bazaarLocation || 'স্থানীয় বাজার').trim();
+  const safePin = String(pin).trim() || '1234';
+
+  try {
+    db.prepare(`
+      INSERT INTO tenants (
+        id, shop_name, owner_name, phone, bazaar_location, industry_category_id,
+        plan_id, pin, status, billing_cycle, monthly_fee, start_date, paid_till, sms_balance, features, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', ?, ?, ?, ?, 50, ?, ?)
+    `).run(
+      id,
+      shopName.trim(),
+      ownerName.trim(),
+      cleanPhone,
+      safeLocation,
+      categoryId,
+      planId,
+      safePin,
+      billingCycle === 'yearly' ? 'yearly' : 'monthly',
+      billingCycle === 'yearly' ? 1499 : 149,
+      todayStr,
+      paidTillStr,
+      featuresJson,
+      now.toISOString()
+    );
+
+    // Create Main Branch for Tenant
+    db.prepare(`
+      INSERT INTO branches (id, tenant_id, name, location, phone, manager_name, is_main_branch, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)
+    `).run('br-' + uuidv4().slice(0, 8), id, 'প্রধান শাখা', safeLocation, cleanPhone, ownerName.trim(), now.toISOString());
+
+    // Auto seed starter products
+    if (process.env.AUTO_SEED !== 'false') {
+      try { autoImportStarterPack(id, categoryId); } catch (e) {}
+    }
+
+    return {
+      success: true,
+      isPendingApproval: true,
+      tenantId: id,
+      shopName: shopName.trim(),
+      phone: cleanPhone,
+      billingCycle,
+      startDate: todayStr,
+      paidTill: paidTillStr,
+      message: 'আপনার রেজিস্ট্রেশন সফল হয়েছে! অ্যাডমিন অনুমোদন (Approval) প্রদান করলেই আপনি লগইন করতে পারবেন।'
+    };
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err.message || 'রেজিস্ট্রেশন সম্পন্ন করা যায়নি' });
+  }
+});
+
 // Authentication (Shopkeeper & Admin)
 fastify.post('/api/auth/login', async (request, reply) => {
   const body = request.body as any;
@@ -1251,8 +1351,24 @@ fastify.post('/api/auth/login', async (request, reply) => {
     return reply.status(401).send({ success: false, error: 'এই মোবাইল নাম্বারে কোনো দোকান বা স্টাফ অ্যাকাউন্ট পাওয়া যায়নি!' });
   }
 
-  if (tenant.status !== 'active') {
-    return reply.status(403).send({ success: false, error: 'আপনার দোকান অ্যাকাউন্টটি সাময়িকভাবে স্থগিত (Suspended) আছে। দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।' });
+  // Check if Pending Admin Approval
+  if (tenant.status === 'pending_approval' || tenant.status === 'pending') {
+    return reply.status(403).send({
+      success: false,
+      isPendingApproval: true,
+      shopName: tenant.shop_name,
+      ownerName: tenant.owner_name,
+      phone: tenant.phone,
+      error: 'আপনার দোকান অ্যাকাউন্টটি অ্যাডমিন অনুমোদনের অপেক্ষায় (Pending Approval) রয়েছে। অ্যাডমিন অনুমোদন প্রদান করার সাথে সাথে আপনি লগইন করতে পারবেন। জরুরি সহায়তার জন্য আমাদের হেল্পলাইনে যোগাযোগ করতে পারেন।'
+    });
+  }
+
+  if (tenant.status === 'suspended') {
+    return reply.status(403).send({
+      success: false,
+      isSuspended: true,
+      error: 'আপনার দোকান অ্যাকাউন্টটি সাময়িকভাবে স্থগিত (Suspended) আছে। দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।'
+    });
   }
 
   // Check PIN: Is it Owner PIN or Staff PIN?
@@ -1289,6 +1405,8 @@ fastify.post('/api/auth/login', async (request, reply) => {
     isOwner: true
   };
 
+  const planName = tenant.plan_id === 'plan-enterprise' ? 'এন্টারপ্রাইজ' : tenant.plan_id === 'plan-basic' ? 'বেসিক' : 'প্রো শপ';
+
   return {
     success: true,
     role: 'shopkeeper',
@@ -1304,7 +1422,11 @@ fastify.post('/api/auth/login', async (request, reply) => {
       industryName: cat ? cat.bangla_name : 'সাধারণ',
       industryIcon: cat ? cat.icon : '🏪',
       planId: tenant.plan_id,
+      planName: planName,
       status: tenant.status,
+      billingCycle: tenant.billing_cycle || 'monthly',
+      startDate: tenant.start_date || tenant.created_at?.slice(0, 10),
+      paidTill: tenant.paid_till || '2027-12-31',
       monthlyFee: tenant.monthly_fee,
       features: tenant.features ? (typeof tenant.features === 'string' ? JSON.parse(tenant.features) : tenant.features) : null
     }
@@ -1319,6 +1441,8 @@ fastify.get('/api/auth/me', async (request, reply) => {
   if (!tenant) return reply.status(404).send({ error: 'Shop not found' });
 
   const cat = db.prepare('SELECT * FROM categories WHERE id = ?').get(tenant.industry_category_id) as any;
+  const planName = tenant.plan_id === 'plan-enterprise' ? 'এন্টারপ্রাইজ' : tenant.plan_id === 'plan-basic' ? 'বেসিক' : 'প্রো শপ';
+
   return {
     id: tenant.id,
     shopName: tenant.shop_name,
@@ -1329,19 +1453,102 @@ fastify.get('/api/auth/me', async (request, reply) => {
     industryName: cat ? cat.bangla_name : 'সাধারণ',
     industryIcon: cat ? cat.icon : '🏪',
     planId: tenant.plan_id,
+    planName: planName,
     status: tenant.status,
+    billingCycle: tenant.billing_cycle || 'monthly',
+    startDate: tenant.start_date || tenant.created_at?.slice(0, 10),
+    paidTill: tenant.paid_till || '2027-12-31',
     monthlyFee: tenant.monthly_fee
   };
 });
 
+// Update Shop Status (Active, Suspended, Pending Approval)
 fastify.put('/api/admin/tenants/:id/status', async (request, reply) => {
   const { id } = request.params as any;
   const { status } = request.body as any;
-  if (!['active', 'suspended'].includes(status)) {
+  if (!['active', 'suspended', 'pending_approval', 'pending'].includes(status)) {
     return reply.status(400).send({ error: 'Invalid status' });
   }
   db.prepare('UPDATE tenants SET status = ? WHERE id = ?').run(status, id);
-  return { success: true, message: `দোকানের স্ট্যাটাস ${status === 'active' ? 'সক্রিয়' : 'স্থগিত'} করা হয়েছে!` };
+  return {
+    success: true,
+    status,
+    message: `দোকানের স্ট্যাটাস ${status === 'active' ? 'সক্রিয় (Active)' : status === 'suspended' ? 'স্থগিত (Suspended)' : 'অনুমোদন পেন্ডিং'} করা হয়েছে!`
+  };
+});
+
+// Admin Approve Shop (1-Click Approval with Dynamic Duration)
+fastify.put('/api/admin/tenants/:id/approve', async (request, reply) => {
+  const { id } = request.params as any;
+  const body = (request.body as any) || {};
+  const { billingCycle, planId, durationDays } = body;
+
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const cycle = billingCycle || tenant.billing_cycle || 'monthly';
+  const days = durationDays ? Number(durationDays) : (cycle === 'yearly' ? 365 : 30);
+
+  const expDate = new Date(now);
+  expDate.setDate(expDate.getDate() + days);
+  const paidTillStr = expDate.toISOString().slice(0, 10);
+
+  db.prepare(`
+    UPDATE tenants
+    SET status = 'active', start_date = ?, paid_till = ?, billing_cycle = ?, plan_id = COALESCE(?, plan_id)
+    WHERE id = ?
+  `).run(todayStr, paidTillStr, cycle, planId || null, id);
+
+  return {
+    success: true,
+    message: `দোকান "${tenant.shop_name}" সফলভাবে অনুমোদন করা হয়েছে! মেয়াদ: ${paidTillStr} পর্যন্ত`,
+    status: 'active',
+    startDate: todayStr,
+    paidTill: paidTillStr,
+    billingCycle: cycle
+  };
+});
+
+// Admin Set/Extend Subscription (Monthly, 1-Year or Custom)
+fastify.put('/api/admin/tenants/:id/subscription', async (request, reply) => {
+  const { id } = request.params as any;
+  const body = (request.body as any) || {};
+  const { billingCycle = 'monthly', planId, customPaidTill, extendMonths } = body;
+
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id) as any;
+  if (!tenant) return reply.status(404).send({ error: 'দোকান খুঁজে পাওয়া যায়নি' });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  let newPaidTill = customPaidTill;
+
+  if (!newPaidTill) {
+    const expDate = new Date();
+    if (billingCycle === 'yearly') {
+      expDate.setDate(expDate.getDate() + 365);
+    } else {
+      const months = Number(extendMonths) || 1;
+      expDate.setMonth(expDate.getMonth() + months);
+    }
+    newPaidTill = expDate.toISOString().slice(0, 10);
+  }
+
+  db.prepare(`
+    UPDATE tenants
+    SET billing_cycle = ?, paid_till = ?, start_date = COALESCE(start_date, ?), plan_id = COALESCE(?, plan_id), status = 'active'
+    WHERE id = ?
+  `).run(billingCycle, newPaidTill, todayStr, planId || null, id);
+
+  return {
+    success: true,
+    message: `সাবস্ক্রিপশন সফলভাবে আপডেট হয়েছে! নতুন মেয়াদ: ${newPaidTill}`,
+    billingCycle,
+    startDate: tenant.start_date || todayStr,
+    paidTill: newPaidTill,
+    status: 'active'
+  };
 });
 
 fastify.get('/api/categories', async () => {

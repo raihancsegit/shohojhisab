@@ -32,7 +32,7 @@ export default function SuperAdminPage() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending_approval' | 'active' | 'suspended'>('all');
   const [filterCategory, setFilterCategory] = useState('all');
 
   // Modals
@@ -271,6 +271,28 @@ export default function SuperAdminPage() {
         setTimeout(() => setNotice(''), 3500);
       }
     } catch (e) {}
+  };
+
+  // Approve Pending Shop
+  const handleApproveShop = async (shopId: string) => {
+    triggerHaptic('success');
+    try {
+      const res = await fetch(`/api/admin/tenants/${shopId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        await loadAdminData();
+        setNotice(`✓ ${d.message || 'দোকান অনুমোদন করা হয়েছে এবং মেয়াদ সক্রিয় করা হয়েছে!'}`);
+        setTimeout(() => setNotice(''), 4000);
+      } else {
+        const err = await res.json();
+        setNotice(`⚠️ ${err.error || 'অনুমোদন সম্পন্ন করা সম্ভব হয়নি'}`);
+      }
+    } catch (e) {
+      setNotice('⚠️ সার্ভারে যোগাযোগ করা সম্ভব হয়নি');
+    }
   };
 
   // Toggle Shop Status (Active vs Suspended)
@@ -666,7 +688,11 @@ export default function SuperAdminPage() {
                    (t.ownerName && t.ownerName.toLowerCase().includes(q)) ||
                    (t.phone && t.phone.includes(q)) ||
                    (t.location && t.location.toLowerCase().includes(q));
-    const matchStatus = filterStatus === 'all' || t.status === filterStatus;
+    const matchStatus = filterStatus === 'all'
+      ? true
+      : filterStatus === 'pending_approval'
+      ? (t.status === 'pending_approval' || t.status === 'pending')
+      : t.status === filterStatus;
     const matchCat = filterCategory === 'all' || t.industryId === filterCategory;
     return matchQ && matchStatus && matchCat;
   });
@@ -786,43 +812,59 @@ export default function SuperAdminPage() {
       {activeTab === 'shops' && (
         <div>
           {/* Quick Stats Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div className="ui-card" style={{ borderLeft: '4px solid #3b82f6', padding: '20px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>মোট দোকান সংখ্যা</span>
                 <span style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'grid', placeItems: 'center', fontSize: '18px' }}>🏪</span>
               </div>
-              <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px' }}>
+              <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#0f172a', margin: '4px 0 2px' }}>
                 {overview.totalShops} টি
               </div>
               <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '700' }}>
-                চালু আছে: {overview.activeShops} টি • স্থগিত: {overview.suspendedShops} টি
+                চালু: {overview.activeShops} টি • স্থগিত: {overview.suspendedShops} টি
               </span>
+            </div>
+
+            <div className="ui-card" style={{ borderLeft: '4px solid #f59e0b', padding: '20px 22px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>অনুমোদন অপেক্ষমাণ</span>
+                <span style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fef3c7', color: '#b45309', display: 'grid', placeItems: 'center', fontSize: '18px' }}>⏳</span>
+              </div>
+              <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#b45309', margin: '4px 0 2px' }}>
+                {overview.pendingShops ?? tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length} টি
+              </div>
+              <button
+                onClick={() => setFilterStatus('pending_approval')}
+                style={{ fontSize: '12px', color: '#b45309', fontWeight: '800', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                ফিল্টার করে অনুমোদন করুন →
+              </button>
             </div>
 
             <div className="ui-card" style={{ borderLeft: '4px solid #10b981', padding: '20px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>মাসিক সম্ভাব্য MRR আয়</span>
+                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>মাসিক সম্ভাব্য MRR</span>
                 <span style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'grid', placeItems: 'center', fontSize: '18px' }}>💳</span>
               </div>
-              <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#059669', margin: '4px 0 2px' }}>
+              <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#059669', margin: '4px 0 2px' }}>
                 ৳{overview.monthlyRecurringRevenue?.toLocaleString('en-US')}
               </div>
               <span style={{ fontSize: '12px', color: '#059669', fontWeight: '700' }}>
-                মোট আদায়কৃত সাবস্ক্রিপশন: ৳{overview.totalSubscriptionRevenue || 0}
+                মোট সাবস্ক্রিপশন: ৳{overview.totalSubscriptionRevenue || 0}
               </span>
             </div>
 
             <div className="ui-card" style={{ borderLeft: '4px solid #8b5cf6', padding: '20px 22px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>সকল দোকানের মোট বিক্রি</span>
+                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>দোকানসমূহের বিক্রি</span>
                 <span style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f5f3ff', color: '#7c3aed', display: 'grid', placeItems: 'center', fontSize: '18px' }}>📈</span>
               </div>
-              <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#7c3aed', margin: '4px 0 2px' }}>
+              <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: '#7c3aed', margin: '4px 0 2px' }}>
                 ৳{overview.totalSalesVolume?.toLocaleString('en-US')}
               </div>
               <span style={{ fontSize: '12px', color: '#7c3aed', fontWeight: '700' }}>
-                মোট {overview.totalTransactions} টি বিক্রয় ইনভয়েস
+                মোট {overview.totalTransactions} টি মেমো
               </span>
             </div>
           </div>
@@ -850,9 +892,10 @@ export default function SuperAdminPage() {
               onChange={(e) => setFilterStatus(e.target.value as any)}
               style={{ padding: '11px 16px', borderRadius: '14px', border: '1.5px solid #cbd5e1', fontSize: '13px', background: '#fff', outline: 'none', fontWeight: '700' }}
             >
-              <option value="all">সব স্ট্যাটাস</option>
-              <option value="active">চালু দোকান</option>
-              <option value="suspended">স্থগিত দোকান</option>
+              <option value="all">সব স্ট্যাটাস ({tenants.length})</option>
+              <option value="pending_approval">⏳ অনুমোদন অপেক্ষমাণ ({tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length})</option>
+              <option value="active">চালু দোকান ({tenants.filter(t => t.status === 'active').length})</option>
+              <option value="suspended">স্থগিত দোকান ({tenants.filter(t => t.status === 'suspended').length})</option>
             </select>
           </div>
 
@@ -868,7 +911,9 @@ export default function SuperAdminPage() {
                   gap: '16px',
                   padding: '22px 24px',
                   border: '1px solid rgba(226, 232, 240, 0.9)',
-                  borderLeft: t.status === 'active' ? '5px solid #10b981' : '5px solid #ef4444',
+                  borderLeft: (t.status === 'pending_approval' || t.status === 'pending')
+                    ? '5px solid #f59e0b'
+                    : t.status === 'active' ? '5px solid #10b981' : '5px solid #ef4444',
                   boxShadow: '0 4px 14px rgba(15, 23, 42, 0.04)'
                 }}
               >
@@ -879,12 +924,16 @@ export default function SuperAdminPage() {
                       width: '54px',
                       height: '54px',
                       borderRadius: '16px',
-                      background: t.status === 'active' ? '#ecfdf5' : '#fee2e2',
-                      color: t.status === 'active' ? '#059669' : '#dc2626',
+                      background: (t.status === 'pending_approval' || t.status === 'pending')
+                        ? '#fef3c7'
+                        : t.status === 'active' ? '#ecfdf5' : '#fee2e2',
+                      color: (t.status === 'pending_approval' || t.status === 'pending')
+                        ? '#b45309'
+                        : t.status === 'active' ? '#059669' : '#dc2626',
                       display: 'grid',
                       placeItems: 'center',
                       fontSize: '26px',
-                      border: `1.5px solid ${t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
+                      border: `1.5px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
                     }}>
                       {t.industryIcon || '🏪'}
                     </div>
@@ -899,11 +948,15 @@ export default function SuperAdminPage() {
                           fontWeight: '800',
                           padding: '3px 10px',
                           borderRadius: '99px',
-                          background: t.status === 'active' ? '#ecfdf5' : '#fee2e2',
-                          color: t.status === 'active' ? '#059669' : '#dc2626',
-                          border: `1px solid ${t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
+                          background: (t.status === 'pending_approval' || t.status === 'pending')
+                            ? '#fef3c7'
+                            : t.status === 'active' ? '#ecfdf5' : '#fee2e2',
+                          color: (t.status === 'pending_approval' || t.status === 'pending')
+                            ? '#b45309'
+                            : t.status === 'active' ? '#059669' : '#dc2626',
+                          border: `1px solid ${(t.status === 'pending_approval' || t.status === 'pending') ? '#fde68a' : t.status === 'active' ? '#a7f3d0' : '#fca5a5'}`
                         }}>
-                          {t.status === 'active' ? '● সক্রিয়' : '● স্থগিত'}
+                          {(t.status === 'pending_approval' || t.status === 'pending') ? '⏳ অনুমোদন অপেক্ষমাণ' : t.status === 'active' ? '● সক্রিয়' : '● স্থগিত'}
                         </span>
                       </div>
 
@@ -913,6 +966,16 @@ export default function SuperAdminPage() {
                         <span className="num-font" style={{ fontWeight: '700', color: '#334155' }}>📱 {t.phone}</span>
                         <span>•</span>
                         <span>📍 {t.location}</span>
+                        <span>•</span>
+                        <span style={{ color: '#4f46e5', fontWeight: '800' }}>
+                          প্যাকেজ: {t.billingCycle === 'yearly' ? '🚀 বাৎসরিক (১ বছর)' : '🌟 মাসিক (৩০ দিন)'}
+                        </span>
+                        {t.startDate && (
+                          <>
+                            <span>•</span>
+                            <span>শুরু: {t.startDate}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -928,32 +991,56 @@ export default function SuperAdminPage() {
                     }}>
                       <div style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '700' }}>বর্তমান প্ল্যান ও মেয়াদ</div>
                       <div style={{ fontSize: '14px', fontWeight: '900', color: '#4f46e5' }}>
-                        {t.planName || t.planId || 'প্রো শপ'}
+                        {t.planName || t.planId || 'প্রো শপ'} ({t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
                       </div>
-                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>
-                        মেয়াদ: {t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত
+                      <div style={{ fontSize: '11px', color: (t.status === 'pending_approval' || t.status === 'pending') ? '#b45309' : '#059669', fontWeight: '800' }}>
+                        {(t.status === 'pending_approval' || t.status === 'pending')
+                          ? 'অনুমোদনের পর সক্রিয় হবে'
+                          : `মেয়াদ: ${t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত`}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleImpersonateShop(t)}
-                      style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        padding: '10px 18px',
-                        borderRadius: '12px',
-                        fontWeight: '800',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                      }}
-                    >
-                      <span>🚀 দোকানে প্রবেশ করুন</span>
-                    </button>
+                    {(t.status === 'pending_approval' || t.status === 'pending') ? (
+                      <button
+                        onClick={() => handleApproveShop(t.id)}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '11px 20px',
+                          borderRadius: '12px',
+                          fontWeight: '900',
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+                        }}
+                      >
+                        <span>✅ অনুমোদন ও অ্যাক্টিভ করুন</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleImpersonateShop(t)}
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '10px 18px',
+                          borderRadius: '12px',
+                          fontWeight: '800',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                        }}
+                      >
+                        <span>🚀 দোকানে প্রবেশ করুন</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

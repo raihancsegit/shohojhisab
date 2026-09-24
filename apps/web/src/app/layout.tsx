@@ -973,9 +973,68 @@ function ScreenLockOverlay() {
    HISABPATI-STYLE SIDE MENU DRAWER (Left Slide-in matching Screenshot 1)
    ========================================================================== */
 function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { tenant, isFeatureEnabled, logout, theme: authTheme } = useAuth();
+  const { tenant, userRole, isFeatureEnabled, logout, theme: authTheme } = useAuth();
   const pathname = usePathname();
   const theme = getIndustryTheme(tenant?.industryId);
+
+  // Dynamic subscription validity and remaining countdown calculation
+  const subInfo = (() => {
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const toBn = (val: string | number) => String(val).replace(/\d/g, d => bnDigits[Number(d)] || d);
+    const monthsBn = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+    const formatDateBn = (d: Date) => `${toBn(d.getDate())} ${monthsBn[d.getMonth()]}, ${toBn(d.getFullYear())}`;
+
+    if (!tenant?.paidTill) {
+      return {
+        formattedStart: 'নিবন্ধন তারিখ',
+        formattedEnd: 'সক্রিয় ট্রায়াল',
+        badgeText: 'সক্রিয়',
+        badgeColor: '#10b981',
+        isExpired: false,
+        percentage: 100,
+        planLabel: tenant?.billingCycle === 'yearly' ? 'বাৎসরিক প্ল্যান (১ বছর)' : 'মাসিক প্ল্যান (৩০ দিন)'
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(tenant.paidTill);
+    expiry.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const start = tenant.startDate ? new Date(tenant.startDate) : new Date(expiry.getTime() - (tenant.billingCycle === 'yearly' ? 365 : 30) * 86400000);
+    start.setHours(0, 0, 0, 0);
+
+    const totalDays = Math.max(1, Math.round((expiry.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    const percentage = Math.max(0, Math.min(100, Math.round((diffDays / totalDays) * 100)));
+    const isExpired = diffDays <= 0;
+
+    let badgeText = '';
+    let badgeColor = '#10b981';
+    if (isExpired) {
+      badgeText = 'মেয়াদ উত্তীর্ণ';
+      badgeColor = '#ef4444';
+    } else if (diffDays === 1) {
+      badgeText = 'আজই শেষ দিন';
+      badgeColor = '#f59e0b';
+    } else if (diffDays <= 5) {
+      badgeText = `আর ${toBn(diffDays)} দিন বাকি`;
+      badgeColor = '#f59e0b';
+    } else {
+      badgeText = `আর ${toBn(diffDays)} দিন বাকি`;
+      badgeColor = '#10b981';
+    }
+
+    return {
+      formattedStart: formatDateBn(start),
+      formattedEnd: formatDateBn(expiry),
+      badgeText,
+      badgeColor,
+      isExpired,
+      percentage,
+      planLabel: tenant.billingCycle === 'yearly' ? 'বাৎসরিক প্যাকেজ (১ বছর)' : 'মাসিক প্যাকেজ (৩০ দিন)'
+    };
+  })();
 
   if (!isOpen) return null;
 
@@ -1130,6 +1189,120 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             <span style={{ fontSize: '9px', opacity: 0.8 }}>▼</span>
           </div>
         </div>
+
+        {/* Dynamic Subscription Validity Banner / Card */}
+        {userRole === 'shopkeeper' && (
+          <div style={{
+            margin: '10px 10px 4px',
+            padding: '12px 14px',
+            borderRadius: '16px',
+            background: authTheme === 'dark' ? 'rgba(30, 27, 75, 0.6)' : '#f8fafc',
+            border: `1.5px solid ${authTheme === 'dark' ? 'rgba(99, 102, 241, 0.3)' : '#e2e8f0'}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+          }}>
+            {/* Header: Plan & Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '15px' }}>⚡</span>
+                <span style={{
+                  fontSize: '12.5px',
+                  fontWeight: '900',
+                  color: authTheme === 'dark' ? '#e0e7ff' : '#0f172a'
+                }}>
+                  {tenant?.planName || 'প্রো প্যাকেজ'}
+                </span>
+              </div>
+              <span style={{
+                fontSize: '10.5px',
+                fontWeight: '900',
+                padding: '2px 8px',
+                borderRadius: '99px',
+                background: subInfo.isExpired ? '#fee2e2' : '#dcfce7',
+                color: subInfo.isExpired ? '#dc2626' : '#15803d',
+                border: `1px solid ${subInfo.isExpired ? '#fecaca' : '#bbf7d0'}`
+              }}>
+                {subInfo.badgeText}
+              </span>
+            </div>
+
+            {/* Plan cycle tag */}
+            <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: '800', marginBottom: '8px' }}>
+              💎 {subInfo.planLabel}
+            </div>
+
+            {/* Dates row: Start date & Expiry date */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '6px',
+              background: authTheme === 'dark' ? 'rgba(15, 23, 42, 0.5)' : '#ffffff',
+              padding: '8px 10px',
+              borderRadius: '10px',
+              border: `1px solid ${authTheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}`,
+              marginBottom: '8px'
+            }}>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>শুরুর তারিখ:</div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: authTheme === 'dark' ? '#cbd5e1' : '#334155' }}>
+                  {subInfo.formattedStart}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>মেয়াদ শেষ:</div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: subInfo.isExpired ? '#ef4444' : (authTheme === 'dark' ? '#cbd5e1' : '#334155') }}>
+                  {subInfo.formattedEnd}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div style={{
+              height: '5px',
+              background: authTheme === 'dark' ? 'rgba(255,255,255,0.1)' : '#e2e8f0',
+              borderRadius: '99px',
+              overflow: 'hidden',
+              marginBottom: '8px'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${subInfo.percentage}%`,
+                background: subInfo.isExpired
+                  ? '#ef4444'
+                  : subInfo.percentage < 20
+                  ? '#f59e0b'
+                  : 'linear-gradient(90deg, #6366f1, #10b981)',
+                borderRadius: '99px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+
+            {/* Action / Renew Link */}
+            <Link
+              href="/subscription"
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                width: '100%',
+                padding: '6px 0',
+                borderRadius: '8px',
+                background: subInfo.isExpired
+                  ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                  : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: '11px',
+                fontWeight: '800',
+                boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)'
+              }}
+            >
+              <span>{subInfo.isExpired ? '⚠️ মেয়াদ শেষ! এখনই নবায়ন করুন' : '🔄 প্যাকেজ নবায়ন / পরিবর্তন'}</span>
+              <span>→</span>
+            </Link>
+          </div>
+        )}
 
         {/* Scrollable Menu Items (Tighter, Ergonomic Spacing) */}
         <div style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
