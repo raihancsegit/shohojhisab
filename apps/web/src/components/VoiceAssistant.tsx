@@ -1,15 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
+import { useAuth } from '../context/AuthContext';
 
 export default function VoiceAssistant() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { tenant } = useAuth();
   const [showTypeInput, setShowTypeInput] = useState<boolean>(false);
   const [manualText, setManualText] = useState<string>('');
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isMobileScreen, setIsMobileScreen] = useState<boolean>(false);
+  const [isScanningInvoice, setIsScanningInvoice] = useState<boolean>(false);
+  const [scannedInvoiceData, setScannedInvoiceData] = useState<any>(null);
+  const [isCommittingStock, setIsCommittingStock] = useState<boolean>(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     isListening,
@@ -20,10 +28,21 @@ export default function VoiceAssistant() {
     currentMode,
     activeSpeaker,
     isSupported,
+    lastResult,
     startListening,
     cancelVoice,
-    executeCommand
+    executeCommand,
+    triggerBriefing,
+    undoAction
   } = useVoiceAgent();
+
+  const effectiveTenantId = tenant?.id || (() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
+      if (raw) return JSON.parse(raw)?.id;
+    } catch (e) {}
+    return 'default';
+  })();
 
   // Track Online / Offline State
   useEffect(() => {
@@ -59,32 +78,238 @@ export default function VoiceAssistant() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const quickOfflineChips = [
-    { label: '📊 আজকের বিক্রি ও লাভ', cmd: 'আজকের বিক্রি ও লাভ কত' },
-    { label: '📦 মোট স্টক কত?', cmd: 'আজকের স্টক কত' },
-    { label: '🛒 POS কাউন্টার', cmd: 'পস পেজে যাও' },
-    { label: '📖 বাকির খাতা', cmd: 'খাতায় যাও' },
-    { label: '📖 বাজারে বাকি কত?', cmd: 'বাজারে মোট বাকি কত' },
-    { label: '➕ নাপা ৫০ পাতা স্টক', cmd: 'নাপা ৫০ পাতা স্টক যোগ করো' },
-    { label: '☕ চা নাস্তা ৬০ টাকা খরচ', cmd: 'চা নাস্তা ৬০ টাকা খরচ লেখো' },
-    { label: '📊 সম্পূর্ণ রিপোর্ট', cmd: 'রিপোর্ট পেজে যাও' }
+  // Superpower Action Chips
+  const superpowerChips = [
+    { label: '🌅 সকালের ব্রিফিং', action: () => triggerBriefing('morning') },
+    { label: '🌙 রাতের হিসাব', action: () => triggerBriefing('evening') },
+    { label: '📦 ডিলার অর্ডার', cmd: 'ডিলারের জন্য অর্ডারের লিস্ট বানাও' },
+    { label: '📷 চালান স্ক্যান', isCamera: true },
+    { label: '📊 আজকের লাভ-ক্ষতি', cmd: 'আজকের বিক্রি ও লাভ কত' },
+    { label: '📖 বাজারে বাকি কত?', cmd: 'বাজারে মোট বাকি কত' }
   ];
+
+  // Handle Photo / Camera capture for Dealer Invoice OCR
+  const handleChallanPhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanningInvoice(true);
+    setScannedInvoiceData(null);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      try {
+        const res = await fetch('/api/ai/scan-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: effectiveTenantId,
+            image: base64,
+            mimeType: file.type || 'image/jpeg'
+          })
+        });
+
+        const data = await res.json();
+        setIsScanningInvoice(false);
+
+        if (data.success && data.items?.length > 0) {
+          setScannedInvoiceData(data);
+        } else {
+          alert(data.error || 'চালান থেকে পণ্যের তথ্য পড়া যায়নি। দয়া করে স্পষ্ট ছবি তুলুন।');
+        }
+      } catch (err) {
+        setIsScanningInvoice(false);
+        alert('চালান স্ক্যানিং সার্ভারে সংযোগ করা যায়নি।');
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Commit scanned invoice items directly to stock
+  const handleCommitScannedInvoice = async () => {
+    if (!scannedInvoiceData) return;
+    setIsCommittingStock(true);
+    try {
+      const res = await fetch('/api/ai/commit-scanned-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: effectiveTenantId,
+          invoiceData: scannedInvoiceData
+        })
+      });
+
+      const result = await res.json();
+      setIsCommittingStock(false);
+
+      if (result.success) {
+        setScannedInvoiceData(null);
+        window.dispatchEvent(new CustomEvent('voice-trigger-add-stock'));
+        router.push('/stock');
+      } else {
+        alert(result.error || 'স্টকে যুক্ত করতে সমস্যা হয়েছে।');
+      }
+    } catch (e) {
+      setIsCommittingStock(false);
+      alert('সার্ভার এরর');
+    }
+  };
 
   if (!isSupported || pathname === '/login') return null;
 
   return (
     <>
+      {/* Hidden File Input for Dealer Challan Camera / Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        capture="environment"
+        onChange={handleChallanPhotoSelect}
+        style={{ display: 'none' }}
+      />
+
       {/* Tap outside to dismiss active listening/feedback popup */}
-      {feedbackType && (
+      {(feedbackType || scannedInvoiceData || isScanningInvoice) && (
         <div
-          onClick={cancelVoice}
+          onClick={() => {
+            cancelVoice();
+            setScannedInvoiceData(null);
+          }}
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 9998,
-            background: 'rgba(0, 0, 0, 0.2)'
+            background: 'rgba(0, 0, 0, 0.35)',
+            backdropFilter: 'blur(2px)'
           }}
         />
+      )}
+
+      {/* 📄 Scanned Invoice Review & 1-Tap Stock-In Modal */}
+      {scannedInvoiceData && (
+        <div style={{
+          position: 'fixed',
+          bottom: '84px',
+          right: isMobileScreen ? '10px' : '24px',
+          left: isMobileScreen ? '10px' : 'auto',
+          maxWidth: '440px',
+          zIndex: 9999,
+          background: '#0f172a',
+          color: '#ffffff',
+          borderRadius: '20px',
+          padding: '16px',
+          boxShadow: '0 20px 48px rgba(0, 0, 0, 0.6)',
+          border: '1.5px solid rgba(59, 130, 246, 0.4)',
+          fontFamily: "'Hind Siliguri', 'Outfit', sans-serif",
+          animation: 'fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '20px' }}>📷</span>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#60a5fa' }}>চালানের ছবি স্ক্যান সম্পন্ন!</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  ডিলার: {scannedInvoiceData.supplierName || 'ডিলার'} | চালান: {scannedInvoiceData.challanNo || 'CH'}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setScannedInvoiceData(null)}
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '16px', cursor: 'pointer', padding: '4px' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ overflowY: 'auto', flex: 1, maxHeight: '240px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11.5px', color: '#cbd5e1', fontWeight: '700' }}>
+              শনাক্তকৃত পণ্যের তালিকা ({scannedInvoiceData.items?.length || 0}টি):
+            </div>
+            {scannedInvoiceData.items?.map((it: any, idx: number) => (
+              <div key={idx} style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '10px',
+                padding: '8px 10px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#f8fafc' }}>{it.name}</div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    পরিমাণ: <strong style={{ color: '#38bdf8' }}>{it.qty} {it.unit}</strong> | কেনা দর: ৳{it.unitCost}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#34d399' }}>৳{it.totalCost?.toLocaleString('en-US')}</div>
+                  {it.isMatched ? (
+                    <span style={{ fontSize: '9.5px', color: '#86efac', background: 'rgba(34, 197, 94, 0.2)', padding: '1px 6px', borderRadius: '8px' }}>স্টকে আছে</span>
+                  ) : (
+                    <span style={{ fontSize: '9.5px', color: '#fde047', background: 'rgba(234, 179, 8, 0.2)', padding: '1px 6px', borderRadius: '8px' }}>নতুন পণ্য</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8' }}>মোট চালানের টাকা:</div>
+              <div style={{ fontSize: '16px', fontWeight: '900', color: '#38bdf8' }}>৳{Number(scannedInvoiceData.totalAmount || 0).toLocaleString('en-US')}</div>
+            </div>
+            <button
+              onClick={handleCommitScannedInvoice}
+              disabled={isCommittingStock}
+              style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+              }}
+            >
+              {isCommittingStock ? 'স্টকে যোগ হচ্ছে...' : '✓ সব মাল স্টকে তুলুন'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scanning Loader Popup */}
+      {isScanningInvoice && (
+        <div style={{
+          position: 'fixed',
+          bottom: '84px',
+          right: isMobileScreen ? '10px' : '24px',
+          zIndex: 9999,
+          background: '#0f172a',
+          color: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          boxShadow: '0 20px 48px rgba(0, 0, 0, 0.6)',
+          border: '1.5px solid rgba(59, 130, 246, 0.5)',
+          fontFamily: "'Hind Siliguri', 'Outfit', sans-serif",
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <span style={{ fontSize: '24px', animation: 'spin 1.5s linear infinite' }}>⚙️</span>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '800', color: '#60a5fa' }}>চালানের ছবি স্ক্যান হচ্ছে...</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>Gemini Vision দিয়ে পণ্য ও দাম পড়া হচ্ছে</div>
+          </div>
+        </div>
       )}
 
       <div className="floating-voice-widget">
@@ -97,17 +322,17 @@ export default function VoiceAssistant() {
                 ? 'linear-gradient(135deg, #065f46, #047857)'
                 : 'linear-gradient(135deg, #1e1b4b, #312e81)',
             color: '#ffffff',
-            padding: '12px 16px',
+            padding: '14px 16px',
             borderRadius: '20px',
             fontSize: '13px',
             fontWeight: '700',
-            maxWidth: '350px',
-            width: 'calc(100vw - 40px)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            maxWidth: '380px',
+            width: 'calc(100vw - 36px)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5)',
             border: '1.5px solid rgba(255, 255, 255, 0.25)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
+            gap: '10px',
             animation: 'fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
           }}>
@@ -127,7 +352,7 @@ export default function VoiceAssistant() {
                     color: currentMode === 'owner' ? '#fef08a' : '#bfdbfe',
                     fontWeight: '800'
                   }}>
-                    {currentMode === 'owner' ? `👑 মালিক মোড (${activeSpeaker?.name || 'মালিক'})` : `👔 কর্মচারী মোড (${activeSpeaker?.name || 'স্টাফ'})`}
+                    {currentMode === 'owner' ? `👑 মালিক (${activeSpeaker?.name || 'মালিক'})` : `👔 কর্মচারী (${activeSpeaker?.name || 'স্টাফ'})`}
                   </span>
                 )}
                 <span style={{ fontSize: '13px' }}>
@@ -143,13 +368,77 @@ export default function VoiceAssistant() {
                   color: '#fff',
                   cursor: 'pointer',
                   opacity: 0.8,
-                  fontSize: '12px',
+                  fontSize: '14px',
                   padding: '2px 6px'
                 }}
               >
                 ✕
               </button>
             </div>
+
+            {/* Rich Markdown / Result Card Display on Success */}
+            {feedbackType === 'success' && lastResult && (
+              <div style={{
+                background: 'rgba(0, 0, 0, 0.25)',
+                borderRadius: '12px',
+                padding: '10px 12px',
+                fontSize: '12px',
+                lineHeight: '1.5',
+                maxHeight: '220px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ whiteSpace: 'pre-wrap', color: '#e2e8f0' }}>
+                  {lastResult.reply || lastResult.speech}
+                </div>
+
+                {/* Interactive Action Buttons */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                  {/* Action Link (e.g. "খাতায় দেখুন →" or "হোয়াটসঅ্যাপে পাঠান") */}
+                  {lastResult.actionLink && (
+                    <a
+                      href={lastResult.actionLink.href}
+                      target={lastResult.actionLink.href.startsWith('http') ? '_blank' : '_self'}
+                      rel="noreferrer"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#ffffff',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        textDecoration: 'none',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {lastResult.actionLink.text}
+                    </a>
+                  )}
+
+                  {/* 1-Tap Undo Button */}
+                  {lastResult.undoAvailable && (
+                    <button
+                      type="button"
+                      onClick={() => undoAction()}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.25)',
+                        border: '1px solid rgba(239, 68, 68, 0.6)',
+                        color: '#fca5a5',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ↩️ ভুল হয়েছে? বাতিল করুন
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Voice-First Live Heard Display */}
             {feedbackType === 'listening' && (
@@ -272,42 +561,45 @@ export default function VoiceAssistant() {
                     </button>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Quick Action Chips ONLY when offline */}
-            {feedbackType === 'listening' && !isOnline && (
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '5px',
-                marginTop: '6px',
-                paddingTop: '6px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.15)'
-              }}>
-                <div style={{ width: '100%', fontSize: '10.5px', color: '#93c5fd', fontWeight: '700' }}>
-                  🟢 অফলাইন কমান্ডের তালিকা:
+                {/* ⚡ Superpower 1-Tap Quick Action Chips */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '5px',
+                  marginTop: '4px',
+                  paddingTop: '6px',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.15)'
+                }}>
+                  {superpowerChips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        if (chip.isCamera) {
+                          fileInputRef.current?.click();
+                        } else if (chip.action) {
+                          chip.action();
+                        } else if (chip.cmd) {
+                          executeCommand(chip.cmd);
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        color: '#e0e7ff',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
                 </div>
-                {quickOfflineChips.map((chip, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => executeCommand(chip.cmd)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.12)',
-                      color: '#e0e7ff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      padding: '4px 8px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
               </div>
             )}
           </div>

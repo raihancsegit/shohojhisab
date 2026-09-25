@@ -17,12 +17,13 @@ export interface LastActionEntry {
   actionId: string;
   tenantId: string;
   timestamp: number;
-  type: 'due_given' | 'due_paid' | 'sale' | 'expense' | 'restock';
+  type: 'due_given' | 'due_paid' | 'sale' | 'expense' | 'restock' | 'multi_action' | 'invoice_commit';
   customerId?: string;
   customerName?: string;
   previousDue?: number;
   newDue?: number;
   saleId?: string;
+  saleIds?: string[];
   expenseId?: string;
   amount: number;
   items: Array<{
@@ -113,6 +114,14 @@ export function undoLastAction(db: Database.Database, tenantId: string): { succe
         db.prepare('DELETE FROM stock_logs WHERE source_ref LIKE ?').run(`%${entry.saleId.slice(-5)}%`);
       }
 
+      if (entry.saleIds && entry.saleIds.length > 0) {
+        for (const sid of entry.saleIds) {
+          db.prepare('DELETE FROM sale_items WHERE sale_id = ?').run(sid);
+          db.prepare('DELETE FROM sales WHERE id = ?').run(sid);
+          db.prepare('DELETE FROM stock_logs WHERE source_ref LIKE ?').run(`%${sid.slice(-5)}%`);
+        }
+      }
+
       // 4. Remove expense if applicable
       if (entry.expenseId) {
         db.prepare('DELETE FROM expenses WHERE id = ?').run(entry.expenseId);
@@ -161,7 +170,7 @@ export function executeStockSaleOrDue(
   if (params.customerId) {
     customer = db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(params.customerId, tenantId) as any;
   } else if (params.customerName) {
-    customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE "%" || name || "%") LIMIT 1')
+    customer = db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE '%' || name || '%') LIMIT 1")
       .get(tenantId, `%${params.customerName}%`, params.customerName) as any;
   }
 
@@ -176,8 +185,91 @@ export function executeStockSaleOrDue(
   }
 
   const allProducts = db.prepare('SELECT * FROM products WHERE tenant_id = ?').all(tenantId) as any[];
+
+  if (!params.items || params.items.length === 0) {
+    return {
+      success: false,
+      action: 'no_items_specified',
+      speech: '⚠️ বিক্রির জন্য কোনো পণ্য উল্লেখ করা হয়নি। কিসের বিক্রি তা মুখে বলুন (যেমন: ২ কেজি চিনি বিক্রি)।',
+      reply: '⚠️ **পণ্যের নাম প্রয়োজন:** বিক্রির জন্য কোনো পণ্য পাওয়া যায়নি।'
+    };
+  }
+
+  // 🚨 STRICT INVENTORY ENFORCEMENT: Validate EVERY item exists in stock and has sufficient quantity
+  for (const rawItem of params.items) {
+    const qty = Number(rawItem.quantity) || 1;
+    let matchedProd: any = null;
+
+    if (rawItem.productId) {
+      matchedProd = allProducts.find(p => p.id === rawItem.productId);
+    }
+    if (!matchedProd && rawItem.productName) {
+      const cleanName = rawItem.productName.toLowerCase().trim();
+      matchedProd = allProducts.find(p => {
+        const bn = (p.bangla_name || '').toLowerCase();
+        const nm = (p.name || '').toLowerCase();
+        const gen = (p.generic_name || '').toLowerCase();
+        return bn.includes(cleanName) || cleanName.includes(bn) || nm.includes(cleanName) || cleanName.includes(nm) || (gen && gen.includes(cleanName));
+      });
+    }
+
+    // Rule 1: Product MUST exist in store inventory
+    if (!matchedProd) {
+      const missingName = rawItem.productName || 'পণ্য';
+      return {
+        success: false,
+        action: 'product_not_in_stock',
+        speech: `⚠️ "${missingName}" আপনার দোকানের পণ্য তালিকায় বা স্টকে নেই। স্টক বহির্ভূত কোনো পণ্য বিক্রি করা যাবে না। দয়া করে পণ্যটি আগে তালিকায় যোগ করুন।`,
+        reply: `⚠️ **পণ্যটি স্টকে নেই:** "${missingName}" আপনার পণ্য তালিকায় পাওয়া যায়নি।\n\n*দোকানের স্টক বহির্ভূত কোনো পণ্য বিক্রি বা বাকি যোগ করা যাবে না। পণ্যটি আগে স্টকে যোগ করুন।*`,
+        navigateTo: '/products',
+        actionLink: { text: 'নতুন পণ্য যোগ করুন →', href: '/products' }
+      };
+    }
+
+    const currentStock = Number(matchedProd.stock) || 0;
+    const pName = matchedProd.bangla_name || matchedProd.name;
+    const pUnit = matchedProd.unit || 'টি';
+
+    // Rule 2: Product MUST NOT be out of stock (stock > 0)
+    if (currentStock <= 0) {
+      return {
+        success: false,
+        action: 'out_of_stock',
+        speech: `⚠️ "${pName}" এর বর্তমান স্টক শূন্য (০ ${pUnit})। স্টকে মাল না থাকায় বিক্রি করা সম্ভব নয়।`,
+        reply: `⚠️ **স্টক শূন্য (Out of Stock):** **${pName}** এর বর্তমান মজুদ ০ ${pUnit}।\n\n*স্টক রিস্টক না করে বিক্রি করা যাবে না।*`,
+        navigateTo: '/stock',
+        actionLink: { text: 'স্টক রিস্টক করুন →', href: `/stock?search=${encodeURIComponent(pName)}` }
+      };
+    }
+
+    // Calculate actual stock deduction based on units
+    let stockDeduction = qty;
+    const baseUnit = (matchedProd.unit || '').trim().toLowerCase();
+    const subUnit = (matchedProd.sub_unit || '').trim().toLowerCase();
+    const spokenUnit = (rawItem.unit || baseUnit).trim().toLowerCase();
+    const ratio = Number(matchedProd.conversion_ratio) || 1;
+
+    if (subUnit && (spokenUnit.includes(subUnit) || subUnit.includes(spokenUnit))) {
+      stockDeduction = ratio > 0 ? (qty / ratio) : qty;
+    } else if (spokenUnit === 'গ্রাম' && (baseUnit.includes('কেজি') || subUnit.includes('কেজি'))) {
+      stockDeduction = qty / 1000;
+    }
+
+    // Rule 3: Requested quantity MUST NOT exceed available stock
+    if (stockDeduction > currentStock) {
+      return {
+        success: false,
+        action: 'insufficient_stock',
+        speech: `⚠️ "${pName}" এর পর্যাপ্ত স্টক নেই। আপনার দোকানে মজুদ আছে মাত্র ${currentStock} ${pUnit}, কিন্তু বিক্রি করতে চেয়েছেন ${qty} ${rawItem.unit || pUnit}।`,
+        reply: `⚠️ **পর্যাপ্ত স্টক নেই:** **${pName}**\n• দোকানে মজুদ: **${currentStock} ${pUnit}**\n• বিক্রির চাওয়া হয়েছে: **${qty} ${rawItem.unit || pUnit}**\n\n*মজুদের চেয়ে অতিরিক্ত বিক্রি করার অনুমতি নেই।*`,
+        navigateTo: '/stock',
+        actionLink: { text: 'স্টক দেখুন →', href: `/stock?search=${encodeURIComponent(pName)}` }
+      };
+    }
+  }
+
   const processedItems: Array<{
-    productId?: string;
+    productId: string;
     productName: string;
     quantity: number;
     unit: string;
@@ -237,8 +329,8 @@ export function executeStockSaleOrDue(
     const newStock = Math.max(0, parseFloat((currentStock - stockDeduction).toFixed(3)));
 
     processedItems.push({
-      productId: matchedProd?.id,
-      productName: matchedProd?.bangla_name || matchedProd?.name || rawItem.productName,
+      productId: matchedProd.id,
+      productName: matchedProd.bangla_name || matchedProd.name,
       quantity: qty,
       unit,
       unitPrice: Math.round(unitPrice),
@@ -249,54 +341,13 @@ export function executeStockSaleOrDue(
     });
   }
 
-  // STRICT STOCK & INVENTORY VALIDATION
-  for (const item of processedItems) {
-    if (!item.productId) {
-      return {
-        success: false,
-        action: 'product_not_found',
-        speech: `⚠️ দুঃখিত, দোকানে "${item.productName}" নামের কোনো পণ্য তালিকায় খুঁজে পাওয়া যায়নি। সঠিক নাম বলুন বা পণ্য তালিকায় যুক্ত করুন।`,
-        reply: `⚠️ **পণ্য পাওয়া যায়নি:**\n• নাম: **${item.productName}**\nদোকানের পণ্য তালিকায় এই পণ্যটি নেই। অনুগ্রহ করে পণ্যটি তালিকায় যুক্ত করুন বা সঠিক নামে ডাকুন।`,
-        actionLink: { text: 'পণ্য তালিকা দেখুন →', href: '/products' }
-      };
-    }
+  const finalTotalAmount = params.explicitTotalAmount && params.explicitTotalAmount > 0
+    ? params.explicitTotalAmount
+    : (calculatedTotal > 0 ? calculatedTotal : 100);
 
-    if (item.currentStock <= 0) {
-      return {
-        success: false,
-        action: 'out_of_stock',
-        speech: `⚠️ সতর্কবার্তা: "${item.productName}" বর্তমানে দোকানে স্টকে নেই (স্টক ০)! বিক্রি করতে হলে আগে নতুন মাল স্টক ইন করুন।`,
-        reply: `❌ **স্টক শেষ (Out of Stock)!**\n• পণ্য: **${item.productName}**\n• বর্তমান মজুদ: **০ ${item.unit}**\nঅনুগ্রহ করে বিক্রি করার পূর্বে মালটি স্টকে যোগ (Stock In) করুন।`,
-        actionLink: { text: 'স্টক ইন করুন →', href: `/stock?search=${encodeURIComponent(item.productName)}` }
-      };
-    }
-
-    if (item.stockDeduction > item.currentStock) {
-      return {
-        success: false,
-        action: 'insufficient_stock',
-        speech: `⚠️ স্টকে পর্যাপ্ত মাল নেই! "${item.productName}" স্টকে মাত্র ${item.currentStock} ${item.unit} আছে, কিন্তু আপনি ${item.quantity} ${item.unit} চেয়েছেন।`,
-        reply: `⚠️ **পর্যাপ্ত স্টক নেই!**\n• পণ্য: **${item.productName}**\n• স্টকে আছে: **${item.currentStock} ${item.unit}**\n• চাওয়া হয়েছে: **${item.quantity} ${item.unit}**\nঅনুগ্রহ করে সঠিক পরিমাণ বলুন।`,
-        actionLink: { text: 'স্টক খাতা দেখুন →', href: `/stock?search=${encodeURIComponent(item.productName)}` }
-      };
-    }
-  }
-
-  const finalTotalAmount = Number(params.explicitTotalAmount) > 0 ? Number(params.explicitTotalAmount) : calculatedTotal;
-
-  // MANDATORY ITEM/REASON REQUIREMENT:
-  if (params.isDue && processedItems.length === 0 && (!params.note || params.note === 'পণ্য সামগ্রী' || params.note.length < 2)) {
-    return {
-      success: false,
-      action: 'due_items_required',
-      speech: `${customer ? customer.name : 'কাস্টমার'}-এর ৳${finalTotalAmount} টাকা বাকি লেখার জন্য পণ্যের বিবরণ বা নাম প্রয়োজন। কিসের জন্য বাকি তা মুখে বলুন (যেমন: ২ কেজি চাল বাবদ ৳${finalTotalAmount})।`,
-      reply: `⚠️ **পণ্যের নাম বা বিবরণ প্রয়োজন (বাধ্যতামূলক):**\n${customer ? customer.name : 'কাস্টমার'}-এর ৳${finalTotalAmount.toLocaleString('en-US')} টাকা বাকি লেখার জন্য কিসের জন্য এই বাকি তা উল্লেখ করা বাধ্যতামূলক।\n\n*উদাহরণ:* *"${customer ? customer.name : 'কাস্টমার'} ২ কেজি চিনি ${finalTotalAmount} টাকা বাকি"*`
-    };
-  }
-
-  const previousDue = customer ? (Number(customer.total_due) || 0) : 0;
-  const newDue = params.isDue && customer ? previousDue + finalTotalAmount : previousDue;
-  const creditLimit = customer ? (Number(customer.credit_limit) || 5000) : 5000;
+  const previousDue = customer ? Number(customer.total_due || 0) : 0;
+  const newDue = params.isDue && customer ? (previousDue + finalTotalAmount) : previousDue;
+  const creditLimit = customer ? Number(customer.credit_limit || 5000) : 5000;
   const isCreditLimitExceeded = params.isDue && customer && newDue > creditLimit;
 
   const summaryList = processedItems.length > 0
@@ -312,8 +363,8 @@ export function executeStockSaleOrDue(
 
     // 2. Insert into sales
     db.prepare(`
-      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, cashier, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       saleId,
       tenantId,
@@ -327,7 +378,6 @@ export function executeStockSaleOrDue(
       params.isDue ? 'due' : 'cash',
       customer ? customer.id : null,
       customer ? customer.name : 'খুচরা কাস্টমার',
-      summaryList,
       'হিসাব সহকারী (ভয়েস)',
       now
     );
@@ -340,7 +390,7 @@ export function executeStockSaleOrDue(
       `).run(
         'sitem-' + uuidv4().slice(0, 8),
         saleId,
-        it.productId || 'prod-custom-' + uuidv4().slice(0, 6),
+        it.productId,
         it.productName,
         it.quantity,
         Math.round(it.unitPrice * 0.8),
@@ -485,7 +535,7 @@ export function executeStockRestock(
     const logId = 'stklog-' + uuidv4().slice(0, 8);
     db.prepare(`
       INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
-      VALUES (?, ?, ?, ?, 'in', ?, ?, ?, ?, 'ভয়েস স্টক ইন', 'ভয়েস সহকারী দ্বারা নতুন মাল যোগ', ?)
+      VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, 'ভয়েস স্টক ইন', 'ভয়েস সহকারী দ্বারা নতুন মাল যোগ', ?)
     `).run(logId, tenantId, matchedProd.id, pName, qty, unit, qty, matchedProd.purchase_price || 0, now);
   })();
 
@@ -651,13 +701,793 @@ export function executeBusinessAnalyticsQuery(
 }
 
 /**
- * Intelligent Bengali LLM AI Agent with Multi-Turn Memory & Fast Fallbacks
+ * 🌟 1. Proactive Morning & Evening Business Advisor & Briefing Generator
+ */
+export function generateProactiveBriefing(
+  db: Database.Database,
+  tenantId: string,
+  mode: 'morning' | 'evening' | 'auto' = 'auto',
+  speakerRole?: string
+): AgentExecutionResult {
+  const tenant = db.prepare('SELECT shop_name, owner_name FROM tenants WHERE id = ?').get(tenantId) as any;
+  const shopName = tenant?.shop_name || 'আমাদের দোকান';
+  const ownerName = tenant?.owner_name || 'ভাই';
+
+  // Determine current BD time and resolved mode
+  const now = new Date();
+  const bdHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Dhaka', hour: 'numeric', hour12: false }).format(now));
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const resolvedMode = mode === 'auto' ? (bdHour < 15 ? 'morning' : 'evening') : mode;
+
+  // Bengali date formatting
+  const bdDateDisplay = new Intl.DateTimeFormat('bn-BD', {
+    timeZone: 'Asia/Dhaka',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(now);
+
+  if (resolvedMode === 'morning') {
+    // 1. Due promises today or overdue
+    const duePromises = db.prepare(`
+      SELECT name, phone, total_due, promise_date
+      FROM customers
+      WHERE tenant_id = ? AND total_due > 0 AND promise_date IS NOT NULL AND promise_date != '' AND promise_date <= ?
+      ORDER BY total_due DESC LIMIT 4
+    `).all(tenantId, todayStr) as any[];
+
+    const totalDueToCollect = duePromises.reduce((acc, c) => acc + (Number(c.total_due) || 0), 0);
+
+    // 2. Critical low-stock products
+    const lowProds = db.prepare(`
+      SELECT bangla_name, name, stock, unit, low_stock_threshold
+      FROM products
+      WHERE tenant_id = ? AND stock <= COALESCE(low_stock_threshold, 5)
+      ORDER BY stock ASC LIMIT 4
+    `).all(tenantId) as any[];
+
+    // 3. Yesterday's performance
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(yesterdayDate);
+
+    const ySales = db.prepare(`
+      SELECT COALESCE(SUM(total_amount), 0) as total, COALESCE(SUM(profit_amount), 0) as profit, COUNT(*) as count
+      FROM sales
+      WHERE tenant_id = ? AND created_at LIKE ? AND payment_method != 'due_payment'
+    `).get(tenantId, `${yesterdayStr}%`) as any;
+
+    const yExpense = db.prepare(`
+      SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE tenant_id = ? AND created_at LIKE ?
+    `).get(tenantId, `${yesterdayStr}%`) as any;
+
+    const yTotal = Number(ySales?.total) || 0;
+    const yNetProfit = Math.max(0, (Number(ySales?.profit) || Math.round(yTotal * 0.18)) - (Number(yExpense?.total) || 0));
+
+    // Bengali Speech
+    let speech = `শুভ সকাল ${ownerName}! আজ ${bdDateDisplay}। `;
+    if (duePromises.length > 0) {
+      const topCustNames = duePromises.slice(0, 2).map(c => c.name).join(' ও ');
+      speech += `আজ ${topCustNames} সহ ${duePromises.length} জন খরিদ্দারের বাকি পরিশোধের ওয়াদার তারিখ রয়েছে (মোট বকেয়া ৳${totalDueToCollect.toLocaleString('bn-BD')} টাকা)। `;
+    } else {
+      speech += `আজ বকেয়া পরিশোধের জরুরি কোনো ওয়াদা ওভারডিউ নেই। `;
+    }
+
+    if (lowProds.length > 0) {
+      const topLow = lowProds.slice(0, 2).map(p => p.bangla_name || p.name).join(' ও ');
+      speech += `দোকানে ${topLow} সহ ${lowProds.length}টি পণ্যের স্টক শেষ হয়ে আসছে। `;
+    }
+
+    if (speakerRole !== 'staff' && yTotal > 0) {
+      speech += `গতকাল আপনার দোকানে মোট বিক্রি হয়েছিল ৳${yTotal.toLocaleString('bn-BD')} টাকা এবং নেট লাভ হয়েছিল ৳${yNetProfit.toLocaleString('bn-BD')} টাকা। আজকের দিনের বেচাকেনার জন্য শুভকামনা!`;
+    } else {
+      speech += `আজকের দিনের বেচাকেনার জন্য শুভকামনা!`;
+    }
+
+    // Markdown Reply
+    let reply = `🌅 **শুভ সকাল! ${shopName} - দৈনিক সকালের ব্রিফিং**\n`;
+    reply += `📅 তারিখ: **${bdDateDisplay}**\n\n`;
+
+    if (duePromises.length > 0) {
+      reply += `📌 **আজ যাদের বাকি দেওয়ার কথা (${duePromises.length} জন — মোট ৳${totalDueToCollect.toLocaleString('en-US')}):**\n`;
+      for (const c of duePromises) {
+        reply += `• **${c.name}**: ৳${Number(c.total_due).toLocaleString('en-US')} *(ওয়াদা: ${c.promise_date})*\n`;
+      }
+      reply += `\n`;
+    } else {
+      reply += `✅ **আজ ওভারডিউ বাকি নেই**\n\n`;
+    }
+
+    if (lowProds.length > 0) {
+      reply += `⚠️ **স্টক শেষ হওয়ার সতর্কবার্তা (${lowProds.length}টি পণ্য):**\n`;
+      for (const p of lowProds) {
+        reply += `• ${p.bangla_name || p.name}: বর্তমান মজুদ **${p.stock} ${p.unit || 'টি'}**\n`;
+      }
+      reply += `\n`;
+    }
+
+    if (speakerRole !== 'staff' && yTotal > 0) {
+      reply += `📈 **গতকালের সারাংশ:** বিক্রি: **৳${yTotal.toLocaleString('en-US')}** | মেমো: **${ySales?.count || 0}টি** | নিট লাভ: **৳${yNetProfit.toLocaleString('en-US')}**\n`;
+    }
+
+    return {
+      success: true,
+      action: 'morning_briefing',
+      speech,
+      reply,
+      navigateTo: duePromises.length > 0 ? '/khata' : (lowProds.length > 0 ? '/stock' : '/pos'),
+      actionLink: {
+        text: duePromises.length > 0 ? 'বাকির খাতা দেখুন →' : 'পণ্য স্টক দেখুন →',
+        href: duePromises.length > 0 ? '/khata' : '/stock'
+      },
+      data: { mode: 'morning', duePromises, lowProds, yesterday: { total: yTotal, profit: yNetProfit } }
+    };
+  }
+
+  // Evening Closing Audit & Cash Drawer Reconciliation
+  const todaySales = db.prepare(`
+    SELECT COALESCE(SUM(total_amount), 0) as totalSales,
+           COALESCE(SUM(paid_amount), 0) as cashSales,
+           COALESCE(SUM(due_amount), 0) as dueGiven,
+           COALESCE(SUM(profit_amount), 0) as grossProfit,
+           COUNT(*) as orderCount
+    FROM sales
+    WHERE tenant_id = ? AND created_at LIKE ? AND payment_method != 'due_payment'
+  `).get(tenantId, `${todayStr}%`) as any;
+
+  const todayDuePayments = db.prepare(`
+    SELECT COALESCE(SUM(paid_amount), 0) as dueCollected
+    FROM sales
+    WHERE tenant_id = ? AND created_at LIKE ? AND payment_method = 'due_payment'
+  `).get(tenantId, `${todayStr}%`) as any;
+
+  const todayExpense = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as totalExpense, COUNT(*) as expCount
+    FROM expenses
+    WHERE tenant_id = ? AND created_at LIKE ?
+  `).get(tenantId, `${todayStr}%`) as any;
+
+  const salesTotal = Number(todaySales?.totalSales) || 0;
+  const cashSales = Number(todaySales?.cashSales) || 0;
+  const dueCollected = Number(todayDuePayments?.dueCollected) || 0;
+  const dueGiven = Number(todaySales?.dueGiven) || 0;
+  const expensesTotal = Number(todayExpense?.totalExpense) || 0;
+
+  // Expected Cash in Drawer = Cash from Sales + Due Cash Collected - Cash Expenses
+  const expectedCashInDrawer = Math.max(0, (cashSales + dueCollected) - expensesTotal);
+  const grossProfit = Number(todaySales?.grossProfit) || Math.round(salesTotal * 0.18);
+  const netProfit = grossProfit - expensesTotal;
+
+  let speech = `আজকের দিন সমাপ্তির হিসাব: মোট বেচাকেনা ৳${salesTotal.toLocaleString('bn-BD')} টাকা। `;
+  speech += `নগদ আদায় হয়েছে ৳${(cashSales + dueCollected).toLocaleString('bn-BD')} টাকা এবং দোকান খরচ ৳${expensesTotal.toLocaleString('bn-BD')} টাকা। `;
+  speech += `হিসাব অনুযায়ী আপনার ক্যাশ বাক্সে ঠিক ৳${expectedCashInDrawer.toLocaleString('bn-BD')} টাকা থাকার কথা। `;
+  if (speakerRole !== 'staff') {
+    speech += `আজ আপনার আনুমানিক নেট লাভ ৳${netProfit.toLocaleString('bn-BD')} টাকা। মিলিয়ে ড্রয়ার বন্ধ করুন।`;
+  } else {
+    speech += `ক্যাশ মেমো মিলিয়ে ড্রয়ার বন্ধ করুন। ধন্যবাদ।`;
+  }
+
+  let reply = `🌙 **দিনের সমাপ্তি ও ক্যাশ ড্রয়ার অডিট (${bdDateDisplay})**\n\n`;
+  reply += `• মোট বিক্রি (মেমো: ${todaySales?.orderCount || 0}টি): **৳${salesTotal.toLocaleString('en-US')}**\n`;
+  reply += `• নগদ বিক্রি আদায়: **৳${cashSales.toLocaleString('en-US')}**\n`;
+  if (dueCollected > 0) {
+    reply += `• বাকি আদায় (Cash In): **+৳${dueCollected.toLocaleString('en-US')}**\n`;
+  }
+  if (dueGiven > 0) {
+    reply += `• নতুন বাকি দেওয়া: **৳${dueGiven.toLocaleString('en-US')}**\n`;
+  }
+  reply += `• আজকের দোকান খরচ (${todayExpense?.expCount || 0}টি): **-৳${expensesTotal.toLocaleString('en-US')}**\n`;
+  reply += `────────────────────────────\n`;
+  reply += `💼 **ক্যাশ বাক্সে থাকার কথা (Expected Cash):** **৳${expectedCashInDrawer.toLocaleString('en-US')}**\n`;
+
+  if (speakerRole !== 'staff') {
+    reply += `💰 **আজকের নেট লাভ:** **৳${netProfit.toLocaleString('en-US')}**\n`;
+  }
+
+  reply += `\n*ক্যাশ ড্রয়ারের নগদ টাকার সাথে মিলিয়ে নিন।*`;
+
+  return {
+    success: true,
+    action: 'evening_audit',
+    speech,
+    reply,
+    navigateTo: '/reports',
+    actionLink: { text: 'সম্পূর্ণ রিপোর্ট দেখুন →', href: '/reports' },
+    data: {
+      mode: 'evening',
+      salesTotal,
+      cashSales,
+      dueCollected,
+      dueGiven,
+      expensesTotal,
+      expectedCashInDrawer,
+      netProfit
+    }
+  };
+}
+
+/**
+ * 🌟 2. Autonomous Customer Relationship & Due Recovery (WhatsApp/SMS Tagada Draft)
+ */
+export function generateDueReminder(
+  db: Database.Database,
+  tenantId: string,
+  customerQuery: string
+): AgentExecutionResult {
+  const clean = (customerQuery || '').trim();
+  let customer = db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(clean, tenantId) as any;
+
+  if (!customer) {
+    customer = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR phone LIKE ?) LIMIT 1')
+      .get(tenantId, `%${clean}%`, `%${clean}%`) as any;
+  }
+
+  if (!customer) {
+    return {
+      success: false,
+      action: 'customer_not_found',
+      speech: `⚠️ "${clean}" নামের কোনো খরিদ্দার পাওয়া যায়নি। নাম অথবা ফোন নম্বর নিশ্চিত করুন।`,
+      reply: `⚠️ **খরিদ্দার পাওয়া যায়নি:** "${clean}" তালিকায় নেই।`,
+      navigateTo: '/khata'
+    };
+  }
+
+  const due = Number(customer.total_due) || 0;
+  if (due <= 0) {
+    return {
+      success: true,
+      action: 'no_due',
+      speech: `${customer.name}-এর কোনো বকেয়া বাকি নেই। উনার বর্তমান বাকি শূন্য টাকা।`,
+      reply: `✅ **বকেয়া নেই:** ${customer.name}-এর কোনো বাকি পাওনা নেই। বর্তমান বকেয়া: ৳০।`,
+      navigateTo: '/khata'
+    };
+  }
+
+  const tenant = db.prepare('SELECT shop_name, phone FROM tenants WHERE id = ?').get(tenantId) as any;
+  const shopName = tenant?.shop_name || 'আমাদের দোকান';
+  const shopPhone = tenant?.phone || '';
+
+  // Clean phone number for WhatsApp
+  let rawPhone = String(customer.phone || '').replace(/\D/g, '');
+  if (rawPhone.startsWith('01')) {
+    rawPhone = '88' + rawPhone;
+  } else if (!rawPhone.startsWith('8801') && rawPhone.length === 10) {
+    rawPhone = '880' + rawPhone;
+  }
+
+  // 3 Distinct culturally polite Bengali message templates
+  const politeMessage = `আসসালামু আলাইকুম ${customer.name} ভাই/সাহেব। ${shopName} থেকে বিনীতভাবে জানাচ্ছি যে, আপনার পূর্বের বকেয়া ৳${due.toLocaleString('en-US')} টাকা বাকি রয়েছে। সুবিধাজনক সময়ে পরিশোধ করলে আমরা বিশেষভাবে উপকৃত হব। ধন্যবাদান্তে, ${shopName} (${shopPhone})।`;
+
+  const friendlyPromiseMessage = `প্রিয় ${customer.name} ভাই, আশা করি ভালো আছেন। ${shopName}-এ আপনার মোট বকেয়া ৳${due.toLocaleString('en-US')} টাকা${customer.promise_date ? ` (${customer.promise_date} তারিখে দেওয়ার কথা ছিল)` : ''}। চলতি সপ্তাহের মধ্যে পরিশোধের অনুরোধ রইল। ধন্যবাদ।`;
+
+  const urgentMessage = `জরুরি তাগাদা: জনাব ${customer.name}, ${shopName}-এ আপনার বকেয়া ৳${due.toLocaleString('en-US')} টাকা পরিশোধের সময় অতিক্রান্ত হয়েছে। অনুগ্রহ করে আজই যোগাযোগ করে বকেয়া পরিশোধ করার অনুরোধ করছি।`;
+
+  const encodedWaText = encodeURIComponent(politeMessage);
+  const waUrl = rawPhone ? `https://wa.me/${rawPhone}?text=${encodedWaText}` : '';
+  const smsUrl = customer.phone ? `sms:${customer.phone}?body=${encodeURIComponent(politeMessage)}` : '';
+
+  updateSessionContext(tenantId, { lastCustomerId: customer.id, lastCustomerName: customer.name });
+
+  const speech = `${customer.name}-এর ৳${due.toLocaleString('bn-BD')} টাকা বকেয়ার জন্য তাগাদা মেসেজ প্রস্তুত হয়েছে। ১-ট্যাপে হোয়াটসঅ্যাপ বা এসএমএস পাঠাতে পারেন।`;
+
+  let reply = `📱 **বাকি তাগাদা ড্রাফট — ${customer.name}**\n`;
+  reply += `• বর্তমান মোট বকেয়া: **৳${due.toLocaleString('en-US')}**\n`;
+  reply += `• ফোন: **${customer.phone || 'দেওয়া নেই'}**\n`;
+  if (customer.promise_date) {
+    reply += `• ওয়াদার তারিখ: **${customer.promise_date}**\n`;
+  }
+  reply += `\n💬 **প্রস্তুতকৃত বার্তা (নম্র তাগাদা):**\n> "${politeMessage}"\n\n`;
+
+  if (waUrl) {
+    reply += `👉 [🟢 হোয়াটসঅ্যাপে পাঠান](${waUrl})  |  [💬 SMS পাঠান](${smsUrl})`;
+  } else {
+    reply += `*(কাস্টমারের সঠিক মোবাইল নম্বর যুক্ত করলে সরাসরি হোয়াটসঅ্যাপ পাঠানো যাবে)*`;
+  }
+
+  return {
+    success: true,
+    action: 'due_reminder_generated',
+    speech,
+    reply,
+    navigateTo: '/khata',
+    actionLink: waUrl ? { text: 'হোয়াটসঅ্যাপে পাঠান →', href: waUrl } : { text: 'খাতা দেখুন →', href: '/khata' },
+    data: {
+      customerId: customer.id,
+      customerName: customer.name,
+      phone: customer.phone,
+      due,
+      templates: {
+        polite: politeMessage,
+        friendly: friendlyPromiseMessage,
+        urgent: urgentMessage
+      },
+      whatsappUrl: waUrl,
+      smsUrl
+    }
+  };
+}
+
+/**
+ * 🌟 3. Smart Predictive Reordering & Vendor Purchase Order Generator
+ */
+export function generateSmartPurchaseOrder(
+  db: Database.Database,
+  tenantId: string,
+  categoryOrDealer?: string
+): AgentExecutionResult {
+  // 1. Analyze sales velocity over the last 14 days
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const cutoffStr = fourteenDaysAgo.toISOString();
+
+  // Aggregate quantity sold per product
+  const recentSales = db.prepare(`
+    SELECT si.product_id, si.product_name, SUM(si.quantity) as total_sold
+    FROM sale_items si
+    JOIN sales s ON si.sale_id = s.id
+    WHERE s.tenant_id = ? AND s.created_at >= ?
+    GROUP BY si.product_id
+  `).all(tenantId, cutoffStr) as Array<{ product_id: string; product_name: string; total_sold: number }>;
+
+  const salesVelocityMap = new Map<string, number>();
+  for (const s of recentSales) {
+    if (s.product_id) {
+      salesVelocityMap.set(s.product_id, (s.total_sold || 0) / 14); // daily velocity
+    }
+  }
+
+  // 2. Query products and find ones running out within 3-5 days or below threshold
+  const allProds = db.prepare(`
+    SELECT id, bangla_name, name, stock, unit, purchase_price, selling_price, low_stock_threshold
+    FROM products
+    WHERE tenant_id = ?
+    ORDER BY stock ASC
+  `).all(tenantId) as any[];
+
+  const orderItems: Array<{
+    productId: string;
+    productName: string;
+    currentStock: number;
+    dailyVelocity: number;
+    daysOfStockLeft: number;
+    suggestedOrderQty: number;
+    unit: string;
+    unitPrice: number;
+    estimatedCost: number;
+    urgency: 'critical' | 'high' | 'medium';
+  }> = [];
+
+  for (const p of allProds) {
+    const dailyVelocity = salesVelocityMap.get(p.id) || 0.3; // minimum assumed velocity if active
+    const stock = Number(p.stock) || 0;
+    const threshold = Number(p.low_stock_threshold) || 5;
+    const daysLeft = dailyVelocity > 0 ? parseFloat((stock / dailyVelocity).toFixed(1)) : 99;
+
+    if (stock <= threshold || daysLeft <= 4) {
+      // Recommend 7-10 days buffer
+      const bufferDays = 7;
+      let orderQty = Math.ceil(dailyVelocity * bufferDays);
+      if (orderQty < 5 && (p.unit === 'পিস' || p.unit === 'টি')) orderQty = 10;
+      if (orderQty < 2 && p.unit === 'কেজি') orderQty = 10;
+
+      const unitCost = Number(p.purchase_price) || Math.round(Number(p.selling_price) * 0.8) || 50;
+      const estimatedCost = orderQty * unitCost;
+
+      orderItems.push({
+        productId: p.id,
+        productName: p.bangla_name || p.name,
+        currentStock: stock,
+        dailyVelocity: parseFloat(dailyVelocity.toFixed(2)),
+        daysOfStockLeft: daysLeft,
+        suggestedOrderQty: orderQty,
+        unit: p.unit || 'টি',
+        unitPrice: unitCost,
+        estimatedCost,
+        urgency: stock <= 0 ? 'critical' : (daysLeft <= 2 ? 'high' : 'medium')
+      });
+    }
+  }
+
+  if (orderItems.length === 0) {
+    return {
+      success: true,
+      action: 'purchase_order',
+      speech: 'আলহামদুলিল্লাহ! আপনার দোকানে পর্যাপ্ত স্টক রয়েছে। আগামী কয়েক দিনের মধ্যে কোনো পণ্য শেষ হওয়ার আশঙ্কা নেই।',
+      reply: '✅ **কোনো অর্ডার প্রয়োজন নেই:** সব পণ্যের পর্যাপ্ত মজুদ রয়েছে।',
+      navigateTo: '/stock'
+    };
+  }
+
+  // Sort by urgency: critical first
+  orderItems.sort((a, b) => a.daysOfStockLeft - b.daysOfStockLeft);
+  const topItems = orderItems.slice(0, 8);
+  const totalEstimatedBudget = topItems.reduce((acc, i) => acc + i.estimatedCost, 0);
+
+  const speechList = topItems.slice(0, 3).map(i => `${i.productName} (${i.suggestedOrderQty} ${i.unit})`).join(', ');
+  const speech = `আপনার দোকানে বিক্রির গতি বিশ্লেষণ করে ${topItems.length}টি পণ্যের ডিলার পারচেজ অর্ডার তৈরি করা হয়েছে। যেমন: ${speechList}। আনুমানিক খরচ ৳${totalEstimatedBudget.toLocaleString('bn-BD')} টাকা।`;
+
+  let reply = `📦 **স্মার্ট ডিলার পারচেজ অর্ডার ড্রাফট (${topItems.length}টি পণ্য)**\n`;
+  reply += `• মোট আনুমানিক খরচ: **৳${totalEstimatedBudget.toLocaleString('en-US')}**\n\n`;
+  reply += `| পণ্য | বর্তমান স্টক | বাকি দিন | প্রস্তাবিত অর্ডার | খরচ |\n`;
+  reply += `|---|---|---|---|---|\n`;
+
+  for (const item of topItems) {
+    const badge = item.urgency === 'critical' ? '🔴 শেষ' : (item.urgency === 'high' ? '🟠 ২ দিন' : '🟡 ৪ দিন');
+    reply += `| **${item.productName}** | ${item.currentStock} ${item.unit} | ${badge} | **+${item.suggestedOrderQty} ${item.unit}** | ৳${item.estimatedCost.toLocaleString('en-US')} |\n`;
+  }
+
+  reply += `\n*উক্ত তালিকাটি ডিলারের সাথে শেয়ার করে সহজে মাল তুলতে পারেন।*`;
+
+  return {
+    success: true,
+    action: 'purchase_order',
+    speech,
+    reply,
+    navigateTo: '/stock',
+    actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' },
+    data: {
+      orderItems: topItems,
+      totalEstimatedBudget
+    }
+  };
+}
+
+/**
+ * 🌟 4. Multi-Modal Vision: Dealer Handwritten / Printed Challan & Memo OCR Scanner
+ */
+export async function scanDealerInvoice(
+  db: Database.Database,
+  tenantId: string,
+  imageBase64: string,
+  mimeType: string = 'image/jpeg'
+): Promise<{
+  success: boolean;
+  supplierName?: string;
+  supplierPhone?: string;
+  challanNo?: string;
+  date?: string;
+  items: Array<{
+    productId?: string;
+    name: string;
+    qty: number;
+    unit: string;
+    unitCost: number;
+    sellingPrice: number;
+    totalCost: number;
+    isMatched?: boolean;
+    isNewProduct?: boolean;
+  }>;
+  totalAmount: number;
+  cashPaid: number;
+  dueAdded: number;
+  error?: string;
+}> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  // Fetch tenant product catalog for intelligent matching
+  const tenantProducts = db.prepare(`
+    SELECT id, name, bangla_name, purchase_price, selling_price, unit, category_id
+    FROM products
+    WHERE tenant_id = ?
+    LIMIT 120
+  `).all(tenantId) as any[];
+
+  const catalogSummary = tenantProducts.map(p => `${p.id}:${p.bangla_name || p.name}(৳${p.purchase_price || 0}/${p.unit || 'পিস'})`).join('; ');
+
+  // Clean base64 string
+  let cleanBase64 = imageBase64;
+  if (cleanBase64.includes(';base64,')) {
+    const parts = cleanBase64.split(';base64,');
+    cleanBase64 = parts[1] || '';
+  }
+
+  const prompt = `You are an Expert Optical Character Recognition (OCR) Engine & Retail Accountant for Bangladeshi retail shops.
+Inspect this handwritten or printed supplier challan / dealer memo invoice image.
+Extract the supplier/dealer name, memo/challan number, date, and every single line item of products purchased.
+
+Existing Shop Products Grounding:
+${catalogSummary || 'None'}
+
+Instructions:
+1. Extract supplierName (e.g. "মেঘনা গ্রুপ", "আকিজ ফুডস", "স্কয়ার ডিপো", "পাইকারি বাজার"), phone if present, challanNo, and date (YYYY-MM-DD or Bengali date).
+2. For each line item:
+   - "name": Clean Bengali/English product name (e.g. "তীর সয়াবিন তেল ১ লিটার", "ফ্রেশ চিনি", "নাপা ৫০০ এমজি").
+   - "qty": Quantity received (number).
+   - "unit": "লিটার"|"কেজি"|"পিস"|"পাতা"|"বস্তা"|"প্যাকেট"|"ডজন"|"কার্টুন"|"বক্স".
+   - "unitCost": Purchase price per unit in Taka.
+   - "totalCost": Line total (qty * unitCost).
+   - "productId": If this item matches an existing product in the grounding list above, provide its ID. Otherwise null.
+   - "sellingPrice": If existing, use its current selling price, or suggest selling price (around 12-18% profit margin over unitCost).
+3. Compute totalAmount, and estimate cashPaid and dueAdded if written on memo (otherwise cashPaid=0, dueAdded=totalAmount).
+
+RESPOND WITH STRICT JSON ONLY (NO markdown wrap, NO comments):
+{
+  "supplierName": "...",
+  "supplierPhone": "...",
+  "challanNo": "...",
+  "date": "...",
+  "items": [
+    {
+      "productId": "id from list or null",
+      "name": "...",
+      "qty": 10,
+      "unit": "কেজি",
+      "unitCost": 120,
+      "sellingPrice": 140,
+      "totalCost": 1200,
+      "isMatched": true
+    }
+  ],
+  "totalAmount": 1200,
+  "cashPaid": 500,
+  "dueAdded": 700
+}`;
+
+  const visionModels = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+  ];
+
+  for (const model of visionModels) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: cleanBase64
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            response_mime_type: "application/json"
+          }
+        })
+      });
+
+      clearTimeout(timeout);
+
+      if (!resp.ok) continue;
+
+      const data = await resp.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) continue;
+
+      const parsed = JSON.parse(rawText);
+      if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+        // Post-process items with fallback ID matching
+        const items = parsed.items.map((it: any) => {
+          let matched = tenantProducts.find(p => p.id === it.productId);
+          if (!matched && it.name) {
+            const clean = it.name.toLowerCase().trim();
+            matched = tenantProducts.find(p => {
+              const bn = (p.bangla_name || '').toLowerCase();
+              const nm = (p.name || '').toLowerCase();
+              return bn.includes(clean) || clean.includes(bn) || nm.includes(clean);
+            });
+          }
+
+          const qty = Number(it.qty) || 1;
+          const unitCost = Number(it.unitCost) || (matched ? Number(matched.purchase_price) : 0);
+          const totalCost = Number(it.totalCost) || (qty * unitCost);
+          const sellingPrice = Number(it.sellingPrice) || (matched ? Number(matched.selling_price) : Math.round(unitCost * 1.15));
+
+          return {
+            productId: matched ? matched.id : null,
+            name: matched ? (matched.bangla_name || matched.name) : it.name,
+            qty,
+            unit: it.unit || (matched?.unit) || 'পিস',
+            unitCost,
+            sellingPrice,
+            totalCost,
+            isMatched: !!matched,
+            isNewProduct: !matched
+          };
+        });
+
+        const totalAmount = Number(parsed.totalAmount) || items.reduce((acc: number, i: any) => acc + i.totalCost, 0);
+        const cashPaid = Number(parsed.cashPaid) || 0;
+        const dueAdded = Number(parsed.dueAdded) !== undefined ? Number(parsed.dueAdded) : Math.max(0, totalAmount - cashPaid);
+
+        return {
+          success: true,
+          supplierName: parsed.supplierName || 'ডিলার চালান',
+          supplierPhone: parsed.supplierPhone || '',
+          challanNo: parsed.challanNo || ('CH-' + Date.now().toString().slice(-5)),
+          date: parsed.date || new Date().toISOString().slice(0, 10),
+          items,
+          totalAmount,
+          cashPaid,
+          dueAdded
+        };
+      }
+    } catch (e) {
+      console.warn(`[OCR Vision] Model ${model} failed:`, e);
+    }
+  }
+
+  throw new Error('চালানের ছবি থেকে লেখা পড়তে সমস্যা হয়েছে। দয়া করে স্পষ্ট ছবি তুলুন।');
+}
+
+/**
+ * Commits a scanned invoice directly into DB stock & creates full audit logs
+ */
+export function commitScannedInvoice(
+  db: Database.Database,
+  tenantId: string,
+  invoiceData: {
+    supplierName?: string;
+    supplierPhone?: string;
+    challanNo?: string;
+    items: Array<{
+      productId?: string;
+      name: string;
+      qty: number;
+      unit?: string;
+      unitCost?: number;
+      sellingPrice?: number;
+      totalCost?: number;
+    }>;
+    totalAmount?: number;
+    cashPaid?: number;
+    dueAdded?: number;
+  }
+): AgentExecutionResult {
+  const now = new Date().toISOString();
+  const safeSupplier = invoiceData.supplierName ? String(invoiceData.supplierName).trim() : 'ডিলার চালান';
+  const safeChallanNo = invoiceData.challanNo ? String(invoiceData.challanNo).trim() : ('CH-' + Date.now().toString().slice(-5));
+  const processedItems: Array<any> = [];
+
+  db.transaction(() => {
+    for (const it of invoiceData.items) {
+      const name = (it.name || '').trim();
+      if (!name) continue;
+      const qty = Number(it.qty) || 1;
+      const cost = Number(it.unitCost) || 0;
+      const sell = Number(it.sellingPrice) || Math.round(cost * 1.15);
+      const unit = it.unit || 'পিস';
+
+      let prod: any = null;
+      if (it.productId) {
+        prod = db.prepare('SELECT * FROM products WHERE id = ? AND tenant_id = ?').get(it.productId, tenantId);
+      }
+      if (!prod) {
+        prod = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name = ? OR name = ?) LIMIT 1')
+          .get(tenantId, name, name);
+      }
+
+      let prodId = '';
+      let newStock = qty;
+
+      if (prod) {
+        prodId = prod.id;
+        newStock = (Number(prod.stock) || 0) + qty;
+        db.prepare(`
+          UPDATE products SET
+            stock = ?,
+            purchase_price = ?,
+            selling_price = COALESCE(?, selling_price)
+          WHERE id = ?
+        `).run(newStock, cost > 0 ? cost : prod.purchase_price, sell > 0 ? sell : null, prodId);
+      } else {
+        prodId = 'prod-' + uuidv4().slice(0, 8);
+        const barcode = '894' + Math.floor(10000000 + Math.random() * 90000000);
+        db.prepare(`
+          INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, created_at)
+          VALUES (?, ?, ?, ?, ?, 'general', ?, ?, ?, ?, 5, ?)
+        `).run(prodId, tenantId, barcode, name, name, cost, sell, qty, unit, now);
+      }
+
+      // Record stock log
+      const logId = 'stklog-' + uuidv4().slice(0, 8);
+      db.prepare(`
+        INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
+        VALUES (?, ?, ?, ?, 'stock_in', ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        logId,
+        tenantId,
+        prodId,
+        name,
+        qty,
+        unit,
+        qty,
+        cost,
+        safeChallanNo,
+        `চালান থেকে স্টক ইন (${safeSupplier})`,
+        now
+      );
+
+      processedItems.push({
+        productId: prodId,
+        productName: name,
+        quantity: -qty, // negative deduction so undo reverts correctly
+        stockDeduction: -qty,
+        unit
+      });
+    }
+
+    // Optional: Log dealer payable if dueAdded > 0
+    const dueAdded = Number(invoiceData.dueAdded) || 0;
+    if (dueAdded > 0 && safeSupplier) {
+      let dealer = db.prepare('SELECT * FROM dealers WHERE tenant_id = ? AND company_name = ? LIMIT 1').get(tenantId, safeSupplier) as any;
+      if (dealer) {
+        db.prepare('UPDATE dealers SET payable_due = payable_due + ? WHERE id = ?').run(dueAdded, dealer.id);
+      } else {
+        const dId = 'deal-' + uuidv4().slice(0, 8);
+        db.prepare(`
+          INSERT INTO dealers (id, tenant_id, company_name, representative_name, phone, payable_due, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).run(dId, tenantId, safeSupplier, safeSupplier, invoiceData.supplierPhone || '01XXXXXXXXX', dueAdded, now);
+      }
+    }
+  })();
+
+  const actionId = 'act-' + uuidv4().slice(0, 8);
+  lastActionsByTenant.set(tenantId, {
+    actionId,
+    tenantId,
+    timestamp: Date.now(),
+    type: 'invoice_commit',
+    amount: Number(invoiceData.totalAmount) || 0,
+    items: processedItems
+  });
+
+  const count = invoiceData.items.length;
+  const speech = `চালান নম্বর ${safeChallanNo}-এর মোট ${count}টি পণ্য সফলভাবে স্টকে যুক্ত করা হয়েছে।`;
+  const reply = `✅ **চালান থেকে পণ্য স্টকে যোগ সম্পন্ন!**\n• ডিলার: **${safeSupplier}**\n• চালান নং: **${safeChallanNo}**\n• মোট যুক্ত পণ্য: **${count}টি পদ**\n• মোট চালানের টাকা: **৳${Number(invoiceData.totalAmount || 0).toLocaleString('en-US')}**`;
+
+  return {
+    success: true,
+    action: 'invoice_committed',
+    speech,
+    reply,
+    navigateTo: '/stock',
+    actionLink: { text: 'স্টক খাতা দেখুন →', href: '/stock' },
+    undoAvailable: true,
+    actionId,
+    data: { challanNo: safeChallanNo, itemCount: count }
+  };
+}
+
+/**
+ * 🌟 5. Intelligent Multi-Action Bengali LLM AI Agent with Multi-Turn Memory & Native Tool Calling
  */
 export async function runGeminiShopAgent(
   db: Database.Database,
   tenantId: string,
-  spokenText: string
+  spokenText: string,
+  speakerRole?: string,
+  speakerName?: string
 ): Promise<AgentExecutionResult | null> {
+  // 👔 Staff Security Guardrail: Reject sensitive owner financial queries immediately (Zero-latency & Offline safe)
+  if (speakerRole === 'staff') {
+    const isSensitive = /(লাভ|মুনাফা|প্রফিট|ব্যবসায়িক লাভ|নিট লাভ|মোট লাভ|ক্যাশ ড্রয়ার|ক্যাশ বাক্স|দিন শেষ|ড্রয়ার মেলাও)/i.test(spokenText);
+    if (isSensitive) {
+      return {
+        success: false,
+        action: 'permission_denied',
+        speech: `👔 সম্মানিত কর্মী ভাই, দোকানের মোট লাভ বা আর্থিক গোপনীয় তথ্য দেখার অনুমতি কেবল মালিকের রয়েছে।`,
+        reply: `👔 **অনুমতি সংরক্ষিত:** [কর্মচারী মোড] মুনাফা বা ক্যাশ ড্রয়ার অডিট শুধুমাত্র মালিক দেখতে পারবেন।`
+      };
+    }
+  }
+
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) return null;
 
@@ -692,35 +1522,47 @@ export async function runGeminiShopAgent(
   };
   const categoryName = categoryNames[categoryId] || 'Retail Store';
 
-  const systemInstruction = `You are the Super-Intelligent AI Shop Assistant & Business Manager for "${tenant?.shop_name || 'আমাদের দোকান'}" (${categoryName}) in Bangladesh.
-Your task is to understand shopkeeper Bengali voice commands and extract structured JSON actions.
+  const systemInstruction = `You are the Super-Intelligent AI Shop Business Partner & Manager for "${tenant?.shop_name || 'আমাদের দোকান'}" (${categoryName}) in Bangladesh.
+Your task is to understand shopkeeper Bengali commands and execute structured actions.
+You support both single actions AND MULTI-ACTION compound sentences (e.g. sale + due payment at the same time).
 
 Grounding Inventory Data:
 Products: ${productListStr || 'None'}
 Customers: ${customerListStr || 'None'}
 Context: ${contextStr}
 
-Pronoun Resolution:
+CRITICAL INVENTORY & STOCK ENFORCEMENT RULES:
+1. The shop operates on a 100% STRICT INVENTORY RULE: Absolutely NO product can be sold unless it explicitly exists in the "Grounding Inventory Data: Products" list above with stock > 0.
+2. If the user mentions or asks to sell any product that does NOT exist in the Products list above (or has 0 stock), DO NOT invent a productId and DO NOT pretend it was sold.
+   - For an unlisted item, set "productId": null with the requested productName, so the inventory validator can inform the user that the product is not in stock.
+3. NEVER hallucinate or map unrelated products.
+
+Pronoun & Context Resolution:
 - If user says "তার", "তাকে", "উনার", "ঐ কাস্টমার" -> map to context customer: ${sessionCtx?.lastCustomerName || 'null'}.
 - If user says "আরও", "এটার", "ঐ মাল" -> map to context product: ${sessionCtx?.lastProductName || 'null'}.
 
-Actions you can return:
-1. "stock_sale_or_due": Selling goods, credit/due, or cash sales (e.g. "রহিম ৫০ টাকা বাকি ২ কেজি চিনি", "২ পাতা নাপা বিক্রি ক্যাশে", "করিমরে ১ জোড়া জুতা বাকিতে দাও", "১০ ফুট পাইপ বিক্রি").
-2. "due_payment": Customer paying back due money (e.g. "রহিম ২০০ টাকা জমা দিল", "করিমের বাকি শোধ ১০০ টাকা", "তার থেকে ৫০০ জমা নাও").
-3. "restock": Adding inventory / stock-in (e.g. "২০ কেজি চিনি মাল ঢুকলো", "৫০ পাতা নাপা স্টকে যোগ করো", "১০ জোড়া জুতা স্টক ইন").
-4. "expense": Shop daily expense (e.g. "চা নাস্তা ৫০ টাকা খরচ", "দোকান ভাড়া ৫০০০ টাকা").
-5. "query": Balance, customer due, or product stock inquiry (e.g. "চিনির স্টক কত", "নাপা আছে কিনা", "করিমের বাকি কত").
-6. "business_query": Overall shop reporting & analytics (e.g. "আজকে কত লাভ হইছে", "আজকের বিক্রি কত", "বাজারে মোট বাকি কত", "কোন কোন মাল শেষ হয়ে গেছে", "কার কার বাকির ডেট পার হয়েছে").
-7. "promise_date": Setting payment due promise date (e.g. "রহিম আগামী শুক্রবার টাকা দিবে", "করিম ১০ তারিখ বাকি দেবে").
+Available Tools & Intents:
+1. "multi_action": When user specifies multiple actions in one sentence! (e.g. "রহিমরে ২ কেজি চিনি বাকিতে দাও আর তার আগের বাকি থেইকা ৫০০ জমা নেও").
+2. "stock_sale_or_due": Selling goods (cash or due/credit) with stock deduction.
+3. "due_payment": Customer paying back due money (e.g. "রহিম ৫০০ টাকা জমা দিল", "করিমের বাকি শোধ ২০০ টাকা").
+4. "due_reminder": Generating polite WhatsApp/SMS reminder for customer (e.g. "কালাম ভাইরে তাগাদা দাও", "রহিমের বাকির মেসেজ পাঠাও").
+5. "purchase_order": Creating predictive reorder list for dealer (e.g. "ডিলারের জন্য অর্ডারের লিস্ট বানাও", "কী কী মাল শেষ হয়ে গেছে অর্ডার করব").
+6. "proactive_briefing": Morning briefing or evening closing audit (e.g. "সকালের হিসাব বলো", "দিনের সমাপ্তি হিসাব", "ক্যাশ ড্রয়ার মেলাও").
+7. "restock": Adding inventory / stock-in (e.g. "২০ কেজি চিনি মাল ঢুকলো").
+8. "expense": Shop daily expense (e.g. "চা নাস্তা ৫০ টাকা খরচ").
+9. "query": Balance, customer due, or product stock inquiry (e.g. "চিনির স্টক কত", "করিমের বাকি কত").
+10. "business_query": Analytics ("today_profit", "market_due", "low_stock", "overdue_customers").
+11. "promise_date": Setting payment due promise date (e.g. "রহিম আগামী শুক্রবার টাকা দিবে").
 
 OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 {
-  "intent": "stock_sale_or_due" | "due_payment" | "restock" | "expense" | "query" | "business_query" | "promise_date" | "unknown",
+  "intent": "multi_action" | "stock_sale_or_due" | "due_payment" | "due_reminder" | "purchase_order" | "proactive_briefing" | "restock" | "expense" | "query" | "business_query" | "promise_date" | "unknown",
   "customerId": "matched customer ID from list or null",
   "customerName": "extracted customer name or null",
   "isDue": boolean,
   "explicitTotalAmount": number or null,
   "queryType": "today_profit" | "market_due" | "low_stock" | "overdue_customers" | null,
+  "briefingMode": "morning" | "evening" | null,
   "promiseDate": "YYYY-MM-DD or descriptive date string or null",
   "items": [
     {
@@ -731,20 +1573,28 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
       "unitPrice": number or null
     }
   ],
-  "note": "brief summary in Bengali"
+  "note": "brief summary in Bengali",
+  "subActions": [
+    {
+      "intent": "stock_sale_or_due" | "due_payment",
+      "customerName": "...",
+      "explicitTotalAmount": 500,
+      "isDue": true,
+      "items": [...]
+    }
+  ]
 }`;
 
   const candidateModels = [
     'gemini-2.5-flash',
     'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-flash-latest'
+    'gemini-1.5-flash'
   ];
 
   for (const modelName of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
+      const timeout = setTimeout(() => controller.abort(), 4500);
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -762,9 +1612,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 
       clearTimeout(timeout);
 
-      if (!response.ok) {
-        continue;
-      }
+      if (!response.ok) continue;
 
       const data = await response.json();
       const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -772,6 +1620,97 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 
       const parsed = JSON.parse(rawJson);
       if (!parsed || parsed.intent === 'unknown') continue;
+
+      // 🌟 MULTI-ACTION HANDLING (e.g. Sale + Due Payment in one command)
+      if (parsed.intent === 'multi_action' && Array.isArray(parsed.subActions) && parsed.subActions.length > 1) {
+        const executionResults: AgentExecutionResult[] = [];
+        const executedSaleIds: string[] = [];
+        let combinedSpeech = '';
+        let combinedReply = `⚡ **একাধিক অ্যাকশন সম্পন্ন হয়েছে:**\n\n`;
+
+        for (const sub of parsed.subActions) {
+          if (sub.intent === 'stock_sale_or_due' && Array.isArray(sub.items) && sub.items.length > 0) {
+            const custId = sub.customerId || (sub.customerName ? null : sessionCtx?.lastCustomerId);
+            const custName = sub.customerName || (custId ? customers.find(c => c.id === custId)?.name : sessionCtx?.lastCustomerName);
+            const res = executeStockSaleOrDue(db, tenantId, {
+              customerId: custId,
+              customerName: custName,
+              isDue: sub.isDue !== false,
+              items: sub.items,
+              explicitTotalAmount: sub.explicitTotalAmount
+            });
+            executionResults.push(res);
+            if (res.data?.actionId) executedSaleIds.push(res.data.actionId);
+            combinedSpeech += res.speech + ' ';
+            combinedReply += res.reply + '\n────────────────\n';
+          } else if (sub.intent === 'due_payment') {
+            const amount = Number(sub.explicitTotalAmount) || 0;
+            const targetName = sub.customerName || sessionCtx?.lastCustomerName;
+            if (amount > 0 && targetName) {
+              const cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${targetName}%`) as any;
+              if (cust) {
+                const prevDue = Number(cust.total_due) || 0;
+                const newDue = Math.max(0, prevDue - amount);
+                db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(newDue, cust.id);
+
+                const paySaleId = 'pay-' + uuidv4().slice(0, 8);
+                const payInvoiceNo = 'PAY-' + Date.now().toString().slice(-4);
+                db.prepare(`
+                  INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
+                  VALUES (?, ?, ?, ?, 0, ?, ?, 0, 0, 'due_payment', ?, ?, 'ভয়েস সহকারী দ্বারা বাকি আদায় জমা', 'হিসাব সহকারী', ?)
+                `).run(paySaleId, tenantId, payInvoiceNo, amount, amount, amount, cust.id, cust.name, new Date().toISOString());
+
+                executedSaleIds.push(paySaleId);
+                combinedSpeech += `এবং ${cust.name}-এর আগের বাকি থেকে ৳${amount} টাকা নগদ জমা হয়েছে (অবশিষ্ট বকেয়া ৳${newDue} টাকা)। `;
+                combinedReply += `💵 **বাকি আদায়:** ${cust.name}: **-৳${amount.toLocaleString('en-US')}** (অবশিষ্ট: **৳${newDue.toLocaleString('en-US')}**)\n`;
+              }
+            }
+          }
+        }
+
+        if (executionResults.length > 0) {
+          const actionId = 'act-multi-' + uuidv4().slice(0, 8);
+          lastActionsByTenant.set(tenantId, {
+            actionId,
+            tenantId,
+            timestamp: Date.now(),
+            type: 'multi_action',
+            amount: 0,
+            saleIds: executedSaleIds,
+            items: []
+          });
+
+          return {
+            success: true,
+            action: 'multi_action',
+            speech: combinedSpeech.trim(),
+            reply: combinedReply.trim(),
+            navigateTo: '/khata',
+            actionLink: { text: 'খাতায় দেখুন →', href: '/khata' },
+            undoAvailable: true,
+            actionId
+          };
+        }
+      }
+
+      // 🌟 DUE REMINDER (Autonomous Due Collector)
+      if (parsed.intent === 'due_reminder') {
+        const target = parsed.customerId || parsed.customerName || sessionCtx?.lastCustomerName || sessionCtx?.lastCustomerId;
+        if (target) {
+          return generateDueReminder(db, tenantId, target);
+        }
+      }
+
+      // 🌟 SMART PURCHASE ORDER (Predictive Reordering)
+      if (parsed.intent === 'purchase_order') {
+        return generateSmartPurchaseOrder(db, tenantId);
+      }
+
+      // 🌟 PROACTIVE BRIEFING (Morning / Evening Advisor)
+      if (parsed.intent === 'proactive_briefing') {
+        const mode = parsed.briefingMode || 'auto';
+        return generateProactiveBriefing(db, tenantId, mode, speakerRole);
+      }
 
       // 1. Stock Sale / Due Sale
       if (parsed.intent === 'stock_sale_or_due' && Array.isArray(parsed.items) && parsed.items.length > 0) {

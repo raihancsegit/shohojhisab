@@ -128,7 +128,7 @@ export default function ChallanOcrPage() {
   const handleRemoveItem = (index: number) => {
     if (!scannedResult) return;
     const newItems = scannedResult.items.filter((_: any, i: number) => i !== index);
-    const newTotal = newItems.reduce((acc, it) => acc + (Number(it.totalCost) || 0), 0);
+    const newTotal = newItems.reduce((acc: number, it: any) => acc + (Number(it.totalCost) || 0), 0);
     const cash = Number(scannedResult.cashPaid) || 0;
     setScannedResult({
       ...scannedResult,

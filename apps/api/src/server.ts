@@ -6,7 +6,17 @@ import { v4 as uuidv4 } from 'uuid';
 
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { runGeminiShopAgent, undoLastAction, getUndoAction, recordLastAction } from './ai-agent/aiAgent';
+import {
+  runGeminiShopAgent,
+  undoLastAction,
+  getUndoAction,
+  recordLastAction,
+  generateProactiveBriefing,
+  generateDueReminder,
+  generateSmartPurchaseOrder,
+  scanDealerInvoice,
+  commitScannedInvoice
+} from './ai-agent/aiAgent';
 import { cloudSync } from './cloud-sync/cloudSync';
 
 // Auto-load .env safely for local development and background processes
@@ -39,7 +49,7 @@ try {
 // Re-read cloud sync config after loading env
 cloudSync.reloadConfig();
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({ logger: true, bodyLimit: 25 * 1024 * 1024 });
 
 // Resolve DB path safely for both local monorepo and standalone cloud deployments (Render/Railway/Docker)
 const candidate1 = path.resolve(__dirname, '../../../local-business-os.db');
@@ -4466,6 +4476,18 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
         }
       }
 
+      // 🚨 Reject if product is NOT in stock/inventory
+      if (!matchedProd && cleanProdCandidate.length >= 2) {
+        return {
+          success: false,
+          action: 'product_not_in_stock',
+          speech: `⚠️ "${cleanProdCandidate}" আপনার দোকানের পণ্য তালিকায় বা স্টকে নেই। স্টক বহির্ভূত কোনো পণ্য বিক্রি করা যাবে না।`,
+          reply: `⚠️ **পণ্যটি স্টকে নেই:** "${cleanProdCandidate}" আপনার দোকানে পাওয়া যায়নি।\n\n*স্টক বহির্ভূত কোনো পণ্য বিক্রি করা যাবে না।*`,
+          navigateTo: '/products',
+          actionLink: { text: 'নতুন পণ্য যোগ করুন →', href: '/products' }
+        };
+      }
+
       if (matchedProd) {
         let baseSellingPrice = Number(matchedProd.selling_price) || 0;
         let basePurchasePrice = Number(matchedProd.purchase_price) || 0;
@@ -4984,19 +5006,54 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
 
         const note = cleanItems;
 
+        // Verify product exists in stock
+        const cleanCand = cleanItems.toLowerCase();
+        const matchedProd = allProducts.find((p: any) => {
+          const bn = (p.bangla_name || '').toLowerCase();
+          const nm = (p.name || '').toLowerCase();
+          return bn.includes(cleanCand) || cleanCand.includes(bn) || nm.includes(cleanCand) || cleanCand.includes(nm);
+        });
+
+        if (!matchedProd) {
+          db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(prevDue, customer.id);
+          return {
+            success: false,
+            action: 'product_not_in_stock',
+            speech: `⚠️ "${cleanItems}" আপনার দোকানের পণ্য তালিকায় বা স্টকে নেই। স্টক বহির্ভূত কোনো পণ্য বিক্রি বা বাকি লেখা যাবে না।`,
+            reply: `⚠️ **পণ্যটি স্টকে নেই:** "${cleanItems}" আপনার পণ্য তালিকায় পাওয়া যায়নি।\n\n*দোকানের স্টক বহির্ভূত কোনো পণ্য বিক্রি বা বাকি যোগ করা যাবে না। পণ্যটি আগে স্টকে যোগ করুন।*`,
+            navigateTo: '/products',
+            actionLink: { text: 'নতুন পণ্য স্টকে যোগ করুন →', href: '/products' }
+          };
+        }
+
+        const currentStock = Number(matchedProd.stock) || 0;
+        if (currentStock <= 0) {
+          db.prepare('UPDATE customers SET total_due = ? WHERE id = ?').run(prevDue, customer.id);
+          return {
+            success: false,
+            action: 'out_of_stock',
+            speech: `⚠️ "${matchedProd.bangla_name || matchedProd.name}" এর বর্তমান স্টক শূন্য (০)। স্টকে মাল না থাকায় বিক্রি করা যাবে না।`,
+            reply: `⚠️ **স্টক শূন্য (Out of Stock):** **${matchedProd.bangla_name || matchedProd.name}** এর স্টক ০ ${matchedProd.unit || 'টি'}।\n\n*স্টক রিস্টক না করে বিক্রি করা যাবে না।*`,
+            navigateTo: '/stock',
+            actionLink: { text: 'স্টক রিস্টক করুন →', href: `/stock?search=${encodeURIComponent(matchedProd.bangla_name || matchedProd.name)}` }
+          };
+        }
+
+        const newStock = Math.max(0, currentStock - 1);
+        db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(newStock, matchedProd.id);
+
         db.prepare(`
           INSERT INTO sales (id, tenant_id, invoice_no, subtotal, discount, total_amount, paid_amount, due_amount, profit_amount, payment_method, customer_id, customer_name, note, cashier, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(saleId, tenantId, invoiceNo, amount, 0, amount, 0, amount, Math.round(amount * 0.15), 'due', customer.id, customer.name, note, 'হিসাব সহকারী', now);
 
         const itemId = 'sitem-' + uuidv4().slice(0, 8);
-        const prodId = 'prod-custom-' + uuidv4().slice(0, 6);
-        const costPrice = Math.round(amount * 0.8);
+        const costPrice = Number(matchedProd.purchase_price) || Math.round(amount * 0.8);
         const profit = amount - costPrice;
         db.prepare(`
           INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(itemId, saleId, prodId, note, 1, costPrice, amount, amount, profit);
+        `).run(itemId, saleId, matchedProd.id, matchedProd.bangla_name || matchedProd.name, 1, costPrice, amount, amount, profit);
 
         // Record for Voice Undo capability
         recordLastAction(tenantId, {
@@ -5010,7 +5067,14 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
           newDue: Number(customer.total_due),
           amount,
           saleId,
-          items: []
+          items: [{
+            productId: matchedProd.id,
+            productName: matchedProd.bangla_name || matchedProd.name,
+            quantity: 1,
+            stockDeduction: 1,
+            unit: matchedProd.unit || 'টি',
+            lineTotal: amount
+          }]
         });
 
         // Credit Limit Intelligence Check
@@ -6488,13 +6552,15 @@ fastify.post('/api/customers/:id/voice-entry', async (request, reply) => {
         );
       }
     } else {
-      const itemId = 'sitem-' + uuidv4().slice(0, 8);
-      const prodCost = Math.round(finalAmount * 0.8);
-      const prodProfit = finalAmount - prodCost;
-      db.prepare(`
-        INSERT INTO sale_items (id, sale_id, product_id, product_name, quantity, purchase_price, selling_price, total_price, profit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(itemId, saleId, 'prod-custom-' + uuidv4().slice(0, 6), summaryList, 1, prodCost, finalAmount, finalAmount, prodProfit);
+      // Revert customer due update
+      db.prepare('UPDATE customers SET total_due = total_due - ? WHERE id = ?').run(finalAmount, customer.id);
+      db.prepare('DELETE FROM sales WHERE id = ?').run(saleId);
+      return reply.status(400).send({
+        success: false,
+        action: 'product_not_in_stock',
+        speech: '⚠️ উক্ত পণ্যটি আপনার দোকানের তালিকায় বা স্টকে নেই। স্টক বহির্ভূত কোনো পণ্য বিক্রি বা বাকি লেখা যাবে না।',
+        reply: '⚠️ **পণ্যটি স্টকে নেই:** দোকানের স্টক বহির্ভূত কোনো পণ্য বিক্রি বা বাকি যোগ করা যাবে না।'
+      });
     }
 
     const speech = `✓ ${customer.name} এর বাকি খাতায় ৳${finalAmount} টাকা (${summaryList}) যোগ ও স্টক আপডেট হয়েছে। বর্তমান মোট বকেয়া ৳${newDue} টাকা।`;
@@ -7892,6 +7958,19 @@ fastify.post('/api/challan/scan', async (request, reply) => {
   const body = (request.body || {}) as any;
   const { image, tenantId, rawText } = body;
 
+  // 1. If image is provided, run real Gemini Vision OCR engine
+  if (image && typeof image === 'string' && image.length > 50) {
+    try {
+      const ocrResult = await scanDealerInvoice(db, tenantId || 'default', image);
+      if (ocrResult && ocrResult.success) {
+        return ocrResult;
+      }
+    } catch (ocrErr: any) {
+      console.warn('[Challan OCR] Vision OCR error, falling back to heuristic parser:', ocrErr?.message);
+    }
+  }
+
+  // 2. Fallback to smart heuristic / text parser
   let supplierName = 'মেঘনা গ্রুপ অব ইন্ডাস্ট্রিজ (ধামরাই ডিপো)';
   let challanNo = 'CH-' + Math.floor(10000 + Math.random() * 90000);
   let date = new Date().toLocaleDateString('bn-BD');
@@ -8747,7 +8826,7 @@ fastify.post('/api/customers/:id/promise-date', async (request, reply) => {
 // ==========================================
 fastify.post('/api/voice-action', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, text, assistantName } = body || {};
+  const { tenantId, text, assistantName, speakerRole, speakerName } = body || {};
 
   if (!tenantId || !text) {
     return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
@@ -8762,9 +8841,9 @@ fastify.post('/api/voice-action', async (request, reply) => {
     }
   }
 
-  // 2. Try Gemini Flash AI Agent for intelligent stock-grounded multi-item parsing
+  // 2. Try Supercharged Gemini AI Agent with Multi-Action, Tools & Guardrails
   try {
-    const agentResult = await runGeminiShopAgent(db, tenantId, text);
+    const agentResult = await runGeminiShopAgent(db, tenantId, text, speakerRole, speakerName);
     if (agentResult && agentResult.success) {
       return agentResult;
     }
@@ -8797,6 +8876,80 @@ fastify.get('/api/ai/undo-status', async (request, reply) => {
     undoAvailable: !!entry,
     action: entry || null
   };
+});
+
+// 🌟 1. Proactive Morning & Evening Business Advisor Endpoint
+fastify.all('/api/ai/proactive-briefing', async (request, reply) => {
+  const payload = (request.method === 'POST' ? request.body : request.query) as any || {};
+  const { tenantId, mode, speakerRole } = payload;
+  if (!tenantId) return reply.status(400).send({ success: false, error: 'tenantId is required' });
+
+  try {
+    const briefing = generateProactiveBriefing(db, tenantId, mode || 'auto', speakerRole);
+    return briefing;
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err?.message || 'ব্রিফিং তৈরি করতে সমস্যা হয়েছে' });
+  }
+});
+
+// 🌟 2. Autonomous Customer Relationship & Due Recovery (WhatsApp/SMS Draft)
+fastify.all('/api/ai/due-reminder', async (request, reply) => {
+  const payload = (request.method === 'POST' ? request.body : request.query) as any || {};
+  const { tenantId, customer, customerQuery } = payload;
+  const target = customer || customerQuery;
+  if (!tenantId || !target) return reply.status(400).send({ success: false, error: 'tenantId এবং customer প্রয়োজন' });
+
+  try {
+    const reminder = generateDueReminder(db, tenantId, String(target));
+    return reminder;
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err?.message || 'তাগাদা তৈরি করতে সমস্যা হয়েছে' });
+  }
+});
+
+// 🌟 3. Smart Predictive Reordering & Vendor Purchase Order Draft
+fastify.all('/api/ai/smart-reorder', async (request, reply) => {
+  const payload = (request.method === 'POST' ? request.body : request.query) as any || {};
+  const { tenantId, category } = payload;
+  if (!tenantId) return reply.status(400).send({ success: false, error: 'tenantId is required' });
+
+  try {
+    const po = generateSmartPurchaseOrder(db, tenantId, category);
+    return po;
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err?.message || 'অর্ডার ড্রাফট তৈরি করতে সমস্যা হয়েছে' });
+  }
+});
+
+// 🌟 4. Multi-Modal Vision: Dealer Handwritten / Printed Challan OCR
+fastify.post('/api/ai/scan-invoice', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { tenantId, image, imageBase64, mimeType } = body;
+  const img = image || imageBase64;
+  if (!tenantId || !img) return reply.status(400).send({ success: false, error: 'tenantId এবং image আবশ্যক' });
+
+  try {
+    const result = await scanDealerInvoice(db, tenantId, img, mimeType || 'image/jpeg');
+    return result;
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err?.message || 'চালান স্ক্যান করতে ব্যর্থ হয়েছে' });
+  }
+});
+
+// 🌟 5. Commit Scanned Invoice to Stock
+fastify.post('/api/ai/commit-scanned-invoice', async (request, reply) => {
+  const body = (request.body || {}) as any;
+  const { tenantId, invoiceData } = body;
+  if (!tenantId || !invoiceData || !invoiceData.items || invoiceData.items.length === 0) {
+    return reply.status(400).send({ success: false, error: 'tenantId এবং চালানের পণ্যের তথ্য আবশ্যক' });
+  }
+
+  try {
+    const result = commitScannedInvoice(db, tenantId, invoiceData);
+    return result;
+  } catch (err: any) {
+    return reply.status(500).send({ success: false, error: err?.message || 'চালানের পণ্য স্টকে যুক্ত করতে ব্যর্থ হয়েছে' });
+  }
 });
 
 // 🔒 TENANT DATA VAULT & DISK SAFEGUARD (Auto Backup & Instant Restore across Render Redeploys)

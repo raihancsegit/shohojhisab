@@ -169,3 +169,14 @@ export function playDeleteSound() {
     osc.stop(now + 0.18);
   } catch (e) {}
 }
+
+/**
+ * 🔔 Notification Sound: Pleasant chime alias
+ */
+export const playNotificationSound = playSuccessChime;
+
+/**
+ * 💵 Cash Register / Money Sound: Pleasant chime alias
+ */
+export const playCashSound = playSuccessChime;
+

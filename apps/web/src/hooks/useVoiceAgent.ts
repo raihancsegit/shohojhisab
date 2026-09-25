@@ -32,10 +32,13 @@ export interface VoiceAgentState {
   currentMode: 'owner' | 'staff' | 'stranger' | null;
   isSupported: boolean;
   isSpeakerLockActive: boolean;
+  lastResult: any;
   startListening: () => void;
   stopListening: () => void;
   cancelVoice: () => void;
   executeCommand: (customText?: string) => Promise<void>;
+  triggerBriefing: (mode?: 'morning' | 'evening' | 'auto') => Promise<void>;
+  undoAction: () => Promise<void>;
   setFeedbackType: (type: 'listening' | 'processing' | 'success' | 'error' | null) => void;
   setFeedbackText: (text: string) => void;
 }
@@ -61,6 +64,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
   const [currentMode, setCurrentMode] = useState<'owner' | 'staff' | 'stranger' | null>(null);
   const [isSupported, setIsSupported] = useState<boolean>(true);
   const [isSpeakerLockActive, setIsSpeakerLockActive] = useState<boolean>(false);
+  const [lastResult, setLastResult] = useState<any>(null);
 
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
@@ -277,6 +281,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
 
         const modePrefix = speakerRole === 'owner' ? '👑 [মালিক] ' : '👔 [কর্মচারী] ';
         setFeedbackText(modePrefix + (data.speech || 'কাজ সম্পন্ন হয়েছে।') + (data.isOffline ? ' (🟢 অফলাইন)' : ''));
+        setLastResult(data);
 
         // Broadcast success events
         window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
@@ -315,6 +320,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
           speakAnnouncement(data.speech, undefined, true);
         }
 
+        setLastResult(data);
         options.onError?.(data);
 
         if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
@@ -537,6 +543,65 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     spawnRecognitionInstance();
   }, [resetInactivityWatchdog, spawnRecognitionInstance, triggerHaptic]);
 
+  const undoAction = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ai/undo-last-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: effectiveTenantId })
+      });
+      const d = await res.json();
+      if (d.success) {
+        playSuccessChime();
+        triggerHaptic?.('success');
+        setFeedbackType('success');
+        setFeedbackText(d.message);
+        if (d.message) speakAnnouncement(d.message, undefined, true);
+        setLastResult(null);
+      } else {
+        playWarningSound();
+        setFeedbackType('error');
+        setFeedbackText(d.message || 'বাতিল করতে সমস্যা হয়েছে।');
+      }
+    } catch (e) {
+      playWarningSound();
+      setFeedbackType('error');
+      setFeedbackText('বাতিল সার্ভারে সংযোগ করা যায়নি।');
+    }
+  }, [effectiveTenantId, speakAnnouncement, triggerHaptic]);
+
+  const triggerBriefing = useCallback(async (mode: 'morning' | 'evening' | 'auto' = 'auto') => {
+    setIsProcessing(true);
+    setFeedbackType('processing');
+    setFeedbackText('সকালের/রাতের হিসাব তৈরি হচ্ছে...');
+    try {
+      const res = await fetch('/api/ai/proactive-briefing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: effectiveTenantId, mode, speakerRole: currentMode || 'owner' })
+      });
+      const d = await res.json();
+      setIsProcessing(false);
+      if (d.success) {
+        playSuccessChime();
+        triggerHaptic?.('success');
+        setFeedbackType('success');
+        setFeedbackText(d.speech);
+        setLastResult(d);
+        if (d.speech) speakAnnouncement(d.speech, undefined, true);
+      } else {
+        playWarningSound();
+        setFeedbackType('error');
+        setFeedbackText(d.error || 'ব্রিফিং তৈরিতে সমস্যা হয়েছে।');
+      }
+    } catch (e) {
+      setIsProcessing(false);
+      playWarningSound();
+      setFeedbackType('error');
+      setFeedbackText('ব্রিফিং সার্ভারে সংযোগ করা যায়নি।');
+    }
+  }, [effectiveTenantId, currentMode, speakAnnouncement, triggerHaptic]);
+
   return {
     isListening,
     isProcessing,
@@ -548,10 +613,13 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     currentMode,
     isSupported,
     isSpeakerLockActive,
+    lastResult,
     startListening,
     stopListening: stopListeningOnly,
     cancelVoice,
     executeCommand,
+    triggerBriefing,
+    undoAction,
     setFeedbackType,
     setFeedbackText
   };
