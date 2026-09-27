@@ -388,7 +388,14 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
  * lock getUserMedia concurrently to prevent audio starvation / silence dropouts.
  */
 export async function ensureBiometricMonitoring(): Promise<boolean> {
-  return true;
+  if (typeof window === 'undefined') return false;
+  try {
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isMobile) return true; // Keep exclusive mic for SpeechRecognition on mobile
+    return await voiceProximityManager.start();
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -534,62 +541,63 @@ export function evaluateUtteranceSpeaker(
       }
     }
 
-    // Check if spoken utterance is an authentic shop operational command
-    if (isRecognizedShopCommand(clean)) {
-      // If this phone is bound to a specific staff or owner, attribute to bound operator
-      if (boundProfile) {
-        // If spoken text explicitly addresses another registered coworker by name, reject cross-talk
-        const otherStaff = profiles.find(p => p.id !== boundProfile.id && clean.includes(p.name.toLowerCase()));
-        if (otherStaff) {
-          return {
-            isAuthorized: false,
-            confidence: 20,
-            reason: 'unauthorized_speaker',
-            speakerName: `অন্য সহকর্মীর কণ্ঠ (${otherStaff.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
-          };
-        }
-
+    // Check if spoken text contains another enrolled coworker's name on a locked device
+    if (boundProfile) {
+      const otherStaff = profiles.find(p => p.id !== boundProfile.id && clean.includes(p.name.toLowerCase()));
+      if (otherStaff) {
         return {
-          isAuthorized: true,
-          confidence: 92,
-          matchedSpeaker: boundProfile,
-          role: boundProfile.role,
-          speakerName: boundProfile.name,
-          reason: 'authorized'
+          isAuthorized: false,
+          confidence: 20,
+          reason: 'unauthorized_speaker',
+          speakerName: `অন্য সহকর্মীর কণ্ঠ (${otherStaff.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
         };
       }
-
-      // If phone is in open mode (all enrolled staff):
-      const matchedStaff = candidateProfiles.find(p => p.role === 'staff' && (clean.includes(p.name.toLowerCase()) || clean.includes('স্টাফ') || clean.includes('কর্মচারী')));
-      if (matchedStaff) {
-        return {
-          isAuthorized: true,
-          confidence: 90,
-          matchedSpeaker: matchedStaff,
-          role: 'staff',
-          speakerName: matchedStaff.name,
-          reason: 'authorized'
-        };
-      }
-
-      const ownerProfile = candidateProfiles.find(p => p.role === 'owner') || candidateProfiles[0];
       return {
         isAuthorized: true,
-        confidence: 95,
-        matchedSpeaker: ownerProfile,
-        role: ownerProfile.role || 'owner',
-        speakerName: ownerProfile.name || 'দোকান মালিক',
+        confidence: 92,
+        matchedSpeaker: boundProfile,
+        role: boundProfile.role,
+        speakerName: boundProfile.name,
         reason: 'authorized'
       };
     }
 
-    // Casual bystander / customer conversation (e.g. "কেমন আছেন", "সিগারেট দেন", "বাসায় যাচ্ছি")
-    // is strictly filtered out as unauthorized!
+    // Single Pharmacy / Single Shop Owner Mode (only 1 profile enrolled):
+    // The person speaking into this phone IS the registered shop owner!
+    // Never block the single owner on their own device!
+    if (candidateProfiles.length === 1) {
+      const singleOwner = candidateProfiles[0];
+      return {
+        isAuthorized: true,
+        confidence: 95,
+        matchedSpeaker: singleOwner,
+        role: singleOwner.role || 'owner',
+        speakerName: singleOwner.name || 'দোকান মালিক',
+        reason: 'authorized'
+      };
+    }
+
+    // Multiple profiles in open mode:
+    const matchedStaff = candidateProfiles.find(p => p.role === 'staff' && (clean.includes(p.name.toLowerCase()) || clean.includes('স্টাফ') || clean.includes('কর্মচারী')));
+    if (matchedStaff) {
+      return {
+        isAuthorized: true,
+        confidence: 90,
+        matchedSpeaker: matchedStaff,
+        role: 'staff',
+        speakerName: matchedStaff.name,
+        reason: 'authorized'
+      };
+    }
+
+    const ownerProfile = candidateProfiles.find(p => p.role === 'owner') || candidateProfiles[0];
     return {
-      isAuthorized: false,
-      confidence: 10,
-      reason: 'unauthorized_speaker',
-      speakerName: 'অপরিচিত ব্যক্তি / গ্রাহক সংলাপ'
+      isAuthorized: true,
+      confidence: 95,
+      matchedSpeaker: ownerProfile,
+      role: ownerProfile.role || 'owner',
+      speakerName: ownerProfile.name || 'দোকান মালিক',
+      reason: 'authorized'
     };
   }
 
@@ -617,12 +625,12 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation is up to 32 Hz from enrolled mean
-      if (diffFromMean <= 32) {
+      // Natural speech pitch variation is up to 38 Hz from enrolled mean
+      if (diffFromMean <= 38) {
         // Timbre check: Filter out sharp laptop sirens or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1500) {
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1800) {
             continue;
           }
         }
