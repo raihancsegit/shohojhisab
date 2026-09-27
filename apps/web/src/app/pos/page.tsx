@@ -21,7 +21,7 @@ import { parseVoicePOSCommand, scoreCatalogCandidate } from '../../lib/voicePOSP
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, getBoundSpeakerId, getSpeakerVoiceProfiles } from '../../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, getBoundSpeakerId, getSpeakerVoiceProfiles, stopBiometricMonitoring } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { counterSleepManager } from '../../lib/counterSleepManager';
 import { playWarningSound } from '../../lib/audioFeedbackUtils';
@@ -2867,7 +2867,7 @@ export default function PosPage() {
     posTranscriptBufferRef.current = '';
 
     const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    voiceProximityManager.start().catch(() => {});
+    stopBiometricMonitoring();
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'bn-BD';

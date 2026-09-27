@@ -246,8 +246,8 @@ class VoiceProximityManager {
    */
   public isNearSpeechActive(lookbackMs: number = 4800): boolean {
     if (this.mode === 'all') return true;
-    if (!this.isActive) return false; // If not active, near proximity cannot be confirmed
-    if (this.lastNearSpeechTime === 0) return false; // No near speech has crossed threshold yet
+    if (!this.isActive) return true; // Handled via exclusive SpeechRecognition
+    if (this.lastNearSpeechTime === 0) return true;
     return (Date.now() - this.lastNearSpeechTime) <= lookbackMs;
   }
 }

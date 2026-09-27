@@ -455,10 +455,20 @@ export function isBackgroundNoise(text: string): boolean {
   const clean = text.toLowerCase().trim();
   if (clean.length < 2) return true;
 
-  // Common movie, drama, entertainment, casual phrases that are NOT retail shop operations:
-  const movieAndCasualRegex = /(ভালোবাসি|ভালবাসি|প্রেম|বিয়ে|সংসার|নাটক|সিনেমা|মুভি|গান|গায়ক|ভিডিও|ইউটিউব|ফেসবুক|টিকটক|সিরিয়াল|নায়ক|নায়িকা|অভিনেতা|খবর|সংবাদ|রাজনীতি|প্রধানমন্ত্রী|সরকার|আন্দোলন|পুলিশ|মার্ডার|গুলি|খুন|পালাও|বাঁচাও|মাফ\s*কর|ক্ষমা|কান্না|হাসি|খেলা|ক্রিকেট|ফুটবল|বৃষ্টি|ঝড়|আবহাওয়া|কেমন\s*আছো|কেমন\s*আছেন|কি\s*খবর|কি\s*অবস্থা|ভালো\s*আছি|কোথায়\s*যাচ্ছ|কোথায়\s*গেলে|কেন\s*গেলে|কেন\s*এলে|কথা\s*বলো|কথা\s*শোন|আমার\s*কথা|ঘুমাব|ঘুম\s*থেকে|ভাত\s*খাব|চা\s*খাব|চা\s*খাবেন)/i;
+  // 1. Movie, drama, cinema, YouTube, serials, actors, emotional phrases
+  const movieAndDrama = /(ভালোবাসি|ভালবাসি|প্রেম|বিয়ে|সংসার|নাটক|সিনেমা|মুভি|সিরিয়াল|নায়ক|নায়িকা|অভিনেতা|খবর|সংবাদ|রাজনীতি|সরকার|আন্দোলন|পুলিশ|মার্ডার|গুলি|খুন|পালাও|বাঁচাও|মাফ\s*কর|ক্ষমা|কান্না|হাসি|খেলা|ক্রিকেট|ফুটবল|বৃষ্টি|ঝড়|আবহাওয়া|গান|মিউজিক|গান\s*শোনাও|ভিডিও|ইউটিউব|ফেসবুক|টিকটক)/i;
 
-  return movieAndCasualRegex.test(clean);
+  // 2. Personal, conversational, question, conflict dialogue from movies & TV
+  const conversationalConflict = /(কেমন\s*আছো|কেমন\s*আছেন|কি\s*খবর|কি\s*অবস্থা|ভালো\s*আছি|কোথায়\s*যাচ্ছ|কোথায়\s*গেলে|কেন\s*গেলে|কেন\s*এলে|কথা\s*বলো|কথা\s*শোন|আমার\s*কথা|ঘুমাব|ঘুম\s*থেকে|ভাত\s*খাব|চা\s*খাব|চা\s*খাবেন|তুই|তোকে|তোরা|আপনি|তুমি|আমি\s*তোমাকে|আমার\s*কাছে|যাও\s*এখান\s*থেকে|চলে\s*যাও|বিশ্বাস\s*কর|মিথ্যা|সত্যি|মিথ্যাবাদী|বেইমান|ধোঁকা|শত্রু|বন্ধু|পাগল|মাথা\s*খারাপ)/i;
+
+  // 3. Movie demands involving money or conflict (e.g. "টাকা দে", "টাকা ফেরত দে", "টাকা ছিনতাই")
+  const movieMoneyDemands = /(টাকা\s*দে|টাকা\s*দাও|টাকা\s*নে|টাকা\s*ছিনতাই|টাকা\s*চুরি|টাকা\s*ফেরত|টাকা\s*মারল|টাকা\s*কোথায়|সব\s*টাকা|টাকা\s*লাগবে|টাকা\s*নাই)/i;
+
+  if (movieAndDrama.test(clean)) return true;
+  if (conversationalConflict.test(clean)) return true;
+  if (movieMoneyDemands.test(clean)) return true;
+
+  return false;
 }
 
 /**
@@ -496,9 +506,9 @@ export function evaluateUtteranceSpeaker(
   if (clean && isBackgroundNoise(clean)) {
     return {
       isAuthorized: false,
-      confidence: 10,
+      confidence: 0,
       reason: 'background_noise_or_tv',
-      speakerName: 'টিভি / মুভি বা ব্যাকগ্রাউন্ড শব্দ (বাতিল)'
+      speakerName: 'টিভি / মুভি বা ব্যাকগ্রাউন্ড আলোচনা (বাতিল)'
     };
   }
 
@@ -512,7 +522,7 @@ export function evaluateUtteranceSpeaker(
   }
 
   // 2. FALLBACK BRANCH: When fewer than 2 vocal pitch frames were detected:
-  // (e.g. initial microphone initialization or very fast utterances)
+  // (e.g. exclusive SpeechRecognition microphone access)
   if (recentFrames.length < 2) {
     if (!clean) {
       return {
@@ -576,21 +586,19 @@ export function evaluateUtteranceSpeaker(
     }
 
     // STRICT CHECK FOR VOICE LOCK:
-    // If Voice Lock is enabled, we NEVER authorize arbitrary speech without acoustic biometrics
-    // unless it is a genuine, verified shop operational command AND near-field proximity was confirmed!
+    // If Voice Lock is enabled, we NEVER authorize non-business speech:
     const isShopCommand = isRecognizedShopCommand(clean);
     if (!isShopCommand) {
       return {
         isAuthorized: false,
-        confidence: 15,
+        confidence: 0,
         reason: 'background_noise_or_tv',
-        speakerName: 'অপরিচিত কণ্ঠ বা ব্যাকগ্রাউন্ড আলোচনা (বাতিল)'
+        speakerName: 'টিভি / মুভি বা ব্যাকগ্রাউন্ড শব্দ (দোকানের কমান্ড নয়)'
       };
     }
 
-    // Near-field proximity validation:
-    // Laptop movies 1-2 meters away do NOT trigger the near speech gate!
-    if (voiceProximityManager && voiceProximityManager.getMode() !== 'all') {
+    // Near-field proximity validation only if voiceProximityManager is actively tracking
+    if (voiceProximityManager && voiceProximityManager.getState().isListening && voiceProximityManager.getMode() !== 'all') {
       if (!voiceProximityManager.isNearSpeechActive(4200)) {
         return {
           isAuthorized: false,
@@ -601,11 +609,11 @@ export function evaluateUtteranceSpeaker(
       }
     }
 
-    // If it is a verified shop command AND near the microphone:
+    // If it is a verified shop command:
     if (boundProfile) {
       return {
         isAuthorized: true,
-        confidence: 85,
+        confidence: 95,
         matchedSpeaker: boundProfile,
         role: boundProfile.role,
         speakerName: boundProfile.name,
@@ -617,7 +625,7 @@ export function evaluateUtteranceSpeaker(
       const singleOwner = candidateProfiles[0];
       return {
         isAuthorized: true,
-        confidence: 85,
+        confidence: 95,
         matchedSpeaker: singleOwner,
         role: singleOwner.role || 'owner',
         speakerName: singleOwner.name || 'দোকান মালিক',

@@ -10,7 +10,7 @@ import {
   verifyCurrentVoice,
   pingVoiceVerification,
   isSpeakerLockEnabled,
-  ensureBiometricMonitoring,
+  stopBiometricMonitoring,
   SpeakerVoiceProfile,
   SpeakerVerificationResult
 } from '../lib/speakerProfileEngine';
@@ -526,8 +526,8 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       return;
     }
 
-    // Keep Web Audio biometric & proximity monitoring alive concurrently
-    ensureBiometricMonitoring().catch(() => {});
+    // Stop any active Web Audio stream to ensure SpeechRecognition has 100% exclusive mic
+    stopBiometricMonitoring();
 
     // Cancel active TTS output to avoid echo
     if (typeof window !== 'undefined') {
