@@ -17,6 +17,11 @@ import {
   scanDealerInvoice,
   commitScannedInvoice
 } from './ai-agent/aiAgent';
+import {
+  matchProductPhonetically,
+  matchCustomerPhonetically,
+  normalizeBangladeshiColloquialUnits
+} from './ai-agent/bengaliPhoneticMatcher';
 import { cloudSync } from './cloud-sync/cloudSync';
 
 // Auto-load .env safely for local development and background processes
@@ -3885,6 +3890,10 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     : /^(সহজহিসাব|সহজ\s*হিসাব|রোবট|ম্যানেজার|সহকারী|জার্ভিস|এআই|অ্যাসিস্ট্যান্ট|কম্পিউটার|ভাই|স্যার|ওহে|এই\s*যে)[,\s]*/i;
 
   let rawText = rawCleaned.replace(assistantNamePattern, '').trim();
+  const { normalizedText: normColloquial } = normalizeBangladeshiColloquialUnits(rawText);
+  if (normColloquial) {
+    rawText = normColloquial;
+  }
   if (!rawText) {
     // User just called the assistant by name (e.g. "সহজহিসাব" or "ম্যানেজার")
     const displayName = customAssistantName || 'সহজহিসাব';
@@ -3937,8 +3946,12 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
     const lowerUtt = utterance.toLowerCase();
     const candidateName = cleanCandidateWords(utterance);
 
-    // 1. Direct candidate matching against all customers
+    // 1. Direct candidate matching against all customers (Phonetic + Exact)
     if (candidateName && candidateName.length >= 2) {
+      const phonMatch = matchCustomerPhonetically(candidateName, allCustomers);
+      if (phonMatch.customer) {
+        return phonMatch.customer;
+      }
       for (const c of allCustomers) {
         if (isNameMatch(c.name, candidateName)) {
           return c;
@@ -4448,13 +4461,18 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
       const cleanCand = cleanProdCandidate.toLowerCase().trim();
 
       if (cleanCand && cleanCand.length >= 2) {
-        for (const p of allProducts) {
-          const pBangla = (p.bangla_name || '').toLowerCase();
-          const pName = (p.name || '').toLowerCase();
-          const pGen = (p.generic_name || '').toLowerCase();
-          if (pBangla.includes(cleanCand) || pName.includes(cleanCand) || cleanCand.includes(pBangla) || (pGen && pGen.includes(cleanCand))) {
-            matchedProd = p;
-            break;
+        const prodMatch = matchProductPhonetically(cleanCand, allProducts);
+        if (prodMatch.product) {
+          matchedProd = prodMatch.product;
+        } else {
+          for (const p of allProducts) {
+            const pBangla = (p.bangla_name || '').toLowerCase();
+            const pName = (p.name || '').toLowerCase();
+            const pGen = (p.generic_name || '').toLowerCase();
+            if (pBangla.includes(cleanCand) || pName.includes(cleanCand) || cleanCand.includes(pBangla) || (pGen && pGen.includes(cleanCand))) {
+              matchedProd = p;
+              break;
+            }
           }
         }
       }
@@ -8826,24 +8844,29 @@ fastify.post('/api/customers/:id/promise-date', async (request, reply) => {
 // ==========================================
 fastify.post('/api/voice-action', async (request, reply) => {
   const body = request.body as any;
-  const { tenantId, text, assistantName, speakerRole, speakerName } = body || {};
+  const { tenantId, text, audioBase64, audioMimeType, assistantName, speakerRole, speakerName } = body || {};
 
-  if (!tenantId || !text) {
-    return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট প্রয়োজন' });
+  if (!tenantId || (!text && !audioBase64)) {
+    return reply.status(400).send({ success: false, error: 'Tenant ID এবং টেক্সট বা অডিও প্রয়োজন' });
   }
 
   // 1. Instant Navigation & Shortcut Check (< 1ms execution, 0 network wait)
-  const navRoute = matchNavigationIntent(text, text);
-  if (navRoute) {
-    const localNav = executeAiShopCommand(tenantId, text, assistantName);
-    if (localNav && localNav.navigateTo) {
-      return localNav;
+  if (text) {
+    const navRoute = matchNavigationIntent(text, text);
+    if (navRoute) {
+      const localNav = executeAiShopCommand(tenantId, text, assistantName);
+      if (localNav && localNav.navigateTo) {
+        return localNav;
+      }
     }
   }
 
-  // 2. Try Supercharged Gemini AI Agent with Multi-Action, Tools & Guardrails
+  // 2. Try Supercharged Gemini AI Agent with Multimodal Audio, Multi-Action, Tools & Guardrails
   try {
-    const agentResult = await runGeminiShopAgent(db, tenantId, text, speakerRole, speakerName);
+    const agentInput = audioBase64
+      ? { audioBase64, audioMimeType: audioMimeType || 'audio/webm', spokenText: text }
+      : (text || '');
+    const agentResult = await runGeminiShopAgent(db, tenantId, agentInput, speakerRole, speakerName);
     if (agentResult && agentResult.success) {
       return agentResult;
     }
@@ -8852,8 +8875,47 @@ fastify.post('/api/voice-action', async (request, reply) => {
   }
 
   // 3. Fallback to high-speed local engine
-  const result = executeAiShopCommand(tenantId, text, assistantName);
-  return result;
+  if (text) {
+    const result = executeAiShopCommand(tenantId, text, assistantName);
+    return result;
+  }
+
+  return reply.status(400).send({
+    success: false,
+    speech: 'ভয়েস কথাটি স্পষ্টভাবে বোঝা যায়নি। আবার মুখে বলুন।',
+    reply: '⚠️ ভয়েস কথাটি স্পষ্টভাবে বোঝা যায়নি। আবার মুখে বলুন।'
+  });
+});
+
+// Dedicated Multimodal Audio Voice Action Endpoint (Accepts Base64 / Streamed Audio from Browser)
+fastify.post('/api/voice-audio-action', async (request, reply) => {
+  const body = request.body as any;
+  const { tenantId, audioBase64, audioMimeType, assistantName, speakerRole, speakerName, text } = body || {};
+
+  if (!tenantId || !audioBase64) {
+    return reply.status(400).send({ success: false, error: 'Tenant ID এবং অডিও ডাটা প্রয়োজন' });
+  }
+
+  try {
+    const agentResult = await runGeminiShopAgent(
+      db,
+      tenantId,
+      { audioBase64, audioMimeType: audioMimeType || 'audio/webm', spokenText: text },
+      speakerRole,
+      speakerName
+    );
+    if (agentResult && agentResult.success) {
+      return agentResult;
+    }
+  } catch (err: any) {
+    console.warn('[AI Engine] Audio voice action error:', err);
+  }
+
+  return {
+    success: false,
+    speech: 'ভয়েস কমান্ডটি বোঝা যায়নি। অনুগ্রহ করে আবার স্পষ্ট করে বলুন।',
+    reply: '⚠️ **ভয়েস বুঝতে সমস্যা হয়েছে:** অনুগ্রহ করে ব্যাকগ্রাউন্ড শব্দ এড়িয়ে স্পষ্ট করে বলুন।'
+  };
 });
 
 // 1-Tap Undo Endpoint for Voice & AI Actions

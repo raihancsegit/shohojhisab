@@ -1,5 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import type Database from 'better-sqlite3';
+import {
+  matchProductPhonetically,
+  matchCustomerPhonetically,
+  normalizeBangladeshiColloquialUnits
+} from './bengaliPhoneticMatcher';
 
 export interface AgentExecutionResult {
   success: boolean;
@@ -11,6 +16,7 @@ export interface AgentExecutionResult {
   data?: any;
   undoAvailable?: boolean;
   actionId?: string;
+  recognizedText?: string;
 }
 
 export interface LastActionEntry {
@@ -166,12 +172,19 @@ export function executeStockSaleOrDue(
   const saleId = 'sale-' + uuidv4().slice(0, 8);
   const invoiceNo = (params.isDue ? 'BK-' : 'MEMO-') + Date.now().toString().slice(-5);
 
+  const allCustomers = db.prepare('SELECT id, name, phone, total_due, credit_limit FROM customers WHERE tenant_id = ?').all(tenantId) as any[];
+
   let customer: any = null;
   if (params.customerId) {
-    customer = db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(params.customerId, tenantId) as any;
+    customer = allCustomers.find(c => c.id === params.customerId) || db.prepare('SELECT * FROM customers WHERE id = ? AND tenant_id = ?').get(params.customerId, tenantId) as any;
   } else if (params.customerName) {
-    customer = db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE '%' || name || '%') LIMIT 1")
-      .get(tenantId, `%${params.customerName}%`, params.customerName) as any;
+    const custPhoneticMatch = matchCustomerPhonetically(params.customerName, allCustomers);
+    if (custPhoneticMatch.customer) {
+      customer = custPhoneticMatch.customer;
+    } else {
+      customer = db.prepare("SELECT * FROM customers WHERE tenant_id = ? AND (name LIKE ? OR ? LIKE '%' || name || '%') LIMIT 1")
+        .get(tenantId, `%${params.customerName}%`, params.customerName) as any;
+    }
   }
 
   // If customer doesn't exist and this is a due sale, create new customer automatically
@@ -204,13 +217,18 @@ export function executeStockSaleOrDue(
       matchedProd = allProducts.find(p => p.id === rawItem.productId);
     }
     if (!matchedProd && rawItem.productName) {
-      const cleanName = rawItem.productName.toLowerCase().trim();
-      matchedProd = allProducts.find(p => {
-        const bn = (p.bangla_name || '').toLowerCase();
-        const nm = (p.name || '').toLowerCase();
-        const gen = (p.generic_name || '').toLowerCase();
-        return bn.includes(cleanName) || cleanName.includes(bn) || nm.includes(cleanName) || cleanName.includes(nm) || (gen && gen.includes(cleanName));
-      });
+      const phoneticProdMatch = matchProductPhonetically(rawItem.productName, allProducts);
+      if (phoneticProdMatch.product) {
+        matchedProd = phoneticProdMatch.product;
+      } else {
+        const cleanName = rawItem.productName.toLowerCase().trim();
+        matchedProd = allProducts.find(p => {
+          const bn = (p.bangla_name || '').toLowerCase();
+          const nm = (p.name || '').toLowerCase();
+          const gen = (p.generic_name || '').toLowerCase();
+          return bn.includes(cleanName) || cleanName.includes(bn) || nm.includes(cleanName) || cleanName.includes(nm) || (gen && gen.includes(cleanName));
+        });
+      }
     }
 
     // Rule 1: Product MUST exist in store inventory
@@ -297,6 +315,32 @@ export function executeStockSaleOrDue(
         const gen = (p.generic_name || '').toLowerCase();
         return bn.includes(cleanName) || cleanName.includes(bn) || nm.includes(cleanName) || cleanName.includes(nm) || (gen && gen.includes(cleanName));
       });
+
+      if (!matchedProd) {
+        matchedProd = matchProductPhonetically(rawItem.productName, allProducts);
+      }
+    }
+
+    if (!matchedProd) {
+      return {
+        success: false,
+        action: 'sale',
+        speech: `⚠️ "${rawItem.productName || 'পণ্য'}" দোকানে স্টকে পাওয়া যায়নি। শুধুমাত্র স্টকে থাকা পণ্য বিক্রি সম্ভব।`,
+        reply: `⚠️ **পণ্য পাওয়া যায়নি!**\n• "${rawItem.productName || 'পণ্য'}" আপনার দোকানের ইনভেন্টরি বা স্টকে নেই।\n• অনুগ্রহ করে সঠিক নাম বলুন বা আগে স্টক ইন করুন।`,
+        undoAvailable: false
+      };
+    }
+
+    const currentStock = Number(matchedProd.stock) || 0;
+    if (currentStock <= 0) {
+      const pName = matchedProd.bangla_name || matchedProd.name;
+      return {
+        success: false,
+        action: 'sale',
+        speech: `⚠️ "${pName}" এর স্টক শেষ (০ টি অবশিষ্ট)! স্টকে পণ্য না থাকায় বিক্রি করা যায়নি।`,
+        reply: `⚠️ **স্টক শূন্য!**\n• পণ্য: **${pName}**\n• বর্তমান স্টক: **০ ${matchedProd.unit || 'টি'}**\n• স্টক শেষ থাকায় বিক্রয় বাতিল করা হয়েছে।`,
+        undoAvailable: false
+      };
     }
 
     let unit = rawItem.unit || (matchedProd?.unit) || 'পিস';
@@ -325,7 +369,6 @@ export function executeStockSaleOrDue(
     const lineTotal = Number(rawItem.lineTotal) || Math.round(qty * unitPrice);
     calculatedTotal += lineTotal;
 
-    const currentStock = Number(matchedProd?.stock) || 0;
     const newStock = Math.max(0, parseFloat((currentStock - stockDeduction).toFixed(3)));
 
     processedItems.push({
@@ -453,7 +496,7 @@ export function executeStockSaleOrDue(
     : '';
 
   const speech = params.isDue
-    ? `✓ ${customer ? customer.name : 'কাস্টমার'} এর বাকি খাতায় ৳${finalTotalAmount} টাকা (${summaryList}) যোগ হয়েছে। অবশিষ্ট স্টক: ${stockSummaryList}।${creditWarning}`
+    ? `✓ ${customer ? customer.name : 'কাস্টমার'} এর বাকি খাতায় ৳${finalTotalAmount} টাকা (${summaryList}) যোগ হয়েছে। ${previousDue > 0 ? `পূর্বের বাকি ছিল ৳${previousDue} টাকা, ` : ''}বর্তমান মোট বাকি ৳${newDue} টাকা। অবশিষ্ট স্টক: ${stockSummaryList}।${creditWarning}`
     : `✓ ক্যাশ বিক্রি ৳${finalTotalAmount} টাকা সম্পন্ন! স্টক থেকে ${summaryList} কাটা হয়েছে। অবশিষ্ট স্টক: ${stockSummaryList}।`;
 
   const reply = `✅ **${params.isDue ? 'বাকি এন্ট্রি ও স্টক আপডেট সম্পন্ন!' : 'ক্যাশ বিক্রয় সম্পন্ন!'}**\n` +
@@ -1471,12 +1514,20 @@ export function commitScannedInvoice(
 export async function runGeminiShopAgent(
   db: Database.Database,
   tenantId: string,
-  spokenText: string,
+  input: string | { spokenText?: string; audioBase64?: string; audioMimeType?: string },
   speakerRole?: string,
   speakerName?: string
 ): Promise<AgentExecutionResult | null> {
+  const rawSpokenText = typeof input === 'string' ? input : (input?.spokenText || '');
+  const audioBase64 = typeof input === 'object' ? input?.audioBase64 : undefined;
+  const audioMimeType = typeof input === 'object' ? (input?.audioMimeType || 'audio/webm') : 'audio/webm';
+
+  // Pre-normalize Bangladeshi colloquial units (সের, পোয়া, হালি, ডজন, পাতা, ইত্যাদি)
+  const { normalizedText } = normalizeBangladeshiColloquialUnits(rawSpokenText);
+  const spokenText = normalizedText || rawSpokenText;
+
   // 👔 Staff Security Guardrail: Reject sensitive owner financial queries immediately (Zero-latency & Offline safe)
-  if (speakerRole === 'staff') {
+  if (speakerRole === 'staff' && spokenText) {
     const isSensitive = /(লাভ|মুনাফা|প্রফিট|ব্যবসায়িক লাভ|নিট লাভ|মোট লাভ|ক্যাশ ড্রয়ার|ক্যাশ বাক্স|দিন শেষ|ড্রয়ার মেলাও)/i.test(spokenText);
     if (isSensitive) {
       return {
@@ -1556,12 +1607,13 @@ Available Tools & Intents:
 
 OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 {
+  "recognizedText": "Bengali transcription of what the shopkeeper said",
   "intent": "multi_action" | "stock_sale_or_due" | "due_payment" | "due_reminder" | "purchase_order" | "proactive_briefing" | "restock" | "expense" | "query" | "business_query" | "promise_date" | "unknown",
   "customerId": "matched customer ID from list or null",
   "customerName": "extracted customer name or null",
   "isDue": boolean,
   "explicitTotalAmount": number or null,
-  "queryType": "today_profit" | "market_due" | "low_stock" | "overdue_customers" | null,
+  "queryType": "today_profit" | "market_due" | "low_stock" | "overdue_customers" | "customer_due" | "product_stock" | null,
   "briefingMode": "morning" | "evening" | null,
   "promiseDate": "YYYY-MM-DD or descriptive date string or null",
   "items": [
@@ -1576,10 +1628,11 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
   "note": "brief summary in Bengali",
   "subActions": [
     {
-      "intent": "stock_sale_or_due" | "due_payment",
+      "intent": "stock_sale_or_due" | "due_payment" | "query",
       "customerName": "...",
       "explicitTotalAmount": 500,
       "isDue": true,
+      "queryType": "customer_due" | "product_stock" | null,
       "items": [...]
     }
   ]
@@ -1591,17 +1644,36 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
     'gemini-1.5-flash'
   ];
 
+  // Construct payload (multimodal audio or normalized text)
+  let userParts: any[] = [];
+  if (audioBase64) {
+    const cleanBase64 = audioBase64.replace(/^data:[^;]+;base64,/, '');
+    userParts = [
+      {
+        inlineData: {
+          mimeType: audioMimeType,
+          data: cleanBase64
+        }
+      },
+      {
+        text: "Listen to the shopkeeper's voice command in Bengali. First transcribe what was said into Bengali under the 'recognizedText' field. Then extract the intent and return the structured action JSON adhering strictly to the system instruction."
+      }
+    ];
+  } else {
+    userParts = [{ text: spokenText }];
+  }
+
   for (const modelName of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4500);
+      const timeout = setTimeout(() => controller.abort(), audioBase64 ? 9000 : 4500);
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: spokenText }] }],
+          contents: [{ role: 'user', parts: userParts }],
           system_instruction: { parts: [{ text: systemInstruction }] },
           generationConfig: {
             temperature: 0.1,
@@ -1647,7 +1719,8 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
             const amount = Number(sub.explicitTotalAmount) || 0;
             const targetName = sub.customerName || sessionCtx?.lastCustomerName;
             if (amount > 0 && targetName) {
-              const cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${targetName}%`) as any;
+              const custMatch = matchCustomerPhonetically(targetName, customers);
+              const cust = custMatch.customer || db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${targetName}%`) as any;
               if (cust) {
                 const prevDue = Number(cust.total_due) || 0;
                 const newDue = Math.max(0, prevDue - amount);
@@ -1663,6 +1736,25 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
                 executedSaleIds.push(paySaleId);
                 combinedSpeech += `এবং ${cust.name}-এর আগের বাকি থেকে ৳${amount} টাকা নগদ জমা হয়েছে (অবশিষ্ট বকেয়া ৳${newDue} টাকা)। `;
                 combinedReply += `💵 **বাকি আদায়:** ${cust.name}: **-৳${amount.toLocaleString('en-US')}** (অবশিষ্ট: **৳${newDue.toLocaleString('en-US')}**)\n`;
+              }
+            }
+          } else if (sub.intent === 'query') {
+            const targetName = sub.customerName || (sub.customerId ? customers.find(c => c.id === sub.customerId)?.name : sessionCtx?.lastCustomerName);
+            if (targetName) {
+              const custMatch = matchCustomerPhonetically(targetName, customers);
+              const cust = custMatch.customer || db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${targetName}%`) as any;
+              if (cust) {
+                const due = Number(cust.total_due) || 0;
+                combinedSpeech += `${cust.name}-এর আগের বাকি ছিল ৳${due} টাকা। `;
+                combinedReply += `📋 **পূর্বের বকেয়া তথ্য:** ${cust.name}: **৳${due.toLocaleString('en-US')}**\n`;
+              }
+            } else if (sub.items && sub.items[0]?.productName) {
+              const prodCandidate = sub.items[0].productName;
+              const prodMatch = matchProductPhonetically(prodCandidate, products);
+              if (prodMatch.product) {
+                const p = prodMatch.product;
+                combinedSpeech += `${p.bangla_name || p.name}-এর বর্তমান স্টক ${p.stock} ${p.unit || 'টি'}। `;
+                combinedReply += `📦 **মজুদ তথ্য:** ${p.bangla_name || p.name}: **${p.stock} ${p.unit || 'টি'}**\n`;
               }
             }
           }
@@ -1688,58 +1780,66 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
             navigateTo: '/khata',
             actionLink: { text: 'খাতায় দেখুন →', href: '/khata' },
             undoAvailable: true,
-            actionId
+            actionId,
+            recognizedText: parsed.recognizedText || spokenText
           };
         }
       }
+
+      const wrapResult = (res: AgentExecutionResult | null): AgentExecutionResult | null => {
+        if (res) {
+          res.recognizedText = parsed.recognizedText || rawSpokenText;
+        }
+        return res;
+      };
 
       // 🌟 DUE REMINDER (Autonomous Due Collector)
       if (parsed.intent === 'due_reminder') {
         const target = parsed.customerId || parsed.customerName || sessionCtx?.lastCustomerName || sessionCtx?.lastCustomerId;
         if (target) {
-          return generateDueReminder(db, tenantId, target);
+          return wrapResult(generateDueReminder(db, tenantId, target));
         }
       }
 
       // 🌟 SMART PURCHASE ORDER (Predictive Reordering)
       if (parsed.intent === 'purchase_order') {
-        return generateSmartPurchaseOrder(db, tenantId);
+        return wrapResult(generateSmartPurchaseOrder(db, tenantId));
       }
 
       // 🌟 PROACTIVE BRIEFING (Morning / Evening Advisor)
       if (parsed.intent === 'proactive_briefing') {
         const mode = parsed.briefingMode || 'auto';
-        return generateProactiveBriefing(db, tenantId, mode, speakerRole);
+        return wrapResult(generateProactiveBriefing(db, tenantId, mode, speakerRole));
       }
 
       // 1. Stock Sale / Due Sale
       if (parsed.intent === 'stock_sale_or_due' && Array.isArray(parsed.items) && parsed.items.length > 0) {
         const custId = parsed.customerId || (parsed.customerName ? null : sessionCtx?.lastCustomerId);
         const custName = parsed.customerName || (custId ? customers.find(c => c.id === custId)?.name : sessionCtx?.lastCustomerName);
-        return executeStockSaleOrDue(db, tenantId, {
+        return wrapResult(executeStockSaleOrDue(db, tenantId, {
           customerId: custId,
           customerName: custName,
           isDue: parsed.isDue !== false,
           items: parsed.items,
           explicitTotalAmount: parsed.explicitTotalAmount,
           note: parsed.note
-        });
+        }));
       }
 
       // 2. Restock / Stock In
       if (parsed.intent === 'restock' && Array.isArray(parsed.items) && parsed.items.length > 0) {
         const firstItem = parsed.items[0];
-        return executeStockRestock(db, tenantId, {
+        return wrapResult(executeStockRestock(db, tenantId, {
           productId: firstItem.productId,
           productName: firstItem.productName,
           quantity: firstItem.quantity,
           unit: firstItem.unit
-        });
+        }));
       }
 
       // 3. Business Analytics & Reporting Queries
       if (parsed.intent === 'business_query' && parsed.queryType) {
-        return executeBusinessAnalyticsQuery(db, tenantId, parsed.queryType);
+        return wrapResult(executeBusinessAnalyticsQuery(db, tenantId, parsed.queryType));
       }
 
       // 4. Due Payment (Cash In)
@@ -1751,7 +1851,12 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           if (targetId) {
             cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(targetId) as any;
           } else if (parsed.customerName) {
-            cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`) as any;
+            const custMatch = matchCustomerPhonetically(parsed.customerName, customers);
+            if (custMatch.customer) {
+              cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(custMatch.customer.id) as any;
+            } else {
+              cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`) as any;
+            }
           }
           if (cust) {
             const prevDue = Number(cust.total_due) || 0;
@@ -1782,7 +1887,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
 
             updateSessionContext(tenantId, { lastCustomerId: cust.id, lastCustomerName: cust.name });
 
-            return {
+            return wrapResult({
               success: true,
               action: 'due_paid',
               actionId,
@@ -1792,7 +1897,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
               navigateTo: '/khata',
               actionLink: { text: 'খাতা দেখুন →', href: '/khata' },
               data: { actionId, customerName: cust.name, amount, previousDue: prevDue, remainingDue: newDue }
-            };
+            });
           }
         }
       }
@@ -1804,20 +1909,25 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
         if (targetId) {
           cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(targetId) as any;
         } else if (parsed.customerName) {
-          cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`) as any;
+          const custMatch = matchCustomerPhonetically(parsed.customerName, customers);
+          if (custMatch.customer) {
+            cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(custMatch.customer.id) as any;
+          } else {
+            cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`) as any;
+          }
         }
         if (cust) {
           const promiseStr = parsed.promiseDate || parsed.note || 'শীঘ্রই';
           db.prepare('UPDATE customers SET promise_date = ? WHERE id = ?').run(promiseStr, cust.id);
           updateSessionContext(tenantId, { lastCustomerId: cust.id, lastCustomerName: cust.name });
-          return {
+          return wrapResult({
             success: true,
             action: 'promise_date_set',
             speech: `✓ ${cust.name} এর বাকি পরিশোধের তারিখ "${promiseStr}" নির্ধারণ করা হয়েছে।`,
             reply: `📅 **ওয়াদার তারিখ সংরক্ষিত!**\n• কাস্টমার: **${cust.name}**\n• পরিশোধের তারিখ: **${promiseStr}**\n• মোট বাকি: **৳${cust.total_due}**`,
             navigateTo: '/khata',
             actionLink: { text: 'খাতায় দেখুন →', href: '/khata' }
-          };
+          });
         }
       }
 
@@ -1843,7 +1953,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
             items: []
           });
 
-          return {
+          return wrapResult({
             success: true,
             action: 'expense_added',
             actionId,
@@ -1853,7 +1963,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
             navigateTo: '/expenses',
             actionLink: { text: 'খরচ তালিকা দেখুন →', href: '/expenses' },
             data: { actionId, amount, title }
-          };
+          });
         }
       }
 
@@ -1866,8 +1976,13 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           matchedProd = db.prepare('SELECT * FROM products WHERE id = ?').get(queryItem.productId);
         }
         if (!matchedProd && queryName) {
-          matchedProd = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1')
-            .get(tenantId, `%${queryName}%`, `%${queryName}%`);
+          const prodPhonetic = matchProductPhonetically(queryName, products);
+          if (prodPhonetic.product) {
+            matchedProd = db.prepare('SELECT * FROM products WHERE id = ?').get(prodPhonetic.product.id);
+          } else {
+            matchedProd = db.prepare('SELECT * FROM products WHERE tenant_id = ? AND (bangla_name LIKE ? OR name LIKE ?) LIMIT 1')
+              .get(tenantId, `%${queryName}%`, `%${queryName}%`);
+          }
         }
 
         if (matchedProd) {
@@ -1877,7 +1992,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           const pName = matchedProd.bangla_name || matchedProd.name;
           const isLow = pStock <= (matchedProd.low_stock_threshold || 5);
           updateSessionContext(tenantId, { lastProductId: matchedProd.id, lastProductName: pName });
-          return {
+          return wrapResult({
             success: true,
             action: 'stock_query',
             speech: `${pName} এর বর্তমান স্টক ${pStock} ${pUnit}। বিক্রয়মূল্য ৳${pPrice} টাকা। ${isLow ? 'সতর্কতা: স্টক কমে গেছে!' : ''}`,
@@ -1885,7 +2000,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
             navigateTo: '/stock',
             actionLink: { text: 'স্টক বিবরণ দেখুন →', href: `/stock?search=${encodeURIComponent(pName)}` },
             data: { product: matchedProd, stock: pStock }
-          };
+          });
         }
 
         // Check customer due query
@@ -1895,12 +2010,17 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
           if (targetCustId) {
             cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(targetCustId);
           } else if (parsed.customerName) {
-            cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`);
+            const custMatch = matchCustomerPhonetically(parsed.customerName, customers);
+            if (custMatch.customer) {
+              cust = db.prepare('SELECT * FROM customers WHERE id = ?').get(custMatch.customer.id);
+            } else {
+              cust = db.prepare('SELECT * FROM customers WHERE tenant_id = ? AND name LIKE ? LIMIT 1').get(tenantId, `%${parsed.customerName}%`);
+            }
           }
           if (cust) {
             const due = Number(cust.total_due) || 0;
             updateSessionContext(tenantId, { lastCustomerId: cust.id, lastCustomerName: cust.name });
-            return {
+            return wrapResult({
               success: true,
               action: 'due_query',
               speech: `${cust.name} এর বর্তমান বকেয়া বাকি আছে ৳${due} টাকা। ${cust.promise_date ? `ওয়াদার তারিখ: ${cust.promise_date}।` : ''}`,
@@ -1908,7 +2028,7 @@ OUTPUT FORMAT: Respond with ONLY a valid JSON object:
               navigateTo: '/khata',
               actionLink: { text: 'খাতায় দেখুন →', href: '/khata' },
               data: { customer: cust, due }
-            };
+            });
           }
         }
       }

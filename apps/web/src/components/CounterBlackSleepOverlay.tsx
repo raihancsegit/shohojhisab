@@ -55,7 +55,17 @@ export default function CounterBlackSleepOverlay({ onExit }: CounterBlackSleepOv
       setIsAwakening(false);
       setMicError(null);
     }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && state.isEnabled && state.isAsleep) {
+        setMicError(null);
+        startSleepListener();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       stopSleepListener();
     };
   }, [state.isEnabled, state.isAsleep]);

@@ -275,16 +275,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Convert English digits to Bengali digits and clean symbols
       const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
       let cleanText = String(text || '')
-        .replace(/✓/g, '')
+        .replace(/✓|★|⚡|✅|⚠️|📦|👤|📋|💵|💸|🛡️|👑|👔|→/g, '')
+        .replace(/৳\s*(\d+)/g, '$1 টাকা')
         .replace(/\d/g, (d) => bnDigits[Number(d)] || d)
-        .replace(/৳/g, '')
-        .replace(/#INV-\d+/gi, '')
-        .replace(/#PAY-\d+/gi, '')
+        .replace(/৳/g, ' টাকা ')
+        .replace(/#INV-[০-৯\d]+/gi, '')
+        .replace(/#PAY-[০-৯\d]+/gi, '')
         .replace(/\(CASH\)/gi, 'নগদে')
         .replace(/\(DUE\)/gi, 'বাকিতে')
         .replace(/\(BKASH\)/gi, 'বিকাশে')
         .replace(/\(NAGAD\)/gi, 'নগদে')
         .replace(/\bnull\b|\bundefined\b/gi, '')
+        .replace(/\s+/g, ' ')
         .trim();
 
       if (!cleanText) {

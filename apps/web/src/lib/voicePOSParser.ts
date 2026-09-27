@@ -884,30 +884,9 @@ function parseSingleVoiceItem(
       });
     }
 
-    // If not found in shop's existing products and no explicit price provided:
-    // Strictly require a genuine commercial unit (e.g. "১ বোতল হরলিক্স", "২ কেজি চাল")
-    // or known retail catalog item. DO NOT convert random conversation ("এই ভাই", "মামা") into products!
-    if (!matchedProd && (!extractedPrice || extractedPrice <= 0)) {
-      const isKnownStaple = COMMON_GROCERY_DEFAULTS[qName] !== undefined;
-      const hasCommercialUnit = unitMatched && ['কেজি', 'লিটার', 'গ্রাম', 'পিস', 'পাতা', 'প্যাকেট', 'বস্তা', 'জোড়া', 'হালি', 'বোতল', 'বক্স', 'ট্যাবলেট', 'ক্যাপসুল'].includes(unit);
-
-      if ((hasCommercialUnit || isKnownStaple) && cleanedName && cleanedName.length >= 2 && !isBackgroundNoise(cleanedName)) {
-        const detected = detectProductCategory(cleanedName);
-        const fallbackPrice = isKnownStaple ? COMMON_GROCERY_DEFAULTS[qName].price : 0;
-        return {
-          name: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
-          banglaName: cleanedName.charAt(0).toUpperCase() + cleanedName.slice(1),
-          quantity,
-          unit: unitMatched ? unit : detected.defaultUnit,
-          unitPrice: fallbackPrice,
-          totalPrice: Math.round(fallbackPrice * quantity * 100) / 100,
-          isExistingProduct: false,
-          productId: undefined,
-          stock: 0,
-          isOutOfStock: true,
-          category: detected.categoryId
-        };
-      }
+    // Strictly require matching a genuine product from the store's inventory!
+    // Never allow random words or products not in the store catalog to enter cart
+    if (!matchedProd) {
       return null;
     }
   }

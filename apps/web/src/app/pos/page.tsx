@@ -849,15 +849,34 @@ export default function PosPage() {
     const handleVoiceAddToCart = (e: any) => {
       const { product, quantity } = e.detail || {};
       if (product) {
+        const found = products.find(p => p.id === product.id) ||
+                      products.find(p => {
+                        const b = (p.banglaName || p.name || '').toLowerCase();
+                        const target = (product.bangla_name || product.banglaName || product.name || '').toLowerCase();
+                        return b === target || (b.length >= 2 && target.includes(b));
+                      });
+
+        const targetProd = found || product;
+        const currentStock = Number(targetProd.stock ?? 0);
+
+        if (currentStock <= 0) {
+          triggerHaptic('warning');
+          playWarningSound();
+          const dispName = targetProd.banglaName || targetProd.bangla_name || targetProd.name;
+          setVoiceNotice(`⚠️ "${dispName}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
+          speakAnnouncement(`${dispName} এর স্টক শেষ।`);
+          return;
+        }
+
         const prod = {
-          id: product.id,
-          name: product.name,
-          banglaName: product.bangla_name || product.name,
-          sellingPrice: Number(product.selling_price || product.sellingPrice) || 50,
-          purchasePrice: Number(product.purchase_price || product.purchasePrice) || 40,
-          unit: product.unit || 'পিস',
-          stock: Number(product.stock) || 10,
-          icon: product.icon || '📦'
+          id: targetProd.id,
+          name: targetProd.name,
+          banglaName: targetProd.banglaName || targetProd.bangla_name || targetProd.name,
+          sellingPrice: Number(targetProd.sellingPrice || targetProd.selling_price) || 50,
+          purchasePrice: Number(targetProd.purchasePrice || targetProd.purchase_price) || 40,
+          unit: targetProd.unit || 'পিস',
+          stock: currentStock,
+          icon: targetProd.icon || '📦'
         };
         addToCart(prod, Number(quantity) || 1);
         triggerHaptic('success');
@@ -869,24 +888,46 @@ export default function PosPage() {
     const handleVoiceMultiItemsAdd = (e: any) => {
       const { items } = e.detail || {};
       if (Array.isArray(items) && items.length > 0) {
+        let addedCount = 0;
         items.forEach(({ product, quantity }: any) => {
           if (product) {
-            const prod = {
-              id: product.id,
-              name: product.name,
-              banglaName: product.bangla_name || product.name,
-              sellingPrice: Number(product.selling_price || product.sellingPrice) || 50,
-              purchasePrice: Number(product.purchase_price || product.purchasePrice) || 40,
-              unit: product.unit || 'পিস',
-              stock: Number(product.stock) || 10,
-              icon: product.icon || '📦'
-            };
-            addToCart(prod, Number(quantity) || 1);
+            const found = products.find(p => p.id === product.id) ||
+                          products.find(p => {
+                            const b = (p.banglaName || p.name || '').toLowerCase();
+                            const target = (product.bangla_name || product.banglaName || product.name || '').toLowerCase();
+                            return b === target || (b.length >= 2 && target.includes(b));
+                          });
+
+            const targetProd = found || product;
+            const currentStock = Number(targetProd.stock ?? 0);
+
+            if (currentStock > 0) {
+              const prod = {
+                id: targetProd.id,
+                name: targetProd.name,
+                banglaName: targetProd.banglaName || targetProd.bangla_name || targetProd.name,
+                sellingPrice: Number(targetProd.sellingPrice || targetProd.selling_price) || 50,
+                purchasePrice: Number(targetProd.purchasePrice || targetProd.purchase_price) || 40,
+                unit: targetProd.unit || 'পিস',
+                stock: currentStock,
+                icon: targetProd.icon || '📦'
+              };
+              addToCart(prod, Number(quantity) || 1);
+              addedCount++;
+            }
           }
         });
-        triggerHaptic('success');
-        playBeep(1100);
-        setVoiceNotice(`✓ ভয়েসে ফর্দ থেকে ${items.length}টি পণ্য কার্টে যুক্ত হয়েছে!`);
+
+        if (addedCount > 0) {
+          triggerHaptic('success');
+          playBeep(1100);
+          setVoiceNotice(`✓ ভয়েসে ফর্দ থেকে ${addedCount}টি স্টকে থাকা পণ্য কার্টে যুক্ত হয়েছে!`);
+        } else {
+          triggerHaptic('warning');
+          playWarningSound();
+          setVoiceNotice(`⚠️ ফর্দের পণ্যগুলো দোকানে স্টকে পাওয়া যায়নি বা স্টক শেষ!`);
+          speakAnnouncement(`ফর্দের পণ্যগুলো স্টকে নেই।`);
+        }
       }
     };
 
@@ -1484,14 +1525,32 @@ export default function PosPage() {
                          products.find(p => {
                            const b = (p.banglaName || p.name || '').toLowerCase();
                            const itB = (it.banglaName || it.name || '').toLowerCase();
-                           return b.includes(itB) || itB.includes(b);
+                           return b === itB || (b.length >= 2 && itB.includes(b)) || (itB.length >= 2 && b.includes(itB));
                          });
+
+          if (!pMatch) {
+            setNumpadVoiceNotice(`⚠️ "${it.banglaName || it.name}" দোকানে স্টকে পাওয়া যায়নি!`);
+            speakAnnouncement(`${it.banglaName || it.name} দোকানে স্টকে নেই।`);
+            playWarningSound();
+            triggerHaptic('warning');
+            return;
+          }
+
+          const currentStock = Number(pMatch.stock || 0);
+          if (currentStock <= 0) {
+            const disp = pMatch.banglaName || pMatch.name;
+            setNumpadVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)!`);
+            speakAnnouncement(`${disp} এর স্টক শেষ।`);
+            playWarningSound();
+            triggerHaptic('warning');
+            return;
+          }
 
           const qty = it.quantity || 1;
           const uUnit = it.unit || pMatch?.unit || 'পিস';
           const uPrice = it.unitPrice || Number(pMatch?.sellingPrice) || 0;
           const totAmt = it.totalPrice || Math.round(qty * uPrice * 100) / 100;
-          const dispName = it.banglaName || it.name || pMatch?.banglaName || pMatch?.name || 'আইটেম';
+          const dispName = pMatch?.banglaName || pMatch?.name || it.banglaName || it.name || 'আইটেম';
 
           const newItem = {
             id: 'np-' + Date.now() + Math.random().toString(36).slice(2, 6),
@@ -2223,30 +2282,40 @@ export default function PosPage() {
             }
           });
         } else {
-          // Standard Cart Mode
+          // Standard Cart Mode - STRICT INVENTORY CHECK
+          let addedCount = 0;
           res.items.forEach(it => {
             const pMatch = products.find(p => p.id === it.productId) ||
                            products.find(p => {
                              const b = (p.banglaName || p.name || '').toLowerCase();
                              const itB = (it.banglaName || it.name || '').toLowerCase();
-                             return b.includes(itB) || itB.includes(b);
+                             return b === itB || (b.length >= 2 && itB.includes(b)) || (itB.length >= 2 && b.includes(itB));
                            });
 
-            const targetProduct = pMatch || {
-              id: 'prod-exp-' + Date.now() + Math.random().toString(36).slice(2, 6),
-              name: it.name,
-              banglaName: it.banglaName || it.name,
-              sellingPrice: it.unitPrice,
-              purchasePrice: Math.round(it.unitPrice * 0.8),
-              unit: it.unit || 'পিস',
-              stock: 999
-            };
+            if (!pMatch) {
+              setVoiceNotice(`⚠️ "${it.banglaName || it.name}" দোকানে স্টকে পাওয়া যায়নি!`);
+              speakAnnouncement(`${it.banglaName || it.name} দোকানে স্টকে নেই।`);
+              playWarningSound();
+              triggerHaptic('warning');
+              return;
+            }
 
+            const currentStock = Number(pMatch.stock || 0);
+            if (currentStock <= 0) {
+              const disp = pMatch.banglaName || pMatch.name;
+              setVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
+              speakAnnouncement(`${disp} এর স্টক শেষ।`);
+              playWarningSound();
+              triggerHaptic('warning');
+              return;
+            }
+
+            const targetProduct = pMatch;
             const qty = it.quantity || 1;
-            const customPrice = it.unitPrice;
+            const customPrice = it.unitPrice || Number(pMatch.sellingPrice) || 0;
 
             if (targetCounter === activeCounterId) {
-              addToCart(targetProduct, qty, it.unit, customPrice);
+              addToCart(targetProduct, qty, it.unit || targetProduct.unit, customPrice);
             } else {
               setCounterSlots(prev => {
                 const slot = prev[targetCounter] || { id: targetCounter, cart: [], numpadItems: [], selectedCustomer: 'none', newCustName: '', newCustPhone: '', discount: '0', paymentMethod: 'cash', cashTendered: '' };
@@ -2267,32 +2336,45 @@ export default function PosPage() {
                 };
               });
             }
+            addedCount++;
           });
+
+          if (addedCount > 0) {
+            playBeep(1100);
+            triggerHaptic('success');
+            const first = res.items[0];
+            const dispName = first.banglaName || first.name;
+            setVoiceNotice(`✓ [কাউন্টার ${targetCounter}] এ ${dispName} (${first.quantity} ${first.unit}) মোট ৳${first.totalPrice} যোগ হয়েছে!`);
+            speakAnnouncement(`কাউন্টার ${targetCounter} এ ${dispName} যোগ হয়েছে।`);
+            setLiveVoiceHeardCard({
+              heardText: rawText,
+              matchedItem: dispName,
+              qty: first.quantity,
+              unit: first.unit,
+              price: first.totalPrice,
+              counterId: targetCounter
+            });
+            setTimeout(() => setLiveVoiceHeardCard(null), 6000);
+          }
         }
 
-        playBeep(1100);
-        triggerHaptic('success');
-        const first = res.items[0];
-        const dispName = first.banglaName || first.name;
-        setVoiceNotice(`✓ [কাউন্টার ${targetCounter}] এ ${dispName} (${first.quantity} ${first.unit}) মোট ৳${first.totalPrice} যোগ হয়েছে!`);
-        speakAnnouncement(`কাউন্টার ${targetCounter} এ ${dispName} ${first.quantity} ${first.unit} যোগ হয়েছে।`);
-        setLiveVoiceHeardCard({
-          heardText: rawText,
-          matchedItem: dispName,
-          qty: first.quantity,
-          unit: first.unit,
-          price: first.totalPrice,
-          counterId: targetCounter
-        });
-        setTimeout(() => setLiveVoiceHeardCard(null), 6000);
         setExpressInput('');
         setExpressPreview(null);
         setTimeout(() => setVoiceNotice(''), 4000);
       } else {
-        // Direct search fallback
-        const q = rawText.toLowerCase();
+        // Direct search fallback - STRICT INVENTORY CHECK
+        const q = rawText.toLowerCase().trim();
         const directProd = products.find(p => (p.banglaName || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q));
         if (directProd) {
+          const dStock = Number(directProd.stock || 0);
+          if (dStock <= 0) {
+            const disp = directProd.banglaName || directProd.name;
+            setVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)!`);
+            speakAnnouncement(`${disp} এর স্টক শেষ।`);
+            playWarningSound();
+            triggerHaptic('warning');
+            return;
+          }
           if (posMode === 'calculator' || posMode === 'numpad') {
             handleQuickProductTap(directProd);
           } else {
@@ -2305,7 +2387,10 @@ export default function PosPage() {
           setExpressPreview(null);
           setTimeout(() => setVoiceNotice(''), 4000);
         } else {
-          setVoiceNotice(`⚠️ "${rawText}" এর কোনো পণ্য স্টকে পাওয়া যায়নি। সঠিক নাম বা দাম লিখুন।`);
+          setVoiceNotice(`⚠️ "${rawText}" এর কোনো পণ্য স্টকে পাওয়া যায়নি।`);
+          speakAnnouncement(`পণ্যটি স্টকে পাওয়া যায়নি।`);
+          playWarningSound();
+          triggerHaptic('warning');
           setTimeout(() => setVoiceNotice(''), 4000);
         }
       }
@@ -3065,6 +3150,15 @@ export default function PosPage() {
         requestedUnit = foundProd.subUnit;
       }
 
+      if (isOutOfStock) {
+        triggerHaptic('warning');
+        playWarningSound();
+        setVoiceNotice(`⚠️ "${finalSelectedName}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
+        speakAnnouncement(`${finalSelectedName} এর স্টক শেষ।`);
+        setShowSearchDropdown(false);
+        return;
+      }
+
       const prodToAdd = { ...foundProd, sellingPrice: unitPrice };
       addToCart(prodToAdd, finalQty, requestedUnit);
       triggerHaptic('success');
@@ -3078,13 +3172,8 @@ export default function PosPage() {
         unitLabel = `${Math.round(finalQty * 10)}টি ট্যাবলেট`;
       }
 
-      if (isOutOfStock) {
-        setVoiceNotice(`✓ কার্টে যুক্ত: ${finalSelectedName} (স্টক ০)`);
-        speakAnnouncement(`${finalSelectedName} কার্টে যুক্ত করা হয়েছে।`);
-      } else {
-        setVoiceNotice(`✓ সিলেক্ট ও কার্টে যুক্ত: ${finalSelectedName} (${unitLabel} - ৳${calculatedTotal})`);
-        speakAnnouncement(`${finalSelectedName} সিলেক্ট করে কার্টে যুক্ত করা হয়েছে।`);
-      }
+      setVoiceNotice(`✓ সিলেক্ট ও কার্টে যুক্ত: ${finalSelectedName} (${unitLabel} - ৳${calculatedTotal})`);
+      speakAnnouncement(`${finalSelectedName} সিলেক্ট করে কার্টে যুক্ত করা হয়েছে।`);
       setShowSearchDropdown(false);
 
       if (extractedPrice && extractedPrice > 0 && extractedPrice !== foundProd.sellingPrice) {
@@ -3095,24 +3184,13 @@ export default function PosPage() {
         }).then(() => loadData()).catch(() => {});
       }
     } else {
-      // Product not in catalog yet - add as instant fast custom item so the shopkeeper can sell immediately!
-      const customPrice = extractedPrice || targetTakaAmount || 50;
-      const customItem = {
-        id: 'prod-custom-' + Date.now().toString().slice(-6),
-        name: querySearchName,
-        banglaName: querySearchName,
-        sellingPrice: customPrice,
-        purchasePrice: Math.round(customPrice * 0.85),
-        unit: 'পিস',
-        stock: 99
-      };
-      addToCart(customItem, targetQuantity || 1);
-      triggerHaptic('success');
-      playBeep(1100);
+      // Product not in catalog - STRICT REJECTION! Do NOT invent custom dummy product!
+      triggerHaptic('warning');
+      playWarningSound();
       setSearch('');
       setShowSearchDropdown(false);
-      setVoiceNotice(`✓ মেমোতে যুক্ত: ${querySearchName} (৳${customPrice})`);
-      speakAnnouncement(`${querySearchName} ${customPrice} টাকা মেমোতে যুক্ত করা হয়েছে।`);
+      setVoiceNotice(`⚠️ "${querySearchName}" দোকানে স্টকে পাওয়া যায়নি!`);
+      speakAnnouncement(`${querySearchName} দোকানে স্টকে পাওয়া যায়নি।`);
     }
   };
 

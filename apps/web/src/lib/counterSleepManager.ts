@@ -29,6 +29,8 @@ const WAKE_WORDS = [
 class CounterSleepManager {
   private wakeLockSentinel: any = null;
   private noSleepVideo: HTMLVideoElement | null = null;
+  private silentAudioCtx: any = null;
+  private silentOscillator: any = null;
   private isEnabled: boolean = false;
   private isAsleep: boolean = false;
   private isListening: boolean = false;
@@ -40,11 +42,12 @@ class CounterSleepManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Re-acquire wake lock if tab becomes visible
+      // Re-acquire wake lock & audio keep-alive if tab becomes visible
       document.addEventListener('visibilitychange', () => {
         if (this.isEnabled && document.visibilityState === 'visible') {
           this.acquireWakeLock();
           this.startNoSleepVideo();
+          this.startSilentAudioKeepAlive();
         }
       });
     }
@@ -94,10 +97,52 @@ class CounterSleepManager {
       }
     }
 
-    // Always reinforce with silent video keepalive for 100% reliability on Android & iOS
+    // Always reinforce with silent video keepalive and WebAudio keepalive for 100% reliability on Android & iOS
     this.startNoSleepVideo();
+    this.startSilentAudioKeepAlive();
     this.notify();
     return wakeLockSuccess;
+  }
+
+  /**
+   * Continuous inaudible WebAudio keep-alive
+   * Signals to mobile browsers that media is actively playing, preventing tab suspension
+   */
+  public startSilentAudioKeepAlive() {
+    if (typeof window === 'undefined') return;
+    if (this.silentAudioCtx) return;
+
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(25, ctx.currentTime);
+      gain.gain.setValueAtTime(0.00001, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      this.silentAudioCtx = ctx;
+      this.silentOscillator = osc;
+    } catch (e) {
+      console.warn('[CounterSleep] Silent audio keepalive error:', e);
+    }
+  }
+
+  public stopSilentAudioKeepAlive() {
+    if (this.silentOscillator) {
+      try { this.silentOscillator.stop(); } catch (e) {}
+      this.silentOscillator = null;
+    }
+    if (this.silentAudioCtx) {
+      try { this.silentAudioCtx.close(); } catch (e) {}
+      this.silentAudioCtx = null;
+    }
   }
 
   /**
@@ -161,6 +206,7 @@ class CounterSleepManager {
       this.wakeLockSentinel = null;
     }
     this.stopNoSleepVideo();
+    this.stopSilentAudioKeepAlive();
     this.notify();
   }
 
@@ -186,6 +232,7 @@ class CounterSleepManager {
 
     if (instant) {
       this.sleepNow();
+      this.speakBengali('কাউন্টার স্লিপ মোড চালু হয়েছে। ফোনের পাওয়ার বাটন চাপবেন না। স্ক্রিনেই কথা শুনবে।');
     } else {
       this.resetIdleTimer();
     }

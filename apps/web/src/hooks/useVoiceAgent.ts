@@ -39,6 +39,9 @@ export interface VoiceAgentState {
   executeCommand: (customText?: string) => Promise<void>;
   triggerBriefing: (mode?: 'morning' | 'evening' | 'auto') => Promise<void>;
   undoAction: () => Promise<void>;
+  isWakeWordMode: boolean;
+  toggleWakeWordMode: () => void;
+  executeAudioCommand: (audioBlob: Blob) => Promise<void>;
   setFeedbackType: (type: 'listening' | 'processing' | 'success' | 'error' | null) => void;
   setFeedbackText: (text: string) => void;
 }
@@ -48,6 +51,7 @@ export interface VoiceAgentState {
  * - Prevents Windows/Chrome WASAPI microphone collisions (zero "শুনছি..." freeze).
  * - Distinguishes between Owner Mode (👑 মালিক) and Staff Mode (👔 কর্মচারী).
  * - Strictly rejects unauthorized voices, customer chatter, and laptop TV/video sounds.
+ * - Supports Hands-free Wake-Word detection ("সহজহিসাব", "হিসাব শোনো") and Direct Multimodal Audio processing.
  */
 export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState {
   const { tenant, triggerHaptic, speakAnnouncement } = useAuth();
@@ -64,6 +68,13 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
   const [currentMode, setCurrentMode] = useState<'owner' | 'staff' | 'stranger' | null>(null);
   const [isSupported, setIsSupported] = useState<boolean>(true);
   const [isSpeakerLockActive, setIsSpeakerLockActive] = useState<boolean>(false);
+  const [isWakeWordMode, setIsWakeWordMode] = useState<boolean>(() => {
+    try {
+      return typeof window !== 'undefined' ? localStorage.getItem('lbos_wakeword_mode') === 'true' : false;
+    } catch (e) {
+      return false;
+    }
+  });
   const [lastResult, setLastResult] = useState<any>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -282,6 +293,11 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         const modePrefix = speakerRole === 'owner' ? '👑 [মালিক] ' : '👔 [কর্মচারী] ';
         setFeedbackText(modePrefix + (data.speech || 'কাজ সম্পন্ন হয়েছে।') + (data.isOffline ? ' (🟢 অফলাইন)' : ''));
         setLastResult(data);
+
+        if (data.recognizedText) {
+          setLiveTranscript(data.recognizedText);
+          setLastSpoken(data.recognizedText);
+        }
 
         // Broadcast success events
         window.dispatchEvent(new CustomEvent('voice-action-success', { detail: data }));
@@ -602,6 +618,110 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     }
   }, [effectiveTenantId, currentMode, speakAnnouncement, triggerHaptic]);
 
+  /**
+   * Toggle Hands-Free Wake-Word Standby Mode ("সহজ হিসাব", "হিসাব শোনো")
+   */
+  const toggleWakeWordMode = useCallback(() => {
+    setIsWakeWordMode(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('lbos_wakeword_mode', next ? 'true' : 'false');
+      } catch (e) {}
+      if (next) {
+        triggerHaptic?.('success');
+        playSuccessChime();
+        setFeedbackType('listening');
+        setFeedbackText('🎙️ হ্যান্ডস-ফ্রি মোড চালু: "সহজ হিসাব" বলুন');
+        speakAnnouncement('হ্যান্ডস-ফ্রি মোড চালু হয়েছে। সহজ হিসাব বলে নির্দেশ দিন।', undefined, true);
+        startListening();
+      } else {
+        triggerHaptic?.('medium');
+        stopListeningOnly();
+        setFeedbackType(null);
+        setFeedbackText('হ্যান্ডস-ফ্রি মোড বন্ধ করা হয়েছে');
+      }
+      return next;
+    });
+  }, [speakAnnouncement, startListening, stopListeningOnly, triggerHaptic]);
+
+  /**
+   * Execute Multimodal Audio Stream / Blob directly against Gemini AI Agent
+   */
+  const executeAudioCommand = useCallback(async (audioBlob: Blob) => {
+    stopListeningOnly();
+    setIsProcessing(true);
+    setFeedbackType('processing');
+    setFeedbackText('🎙️ ভয়েস অডিও সরাসরি প্রসেস হচ্ছে...');
+    triggerHaptic?.('medium');
+
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(audioBlob);
+      const audioBase64 = await base64Promise;
+
+      const res = await fetch('/api/voice-audio-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: effectiveTenantId,
+          audioBase64,
+          audioMimeType: audioBlob.type || 'audio/webm',
+          speakerRole: currentMode || 'owner',
+          speakerName: activeSpeaker?.name || 'দোকান মালিক'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setIsProcessing(false);
+        if (data && data.success) {
+          playSuccessChime();
+          triggerHaptic?.('success');
+          setFeedbackType('success');
+          if (data.recognizedText) {
+            setLastSpoken(data.recognizedText);
+            setLiveTranscript(data.recognizedText);
+          }
+          setFeedbackText(data.speech || 'কাজ সম্পন্ন হয়েছে।');
+          setLastResult(data);
+          if (data.speech) {
+            speakAnnouncement(data.speech, undefined, true);
+          }
+          if (data.navigateTo && pathname !== data.navigateTo) {
+            router.push(data.navigateTo);
+          }
+          options.onSuccess?.(data);
+        } else {
+          playWarningSound();
+          setFeedbackType('error');
+          setFeedbackText(data?.reply || data?.speech || 'কমান্ড বুঝতে সমস্যা হয়েছে।');
+          options.onError?.(data);
+        }
+      } else {
+        throw new Error('Server audio action failed');
+      }
+    } catch (e) {
+      setIsProcessing(false);
+      playWarningSound();
+      setFeedbackType('error');
+      setFeedbackText('অডিও সার্ভারে পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+    }
+  }, [
+    activeSpeaker,
+    currentMode,
+    effectiveTenantId,
+    options,
+    pathname,
+    router,
+    speakAnnouncement,
+    stopListeningOnly,
+    triggerHaptic
+  ]);
+
   return {
     isListening,
     isProcessing,
@@ -613,6 +733,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     currentMode,
     isSupported,
     isSpeakerLockActive,
+    isWakeWordMode,
+    toggleWakeWordMode,
+    executeAudioCommand,
     lastResult,
     startListening,
     stopListening: stopListeningOnly,

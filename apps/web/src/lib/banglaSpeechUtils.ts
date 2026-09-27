@@ -129,6 +129,66 @@ export function normalizeBengaliNumbers(str: string): string {
   // Convert digits ০-৯ to 0-9
   s = s.replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
 
+  // Traditional Ser / শের
+  s = s.replace(/দেড়\s*সের|দেড়\s*সের|১\.৫\s*সের|1\.5\s*সের/g, '1.4 কেজি');
+  s = s.replace(/আড়াই\s*সের|আড়াই\s*সের|২\.৫\s*সের|2\.5\s*সের/g, '2.33 কেজি');
+  s = s.replace(/আধা\s*সের|আধ\s*সের|হাফ\s*সের/g, '0.465 কেজি');
+  s = s.replace(/এক\s*সের|১\s*সের|1\s*সের/g, '0.93 কেজি');
+  s = s.replace(/দুই\s*সের|২\s*সের|2\s*সের/g, '1.86 কেজি');
+  s = s.replace(/তিন\s*সের|৩\s*সের|3\s*সের/g, '2.79 কেজি');
+  s = s.replace(/পাঁচ\s*সের|৫\s*সের|5\s*সের/g, '4.65 কেজি');
+
+  // Pata / Strip (Pharmacy)
+  s = s.replace(/আধা\s*পাতা|আধ\s*পাতা|হাফ\s*পাতা/g, '5টি');
+  s = s.replace(/এক\s*পাতা|১\s*পাতা|1\s*পাতা/g, '10টি');
+  s = s.replace(/দুই\s*পাতা|২\s*পাতা|2\s*পাতা/g, '20টি');
+
+  // Mon / মণ
+  s = s.replace(/এক\s*মণ|১\s*মণ|1\s*মণ/g, '40 কেজি');
+  s = s.replace(/আধা\s*মণ|আধ\s*মণ|হাফ\s*মণ/g, '20 কেজি');
+
+  return s;
+}
+
+/**
+ * Phonetically normalizes Bengali text by grouping interchangeable consonants,
+ * sibilants (শ/ষ/স), nasals (ণ/ন), flaps (ড়/ঢ়/র), and removing hasanta/nukta.
+ */
+export function canonicalizeBengaliPhonetic(str: string): string {
+  if (!str) return '';
+  let s = str.trim().toLowerCase();
+
+  // Remove nukta, virama (hasanta), chandrabindu
+  s = s.replace(/[\u09BC\u09CD\u0981]/g, '');
+
+  // Group Sibilants: শ, ষ, স -> স
+  s = s.replace(/[শষ]/g, 'স');
+
+  // Group Nasals: ণ, ঞ, ঙ -> ন
+  s = s.replace(/[ণঞঙ]/g, 'ন');
+
+  // Group Flaps & Rhotics: ড়, ঢ় -> র
+  s = s.replace(/[ড়ঢ়]/g, 'র');
+
+  // Group Dentals: ৎ -> ত, থ -> ত
+  s = s.replace(/[ৎথ]/g, 'ত');
+
+  // Group Bilabials: ভ, ফ, ব -> ব
+  s = s.replace(/[ভফ]/g, 'ব');
+
+  // Group Vowels
+  s = s.replace(/[যয়]/g, 'জ');
+  s = s.replace(/ৈ/g, 'ই');
+  s = s.replace(/ৌ/g, 'উ');
+  s = s.replace(/ী/g, 'ি');
+  s = s.replace(/ূ/g, 'ু');
+
+  // Collapse repetitions
+  s = s.replace(/(.)\1+/g, '$1');
+
+  // Strip non-Bengali symbols
+  s = s.replace(/[^\u0980-\u09FFa-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
   return s;
 }
 
@@ -166,6 +226,7 @@ export function getBengaliStringSimilarity(a: string, b: string): number {
 
 /**
  * Finds the best matching candidate from the database for a spoken name
+ * Enhanced with Phonetic Canonical matching!
  */
 export function findBestFuzzyMatch<T extends { name?: string; banglaName?: string; bangla_name?: string }>(
   spoken: string,
@@ -174,6 +235,7 @@ export function findBestFuzzyMatch<T extends { name?: string; banglaName?: strin
 ): { match: T | null; confidence: number } {
   if (!spoken || !candidates || candidates.length === 0) return { match: null, confidence: 0 };
   const cleanSpoken = spoken.replace(/(ভাই|কাকা|চাচা|মাস্টার|দাদা|আপা|সাহেব|বেগম|হাজী)/g, '').trim();
+  const phoneticSpoken = canonicalizeBengaliPhonetic(cleanSpoken);
 
   let bestMatch: T | null = null;
   let highestScore = 0;
@@ -189,9 +251,19 @@ export function findBestFuzzyMatch<T extends { name?: string; banglaName?: strin
       return { match: c, confidence: 0.95 };
     }
 
+    // Phonetic canonical match
+    const phoneticCand = canonicalizeBengaliPhonetic(cleanCand);
+    if (phoneticCand && (phoneticCand === phoneticSpoken || phoneticCand.includes(phoneticSpoken) || phoneticSpoken.includes(phoneticCand))) {
+      if (highestScore < 0.90) {
+        highestScore = 0.90;
+        bestMatch = c;
+      }
+    }
+
     const sim = Math.max(
       getBengaliStringSimilarity(spoken, candidateName),
-      getBengaliStringSimilarity(cleanSpoken, cleanCand)
+      getBengaliStringSimilarity(cleanSpoken, cleanCand),
+      phoneticCand ? getBengaliStringSimilarity(phoneticSpoken, phoneticCand) : 0
     );
 
     if (sim > highestScore) {
@@ -206,3 +278,4 @@ export function findBestFuzzyMatch<T extends { name?: string; banglaName?: strin
 
   return { match: null, confidence: highestScore };
 }
+
