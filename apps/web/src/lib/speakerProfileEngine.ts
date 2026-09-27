@@ -339,7 +339,7 @@ let lastPitchFrameTime = 0;
  */
 export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: number): void {
   const now = performance.now();
-  if (now - lastPitchFrameTime < 90) return;
+  if (now - lastPitchFrameTime < 45) return; // Sample every ~45ms for high frame density
   lastPitchFrameTime = now;
 
   try {
@@ -354,8 +354,8 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
     }
     const rms = Math.sqrt(sum / (timeData.length / 4));
 
-    // Reject faint background hum / laptop fan noise (RMS threshold 0.005)
-    if (rms < 0.005) return;
+    // Reject faint background hum / laptop fan noise / distant audio (RMS threshold 0.006)
+    if (rms < 0.006) return;
 
     // Detect pitch
     const pitchRes = extractPitchFromTimeDomain(timeData, sampleRate);
@@ -383,15 +383,12 @@ export function recordLiveVocalFrame(analyserNode: AnalyserNode, sampleRate: num
 }
 
 /**
- * Ensures the microphone Web Audio stream & biometric analyzer is active if safe.
- * When SpeechRecognition is used on mobile / single-stream platforms, we do not
- * lock getUserMedia concurrently to prevent audio starvation / silence dropouts.
+ * Ensures the microphone Web Audio stream & biometric analyzer is active.
+ * Feeds live acoustic pitch & proximity frames to filter TV, laptop movies, and stranger crosstalk.
  */
 export async function ensureBiometricMonitoring(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (isMobile) return true; // Keep exclusive mic for SpeechRecognition on mobile
     return await voiceProximityManager.start();
   } catch (e) {
     return false;
@@ -450,6 +447,21 @@ export function isRecognizedShopCommand(text: string): boolean {
 }
 
 /**
+ * Detects whether spoken text represents movie dialogue, TV broadcast, drama,
+ * music lyrics, political news, or non-shop casual chatter.
+ */
+export function isBackgroundNoise(text: string): boolean {
+  if (!text) return true;
+  const clean = text.toLowerCase().trim();
+  if (clean.length < 2) return true;
+
+  // Common movie, drama, entertainment, casual phrases that are NOT retail shop operations:
+  const movieAndCasualRegex = /(ভালোবাসি|ভালবাসি|প্রেম|বিয়ে|সংসার|নাটক|সিনেমা|মুভি|গান|গায়ক|ভিডিও|ইউটিউব|ফেসবুক|টিকটক|সিরিয়াল|নায়ক|নায়িকা|অভিনেতা|খবর|সংবাদ|রাজনীতি|প্রধানমন্ত্রী|সরকার|আন্দোলন|পুলিশ|মার্ডার|গুলি|খুন|পালাও|বাঁচাও|মাফ\s*কর|ক্ষমা|কান্না|হাসি|খেলা|ক্রিকেট|ফুটবল|বৃষ্টি|ঝড়|আবহাওয়া|কেমন\s*আছো|কেমন\s*আছেন|কি\s*খবর|কি\s*অবস্থা|ভালো\s*আছি|কোথায়\s*যাচ্ছ|কোথায়\s*গেলে|কেন\s*গেলে|কেন\s*এলে|কথা\s*বলো|কথা\s*শোন|আমার\s*কথা|ঘুমাব|ঘুম\s*থেকে|ভাত\s*খাব|চা\s*খাব|চা\s*খাবেন)/i;
+
+  return movieAndCasualRegex.test(clean);
+}
+
+/**
  * Evaluate the entire recent speech utterance against enrolled biometric profiles.
  * Analyzes all pitch frames recorded during the speech window (last ~3.8-5.5 seconds).
  * Strictly filters laptop videos, TV news/natok, and other customers' voices.
@@ -478,6 +490,18 @@ export function evaluateUtteranceSpeaker(
     candidateProfiles = [boundProfile, ...profiles.filter(p => p.id !== boundProfile.id)];
   }
 
+  const clean = spokenText ? spokenText.toLowerCase().trim() : '';
+
+  // 1. IMMEDIATE FILTER: If spoken text is background movie, drama, or casual dialogue, REJECT!
+  if (clean && isBackgroundNoise(clean)) {
+    return {
+      isAuthorized: false,
+      confidence: 10,
+      reason: 'background_noise_or_tv',
+      speakerName: 'টিভি / মুভি বা ব্যাকগ্রাউন্ড শব্দ (বাতিল)'
+    };
+  }
+
   const now = Date.now();
   const cutoff = now - lookbackMs;
   let recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= cutoff);
@@ -487,10 +511,10 @@ export function evaluateUtteranceSpeaker(
     recentFrames = rollingVoicedFrames.filter(f => f.timestamp >= now - 5500);
   }
 
-  // If fewer than 2 vocal frames were detected in lookback window
-  // (Standard when SpeechRecognition holds exclusive microphone access without concurrent Web Audio):
+  // 2. FALLBACK BRANCH: When fewer than 2 vocal pitch frames were detected:
+  // (e.g. initial microphone initialization or very fast utterances)
   if (recentFrames.length < 2) {
-    if (!spokenText || !spokenText.trim()) {
+    if (!clean) {
       return {
         isAuthorized: false,
         confidence: 0,
@@ -498,12 +522,9 @@ export function evaluateUtteranceSpeaker(
       };
     }
 
-    const clean = spokenText.toLowerCase();
-
-    // Check for direct wake phrase or enrolled speaker keyword match
+    // Check for direct enrolled wake phrase or keyword match
     for (const p of candidateProfiles) {
       if (p.wakePhrase && clean.includes(p.wakePhrase.toLowerCase())) {
-        // If device is bound to a different operator, reject coworker's wake phrase!
         if (boundProfile && p.id !== boundProfile.id) {
           return {
             isAuthorized: false,
@@ -552,9 +573,39 @@ export function evaluateUtteranceSpeaker(
           speakerName: `অন্য সহকর্মীর কণ্ঠ (${otherStaff.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
         };
       }
+    }
+
+    // STRICT CHECK FOR VOICE LOCK:
+    // If Voice Lock is enabled, we NEVER authorize arbitrary speech without acoustic biometrics
+    // unless it is a genuine, verified shop operational command AND near-field proximity was confirmed!
+    const isShopCommand = isRecognizedShopCommand(clean);
+    if (!isShopCommand) {
+      return {
+        isAuthorized: false,
+        confidence: 15,
+        reason: 'background_noise_or_tv',
+        speakerName: 'অপরিচিত কণ্ঠ বা ব্যাকগ্রাউন্ড আলোচনা (বাতিল)'
+      };
+    }
+
+    // Near-field proximity validation:
+    // Laptop movies 1-2 meters away do NOT trigger the near speech gate!
+    if (voiceProximityManager && voiceProximityManager.getMode() !== 'all') {
+      if (!voiceProximityManager.isNearSpeechActive(4200)) {
+        return {
+          isAuthorized: false,
+          confidence: 20,
+          reason: 'background_noise_or_tv',
+          speakerName: 'দূরবর্তী কণ্ঠ বা ল্যাপটপ/টিভি শব্দ (কাছে এসে বলুন)'
+        };
+      }
+    }
+
+    // If it is a verified shop command AND near the microphone:
+    if (boundProfile) {
       return {
         isAuthorized: true,
-        confidence: 92,
+        confidence: 85,
         matchedSpeaker: boundProfile,
         role: boundProfile.role,
         speakerName: boundProfile.name,
@@ -562,14 +613,11 @@ export function evaluateUtteranceSpeaker(
       };
     }
 
-    // Single Pharmacy / Single Shop Owner Mode (only 1 profile enrolled):
-    // The person speaking into this phone IS the registered shop owner!
-    // Never block the single owner on their own device!
     if (candidateProfiles.length === 1) {
       const singleOwner = candidateProfiles[0];
       return {
         isAuthorized: true,
-        confidence: 95,
+        confidence: 85,
         matchedSpeaker: singleOwner,
         role: singleOwner.role || 'owner',
         speakerName: singleOwner.name || 'দোকান মালিক',
@@ -582,7 +630,7 @@ export function evaluateUtteranceSpeaker(
     if (matchedStaff) {
       return {
         isAuthorized: true,
-        confidence: 90,
+        confidence: 85,
         matchedSpeaker: matchedStaff,
         role: 'staff',
         speakerName: matchedStaff.name,
@@ -593,7 +641,7 @@ export function evaluateUtteranceSpeaker(
     const ownerProfile = candidateProfiles.find(p => p.role === 'owner') || candidateProfiles[0];
     return {
       isAuthorized: true,
-      confidence: 95,
+      confidence: 85,
       matchedSpeaker: ownerProfile,
       role: ownerProfile.role || 'owner',
       speakerName: ownerProfile.name || 'দোকান মালিক',
@@ -601,7 +649,8 @@ export function evaluateUtteranceSpeaker(
     };
   }
 
-  // Find profile with the best match across the entire utterance
+  // 3. MAIN BIOMETRIC ACOUSTIC MATCHING (when recentFrames.length >= 2):
+  // Compare collected pitch frames against enrolled biometric profiles!
   let bestMatch: {
     profile: SpeakerVoiceProfile;
     matchingCount: number;
@@ -625,12 +674,13 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation is up to 38 Hz from enrolled mean
-      if (diffFromMean <= 38) {
-        // Timbre check: Filter out sharp laptop sirens or metallic reflections
+      // Natural speech pitch variation is up to 32 Hz from enrolled mean
+      if (diffFromMean <= 32) {
+        // Timbre check: Filter out sharp laptop speakers or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1800) {
+          // Laptop speakers have tinny treble resonance (>2200 Hz) that deviates heavily
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1400) {
             continue;
           }
         }
@@ -638,12 +688,11 @@ export function evaluateUtteranceSpeaker(
         let conf = Math.max(60, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.0))));
 
         // If wake phrase or spoken text matches enrolled name/phrase, boost confidence
-        if (spokenText) {
-          const cleanText = spokenText.toLowerCase();
-          if (profile.wakePhrase && cleanText.includes(profile.wakePhrase.toLowerCase())) {
+        if (clean) {
+          if (profile.wakePhrase && clean.includes(profile.wakePhrase.toLowerCase())) {
             conf = Math.min(100, conf + 15);
           }
-          if (profile.name && cleanText.includes(profile.name.toLowerCase())) {
+          if (profile.name && clean.includes(profile.name.toLowerCase())) {
             conf = Math.min(100, conf + 10);
           }
         }
@@ -681,7 +730,8 @@ export function evaluateUtteranceSpeaker(
       role: bestMatch.profile.role,
       speakerName: bestMatch.profile.name,
       confidence: bestMatch.confidence,
-      pitchDetected: Math.round(bestMatch.avgPitch)
+      pitchDetected: Math.round(bestMatch.avgPitch),
+      reason: 'authorized'
     };
   }
 
@@ -694,7 +744,7 @@ export function evaluateUtteranceSpeaker(
     isAuthorized: false,
     confidence: Math.round((bestMatch?.matchRatio || 0) * 100),
     reason: 'unauthorized_speaker',
-    speakerName: boundProfile ? `অপরিচিত কণ্ঠ (ডিভাইসটি "${boundProfile.name}" এর জন্য সংরক্ষিত)` : 'অপরিচিত ব্যক্তি / গ্রাহকের কণ্ঠ',
+    speakerName: boundProfile ? `অপরিচিত কণ্ঠ বা ল্যাপটপ/টিভি শব্দ (লক: "${boundProfile.name}")` : 'অপরিচিত ব্যক্তি বা ব্যাকগ্রাউন্ড অডিও',
     pitchDetected: overallAvgPitch
   };
 }
@@ -824,15 +874,18 @@ export function verifyCurrentVoice(
   }
 
   // 2. If utterance didn't authorize, check if live frame matches right now
-  try {
-    const analyser = voiceProximityManager?.getAnalyser();
-    if (analyser) {
-      const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
-      if (live.isAuthorized) {
-        return live;
+  // Guard: NEVER allow live frame to override movie dialogue or background noise!
+  if (!spokenText || (!isBackgroundNoise(spokenText) && isRecognizedShopCommand(spokenText))) {
+    try {
+      const analyser = voiceProximityManager?.getAnalyser();
+      if (analyser) {
+        const live = verifyLiveSpeaker(analyser, tenantId, targetSpeakerId);
+        if (live.isAuthorized) {
+          return live;
+        }
       }
-    }
-  } catch (e) {}
+    } catch (e) {}
+  }
 
   // 3. Proximity distance gate validation:
   // Rejects speech originating 1-2 meters away (distant chatter, crowd noise, TV)

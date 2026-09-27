@@ -2867,11 +2867,7 @@ export default function PosPage() {
     posTranscriptBufferRef.current = '';
 
     const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (isMobile) {
-      try { voiceProximityManager.stop(); } catch (e) {}
-    } else {
-      voiceProximityManager.start().catch(() => {});
-    }
+    voiceProximityManager.start().catch(() => {});
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'bn-BD';
