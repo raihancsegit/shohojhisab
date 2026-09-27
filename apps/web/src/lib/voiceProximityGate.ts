@@ -24,7 +24,7 @@ class VoiceProximityManager {
   private listeners: Set<(state: ProximityState) => void> = new Set();
   private frameListeners: Array<(analyser: AnalyserNode, sampleRate: number) => void> = [];
 
-  private mode: ProximityDistanceMode = 'strict_pharmacy';
+  private mode: ProximityDistanceMode = 'near';
   private currentVolume: number = 0;
   private isGateOpen: boolean = false;
   private lastNearSpeechTime: number = 0;
@@ -36,7 +36,7 @@ class VoiceProximityManager {
   // Distant chatter (1-3 meters away) or background TV typically registers at 2-12.
   private readonly THRESHOLDS: Record<ProximityDistanceMode, number> = {
     strict_pharmacy: 10, // একদম কাছে / ~১৫-২৫ সেমি (ফার্মেসি মাল্টি-কাউন্টার শিল্ড - পাশের কর্মী ও ভিড় বাদ)
-    near: 6,             // ১ হাত / ~৩০ সেমি - সাধারণ দোকান ভিড় ফিল্টার
+    near: 6,             // ১ হাত / ~৩০ সেমি - সাধারণ দোকান ভিড় ফিল্টার (ডিফল্ট)
     medium: 3,           // ২ হাত / ~৬০ সেমি
     all: 0               // ফিল্টার অফ (সব কথা গ্রহণ)
   };
@@ -242,12 +242,13 @@ class VoiceProximityManager {
 
   /**
    * Evaluates whether speech was spoken at close proximity to the phone
-   * Returns true if near speech was detected within the last 1200ms
+   * Returns true if near speech was detected within the lookback window (default 4800ms)
    */
-  public isNearSpeechActive(): boolean {
+  public isNearSpeechActive(lookbackMs: number = 4800): boolean {
     if (this.mode === 'all') return true;
-    if (!this.isActive) return true; // Fallback if Web Audio was denied
-    return (Date.now() - this.lastNearSpeechTime) <= 1200;
+    if (!this.isActive) return true; // Fallback if Web Audio was denied or stopped on mobile
+    if (this.lastNearSpeechTime === 0) return true; // Microphone freshly initialized
+    return (Date.now() - this.lastNearSpeechTime) <= lookbackMs;
   }
 }
 
