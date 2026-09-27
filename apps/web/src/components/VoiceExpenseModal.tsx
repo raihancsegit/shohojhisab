@@ -76,14 +76,16 @@ export default function VoiceExpenseModal({
         silenceTimerRef.current = setTimeout(() => {
           if (isMountedRef.current && latestTranscriptRef.current.trim()) {
             if (isSpeakerLockEnabled(tenantKey)) {
-              const speakerCheck = verifyCurrentVoice(tenantKey);
+              const textToVerify = latestTranscriptRef.current.trim();
+              const speakerCheck = verifyCurrentVoice(tenantKey, undefined, textToVerify);
               if (!speakerCheck.isAuthorized) {
                 triggerHaptic?.('warning');
-                if (speakerCheck.reason === 'background_noise_or_tv') {
-                  setFeedback('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
-                } else {
-                  setFeedback('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
-                }
+                const msg = speakerCheck.speakerName
+                  ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+                  : speakerCheck.reason === 'background_noise_or_tv'
+                    ? '🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (বাতিল)'
+                    : '🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল)';
+                setFeedback(msg);
                 setTimeout(() => setFeedback(''), 3500);
                 return;
               }

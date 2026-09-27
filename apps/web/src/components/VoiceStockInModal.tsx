@@ -87,14 +87,15 @@ export default function VoiceStockInModal({
         if (isFinal && fullTranscript) {
           const tenantKey = currentTenantId || 'default';
           if (isSpeakerLockEnabled(tenantKey)) {
-            const speakerCheck = verifyCurrentVoice(tenantKey);
+            const speakerCheck = verifyCurrentVoice(tenantKey, undefined, fullTranscript);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
-              if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
-              } else {
-                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
-              }
+              const msg = speakerCheck.speakerName
+                ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+                : speakerCheck.reason === 'background_noise_or_tv'
+                  ? '🛡️ ল্যাপটপ / দূরবর্তী শব্দ ফিল্টার করা হয়েছে (বাতিল)'
+                  : '🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল)';
+              setLastActionMessage(msg);
               return;
             }
           }

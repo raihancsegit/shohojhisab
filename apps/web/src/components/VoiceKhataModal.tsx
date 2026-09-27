@@ -115,15 +115,17 @@ export default function VoiceKhataModal({
         silenceTimerRef.current = setTimeout(() => {
           if (isMountedRef.current && latestTranscriptRef.current.trim()) {
             if (isSpeakerLockEnabled(tenantKey)) {
-              const speakerCheck = verifyCurrentVoice(tenantKey);
+              const textToVerify = latestTranscriptRef.current.trim();
+              const speakerCheck = verifyCurrentVoice(tenantKey, undefined, textToVerify);
               if (!speakerCheck.isAuthorized) {
                 triggerHaptic?.('error');
                 playWarningSound();
-                if (speakerCheck.reason === 'background_noise_or_tv') {
-                  setLiveTranscript('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
-                } else {
-                  setLiveTranscript('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - শুধু মালিকের কণ্ঠ)');
-                }
+                const msg = speakerCheck.speakerName
+                  ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+                  : speakerCheck.reason === 'background_noise_or_tv'
+                    ? '🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (বাতিল)'
+                    : '🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল)';
+                setLiveTranscript(msg);
                 setTimeout(() => setLiveTranscript(''), 3500);
                 return;
               }

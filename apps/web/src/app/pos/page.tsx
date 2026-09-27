@@ -21,7 +21,7 @@ import { parseVoicePOSCommand, scoreCatalogCandidate } from '../../lib/voicePOSP
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled } from '../../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, getBoundSpeakerId, getSpeakerVoiceProfiles } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { counterSleepManager } from '../../lib/counterSleepManager';
 import { playWarningSound } from '../../lib/audioFeedbackUtils';
@@ -2880,7 +2880,14 @@ export default function PosPage() {
     recognition.maxAlternatives = 1;
 
     setIsListening(true);
-    setVoiceNotice('🎙️ শুনছি... বলুন: যেমন "চিনি ১ কেজি" বা "তেল ২ লিটার"');
+    const tenantKey = tenant?.id || 'default';
+    const boundOpId = getBoundSpeakerId(tenantKey);
+    const boundProfiles = getSpeakerVoiceProfiles(tenantKey);
+    const boundOpName = boundOpId ? boundProfiles.find(p => p.id === boundOpId)?.name : null;
+    const initialNotice = boundOpName
+      ? `🎙️ [লক: ${boundOpName}] শুনছি... বলুন`
+      : '🎙️ শুনছি... বলুন: যেমন "নাপা ২ পাতা" বা "তেল ১ লিটার"';
+    setVoiceNotice(initialNotice);
     triggerHaptic('medium');
 
     recognition.onresult = (event: any) => {
@@ -2931,17 +2938,18 @@ export default function PosPage() {
           }
 
           const tenantKey = tenant?.id || 'default';
-          const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
+          const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id, finalToParse);
 
           // If speaker lock is enabled, STRICTLY reject any speech that is NOT from the enrolled owner/staff
           if (isSpeakerLockEnabled(tenantKey) && !speakerCheck.isAuthorized) {
             triggerHaptic('warning');
             playWarningSound();
-            if (speakerCheck.reason === 'background_noise_or_tv') {
-              setVoiceNotice('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
-            } else {
-              setVoiceNotice('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল - কেবল মালিকের কণ্ঠ গ্রহণযোগ্য)');
-            }
+            const rejectMsg = speakerCheck.speakerName
+              ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+              : speakerCheck.reason === 'background_noise_or_tv'
+                ? '🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (বাতিল)'
+                : '🛡️ অননুমোদিত ব্যক্তির কণ্ঠ শনাক্ত (বাতিল)';
+            setVoiceNotice(rejectMsg);
             setTimeout(() => setVoiceNotice(''), 4500);
             return;
           }

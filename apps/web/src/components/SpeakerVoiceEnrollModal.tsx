@@ -7,10 +7,13 @@ import {
   deleteSpeakerVoiceProfile,
   isSpeakerLockEnabled,
   setSpeakerLockEnabled,
+  getBoundSpeakerId,
+  setBoundSpeakerId,
   extractPitchFromTimeDomain,
   extractSpectralCentroid,
   verifyLiveSpeaker
 } from '../lib/speakerProfileEngine';
+import { voiceProximityManager, ProximityDistanceMode } from '../lib/voiceProximityGate';
 
 interface StaffOption {
   id: string;
@@ -67,10 +70,12 @@ export default function SpeakerVoiceEnrollModal({
   preSelectedStaffId,
   onProfileUpdated
 }: SpeakerVoiceEnrollModalProps) {
-  const [activeTab, setActiveTab] = useState<'enroll' | 'list' | 'test'>('enroll');
+  const [activeTab, setActiveTab] = useState<'enroll' | 'device' | 'list' | 'test'>('enroll');
   const [isLockEnabled, setIsLockEnabled] = useState<boolean>(true);
   const [profiles, setProfiles] = useState<SpeakerVoiceProfile[]>([]);
   const [activeIndustry, setActiveIndustry] = useState<string>('cat-grocery');
+  const [boundSpeakerId, setLocalBoundSpeakerId] = useState<string | null>(null);
+  const [proximityMode, setLocalProximityMode] = useState<ProximityDistanceMode>('strict_pharmacy');
 
   // Enrollment State
   const [speakerType, setSpeakerType] = useState<'owner' | 'staff'>('owner');
@@ -119,6 +124,10 @@ export default function SpeakerVoiceEnrollModal({
     setIsLockEnabled(locked);
     const loaded = getSpeakerVoiceProfiles(tenantId);
     setProfiles(loaded);
+
+    const bound = getBoundSpeakerId(tenantId);
+    setLocalBoundSpeakerId(bound);
+    setLocalProximityMode(voiceProximityManager.getMode());
 
     try {
       const raw = localStorage.getItem('lbos_active_tenant');
@@ -225,7 +234,25 @@ export default function SpeakerVoiceEnrollModal({
     deleteSpeakerVoiceProfile(tenantId, 'all');
     setProfiles([]);
     setIsLockEnabled(false);
+    setLocalBoundSpeakerId(null);
+    setBoundSpeakerId(tenantId, null);
     setActionToast('সকল সংরক্ষিত কণ্ঠ প্রোফাইল সফলভাবে মুছে রিসেট করা হয়েছে');
+    setTimeout(() => setActionToast(null), 3000);
+    if (onProfileUpdated) onProfileUpdated();
+  };
+
+  const handleSetBoundSpeaker = (spkId: string | null) => {
+    setLocalBoundSpeakerId(spkId);
+    setBoundSpeakerId(tenantId, spkId);
+    setActionToast(spkId ? 'ডিভাইসটি নির্দিষ্ট অপারেটরের জন্য লক করা হয়েছে' : 'ডিভাইস উন্মুক্ত মোডে রাখা হয়েছে');
+    setTimeout(() => setActionToast(null), 3000);
+    if (onProfileUpdated) onProfileUpdated();
+  };
+
+  const handleSetProximityMode = (mode: ProximityDistanceMode) => {
+    setLocalProximityMode(mode);
+    voiceProximityManager.setMode(mode);
+    setActionToast('কাউন্টার প্রক্সিমিটি শিল্ড মোড আপডেট হয়েছে');
     setTimeout(() => setActionToast(null), 3000);
     if (onProfileUpdated) onProfileUpdated();
   };
@@ -524,6 +551,11 @@ export default function SpeakerVoiceEnrollModal({
     setSpeakerLockEnabled(tenantId, true);
     setIsLockEnabled(true);
 
+    if (!boundSpeakerId) {
+      setBoundSpeakerId(tenantId, profileId);
+      setLocalBoundSpeakerId(profileId);
+    }
+
     const updated = getSpeakerVoiceProfiles(tenantId);
     setProfiles(updated);
     setLastSavedStats({ pitchMean, pitchMin, pitchMax });
@@ -713,6 +745,7 @@ export default function SpeakerVoiceEnrollModal({
         }}>
           {[
             { id: 'enroll', label: '🎙️ কণ্ঠ রেজিস্টার' },
+            { id: 'device', label: `📱 ডিভাইস লক${boundSpeakerId ? ' 🔒' : ''}` },
             { id: 'list', label: `👥 তালিকা (${profiles.length})` },
             { id: 'test', label: '🧪 লাইভ টেস্ট' }
           ].map(tab => (
@@ -1143,7 +1176,195 @@ export default function SpeakerVoiceEnrollModal({
             </div>
           )}
 
-          {/* TAB 2: REGISTERED PROFILES */}
+          {/* TAB 2: DEVICE OPERATOR LOCK & PHARMACY SHIELD */}
+          {activeTab === 'device' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {actionToast && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  color: '#166534',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>✓</span> {actionToast}
+                </div>
+              )}
+
+              {/* Status Header Card */}
+              <div style={{
+                background: boundSpeakerId ? '#f0fdf4' : '#eff6ff',
+                border: `1.5px solid ${boundSpeakerId ? '#bbf7d0' : '#bfdbfe'}`,
+                borderRadius: '14px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '26px' }}>{boundSpeakerId ? '🔒' : '📱'}</div>
+                <div>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '900', color: boundSpeakerId ? '#166534' : '#1e40af' }}>
+                    {boundSpeakerId
+                      ? `লক সক্রিয়: ${profiles.find(p => p.id === boundSpeakerId)?.name || 'নির্দিষ্ট অপারেটর'}`
+                      : 'উন্মুক্ত মোড: সব নিবন্ধিত কর্মী ও মালিক'}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: boundSpeakerId ? '#15803d' : '#3b82f6', lineHeight: 1.45 }}>
+                    ফার্মেসিতে যখন পাশাপাশি একাধিক কর্মী ফোন নিয়ে দাঁড়ান, এই ফোনটি কেবল নির্বাচিত অপারেটরের কণ্ঠেই মেমো গ্রহণ করবে। পাশের কর্মীর গলার আওয়াজ অন্য ফোনে পড়বে না।
+                  </p>
+                </div>
+              </div>
+
+              {/* Operator Selection */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+                  👤 এই ফোনের নির্দিষ্ট অপারেটর নির্বাচন করুন:
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {/* Option: Open Mode (All Enrolled) */}
+                  <div
+                    onClick={() => handleSetBoundSpeaker(null)}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: `1.5px solid ${!boundSpeakerId ? '#4f46e5' : '#e2e8f0'}`,
+                      background: !boundSpeakerId ? '#f5f3ff' : '#ffffff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: !boundSpeakerId ? '#4f46e5' : '#1e293b' }}>
+                        🌐 সব নিবন্ধিত কর্মী ও মালিক (উন্মুক্ত মোড)
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        দোকানের যেকোনো নিবন্ধিত ব্যক্তির কণ্ঠেই এই ফোনে মেমো তৈরি হবে
+                      </div>
+                    </div>
+                    {!boundSpeakerId && <span style={{ color: '#4f46e5', fontWeight: '900', fontSize: '16px' }}>✓</span>}
+                  </div>
+
+                  {/* Registered Profiles List */}
+                  {profiles.map(p => {
+                    const isSelected = boundSpeakerId === p.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleSetBoundSpeaker(p.id)}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          border: `1.5px solid ${isSelected ? '#10b981' : '#e2e8f0'}`,
+                          background: isSelected ? '#f0fdf4' : '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: isSelected ? '#047857' : '#1e293b' }}>
+                            {p.role === 'owner' ? '👑' : '👨‍💼'} {p.name} ({p.role === 'owner' ? 'মালিক' : 'স্টাফ'})
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            গড় পিচ: {p.pitchMean} Hz • {p.wakePhrase ? `ওয়েক শব্দ: "${p.wakePhrase}"` : 'বায়োমেট্রিক পিচ লকিং'}
+                          </div>
+                        </div>
+                        {isSelected && <span style={{ color: '#10b981', fontWeight: '900', fontSize: '16px' }}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Counter Proximity Distance Gate */}
+              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+                  🛡️ কাউন্টার প্রক্সিমিটি দূরত্ব শিল্ড (দূরবর্তী কণ্ঠ ও কোলাহল ফিল্টার):
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                  {[
+                    {
+                      id: 'strict_pharmacy',
+                      title: '🛡️ ফার্মেসি মাল্টি-কাউন্টার শিল্ড (~১৫-২৫ সেমি)',
+                      badge: 'সুপারিশকৃত',
+                      desc: 'ঠোঁটের কাছে বা কাউন্টারে ফোনের সামনে স্পষ্ট স্বরে কথা বললে নিবে। পাশের কর্মীর গলার আওয়াজ ও ভিড় ১০০% ফিল্টার হবে।'
+                    },
+                    {
+                      id: 'near',
+                      title: '🛡️ সাধারণ দোকান শিল্ড (~৩০ সেমি)',
+                      badge: 'স্ট্যান্ডার্ড',
+                      desc: 'এক হাত দূরত্বের কথা গ্রহণ করবে। পেছনের টিভি ও ক্রেতাদের সংলাপ ফিল্টার করবে।'
+                    },
+                    {
+                      id: 'medium',
+                      title: '🛡️ মাঝারি দূরত্বের শিল্ড (~৬০ সেমি)',
+                      badge: 'খোলামেলা',
+                      desc: 'কাউন্টার থেকে সামান্য দূরে থাকলেও কথা নিবে।'
+                    },
+                    {
+                      id: 'all',
+                      title: '🔓 উন্মুক্ত মোড (প্রক্সিমিটি ফিল্টার অফ)',
+                      badge: 'সব শব্দ',
+                      desc: 'সব দূরত্বের কথা গ্রহণ করবে।'
+                    }
+                  ].map(m => {
+                    const isSel = proximityMode === m.id;
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => handleSetProximityMode(m.id as ProximityDistanceMode)}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: `1.5px solid ${isSel ? '#3b82f6' : '#e2e8f0'}`,
+                          background: isSel ? '#eff6ff' : '#f8fafc',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: '800', color: isSel ? '#1d4ed8' : '#1e293b' }}>
+                              {m.title}
+                            </span>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: isSel ? '#dbeafe' : '#e2e8f0',
+                              color: isSel ? '#1e40af' : '#64748b'
+                            }}>
+                              {m.badge}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', lineHeight: 1.35 }}>
+                            {m.desc}
+                          </div>
+                        </div>
+                        {isSel && <span style={{ color: '#2563eb', fontWeight: '900', fontSize: '16px' }}>✓</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: REGISTERED PROFILES */}
           {activeTab === 'list' && (
             <div>
               {actionToast && (

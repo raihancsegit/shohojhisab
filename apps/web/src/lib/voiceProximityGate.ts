@@ -4,7 +4,7 @@
  * Powered by Web Audio API real-time RMS energy measurement with autoGainControl disabled.
  */
 
-export type ProximityDistanceMode = 'near' | 'medium' | 'all';
+export type ProximityDistanceMode = 'strict_pharmacy' | 'near' | 'medium' | 'all';
 
 export interface ProximityState {
   isListening: boolean;
@@ -24,7 +24,7 @@ class VoiceProximityManager {
   private listeners: Set<(state: ProximityState) => void> = new Set();
   private frameListeners: Array<(analyser: AnalyserNode, sampleRate: number) => void> = [];
 
-  private mode: ProximityDistanceMode = 'near';
+  private mode: ProximityDistanceMode = 'strict_pharmacy';
   private currentVolume: number = 0;
   private isGateOpen: boolean = false;
   private lastNearSpeechTime: number = 0;
@@ -35,15 +35,16 @@ class VoiceProximityManager {
   // When speaking 10-30cm from mobile phone mic with AGC disabled, RMS is typically 22-80.
   // Distant chatter (1-3 meters away) or background TV typically registers at 2-12.
   private readonly THRESHOLDS: Record<ProximityDistanceMode, number> = {
-    near: 6,      // ১ হাত / ~৩০ সেমি - দোকান ভিড় ফিল্টার
-    medium: 3,    // ২ হাত / ~৬০ সেমি
-    all: 0        // ফিল্টার অফ (সব কথা গ্রহণ)
+    strict_pharmacy: 10, // একদম কাছে / ~১৫-২৫ সেমি (ফার্মেসি মাল্টি-কাউন্টার শিল্ড - পাশের কর্মী ও ভিড় বাদ)
+    near: 6,             // ১ হাত / ~৩০ সেমি - সাধারণ দোকান ভিড় ফিল্টার
+    medium: 3,           // ২ হাত / ~৬০ সেমি
+    all: 0               // ফিল্টার অফ (সব কথা গ্রহণ)
   };
 
   constructor() {
     if (typeof window !== 'undefined') {
       const savedMode = localStorage.getItem('lbos_voice_proximity_mode') as ProximityDistanceMode | null;
-      if (savedMode && ['near', 'medium', 'all'].includes(savedMode)) {
+      if (savedMode && ['strict_pharmacy', 'near', 'medium', 'all'].includes(savedMode)) {
         this.mode = savedMode;
       }
     }

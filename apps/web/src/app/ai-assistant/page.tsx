@@ -196,15 +196,16 @@ export default function AiAssistantPage() {
 
           // Speaker Biometrics Verification
           if (isSpeakerLockEnabled(tenantKey)) {
-            const speakerCheck = verifyCurrentVoice(tenantKey);
+            const speakerCheck = verifyCurrentVoice(tenantKey, undefined, fullTranscript);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
               playWarningSound();
-              if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLiveTranscript('🛡️ টিভি বা পেছনের শব্দ ফিল্টার করা হয়েছে (বাতিল)');
-              } else {
-                setLiveTranscript('🛡️ অননুমোদিত কণ্ঠ শনাক্ত (বাতিল - শুধু মালিক ও স্টাফদের কণ্ঠ গ্রহণযোগ্য)');
-              }
+              const msg = speakerCheck.speakerName
+                ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+                : speakerCheck.reason === 'background_noise_or_tv'
+                  ? '🛡️ টিভি বা দূরবর্তী শব্দ ফিল্টার করা হয়েছে (বাতিল)'
+                  : '🛡️ অননুমোদিত কণ্ঠ শনাক্ত (বাতিল - শুধু অনুমোদিত কণ্ঠ গ্রহণযোগ্য)';
+              setLiveTranscript(msg);
               setTimeout(() => setLiveTranscript(''), 3500);
               return;
             }

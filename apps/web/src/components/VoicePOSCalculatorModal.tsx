@@ -233,15 +233,16 @@ export default function VoicePOSCalculatorModal({
           // Biometrics verification with enrolled speaker profile (only if user explicitly turned it ON!)
           const tenantKey = currentTenantId || 'default';
           if (isVoiceLockOn && isSpeakerLockEnabled(tenantKey)) {
-            const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id);
+            const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id, textToProcess);
             if (!speakerCheck.isAuthorized) {
               triggerHaptic('warning');
               playBeep(350);
-              if (speakerCheck.reason === 'background_noise_or_tv') {
-                setLastActionMessage('🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)');
-              } else {
-                setLastActionMessage('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (শুধু নিবন্ধিত কণ্ঠ)');
-              }
+              const rejectMsg = speakerCheck.speakerName
+                ? `🛡️ ${speakerCheck.speakerName} (বাতিল)`
+                : speakerCheck.reason === 'background_noise_or_tv'
+                  ? '🛡️ ল্যাপটপ / টিভির সাউন্ড ফিল্টার করা হয়েছে (বাতিল)'
+                  : '🛡️ অননুমোদিত ব্যক্তির কণ্ঠ ফিল্টার করা হয়েছে (শুধু নিবন্ধিত কণ্ঠ)';
+              setLastActionMessage(rejectMsg);
               return;
             }
           }

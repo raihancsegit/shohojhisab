@@ -35,6 +35,38 @@ export interface SpeakerVerificationResult {
 
 const STORAGE_KEY_PREFIX = 'lbos_speaker_profiles_';
 const TOGGLE_KEY_PREFIX = 'lbos_speaker_lock_enabled_';
+const BOUND_SPEAKER_PREFIX = 'lbos_bound_speaker_';
+
+/**
+ * Get the specifically bound operator/speaker ID for this device
+ * If null, any enrolled owner/staff is accepted.
+ * If set (e.g. 'owner' or 'staff-123'), this device ONLY accepts that specific person's voice!
+ */
+export function getBoundSpeakerId(tenantId: string = 'default'): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const val = localStorage.getItem(`${BOUND_SPEAKER_PREFIX}${tenantId}`);
+    if (val && val !== 'all_enrolled') return val;
+    if (val === 'all_enrolled') return null;
+    const defVal = localStorage.getItem(`${BOUND_SPEAKER_PREFIX}default`);
+    if (defVal && defVal !== 'all_enrolled') return defVal;
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Bind or unbind this device to a specific operator/speaker
+ */
+export function setBoundSpeakerId(tenantId: string, speakerId: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const val = speakerId || 'all_enrolled';
+    localStorage.setItem(`${BOUND_SPEAKER_PREFIX}${tenantId}`, val);
+    localStorage.setItem(`${BOUND_SPEAKER_PREFIX}default`, val);
+  } catch (e) {}
+}
 
 /**
  * Load all enrolled speaker voice profiles for this tenant
@@ -409,6 +441,11 @@ export function isRecognizedShopCommand(text: string): boolean {
  * Analyzes all pitch frames recorded during the speech window (last ~3.8-5.5 seconds).
  * Strictly filters laptop videos, TV news/natok, and other customers' voices.
  */
+/**
+ * Evaluate the entire recent speech utterance against enrolled biometric profiles.
+ * Analyzes all pitch frames recorded during the speech window (last ~3.8-5.5 seconds).
+ * Strictly filters laptop videos, TV news/natok, and other customers' voices.
+ */
 export function evaluateUtteranceSpeaker(
   tenantId: string = 'default',
   targetSpeakerId?: string,
@@ -424,13 +461,13 @@ export function evaluateUtteranceSpeaker(
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
 
-  // Pre-initialize candidate profiles so it is never accessed before initialization (fixes TDZ bug)
+  const boundOperatorId = targetSpeakerId || getBoundSpeakerId(tenantId);
+  const boundProfile = boundOperatorId ? profiles.find(p => p.id === boundOperatorId) : null;
+
+  // Pre-initialize candidate profiles so it is never accessed before initialization
   let candidateProfiles = profiles;
-  if (targetSpeakerId) {
-    const specific = profiles.find(p => p.id === targetSpeakerId);
-    if (specific) {
-      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
-    }
+  if (boundProfile) {
+    candidateProfiles = [boundProfile, ...profiles.filter(p => p.id !== boundProfile.id)];
   }
 
   const now = Date.now();
@@ -458,6 +495,15 @@ export function evaluateUtteranceSpeaker(
     // Check for direct wake phrase or enrolled speaker keyword match
     for (const p of candidateProfiles) {
       if (p.wakePhrase && clean.includes(p.wakePhrase.toLowerCase())) {
+        // If device is bound to a different operator, reject coworker's wake phrase!
+        if (boundProfile && p.id !== boundProfile.id) {
+          return {
+            isAuthorized: false,
+            confidence: 20,
+            reason: 'unauthorized_speaker',
+            speakerName: `অন্য সহকর্মীর কণ্ঠ (${p.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
+          };
+        }
         return {
           isAuthorized: true,
           confidence: 95,
@@ -468,6 +514,14 @@ export function evaluateUtteranceSpeaker(
         };
       }
       if (p.speechKeywords && p.speechKeywords.some(kw => kw && clean.includes(kw.toLowerCase()))) {
+        if (boundProfile && p.id !== boundProfile.id) {
+          return {
+            isAuthorized: false,
+            confidence: 20,
+            reason: 'unauthorized_speaker',
+            speakerName: `অন্য সহকর্মীর কণ্ঠ (${p.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
+          };
+        }
         return {
           isAuthorized: true,
           confidence: 90,
@@ -481,23 +535,42 @@ export function evaluateUtteranceSpeaker(
 
     // Check if spoken utterance is an authentic shop operational command
     if (isRecognizedShopCommand(clean)) {
-      // Resolve whether caller is designated staff or owner
-      const targetStaff = targetSpeakerId
-        ? candidateProfiles.find(p => p.id === targetSpeakerId && p.role === 'staff')
-        : candidateProfiles.find(p => p.role === 'staff' && (clean.includes(p.name.toLowerCase()) || clean.includes('স্টাফ') || clean.includes('কর্মচারী')));
+      // If this phone is bound to a specific staff or owner, attribute to bound operator
+      if (boundProfile) {
+        // If spoken text explicitly addresses another registered coworker by name, reject cross-talk
+        const otherStaff = profiles.find(p => p.id !== boundProfile.id && clean.includes(p.name.toLowerCase()));
+        if (otherStaff) {
+          return {
+            isAuthorized: false,
+            confidence: 20,
+            reason: 'unauthorized_speaker',
+            speakerName: `অন্য সহকর্মীর কণ্ঠ (${otherStaff.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`
+          };
+        }
 
-      if (targetStaff) {
         return {
           isAuthorized: true,
-          confidence: 90,
-          matchedSpeaker: targetStaff,
-          role: 'staff',
-          speakerName: targetStaff.name,
+          confidence: 92,
+          matchedSpeaker: boundProfile,
+          role: boundProfile.role,
+          speakerName: boundProfile.name,
           reason: 'authorized'
         };
       }
 
-      // Default to registered owner
+      // If phone is in open mode (all enrolled staff):
+      const matchedStaff = candidateProfiles.find(p => p.role === 'staff' && (clean.includes(p.name.toLowerCase()) || clean.includes('স্টাফ') || clean.includes('কর্মচারী')));
+      if (matchedStaff) {
+        return {
+          isAuthorized: true,
+          confidence: 90,
+          matchedSpeaker: matchedStaff,
+          role: 'staff',
+          speakerName: matchedStaff.name,
+          reason: 'authorized'
+        };
+      }
+
       const ownerProfile = candidateProfiles.find(p => p.role === 'owner') || candidateProfiles[0];
       return {
         isAuthorized: true,
@@ -530,9 +603,9 @@ export function evaluateUtteranceSpeaker(
 
   for (const profile of candidateProfiles) {
     // Registered speaker's calibrated pitch window:
-    // Natural human pitch stays within enrolled range ±18 Hz
-    const lowerPitch = Math.max(65, profile.pitchMin - 18);
-    const upperPitch = Math.min(380, profile.pitchMax + 22);
+    // Natural human pitch stays within enrolled range ±16 Hz
+    const lowerPitch = Math.max(65, profile.pitchMin - 16);
+    const upperPitch = Math.min(380, profile.pitchMax + 20);
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
@@ -543,12 +616,12 @@ export function evaluateUtteranceSpeaker(
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation is up to 35 Hz from enrolled mean
-      if (diffFromMean <= 35) {
+      // Natural speech pitch variation is up to 32 Hz from enrolled mean
+      if (diffFromMean <= 32) {
         // Timbre check: Filter out sharp laptop sirens or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1600) {
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1500) {
             continue;
           }
         }
@@ -579,8 +652,20 @@ export function evaluateUtteranceSpeaker(
     }
   }
 
-  // Strict acceptance: Must match enrolled profile with confidence >= 50
-  if (bestMatch && bestMatch.confidence >= 50) {
+  // Device Operator Lock Validation:
+  // If this device is bound to a specific person and someone else matches, REJECT coworker crosstalk!
+  if (bestMatch && boundProfile && bestMatch.profile.id !== boundProfile.id) {
+    return {
+      isAuthorized: false,
+      confidence: 25,
+      reason: 'unauthorized_speaker',
+      speakerName: `অন্য সহকর্মীর কণ্ঠ (${bestMatch.profile.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`,
+      pitchDetected: Math.round(bestMatch.avgPitch)
+    };
+  }
+
+  // Strict acceptance: Must match enrolled profile with confidence >= 55
+  if (bestMatch && bestMatch.confidence >= 55) {
     return {
       isAuthorized: true,
       matchedSpeaker: bestMatch.profile,
@@ -600,6 +685,7 @@ export function evaluateUtteranceSpeaker(
     isAuthorized: false,
     confidence: Math.round((bestMatch?.matchRatio || 0) * 100),
     reason: 'unauthorized_speaker',
+    speakerName: boundProfile ? `অপরিচিত কণ্ঠ (ডিভাইসটি "${boundProfile.name}" এর জন্য সংরক্ষিত)` : 'অপরিচিত ব্যক্তি / গ্রাহকের কণ্ঠ',
     pitchDetected: overallAvgPitch
   };
 }
@@ -620,6 +706,9 @@ export function verifyLiveSpeaker(
   if (profiles.length === 0) {
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
   }
+
+  const boundOperatorId = targetSpeakerId || getBoundSpeakerId(tenantId);
+  const boundProfile = boundOperatorId ? profiles.find(p => p.id === boundOperatorId) : null;
 
   const sampleRate = analyserNode.context.sampleRate || 44100;
   const fftSize = analyserNode.fftSize;
@@ -655,20 +744,28 @@ export function verifyLiveSpeaker(
   const livePitch = pitchRes.pitch;
 
   let candidateProfiles = profiles;
-  if (targetSpeakerId) {
-    const specific = profiles.find(p => p.id === targetSpeakerId);
-    if (specific) {
-      candidateProfiles = [specific, ...profiles.filter(p => p.id !== targetSpeakerId)];
-    }
+  if (boundProfile) {
+    candidateProfiles = [boundProfile, ...profiles.filter(p => p.id !== boundProfile.id)];
   }
 
   for (const profile of candidateProfiles) {
-    const lowerPitch = Math.max(65, profile.pitchMin - 22);
-    const upperPitch = Math.min(380, profile.pitchMax + 28);
+    const lowerPitch = Math.max(65, profile.pitchMin - 20);
+    const upperPitch = Math.min(380, profile.pitchMax + 24);
 
     if (livePitch >= lowerPitch && livePitch <= upperPitch) {
       const diff = Math.abs(livePitch - profile.pitchMean);
-      if (diff <= 38) {
+      if (diff <= 35) {
+        // If bound to someone else, reject coworker's cross-voice
+        if (boundProfile && profile.id !== boundProfile.id) {
+          return {
+            isAuthorized: false,
+            confidence: 25,
+            reason: 'unauthorized_speaker',
+            speakerName: `অন্য সহকর্মীর কণ্ঠ (${profile.name}) - ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা`,
+            pitchDetected: livePitch
+          };
+        }
+
         const confidence = Math.max(65, Math.round(100 - (diff * 1.2)));
 
         return {
@@ -687,6 +784,7 @@ export function verifyLiveSpeaker(
     isAuthorized: false,
     confidence: 10,
     reason: 'unauthorized_speaker',
+    speakerName: boundProfile ? `অপরিচিত কণ্ঠ (ডিভাইসটি "${boundProfile.name}" এর জন্য লক করা)` : 'অপরিচিত ব্যক্তির কণ্ঠ',
     pitchDetected: livePitch
   };
 }
@@ -708,6 +806,17 @@ export function verifyCurrentVoice(
   const profiles = getSpeakerVoiceProfiles(tenantId);
   if (profiles.length === 0) {
     return { isAuthorized: true, confidence: 100, reason: 'feature_disabled', role: 'owner', speakerName: 'দোকান মালিক' };
+  }
+
+  // Near-field acoustic distance gate validation:
+  // Rejects speech originating 1-2 meters away (coworkers at adjacent counter stations or distant crowd noise)
+  if (voiceProximityManager && !voiceProximityManager.isNearSpeechActive()) {
+    return {
+      isAuthorized: false,
+      confidence: 0,
+      reason: 'background_noise_or_tv',
+      speakerName: 'দূরবর্তী কণ্ঠ / পাশের কাউন্টারের আওয়াজ (ফোনের ১৫-২৫ সেমি কাছে এসে বলুন)'
+    };
   }
 
   // 1. First check the rolling utterance buffer (evaluates the speech sentence just spoken)
