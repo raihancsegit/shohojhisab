@@ -863,8 +863,8 @@ export default function PosPage() {
           triggerHaptic('warning');
           playWarningSound();
           const dispName = targetProd.banglaName || targetProd.bangla_name || targetProd.name;
-          setVoiceNotice(`⚠️ "${dispName}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
-          speakAnnouncement(`${dispName} এর স্টক শেষ।`);
+          setVoiceNotice(`⚠️ "${dispName}" স্টকে নাই!`);
+          speakAnnouncement(`${dispName} স্টকে নাই।`);
           return;
         }
 
@@ -925,8 +925,8 @@ export default function PosPage() {
         } else {
           triggerHaptic('warning');
           playWarningSound();
-          setVoiceNotice(`⚠️ ফর্দের পণ্যগুলো দোকানে স্টকে পাওয়া যায়নি বা স্টক শেষ!`);
-          speakAnnouncement(`ফর্দের পণ্যগুলো স্টকে নেই।`);
+          setVoiceNotice(`⚠️ ফর্দের পণ্যগুলো স্টকে নাই বা দোকানে এই প্রোডাক্ট নাই!`);
+          speakAnnouncement(`পণ্যগুলো স্টকে নাই বা এই প্রোডাক্ট নাই।`);
         }
       }
     };
@@ -1529,8 +1529,8 @@ export default function PosPage() {
                          });
 
           if (!pMatch) {
-            setNumpadVoiceNotice(`⚠️ "${it.banglaName || it.name}" দোকানে স্টকে পাওয়া যায়নি!`);
-            speakAnnouncement(`${it.banglaName || it.name} দোকানে স্টকে নেই।`);
+            setNumpadVoiceNotice(`⚠️ "${it.banglaName || it.name}" এই প্রোডাক্ট নাই!`);
+            speakAnnouncement(`${it.banglaName || it.name} এই প্রোডাক্ট নাই।`);
             playWarningSound();
             triggerHaptic('warning');
             return;
@@ -1539,8 +1539,8 @@ export default function PosPage() {
           const currentStock = Number(pMatch.stock || 0);
           if (currentStock <= 0) {
             const disp = pMatch.banglaName || pMatch.name;
-            setNumpadVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)!`);
-            speakAnnouncement(`${disp} এর স্টক শেষ।`);
+            setNumpadVoiceNotice(`⚠️ "${disp}" স্টকে নাই!`);
+            speakAnnouncement(`${disp} স্টকে নাই।`);
             playWarningSound();
             triggerHaptic('warning');
             return;
@@ -2293,8 +2293,8 @@ export default function PosPage() {
                            });
 
             if (!pMatch) {
-              setVoiceNotice(`⚠️ "${it.banglaName || it.name}" দোকানে স্টকে পাওয়া যায়নি!`);
-              speakAnnouncement(`${it.banglaName || it.name} দোকানে স্টকে নেই।`);
+              setVoiceNotice(`⚠️ "${it.banglaName || it.name}" এই প্রোডাক্ট নাই!`);
+              speakAnnouncement(`${it.banglaName || it.name} এই প্রোডাক্ট নাই।`);
               playWarningSound();
               triggerHaptic('warning');
               return;
@@ -2303,8 +2303,8 @@ export default function PosPage() {
             const currentStock = Number(pMatch.stock || 0);
             if (currentStock <= 0) {
               const disp = pMatch.banglaName || pMatch.name;
-              setVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
-              speakAnnouncement(`${disp} এর স্টক শেষ।`);
+              setVoiceNotice(`⚠️ "${disp}" স্টকে নাই!`);
+              speakAnnouncement(`${disp} স্টকে নাই।`);
               playWarningSound();
               triggerHaptic('warning');
               return;
@@ -2369,8 +2369,8 @@ export default function PosPage() {
           const dStock = Number(directProd.stock || 0);
           if (dStock <= 0) {
             const disp = directProd.banglaName || directProd.name;
-            setVoiceNotice(`⚠️ "${disp}" এর স্টক শেষ (স্টক: ০)!`);
-            speakAnnouncement(`${disp} এর স্টক শেষ।`);
+            setVoiceNotice(`⚠️ "${disp}" স্টকে নাই!`);
+            speakAnnouncement(`${disp} স্টকে নাই।`);
             playWarningSound();
             triggerHaptic('warning');
             return;
@@ -2387,8 +2387,8 @@ export default function PosPage() {
           setExpressPreview(null);
           setTimeout(() => setVoiceNotice(''), 4000);
         } else {
-          setVoiceNotice(`⚠️ "${rawText}" এর কোনো পণ্য স্টকে পাওয়া যায়নি।`);
-          speakAnnouncement(`পণ্যটি স্টকে পাওয়া যায়নি।`);
+          setVoiceNotice(`⚠️ "${rawText}" এই প্রোডাক্ট নাই!`);
+          speakAnnouncement(`${rawText} এই প্রোডাক্ট নাই।`);
           playWarningSound();
           triggerHaptic('warning');
           setTimeout(() => setVoiceNotice(''), 4000);
@@ -3153,8 +3153,8 @@ export default function PosPage() {
       if (isOutOfStock) {
         triggerHaptic('warning');
         playWarningSound();
-        setVoiceNotice(`⚠️ "${finalSelectedName}" এর স্টক শেষ (স্টক: ০)! কার্টে যোগ করা যাবে না।`);
-        speakAnnouncement(`${finalSelectedName} এর স্টক শেষ।`);
+        setVoiceNotice(`⚠️ "${finalSelectedName}" স্টকে নাই!`);
+        speakAnnouncement(`${finalSelectedName} স্টকে নাই।`);
         setShowSearchDropdown(false);
         return;
       }
@@ -3189,8 +3189,8 @@ export default function PosPage() {
       playWarningSound();
       setSearch('');
       setShowSearchDropdown(false);
-      setVoiceNotice(`⚠️ "${querySearchName}" দোকানে স্টকে পাওয়া যায়নি!`);
-      speakAnnouncement(`${querySearchName} দোকানে স্টকে পাওয়া যায়নি।`);
+      setVoiceNotice(`⚠️ "${querySearchName}" এই প্রোডাক্ট নাই!`);
+      speakAnnouncement(`${querySearchName} এই প্রোডাক্ট নাই।`);
     }
   };
 

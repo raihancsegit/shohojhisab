@@ -342,25 +342,19 @@ export default function VoicePOSCalculatorModal({
           });
         }
 
-        // If not in catalog, still add as dynamic item so the merchant can bill immediately!
+        // If not in catalog, REJECT and announce!
         if (!prod) {
-          const defaultPrice = item.unitPrice || item.totalPrice || 50;
-          validInStockItems.push({
-            ...item,
-            productId: null,
-            name: item.name,
-            banglaName: item.banglaName || item.name,
-            unit: item.unit || 'পিস',
-            unitPrice: defaultPrice,
-            totalPrice: item.totalPrice || Math.round(defaultPrice * item.quantity * 100) / 100,
-            stock: 99,
-            isExistingProduct: false
-          });
+          notFoundNames.push(item.banglaName || item.name);
           continue;
         }
 
-        // Product found in catalog - add to memo directly!
+        // Product found in catalog - check stock!
         const currentStock = Number(prod.stock ?? 0);
+        if (currentStock <= 0) {
+          outOfStockNames.push(prod.banglaName || prod.name);
+          continue;
+        }
+
         const resolvedUnitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : (Number(prod.sellingPrice) || 0);
         const resolvedTotalPrice = item.totalPrice && item.totalPrice > 0 ? item.totalPrice : Math.round(resolvedUnitPrice * item.quantity * 100) / 100;
 
@@ -377,45 +371,72 @@ export default function VoicePOSCalculatorModal({
         });
       }
 
-      // Only add verified items that actually exist in stock!
-      if (validInStockItems.length > 0) {
-        playBeep(1100);
-        triggerHaptic('success');
-        let nextTotal = 0;
+      // If no valid in-stock items could be added
+      if (validInStockItems.length === 0) {
+        playBeep(450);
+        triggerHaptic('warning');
 
-        setItems(prevItems => {
-          const updated = [...prevItems];
-          validInStockItems.forEach((item) => {
-            const existingIdx = updated.findIndex(i =>
-              (item.productId && i.productId === item.productId) ||
-              ((i.banglaName || i.name).toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
-            );
-            if (existingIdx >= 0) {
-              const current = updated[existingIdx];
-              const newQty = current.quantity + item.quantity;
-              updated[existingIdx] = {
-                ...current,
-                quantity: newQty,
-                totalPrice: Math.round(newQty * current.unitPrice * 100) / 100
-              };
-            } else {
-              updated.push({
-                ...item,
-                id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
-              });
-            }
-          });
-          itemsRef.current = updated;
-          nextTotal = updated.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
-          return updated;
-        });
+        let alertMsg = '';
+        if (notFoundNames.length > 0 && outOfStockNames.length > 0) {
+          alertMsg = `${notFoundNames.join(', ')} এই প্রোডাক্ট নাই এবং ${outOfStockNames.join(', ')} স্টকে নাই।`;
+        } else if (notFoundNames.length > 0) {
+          alertMsg = `${notFoundNames.join(', ')} এই প্রোডাক্ট নাই।`;
+        } else if (outOfStockNames.length > 0) {
+          alertMsg = `${outOfStockNames.join(', ')} স্টকে নাই।`;
+        } else {
+          alertMsg = 'পণ্যটি স্টকে নাই বা দোকানে এই প্রোডাক্ট নাই।';
+        }
 
-        const spokenSummary = validInStockItems.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
-        const displayTotal = nextTotal > 0 ? nextTotal : validInStockItems.reduce((acc, i) => acc + i.totalPrice, 0);
-
-        setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${displayTotal})`);
-        speakFeedback(`${spokenSummary} মেমোতে যোগ হয়েছে।`);
+        setLastActionMessage(`⚠️ ${alertMsg}`);
+        speakFeedback(alertMsg);
+        return;
       }
+
+      // Valid in-stock items found - add to memo
+      playBeep(1100);
+      triggerHaptic('success');
+      let nextTotal = 0;
+
+      setItems(prevItems => {
+        const updated = [...prevItems];
+        validInStockItems.forEach((item) => {
+          const existingIdx = updated.findIndex(i =>
+            (item.productId && i.productId === item.productId) ||
+            ((i.banglaName || i.name).toLowerCase().trim() === (item.banglaName || item.name).toLowerCase().trim())
+          );
+          if (existingIdx >= 0) {
+            const current = updated[existingIdx];
+            const newQty = current.quantity + item.quantity;
+            updated[existingIdx] = {
+              ...current,
+              quantity: newQty,
+              totalPrice: Math.round(newQty * current.unitPrice * 100) / 100
+            };
+          } else {
+            updated.push({
+              ...item,
+              id: 'vitem-' + Date.now() + Math.random().toString().slice(-4)
+            });
+          }
+        });
+        itemsRef.current = updated;
+        nextTotal = updated.reduce((acc, i) => acc + i.totalPrice, 0) - discount;
+        return updated;
+      });
+
+      const spokenSummary = validInStockItems.map(i => `${i.banglaName} ${i.quantity} ${i.unit}`).join(', ');
+      const displayTotal = nextTotal > 0 ? nextTotal : validInStockItems.reduce((acc, i) => acc + i.totalPrice, 0);
+
+      let feedbackMsg = `${spokenSummary} মেমোতে যোগ হয়েছে।`;
+      if (notFoundNames.length > 0) {
+        feedbackMsg += ` ${notFoundNames.join(', ')} এই প্রোডাক্ট নাই।`;
+      }
+      if (outOfStockNames.length > 0) {
+        feedbackMsg += ` ${outOfStockNames.join(', ')} স্টকে নাই।`;
+      }
+
+      setLastActionMessage(`✓ মেমোতে যোগ হয়েছে: ${spokenSummary} (মোট: ৳${displayTotal})${notFoundNames.length > 0 ? ` (⚠️ ${notFoundNames.join(', ')} এই প্রোডাক্ট নাই)` : ''}${outOfStockNames.length > 0 ? ` (⚠️ ${outOfStockNames.join(', ')} স্টকে নাই)` : ''}`);
+      speakFeedback(feedbackMsg);
       return;
     }
 

@@ -325,8 +325,8 @@ export function executeStockSaleOrDue(
       return {
         success: false,
         action: 'sale',
-        speech: `⚠️ "${rawItem.productName || 'পণ্য'}" দোকানে স্টকে পাওয়া যায়নি। শুধুমাত্র স্টকে থাকা পণ্য বিক্রি সম্ভব।`,
-        reply: `⚠️ **পণ্য পাওয়া যায়নি!**\n• "${rawItem.productName || 'পণ্য'}" আপনার দোকানের ইনভেন্টরি বা স্টকে নেই।\n• অনুগ্রহ করে সঠিক নাম বলুন বা আগে স্টক ইন করুন।`,
+        speech: `⚠️ দুঃখিত, "${rawItem.productName || 'পণ্য'}" এই প্রোডাক্ট নাই। স্টকের বাইরের কোনো পণ্য নেওয়া যাবে না।`,
+        reply: `⚠️ **এই প্রোডাক্ট নাই!**\n• "${rawItem.productName || 'পণ্য'}" আপনার দোকানের স্টকে নেই।\n• স্টকের বাইরের কোনো পণ্য মেমোতে নেওয়া যাবে না।`,
         undoAvailable: false
       };
     }
@@ -337,8 +337,8 @@ export function executeStockSaleOrDue(
       return {
         success: false,
         action: 'sale',
-        speech: `⚠️ "${pName}" এর স্টক শেষ (০ টি অবশিষ্ট)! স্টকে পণ্য না থাকায় বিক্রি করা যায়নি।`,
-        reply: `⚠️ **স্টক শূন্য!**\n• পণ্য: **${pName}**\n• বর্তমান স্টক: **০ ${matchedProd.unit || 'টি'}**\n• স্টক শেষ থাকায় বিক্রয় বাতিল করা হয়েছে।`,
+        speech: `⚠️ "${pName}" স্টকে নাই! স্টকে পণ্য না থাকায় বিক্রি করা যায়নি।`,
+        reply: `⚠️ **স্টকে নাই!**\n• পণ্য: **${pName}**\n• বর্তমান স্টক: **০ ${matchedProd.unit || 'টি'}**\n• স্টকে না থাকায় মেমোতে নেওয়া যায়নি।`,
         undoAvailable: false
       };
     }
