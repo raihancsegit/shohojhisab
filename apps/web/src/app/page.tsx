@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import DataLoader from '../components/DataLoader';
+import LandingPage from '../components/LandingPage';
 import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import { triggerFieldVoiceInput } from '../lib/voiceFieldUtils';
 import { formatBDDateLong, formatBDDate, formatBDDateTime, formatBDTime } from '../lib/dateUtils';
@@ -156,10 +157,12 @@ export default function ShopkeeperDashboard() {
   }, [tenant?.id]);
 
   useEffect(() => {
-    if (!isLoading && !tenant && userRole !== 'admin') {
-      router.push('/login');
+    if (!isLoading) {
+      if (userRole === 'admin') {
+        router.push('/admin');
+      }
     }
-  }, [isLoading, tenant, userRole, router]);
+  }, [isLoading, userRole, router]);
 
   const loadShopData = async (periodOverride?: string, startOverride?: string, endOverride?: string) => {
     if (!tenant?.id) {
@@ -251,21 +254,10 @@ export default function ShopkeeperDashboard() {
   useEffect(() => {
     if (tenant?.id) {
       loadShopData(selectedPeriod, customStartDate, customEndDate);
+    } else if (!isLoading) {
+      setLoading(false);
     }
-  }, [tenant?.id, selectedPeriod]);
-
-  if (isLoading || (loading && recentSales.length === 0 && metrics.totalSales === 0)) {
-    return (
-      <div className="app-container">
-        <DataLoader
-          type="full"
-          text="দোকানের লাইভ হিসাব ও ড্যাশবোর্ড লোড হচ্ছে..."
-          subText="আজকের বিক্রয়, ক্যাশ ও খতিয়ান প্রস্তুত করা হচ্ছে"
-          icon="🏪"
-        />
-      </div>
-    );
-  }
+  }, [tenant?.id, selectedPeriod, isLoading]);
 
   // If Admin visiting root, offer quick link to admin console
   if (userRole === 'admin') {
@@ -299,32 +291,43 @@ export default function ShopkeeperDashboard() {
     );
   }
 
-  if (!tenant) {
+  // Fast local storage check to instantly show Landing Page for guests without loader flash
+  const isGuest = typeof window !== 'undefined' && !localStorage.getItem('lbos_user_role') && !localStorage.getItem('lbos_active_tenant');
+  if (isGuest && !tenant && userRole !== 'admin') {
+    return <LandingPage />;
+  }
+
+  // If user is super admin, redirect to super admin panel immediately
+  if (userRole === 'admin') {
+    if (typeof window !== 'undefined') {
+      router.push('/admin');
+    }
     return (
-      <div className="app-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
-        <div className="ui-card" style={{ maxWidth: '440px', margin: '0 auto', padding: '36px 24px' }}>
-          <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>🏪</span>
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>
-            দোকানে লগইন করুন
-          </h2>
-          <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 24px' }}>
-            দোকানের দৈনিক হিসাব, বাকি খাতা ও বিক্রয় পরিচালনা করতে আপনার দোকানের মোবাইল নাম্বার ও পিন দিয়ে লগইন করুন।
-          </p>
-          <Link
-            href="/login"
-            style={{
-              background: '#10b981',
-              color: '#fff',
-              textDecoration: 'none',
-              padding: '12px 24px',
-              borderRadius: '12px',
-              fontWeight: '800',
-              display: 'inline-block'
-            }}
-          >
-            🔑 দোকানদার লগইন ➔
-          </Link>
-        </div>
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="সুপার অ্যাডমিন ড্যাশবোর্ডে নিয়ে যাওয়া হচ্ছে..."
+          subText="অনুগ্রহ করে অপেক্ষা করুন"
+          icon="👑"
+        />
+      </div>
+    );
+  }
+
+  // If not logged in or no shop tenant loaded yet, show the full Bengali Landing Page!
+  if (!tenant) {
+    return <LandingPage />;
+  }
+
+  if (isLoading || (loading && recentSales.length === 0 && metrics.totalSales === 0)) {
+    return (
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="দোকানের লাইভ হিসাব ও ড্যাশবোর্ড লোড হচ্ছে..."
+          subText="আজকের বিক্রয়, ক্যাশ ও খতিয়ান প্রস্তুত করা হচ্ছে"
+          icon="🏪"
+        />
       </div>
     );
   }
@@ -1327,8 +1330,8 @@ export default function ShopkeeperDashboard() {
               </Link>
             </div>
 
-            {/* 📋 3 HORIZONTAL QUICK ACTION INFO BARS */}
-            <div style={{ display: 'grid', gap: '10px', marginBottom: '22px' }}>
+            {/* 📋 3 HORIZONTAL QUICK ACTION INFO BARS (Responsive 1-Col Mobile, 3-Col Desktop) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '22px' }}>
               {/* Bar 1: মোট ব্যয়/খরচ > */}
               <Link
                 href="/expenses"

@@ -3490,6 +3490,8 @@ export default function PosPage() {
 
   return (
     <div className="app-container" style={{ paddingBottom: '160px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <div className="pos-workstation-layout">
+        <div className="pos-left-catalog">
       
       {/* 🎙️ ULTIMATE HANDS-FREE VOICE POS & 🌙 COUNTER SLEEP BANNER */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'stretch', maxWidth: '100%', minWidth: 0 }}>
@@ -6197,6 +6199,418 @@ export default function PosPage() {
       )}
       </>
     )}
+        </div>
+
+        {/* 🖥️ Desktop Sticky Live Bill Workstation (>= 1024px) */}
+        <div className="pos-right-bill-station desktop-only">
+          {/* Header */}
+          <div style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #e2e8f0',
+            background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '9px',
+                background: '#ecfdf5',
+                color: '#059669',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '16px',
+                fontWeight: '900'
+              }}>
+                🧾
+              </span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '13.5px', fontWeight: '900', color: '#0f172a' }}>
+                  চলতি কাউন্টার বিল
+                </h3>
+                <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
+                  কাউন্টার {activeCounterId} • {cart.length} প্রকার পণ্য
+                </p>
+              </div>
+            </div>
+
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('আপনি কি এই কাউন্টারের পুরো বিল মুছে ফেলতে চান?')) {
+                    triggerHaptic('medium');
+                    setCart([]);
+                  }
+                }}
+                style={{
+                  background: '#fee2e2',
+                  border: '1px solid #fca5a5',
+                  color: '#dc2626',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+                title="বিল ক্লিয়ার করুন"
+              >
+                🗑️ ক্লিয়ার
+              </button>
+            )}
+          </div>
+
+          {/* Customer Quick Selector */}
+          <div style={{
+            padding: '9px 14px',
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            <span style={{ fontSize: '13px' }}>👤</span>
+            <select
+              value={selectedCustomer}
+              onChange={(e) => {
+                setSelectedCustomer(e.target.value);
+                triggerHaptic('light');
+              }}
+              style={{
+                flex: 1,
+                padding: '6px 8px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                color: '#0f172a',
+                background: '#ffffff',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="none">নগদ কাস্টমার (সাধারণ)</option>
+              {customers.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.phone ? `(${c.phone})` : ''} {c.totalDue ? `• বকেয়া: ৳${c.totalDue}` : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setShowNewCustFields(true);
+                setShowCheckoutModal(true);
+              }}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #cbd5e1',
+                padding: '5px 8px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#475569',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              title="নতুন কাস্টমার তৈরি করুন"
+            >
+              + নতুন
+            </button>
+          </div>
+
+          {/* Scrollable Cart Items List */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '10px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}>
+            {cart.length === 0 ? (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 16px',
+                textAlign: 'center',
+                color: '#94a3b8'
+              }}>
+                <span style={{ fontSize: '38px', display: 'block', marginBottom: '8px', opacity: 0.6 }}>🛒</span>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: '#64748b' }}>
+                  বিল বর্তমানে খালি
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>
+                  বামের তালিকা থেকে পণ্যে ক্লিক করুন বা বারকোড স্ক্যান করুন
+                </p>
+              </div>
+            ) : (
+              cart.map(item => (
+                <div
+                  key={item.product.id}
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px'
+                  }}
+                >
+                  {/* Title & Delete */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <strong style={{ fontSize: '12px', color: '#0f172a', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.product.banglaName || item.product.name}
+                      </strong>
+                      <span style={{ fontSize: '10.5px', color: '#64748b' }}>
+                        দর: ৳{item.unitPrice} /{item.selectedUnit || item.product.unit || 'পিস'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(item.product.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        padding: '1px 3px',
+                        lineHeight: 1
+                      }}
+                      title="বাদ দিন"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Qty Controls & Line Total */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={() => updateQty(item.product.id, -1)}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          fontWeight: '900',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        step="any"
+                        value={item.quantity}
+                        onChange={(e) => setDirectQuantity(item.product.id, parseFloat(e.target.value) || 0)}
+                        className="num-font"
+                        style={{
+                          width: '46px',
+                          padding: '2px 0',
+                          textAlign: 'center',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          outline: 'none',
+                          background: '#ffffff'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateQty(item.product.id, 1)}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          background: '#ffffff',
+                          fontWeight: '900',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        +
+                      </button>
+                      <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', marginLeft: '2px' }}>
+                        {item.selectedUnit || item.product.unit || ''}
+                      </span>
+                    </div>
+
+                    <strong className="num-font" style={{ fontSize: '13px', color: '#0f172a', fontWeight: '900' }}>
+                      ৳ {item.totalPrice?.toLocaleString('en-US')}
+                    </strong>
+                  </div>
+
+                  {/* Quick Weight Chips (For Kg/Liter) */}
+                  {(item.product.unit === 'কেজি' || item.product.unit === 'লিটার') && (
+                    <div style={{ display: 'flex', gap: '3px', paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
+                      <button type="button" onClick={() => setDirectQuantity(item.product.id, 0.25)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 0.25 ? '#10b981' : '#fff', color: item.quantity === 0.25 ? '#fff' : '#475569', cursor: 'pointer' }}>১ পোয়া</button>
+                      <button type="button" onClick={() => setDirectQuantity(item.product.id, 0.5)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 0.5 ? '#10b981' : '#fff', color: item.quantity === 0.5 ? '#fff' : '#475569', cursor: 'pointer' }}>হাফ কেজি</button>
+                      <button type="button" onClick={() => setDirectQuantity(item.product.id, 1)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 1 ? '#10b981' : '#fff', color: item.quantity === 1 ? '#fff' : '#475569', cursor: 'pointer' }}>১ কেজি</button>
+                      <button type="button" onClick={() => handlePromptTakaAmount(item)} style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', cursor: 'pointer' }}>টাকায়</button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Calculation & Action Footer */}
+          <div style={{
+            padding: '12px 14px',
+            background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+            borderTop: '1.5px solid #e2e8f0',
+            boxShadow: '0 -4px 14px rgba(0,0,0,0.03)'
+          }}>
+            {/* Subtotal & Discount Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '11.5px', color: '#64748b' }}>
+              <span>উপ-মোট (Subtotal):</span>
+              <strong className="num-font" style={{ color: '#0f172a' }}>
+                ৳ {cart.reduce((acc, it) => acc + (it.totalPrice || 0), 0).toLocaleString('en-US')}
+              </strong>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11.5px' }}>
+              <span style={{ color: '#64748b' }}>ছাড় (Discount):</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ color: '#64748b', fontSize: '10.5px' }}>৳</span>
+                <input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0"
+                  style={{
+                    width: '54px',
+                    padding: '2px 5px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    textAlign: 'right',
+                    fontSize: '11.5px',
+                    fontWeight: '800',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Grand Total */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '7px 10px',
+              background: '#ecfdf5',
+              borderRadius: '10px',
+              border: '1px solid #a7f3d0',
+              marginBottom: '10px'
+            }}>
+              <span style={{ fontSize: '12.5px', fontWeight: '900', color: '#065f46' }}>
+                মোট প্রদেয়:
+              </span>
+              <span className="num-font" style={{ fontSize: '19px', fontWeight: '900', color: '#059669' }}>
+                ৳ {Math.max(0, cart.reduce((acc, it) => acc + (it.totalPrice || 0), 0) - (Number(discount) || 0)).toLocaleString('en-US')}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+              <button
+                type="button"
+                disabled={cart.length === 0}
+                onClick={() => {
+                  setPaymentMethod('cash');
+                  setShowCheckoutModal(true);
+                  triggerHaptic('medium');
+                }}
+                style={{
+                  padding: '8px 6px',
+                  borderRadius: '9px',
+                  background: cart.length === 0 ? '#cbd5e1' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '900',
+                  fontSize: '12px',
+                  cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  boxShadow: cart.length === 0 ? 'none' : '0 2px 6px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                <span>💵</span> নগদ বিক্রি
+              </button>
+
+              <button
+                type="button"
+                disabled={cart.length === 0}
+                onClick={() => {
+                  setPaymentMethod('due');
+                  setShowCheckoutModal(true);
+                  triggerHaptic('medium');
+                }}
+                style={{
+                  padding: '8px 6px',
+                  borderRadius: '9px',
+                  background: cart.length === 0 ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '900',
+                  fontSize: '12px',
+                  cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  boxShadow: cart.length === 0 ? 'none' : '0 2px 6px rgba(245, 158, 11, 0.3)'
+                }}
+              >
+                <span>📒</span> বাকি বিক্রি
+              </button>
+            </div>
+
+            <button
+              type="button"
+              disabled={cart.length === 0}
+              onClick={() => {
+                setShowCheckoutModal(true);
+                triggerHaptic('medium');
+              }}
+              style={{
+                width: '100%',
+                padding: '9px',
+                borderRadius: '9px',
+                background: cart.length === 0 ? '#f1f5f9' : '#0f172a',
+                color: cart.length === 0 ? '#94a3b8' : '#ffffff',
+                border: 'none',
+                fontWeight: '900',
+                fontSize: '12.5px',
+                cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
+              }}
+            >
+              <span>⚡</span> বিস্তারিত বিল ও মেমো (Enter)
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Cart Drawer Modal */}
       {showCartDrawer && (
@@ -8037,7 +8451,7 @@ export default function PosPage() {
 
       {/* 📱 Mobile Sticky Bottom Cart Pill (1-Tap Fast Checkout - Amar Dokan Style) */}
       {cart.length > 0 && (
-        <div style={{
+        <div className="mobile-only" style={{
           position: 'fixed',
           bottom: '80px',
           left: '12px',

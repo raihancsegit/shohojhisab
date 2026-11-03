@@ -34,7 +34,9 @@ export default function PWAInstaller() {
     const handler = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      (window as any).__pwaInstallPrompt = e;
       setIsInstallable(true);
+      window.dispatchEvent(new Event('lbos-pwa-ready'));
     };
 
     window.addEventListener('beforeinstallprompt', handler);

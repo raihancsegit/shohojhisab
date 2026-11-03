@@ -13,8 +13,17 @@ import CounterBlackSleepOverlay from '../components/CounterBlackSleepOverlay';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
 import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
 import { useRenderKeepAlive } from '../lib/renderKeepAlive';
+import DesktopAdminSidebar from '../components/DesktopAdminSidebar';
 
-function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
+function HeaderNav({
+  onOpenMenuDrawer,
+  isSidebarCollapsed,
+  onToggleSidebar
+}: {
+  onOpenMenuDrawer: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+}) {
   useRenderKeepAlive();
   const { userRole, tenant, activeRoleMode, currentStaffUser, switchRoleMode, loginWithPin, logout, triggerHaptic, isSoundboxEnabled, toggleSoundbox, isFeatureEnabled, theme: authTheme, toggleTheme, updateActiveTenant } = useAuth();
   const pathname = usePathname();
@@ -27,6 +36,49 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
   const [pinInput, setPinInput] = useState('');
   const [modeError, setModeError] = useState('');
   const [availableStaff, setAvailableStaff] = useState<any[]>([]);
+
+  // Listen for sidebar custom events for modal opening
+  useEffect(() => {
+    const handleOpenMode = () => {
+      setPinInput('');
+      setModeError('');
+      setShowModeModal(true);
+    };
+    const handleOpenShop = () => {
+      setShowShopSwitchModal(true);
+    };
+    window.addEventListener('lbos-open-mode-modal', handleOpenMode);
+    window.addEventListener('lbos-open-shop-switch-modal', handleOpenShop);
+    return () => {
+      window.removeEventListener('lbos-open-mode-modal', handleOpenMode);
+      window.removeEventListener('lbos-open-shop-switch-modal', handleOpenShop);
+    };
+  }, []);
+
+  // Contextual Page Header Info for Desktop Admin Dashboard
+  const getPageTitleInfo = (path: string) => {
+    if (path === '/') return { title: 'ড্যাশবোর্ড', icon: '🏠', badge: 'লাইভ হিসাব' };
+    if (path.startsWith('/pos')) return { title: 'POS কাউন্টার', icon: '🛒', badge: 'বিক্রয়' };
+    if (path.startsWith('/calculator')) return { title: 'ক্যালকুলেটর কুইক সেল', icon: '🔢', badge: 'দ্রুত বিক্রি' };
+    if (path.startsWith('/khata')) return { title: 'গ্রাহক বাকি খাতা', icon: '📒', badge: 'খাতা' };
+    if (path.startsWith('/installments')) return { title: 'বাকির কিস্তি কালেকশন', icon: '📅', badge: 'কিস্তি' };
+    if (path.startsWith('/stock')) return { title: 'পণ্য ও স্টক ইনভেন্টরি', icon: '📦', badge: 'ইনভেন্টরি' };
+    if (path.startsWith('/dealers')) return { title: 'ডিলার ও মহাজন খাতা', icon: '🛍️', badge: 'ক্রয় চালান' };
+    if (path.startsWith('/dealer-portal')) return { title: 'ডিলার পোর্টাল', icon: '🚚', badge: 'সরাসরি চালান' };
+    if (path.startsWith('/expenses')) return { title: 'ব্যয় / দৈনিক খরচ', icon: '💸', badge: 'খরচ' };
+    if (path.startsWith('/day-end')) return { title: 'ক্যাশ ড্রয়ার ও ক্লোজিং', icon: '🌙', badge: 'ক্যাশ মিল' };
+    if (path.startsWith('/reports')) return { title: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', badge: 'অ্যানালিটিক্স' };
+    if (path.startsWith('/staff')) return { title: 'কর্মচারী ও পারমিশন', icon: '👥', badge: 'টিম' };
+    if (path.startsWith('/branches')) return { title: 'দোকানের শাখা (Branches)', icon: '🏢', badge: 'শাখা' };
+    if (path.startsWith('/expiry-tracker')) return { title: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', badge: 'মেয়াদ ট্র্যাকার' };
+    if (path.startsWith('/subscription')) return { title: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', badge: 'লাইসেন্স' };
+    if (path.startsWith('/settings')) return { title: 'দোকানের সেটিংস', icon: '⚙️', badge: 'কনফিগারেশন' };
+    if (path.startsWith('/support')) return { title: 'হেল্প এন্ড সাপোর্ট', icon: '🎧', badge: '২৪/৭ সাপোর্ট' };
+    if (path.startsWith('/tutorials')) return { title: 'ভিডিও টিউটোরিয়াল', icon: '🎬', badge: 'গাইড' };
+    if (path.startsWith('/voice-guide')) return { title: 'ভয়েস নির্দেশিকা', icon: '🎙️', badge: 'এআই নির্দেশিকা' };
+    return { title: 'সহজ হিসাব', icon: '🏪', badge: 'স্মার্ট বিজনেস' };
+  };
+  const pageTitleInfo = getPageTitleInfo(pathname);
 
   // Offline network status and pending sync count
   const [isOnline, setIsOnline] = useState(true);
@@ -192,32 +244,52 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
 
         {/* Top Main Bar */}
         <div style={{
-          maxWidth: '1280px',
+          maxWidth: '1440px',
+          width: '100%',
           margin: '0 auto',
-          padding: '7px 12px',
+          padding: '7px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '8px'
+          gap: '8px',
+          boxSizing: 'border-box'
         }}>
-          {/* Left: Hamburger & Shop Name / Logo */}
+          {/* Left: Mobile hamburger & Shop Logo, Desktop Admin Sidebar toggle & Breadcrumb */}
           <div className="header-shop-container">
             {userRole === 'shopkeeper' && (
-              <button
-                type="button"
-                onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
-                className="header-hamburger-btn"
-                title="মেনু ড্রয়ার খুলুন"
-              >
-                ☰
-              </button>
+              <>
+                {/* Mobile Hamburger Button */}
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic('light'); onOpenMenuDrawer(); }}
+                  className="header-hamburger-btn mobile-only"
+                  title="মেনু ড্রয়ার খুলুন"
+                >
+                  ☰
+                </button>
+
+                {/* Desktop Sidebar Expand Button (Shown only when sidebar is collapsed) */}
+                {isSidebarCollapsed && (
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic('light'); if (onToggleSidebar) onToggleSidebar(); }}
+                    className="header-hamburger-btn desktop-only"
+                    style={{ width: '32px', height: '32px', borderRadius: '8px' }}
+                    title="সাইডবার বড় করুন (Expand Sidebar)"
+                  >
+                    ▶
+                  </button>
+                )}
+              </>
             )}
 
             {userRole === 'shopkeeper' && tenant ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: '1 1 auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: '1 1 auto' }}>
+                {/* Mobile Shop Switcher & Title (100% UNCHANGED for Mobile) */}
                 <button
                   type="button"
                   onClick={() => { triggerHaptic('light'); setShowShopSwitchModal(true); }}
+                  className="mobile-only"
                   style={{
                     background: 'none',
                     border: 'none',
@@ -246,12 +318,38 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                         <span style={{ display: 'inline-block', width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80', marginRight: '3px', boxShadow: '0 0 4px #4ade80' }}></span>
                         {theme.name}
                       </span>
-                      <span className="desktop-only" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>
-                        • {tenant.location || 'বাজার'}
-                      </span>
                     </div>
                   </div>
                 </button>
+
+                {/* Desktop Admin Page Title & Breadcrumb Indicator */}
+                <div className="desktop-only" style={{ alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '18px' }}>{pageTitleInfo.icon}</span>
+                    <h2 style={{
+                      margin: 0,
+                      fontSize: '15px',
+                      fontWeight: '900',
+                      color: '#ffffff',
+                      letterSpacing: '-0.2px'
+                    }}>
+                      {pageTitleInfo.title}
+                    </h2>
+                    {pageTitleInfo.badge && (
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        padding: '1px 8px',
+                        borderRadius: '99px',
+                        background: 'rgba(99, 102, 241, 0.25)',
+                        border: '1px solid rgba(165, 180, 252, 0.35)',
+                        color: '#c7d2fe'
+                      }}>
+                        {pageTitleInfo.badge}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : userRole === 'admin' ? (
               <Link href="/admin" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
@@ -372,28 +470,30 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
                   {authTheme === 'dark' ? '☀️' : '🌙'}
                 </button>
 
-                {/* Primary Fast POS Button (Desktop Only) */}
-                <Link
-                  href="/pos"
-                  className="desktop-only"
-                  style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#ffffff',
-                    padding: '7px 16px',
-                    borderRadius: '99px',
-                    fontSize: '12.5px',
-                    fontWeight: '900',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span>⚡</span> POS বিক্রি
-                </Link>
+                {/* Primary Fast POS Button (Desktop Only, hidden on /pos) */}
+                {pathname !== '/pos' && (
+                  <Link
+                    href="/pos"
+                    className="desktop-only"
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#ffffff',
+                      padding: '7px 16px',
+                      borderRadius: '99px',
+                      fontSize: '12.5px',
+                      fontWeight: '900',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>⚡</span> POS বিক্রি
+                  </Link>
+                )}
               </>
             )}
 
@@ -416,22 +516,35 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
               </button>
             )}
 
-            {userRole === 'admin' && (
+            {/* Prominent Header Logout Button for Desktop & Admin */}
+            {(userRole === 'admin' || userRole === 'shopkeeper') && (
               <button
-                onClick={logout}
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  logout();
+                }}
+                className={userRole === 'shopkeeper' ? 'desktop-only' : ''}
                 style={{
-                  background: '#fee2e2',
-                  color: '#be123c',
-                  border: '1px solid #fecaca',
-                  padding: '5px 12px',
+                  background: authTheme === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2',
+                  color: authTheme === 'dark' ? '#fca5a5' : '#b91c1c',
+                  border: authTheme === 'dark' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid #fecaca',
+                  padding: '6px 14px',
                   borderRadius: '8px',
-                  fontSize: '12px',
+                  fontSize: '12.5px',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  flexShrink: 0
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)',
+                  transition: 'all 0.15s ease'
                 }}
+                title="সিস্টেম থেকে লগআউট করুন"
               >
-                🚪 লগআউট
+                <span style={{ fontSize: '13px' }}>🚪</span>
+                <span>লগআউট</span>
               </button>
             )}
           </div>
@@ -692,6 +805,35 @@ function HeaderNav({ onOpenMenuDrawer }: { onOpenMenuDrawer: () => void }) {
             >
               👥 সকল কর্মচারী ও পারমিশন ম্যানেজ করুন →
             </Link>
+
+            {/* Complete Logout Option */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowModeModal(false);
+                logout();
+              }}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '11px',
+                borderRadius: '12px',
+                background: authTheme === 'dark' ? 'rgba(239, 68, 68, 0.16)' : '#fee2e2',
+                border: authTheme === 'dark' ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid #fecaca',
+                color: authTheme === 'dark' ? '#fca5a5' : '#b91c1c',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>🚪</span>
+              <span>দোকান থেকে সম্পূর্ণ লগআউট করুন</span>
+            </button>
           </div>
         </div>
       )}
@@ -2299,10 +2441,81 @@ function BackendHealthBanner() {
   );
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutShell({ children }: { children: React.ReactNode }) {
+  const { userRole, tenant } = useAuth();
+  const pathname = usePathname();
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('lbos_desktop_sidebar_collapsed');
+    if (saved === 'true') {
+      setIsSidebarCollapsed(true);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('lbos_desktop_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
+  const isPublicPage = pathname === '/login' || pathname === '/landing' || (pathname === '/' && !tenant && userRole !== 'admin');
+
+  if (isPublicPage) {
+    return (
+      <>
+        <BackendHealthBanner />
+        <PWAInstaller />
+        <main className="min-h-screen">
+          {children}
+        </main>
+      </>
+    );
+  }
+
+  const isShopkeeper = userRole === 'shopkeeper';
+  const isAdminPage = pathname ? pathname.startsWith('/admin') : false;
+
+  return (
+    <>
+      <BackendHealthBanner />
+      <PWAInstaller />
+      <ScreenLockOverlay />
+      {isShopkeeper && (
+        <DesktopAdminSidebar
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+        />
+      )}
+      <div className={`admin-main-wrapper flex flex-col min-h-screen min-w-0 ${isShopkeeper ? (isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded') : 'no-sidebar'} ${isAdminPage ? 'admin-fullscreen' : ''}`}>
+        {!isAdminPage && (
+          <HeaderNav
+            onOpenMenuDrawer={() => setIsMenuDrawerOpen(true)}
+            isSidebarCollapsed={isSidebarCollapsed}
+            onToggleSidebar={toggleSidebar}
+          />
+        )}
+        <main style={{ minHeight: isAdminPage ? '100vh' : 'calc(100vh - 130px)' }} className={`flex-1 ${isAdminPage ? 'p-0 pb-0' : 'pb-20 lg:pb-6'}`}>
+          {children}
+        </main>
+      </div>
+      <GlobalShortcutsModal />
+      <BottomMobileNav onOpenActionSheet={() => setIsActionSheetOpen(true)} />
+      <SideMenuDrawer isOpen={isMenuDrawerOpen} onClose={() => setIsMenuDrawerOpen(false)} />
+      <ActionSheetModal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} />
+      <VoiceFieldHUD />
+      <VoiceAssistant />
+      <CounterBlackSleepOverlay />
+    </>
+  );
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const unlockAudio = () => {
@@ -2336,20 +2549,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ margin: 0, fontFamily: 'var(--font-sans)' }}>
         <AuthProvider>
-          <BackendHealthBanner />
-          <PWAInstaller />
-          <ScreenLockOverlay />
-          <HeaderNav onOpenMenuDrawer={() => setIsMenuDrawerOpen(true)} />
-          <main style={{ minHeight: 'calc(100vh - 130px)', paddingBottom: '80px' }}>
-            {children}
-          </main>
-          <GlobalShortcutsModal />
-          <BottomMobileNav onOpenActionSheet={() => setIsActionSheetOpen(true)} />
-          <SideMenuDrawer isOpen={isMenuDrawerOpen} onClose={() => setIsMenuDrawerOpen(false)} />
-          <ActionSheetModal isOpen={isActionSheetOpen} onClose={() => setIsActionSheetOpen(false)} />
-          <VoiceFieldHUD />
-          <VoiceAssistant />
-          <CounterBlackSleepOverlay />
+          <AppLayoutShell>{children}</AppLayoutShell>
         </AuthProvider>
       </body>
     </html>

@@ -30,12 +30,15 @@ const toEnglishDigits = (str: any): string => {
 };
 
 export default function SuperAdminPage() {
-  const { userRole, loginAdmin, logout, updateActiveTenant, triggerHaptic } = useAuth();
+  const { userRole, loginAdmin, logout, updateActiveTenant, triggerHaptic, theme: authTheme, toggleTheme } = useAuth();
   const router = useRouter();
+  const isDark = authTheme === 'dark';
 
   const [passcode, setPasscode] = useState('');
   const [passError, setPassError] = useState('');
   const [activeTab, setActiveTab] = useState<'shops' | 'coupons' | 'analytics' | 'settings'>('shops');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [tenants, setTenants] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>(DEFAULT_CATEGORIES);
@@ -696,13 +699,42 @@ export default function SuperAdminPage() {
   // Unauthenticated Admin Passcode Screen
   if (userRole !== 'admin') {
     return (
-      <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-        <div className="ui-card" style={{ maxWidth: '400px', width: '100%', padding: '36px 24px', textAlign: 'center' }}>
-          <span style={{ fontSize: '48px', display: 'block', marginBottom: '14px' }}>👑</span>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'radial-gradient(ellipse at center, #1e1b4b 0%, #090d16 100%)',
+        padding: '20px'
+      }}>
+        <div style={{
+          maxWidth: '420px',
+          width: '100%',
+          padding: '36px 28px',
+          textAlign: 'center',
+          background: '#ffffff',
+          borderRadius: '24px',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5)',
+          border: '1.5px solid #cbd5e1'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '18px',
+            background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+            color: '#fff',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: '32px',
+            margin: '0 auto 16px',
+            boxShadow: '0 8px 20px rgba(245, 158, 11, 0.35)'
+          }}>
+            👑
+          </div>
           <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px' }}>
-            সুপার অ্যাডমিন লগইন
+            সুপার অ্যাডমিন প্ল্যাটফর্ম
           </h2>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px' }}>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 24px', lineHeight: 1.5 }}>
             প্ল্যাটফর্ম ওনার ও সাবস্ক্রিপশন কন্ট্রোল প্যানেলে প্রবেশ করতে আপনার মাস্টার পাসকোড দিন।
           </p>
 
@@ -713,15 +745,18 @@ export default function SuperAdminPage() {
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
               required
+              autoFocus
               style={{
                 padding: '14px',
                 borderRadius: '12px',
                 border: '1.5px solid #cbd5e1',
-                fontSize: '15px',
+                fontSize: '16px',
                 textAlign: 'center',
                 letterSpacing: '2px',
                 outline: 'none',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                background: '#f8fafc',
+                color: '#0f172a'
               }}
             />
 
@@ -734,7 +769,7 @@ export default function SuperAdminPage() {
             <button
               type="submit"
               style={{
-                background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
                 color: '#fff',
                 border: 'none',
                 padding: '14px',
@@ -742,11 +777,24 @@ export default function SuperAdminPage() {
                 fontWeight: '900',
                 fontSize: '15px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(225, 29, 72, 0.4)'
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
               }}
             >
               🔓 কন্ট্রোল সেন্টারে প্রবেশ করুন
             </button>
+
+            <Link
+              href="/"
+              style={{
+                textDecoration: 'none',
+                color: '#64748b',
+                fontSize: '13px',
+                fontWeight: '700',
+                marginTop: '6px'
+              }}
+            >
+              ← হোম পেজে ফিরে যান
+            </Link>
           </form>
         </div>
       </div>
@@ -787,119 +835,611 @@ export default function SuperAdminPage() {
     return matchQ && matchStatus && matchCat;
   });
 
+  const adminTabs = [
+    {
+      id: 'shops',
+      label: 'দোকান ও লাইসেন্স',
+      desc: 'অনুমোদন, মেয়াদ ও ব্যালেন্স',
+      icon: '🏪',
+      count: tenants.length,
+      badgeColor: '#3b82f6'
+    },
+    {
+      id: 'coupons',
+      label: 'প্রোমো কুপন কোড',
+      desc: 'ডিসকাউন্ট ও অফার কোড',
+      icon: '🎟️',
+      count: coupons.length,
+      badgeColor: '#8b5cf6'
+    },
+    {
+      id: 'analytics',
+      label: 'সেলস ও প্ল্যাটফর্ম আয়',
+      desc: 'মাসিক আয় ও লেনদেন ভলিউম',
+      icon: '📊',
+      badgeColor: '#10b981'
+    },
+    {
+      id: 'settings',
+      label: 'সিস্টেম সেটিংস ও অডিট লগ',
+      desc: 'পেমেন্ট গেটওয়ে ও অডিট হিস্ট্রি',
+      icon: '⚙️',
+      badgeColor: '#64748b'
+    }
+  ];
+
   return (
-    <div className="app-container" style={{ paddingBottom: '96px', maxWidth: '1260px', width: '100%' }}>
-      
-      {/* Top Super Admin Glass Hero */}
-      <div style={{
-        background: 'linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #311042 100%)',
-        borderRadius: '28px',
-        padding: '28px 24px',
-        color: '#ffffff',
-        marginBottom: '24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '16px',
-        boxShadow: '0 20px 40px -10px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
+    <div className="super-admin-layout" style={{
+      display: 'flex',
+      minHeight: '100vh',
+      width: '100%',
+      backgroundColor: isDark ? '#090d16' : '#f8fafc',
+      color: isDark ? '#f8fafc' : '#0f172a',
+      fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
+    }}>
+      {/* 🌟 1. DESKTOP SUPER ADMIN SIDEBAR */}
+      <aside
+        className={`super-admin-sidebar ${sidebarCollapsed ? 'collapsed' : 'expanded'} desktop-only`}
+        style={{
+          width: sidebarCollapsed ? '78px' : '280px',
+          minWidth: sidebarCollapsed ? '78px' : '280px',
+          maxWidth: sidebarCollapsed ? '78px' : '280px',
+          background: isDark ? '#090d16' : '#0f172a',
+          color: '#ffffff',
+          borderRight: isDark ? '1px solid #1e293b' : '1px solid rgba(255, 255, 255, 0.08)',
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          zIndex: 50,
+          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.28)',
+          transition: 'width 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          overflowY: 'auto',
+          userSelect: 'none'
+        }}
+      >
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.1)', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: '800', marginBottom: '8px' }}>
-            <span>👑 ShohojHisab Platform Master Suite</span>
+          {/* Brand Header */}
+          <div style={{
+            padding: sidebarCollapsed ? '16px 8px' : '20px 18px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                color: '#ffffff',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '20px',
+                flexShrink: 0,
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)'
+              }}>
+                👑
+              </div>
+              {!sidebarCollapsed && (
+                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff', margin: 0, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
+                    ShohojHisab
+                  </h2>
+                  <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                    সুপার অ্যাডমিন প্ল্যাটফর্ম
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {!sidebarCollapsed && (
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="desktop-only"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#94a3b8',
+                  width: '28px',
+                  height: '28px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+                title="সাইডবার ছোট করুন"
+              >
+                ◀
+              </button>
+            )}
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: '900', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            সুপার অ্যাডমিন কন্ট্রোল সেন্টার
-          </h1>
-          <p style={{ fontSize: '13.5px', color: '#cbd5e1', margin: 0 }}>
-            সকল দোকানের সাবস্ক্রিপশন প্ল্যান, মেয়াদ বৃদ্ধি, এসএমএস পুল, কুপন এবং ফিচার পারমিশন নিয়ন্ত্রণ করুন।
-          </p>
+
+          {/* Platform Status & Mini-Cockpit Card */}
+          {!sidebarCollapsed && (
+            <div style={{
+              margin: '14px 16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '14px',
+              padding: '12px 14px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#34d399', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', display: 'inline-block', boxShadow: '0 0 8px #34d399' }} />
+                  সিস্টেম লাইভ
+                </span>
+                <span style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: '700' }}>v3.0 Master</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>মোট দোকান</div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff' }}>{tenants.length} টি</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>মাসিক আয়</div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#38bdf8' }}>৳{(overview.monthlyRecurringRevenue || 0).toLocaleString('en-US')}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Primary Action Button */}
+          <div style={{ padding: sidebarCollapsed ? '10px 8px' : '0 16px 14px' }}>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: sidebarCollapsed ? '10px 0' : '11px 14px',
+                fontSize: '13.5px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                transition: 'all 0.18s ease'
+              }}
+              title="নতুন দোকান যুক্ত করুন"
+            >
+              <span>➕</span>
+              {!sidebarCollapsed && <span>নতুন দোকান যুক্ত করুন</span>}
+            </button>
+          </div>
+
+          {/* Navigation Menu Tabs */}
+          <div style={{ padding: '0 12px', display: 'grid', gap: '6px' }}>
+            {!sidebarCollapsed && (
+              <div style={{ padding: '4px 8px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                প্ল্যাটফর্ম ম্যানেজমেন্ট
+              </div>
+            )}
+            {adminTabs.map(tab => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => { setActiveTab(tab.id as any); triggerHaptic('light'); }}
+                  className={`super-admin-nav-item ${active ? 'active' : ''}`}
+                  style={{
+                    justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+                    padding: sidebarCollapsed ? '12px 0' : '11px 14px'
+                  }}
+                  title={tab.label}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                    <span style={{ fontSize: '18px', flexShrink: 0 }}>{tab.icon}</span>
+                    {!sidebarCollapsed && (
+                      <div style={{ minWidth: 0, textAlign: 'left' }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: active ? '900' : '700', color: active ? '#34d399' : '#ffffff', lineHeight: 1.2 }}>
+                          {tab.label}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          {tab.desc}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {!sidebarCollapsed && tab.count !== undefined && (
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '8px',
+                      background: active ? '#10b981' : 'rgba(255,255,255,0.1)',
+                      color: '#ffffff'
+                    }}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Shortcuts Section */}
+          {!sidebarCollapsed && (
+            <div style={{ padding: '16px 12px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: '16px', display: 'grid', gap: '4px' }}>
+              <div style={{ padding: '0 8px 6px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                কুইক টুলস
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { setShowCouponModal(true); triggerHaptic('light'); }}
+                className="super-admin-nav-item"
+                style={{ padding: '9px 12px', fontSize: '12.5px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🎟️</span>
+                  <span>নতুন কুপন তৈরি</span>
+                </div>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>+</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { loadAdminData(); triggerHaptic('light'); }}
+                className="super-admin-nav-item"
+                style={{ padding: '9px 12px', fontSize: '12.5px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🔄</span>
+                  <span>ডাটা রিফ্রেশ করুন</span>
+                </div>
+              </button>
+
+              <Link
+                href="/"
+                className="super-admin-nav-item"
+                style={{ padding: '9px 12px', fontSize: '12.5px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🌐</span>
+                  <span>দোকানদার ভিউ / হোম</span>
+                </div>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>↗</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => { toggleTheme(); triggerHaptic('light'); }}
+                className="super-admin-nav-item"
+                style={{ padding: '9px 12px', fontSize: '12.5px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{isDark ? '☀️' : '🌙'}</span>
+                  <span>{isDark ? 'লাইট মোড চালু' : 'ডার্ক মোড চালু'}</span>
+                </div>
+              </button>
+            </div>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {/* Bottom Profile & Logout Area */}
+        <div style={{
+          padding: sidebarCollapsed ? '14px 8px' : '16px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'rgba(0, 0, 0, 0.2)'
+        }}>
+          {!sidebarCollapsed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
+                color: '#fff',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: '16px',
+                fontWeight: '900',
+                flexShrink: 0
+              }}>
+                A
+              </div>
+              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ fontSize: '13px', fontWeight: '900', color: '#ffffff', whiteSpace: 'nowrap' }}>
+                  সুপার অ্যাডমিন
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#f43f5e', fontWeight: '800' }}>
+                  রুট এক্সেস অনুমোদিত
+                </div>
+              </div>
+            </div>
+          )}
+
           <button
-            onClick={() => setShowAddModal(true)}
+            type="button"
+            onClick={logout}
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              border: 'none',
-              padding: '11px 20px',
-              borderRadius: '14px',
-              fontSize: '13.5px',
-              fontWeight: '900',
+              width: '100%',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#f87171',
+              borderRadius: '10px',
+              padding: sidebarCollapsed ? '10px 0' : '10px 14px',
+              fontSize: '13px',
+              fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)'
+              transition: 'all 0.18s ease'
             }}
+            title="প্ল্যাটফর্ম থেকে সম্পূর্ণ লগআউট"
           >
-            <span>➕ নতুন দোকান যুক্ত করুন</span>
-          </button>
-
-          <button
-            onClick={logout}
-            style={{
-              background: 'rgba(255, 255, 255, 0.12)',
-              color: '#ffffff',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              padding: '11px 18px',
-              borderRadius: '14px',
-              fontSize: '13.5px',
-              fontWeight: '800',
-              cursor: 'pointer'
-            }}
-          >
-            লগআউট
+            <span>🚪</span>
+            {!sidebarCollapsed && <span>অ্যাডমিন লগআউট</span>}
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Notice Banner */}
-      {notice && (
-        <div style={{ background: '#ecfdf5', border: '1.5px solid #86efac', color: '#065f46', padding: '14px 18px', borderRadius: '16px', marginBottom: '20px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)' }}>
-          <span>✓</span>
-          <span>{notice}</span>
+      {/* 📱 2. MOBILE DRAWER SIDEBAR */}
+      {mobileSidebarOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex'
+        }}>
+          <div style={{ flex: 1 }} onClick={() => setMobileSidebarOpen(false)} />
+          <aside style={{
+            width: '84%',
+            maxWidth: '320px',
+            background: isDark ? '#090d16' : '#0f172a',
+            color: '#ffffff',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+            overflowY: 'auto'
+          }}>
+            <div>
+              {/* Drawer Top */}
+              <div style={{ padding: '18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f59e0b', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px' }}>
+                    👑
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '15px', color: '#fff' }}>ShohojHisab</strong>
+                    <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800' }}>সুপার অ্যাডমিন</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(false)}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', color: '#94a3b8', fontSize: '16px', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Drawer Tabs */}
+              <div style={{ padding: '14px 12px', display: 'grid', gap: '8px' }}>
+                {adminTabs.map(tab => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => { setActiveTab(tab.id as any); setMobileSidebarOpen(false); triggerHaptic('light'); }}
+                      className={`super-admin-nav-item ${active ? 'active' : ''}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: active ? '900' : '700', color: active ? '#34d399' : '#ffffff' }}>
+                            {tab.label}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            {tab.desc}
+                          </div>
+                        </div>
+                      </div>
+                      {tab.count !== undefined && (
+                        <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', background: active ? '#10b981' : 'rgba(255,255,255,0.1)', color: '#ffffff' }}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Drawer Bottom Actions */}
+            <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <button
+                type="button"
+                onClick={() => { setMobileSidebarOpen(false); setShowAddModal(true); }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '13.5px', fontWeight: '900', cursor: 'pointer', marginBottom: '10px' }}
+              >
+                ➕ নতুন দোকান যুক্ত করুন
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                style={{ width: '100%', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', borderRadius: '10px', padding: '11px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                🚪 অ্যাডমিন লগআউট
+              </button>
+            </div>
+          </aside>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '22px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {[
-          { id: 'shops', label: `🏪 সকল দোকান ও লাইসেন্স (${tenants.length})`, icon: '🏪' },
-          { id: 'coupons', label: `🎟️ প্রোমো কুপন (${coupons.length})`, icon: '🎟️' },
-          { id: 'analytics', label: '📊 সেলস ও সাবস্ক্রিপশন আয়', icon: '📊' },
-          { id: 'settings', label: '⚙️ সেটিংস ও অডিট লগ', icon: '⚙️' }
-        ].map(tab => {
-          const active = activeTab === tab.id;
-          return (
+      {/* 🌟 3. RIGHT MAIN CONTENT AREA */}
+      <div className="super-admin-main-area" style={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        background: isDark ? '#0b1120' : '#f8fafc'
+      }}>
+        {/* Right Topbar */}
+        <header className="super-admin-topbar">
+          {/* Left: Mobile Toggle + Title + Breadcrumbs */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
             <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id as any); triggerHaptic('light'); }}
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="mobile-only"
               style={{
-                padding: '11px 20px',
-                borderRadius: '14px',
-                border: active ? '1.5px solid #0f172a' : '1px solid rgba(226, 232, 240, 0.9)',
-                background: active ? '#0f172a' : '#ffffff',
-                color: active ? '#ffffff' : '#475569',
-                fontWeight: active ? '900' : '700',
-                fontSize: '13.5px',
+                background: isDark ? '#1e293b' : '#f1f5f9',
+                border: isDark ? '1px solid #334155' : '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                fontSize: '18px',
+                color: isDark ? '#ffffff' : '#0f172a',
+                cursor: 'pointer'
+              }}
+              title="মেনু খুলুন"
+            >
+              ☰
+            </button>
+
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: '18px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a', margin: 0 }}>
+                  {activeTab === 'shops' && '🏪 সকল দোকান ও লাইসেন্স কন্ট্রোল'}
+                  {activeTab === 'coupons' && '🎟️ প্রোমো ও ডিসকাউন্ট কুপন'}
+                  {activeTab === 'analytics' && '📊 সেলস, ভলিউম ও সাবস্ক্রিপশন আয়'}
+                  {activeTab === 'settings' && '⚙️ প্ল্যাটফর্ম সেটিংস ও অডিট লগ'}
+                </h1>
+                {activeTab === 'shops' && (
+                  <span style={{ fontSize: '11px', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '6px', fontWeight: '800' }}>
+                    {tenants.length} টি দোকান
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>
+                সুপার অ্যাডমিন প্ল্যাটফর্ম • ShohojHisab Platform Master Control
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Actions & Stats */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => { loadAdminData(); triggerHaptic('light'); }}
+              style={{
+                background: isDark ? '#1e293b' : '#ffffff',
+                border: isDark ? '1px solid #334155' : '1.5px solid #cbd5e1',
+                borderRadius: '10px',
+                padding: '8px 14px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                color: isDark ? '#cbd5e1' : '#334155',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                boxShadow: active ? '0 4px 14px rgba(15, 23, 42, 0.15)' : '0 2px 4px rgba(0,0,0,0.02)',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="ডাটা রিফ্রেশ করুন"
+            >
+              <span>🔄</span>
+              <span className="desktop-only">রিফ্রেশ</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '8px 16px',
+                fontSize: '12.5px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
               }}
             >
-              {tab.label}
+              <span>➕</span>
+              <span className="desktop-only">নতুন দোকান</span>
             </button>
-          );
-        })}
-      </div>
 
-      {/* TAB 1: SHOPS DIRECTORY & CONTROL */}
-      {activeTab === 'shops' && (
+            <button
+              type="button"
+              onClick={logout}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: '#ef4444',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              title="অ্যাডমিন লগআউট"
+            >
+              <span>🚪</span>
+              <span className="desktop-only">লগআউট</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Notice Toast */}
+        {notice && (
+          <div style={{
+            margin: '18px 28px 0',
+            background: '#ecfdf5',
+            border: '1.5px solid #86efac',
+            color: '#065f46',
+            padding: '12px 18px',
+            borderRadius: '14px',
+            fontSize: '13.5px',
+            fontWeight: '800',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)'
+          }}>
+            <span>✓</span>
+            <span>{notice}</span>
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <div style={{
+          padding: '24px 28px 80px',
+          flex: 1,
+          maxWidth: '1600px',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          {/* TAB 1: SHOPS DIRECTORY & CONTROL */}
+          {activeTab === 'shops' && (
         <div>
           {/* Quick Stats Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -3075,6 +3615,9 @@ export default function SuperAdminPage() {
           </div>
         </div>
       )}
+
+        </div>
+      </div>
 
       {/* MODAL: Create New Shop */}
       {showAddModal && (

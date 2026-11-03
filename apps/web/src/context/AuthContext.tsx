@@ -655,7 +655,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('lbos_tenant_pin');
     localStorage.removeItem('lbos_role_mode');
     localStorage.removeItem('lbos_staff_user');
-    router.push('/login');
+    router.push('/');
   };
 
   // Counter Lock & Unlock

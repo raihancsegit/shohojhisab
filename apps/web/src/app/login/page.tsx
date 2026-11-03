@@ -242,24 +242,52 @@ function LoginFormContent() {
     }}>
       
       {/* Brand Header */}
-      <div style={{ textAlign: 'center', marginBottom: '16px', maxWidth: '100%' }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-          color: '#ffffff',
-          padding: '6px 14px',
-          borderRadius: '99px',
-          boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
-          marginBottom: '6px'
-        }}>
-          <span style={{ fontSize: '18px' }}>🏪</span>
-          <span style={{ fontSize: '16px', fontWeight: '900', letterSpacing: '-0.3px' }}>ShohojHisab</span>
-        </div>
+      <div style={{ textAlign: 'center', marginBottom: '14px', maxWidth: '100%' }}>
+        <Link href="/" style={{ textDecoration: 'none' }} title="সহজ হিসাব হোম পেজে যান">
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            color: '#ffffff',
+            padding: '6px 14px',
+            borderRadius: '99px',
+            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+            marginBottom: '6px',
+            cursor: 'pointer'
+          }}>
+            <span style={{ fontSize: '18px' }}>🏪</span>
+            <span style={{ fontSize: '16px', fontWeight: '900', letterSpacing: '-0.3px' }}>ShohojHisab</span>
+          </div>
+        </Link>
         <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
           স্মার্ট দোকান ও ব্যবসা সফটওয়্যার
         </p>
+      </div>
+
+      {/* Back to Home Navigation Pill */}
+      <div style={{ width: '100%', maxWidth: '380px', marginBottom: '10px', display: 'flex', justifyContent: 'flex-start' }}>
+        <Link
+          href="/"
+          style={{
+            fontSize: '12px',
+            color: '#4f46e5',
+            textDecoration: 'none',
+            fontWeight: '800',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: '99px',
+            background: '#eef2ff',
+            border: '1px solid #c7d2fe',
+            transition: 'all 0.15s ease'
+          }}
+          title="সহজ হিসাব হোম ও ল্যান্ডিং পেজে যান"
+        >
+          <span>←</span>
+          <span>হোম পেজে ফিরে যান</span>
+        </Link>
       </div>
 
       {/* Main Container Card */}
@@ -1223,6 +1251,25 @@ function LoginFormContent() {
           </form>
         )}
 
+      </div>
+
+      {/* Subtle Return to Home Link */}
+      <div style={{ marginTop: '18px', textAlign: 'center' }}>
+        <Link
+          href="/"
+          style={{
+            fontSize: '12.5px',
+            color: '#64748b',
+            textDecoration: 'none',
+            fontWeight: '700',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <span>🏠</span>
+          <span>সহজ হিসাব মূল হোম পেজে ফিরে যান</span>
+        </Link>
       </div>
 
       {/* Forgot PIN Modal */}
