@@ -938,9 +938,9 @@ export default function StockPage() {
           <button
             onClick={() => { setShowVoiceStockModal(true); triggerHaptic('medium'); }}
             style={{
-              background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-              color: '#fff',
-              border: 'none',
+              background: '#0f172a',
+              color: '#ffffff',
+              border: '1.5px solid #0f172a',
               padding: '8px 12px',
               borderRadius: '12px',
               fontWeight: '800',
@@ -949,7 +949,7 @@ export default function StockPage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              boxShadow: '0 3px 10px rgba(79, 70, 229, 0.25)'
+              boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)'
             }}
           >
             <span>🎙️</span> ভয়েস স্টক
@@ -959,9 +959,9 @@ export default function StockPage() {
             onClick={handleSeedCategoryDefaults}
             disabled={seedingDefaults}
             style={{
-              background: '#f8fafc',
-              color: '#d97706',
-              border: '1.5px solid #fde68a',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1.5px solid #cbd5e1',
               padding: '7px 11px',
               borderRadius: '10px',
               fontWeight: '800',
@@ -980,9 +980,9 @@ export default function StockPage() {
           <button
             onClick={openAllStockLedgerModal}
             style={{
-              background: '#f8fafc',
-              color: '#0284c7',
-              border: '1.5px solid #bae6fd',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1.5px solid #cbd5e1',
               padding: '7px 11px',
               borderRadius: '10px',
               fontWeight: '800',
@@ -1003,7 +1003,7 @@ export default function StockPage() {
               onClick={handleExportStock}
               style={{
                 background: 'transparent',
-                color: '#047857',
+                color: '#0f172a',
                 border: 'none',
                 padding: '4px 8px',
                 borderRadius: '7px',
@@ -1023,7 +1023,7 @@ export default function StockPage() {
               onClick={() => { setShowImportModal(true); triggerHaptic('light'); }}
               style={{
                 background: 'transparent',
-                color: '#0284c7',
+                color: '#0f172a',
                 border: 'none',
                 padding: '4px 8px',
                 borderRadius: '7px',
@@ -1077,7 +1077,7 @@ export default function StockPage() {
         </div>
       </div>
 
-      {/* 3 Sleek Responsive Summary Cards */}
+      {/* 3 Sleek Responsive Summary Cards - Clean 2-Color System */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
@@ -1085,20 +1085,21 @@ export default function StockPage() {
         marginBottom: '14px'
       }}>
         <div style={{
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-          borderRadius: '14px',
-          padding: '10px 12px',
-          border: '1px solid #bbf7d0',
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '12px 14px',
+          border: '1.5px solid #e2e8f0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: '10px'
         }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#16a34a', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
             📦
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: '#166534', fontWeight: '700', display: 'block' }}>মোট পণ্য</span>
-            <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: '#14532d' }}>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '800', display: 'block' }}>মোট পণ্য</span>
+            <span className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
               {products.length}টি
             </span>
           </div>
@@ -1106,10 +1107,11 @@ export default function StockPage() {
 
         <div
           style={{
-            background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-            borderRadius: '14px',
-            padding: '10px 12px',
-            border: '1px solid #fecaca',
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '12px 14px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
@@ -1117,32 +1119,33 @@ export default function StockPage() {
           }}
           onClick={() => { setFilter('low'); triggerHaptic('light'); }}
         >
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#dc2626', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
             ⚠️
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: '#991b1b', fontWeight: '700', display: 'block' }}>কম স্টক সতর্কতা</span>
-            <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: '#7f1d1d' }}>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '800', display: 'block' }}>কম স্টক সতর্কতা</span>
+            <span className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
               {lowStockItems.length}টি
             </span>
           </div>
         </div>
 
         <div style={{
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          borderRadius: '14px',
-          padding: '10px 12px',
-          border: '1px solid #bae6fd',
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '12px 14px',
+          border: '1.5px solid #e2e8f0',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
           display: 'flex',
           alignItems: 'center',
           gap: '10px'
         }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#0284c7', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
             💰
           </div>
           <div>
-            <span style={{ fontSize: '11px', color: '#0369a1', fontWeight: '700', display: 'block' }}>মোট ইনভেন্টরি মূল্য</span>
-            <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: '#0c4a6e' }}>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '800', display: 'block' }}>মোট ইনভেন্টরি মূল্য</span>
+            <span className="num-font" style={{ fontSize: '17px', fontWeight: '900', color: '#059669' }}>
               ৳{Math.round(totalStockValue).toLocaleString('en-IN')}
             </span>
           </div>
@@ -1197,9 +1200,9 @@ export default function StockPage() {
               onClick={() => { setShowCameraScanner(true); triggerHaptic('medium'); }}
               className="stock-search-btn"
               style={{
-                background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                color: '#4f46e5',
-                border: '1px solid #c7d2fe'
+                background: '#f8fafc',
+                color: '#0f172a',
+                border: '1px solid #e2e8f0'
               }}
               title="ক্যামেরা বারকোড স্ক্যানার"
             >
@@ -1208,17 +1211,18 @@ export default function StockPage() {
           </div>
         </div>
 
-        {/* Scrollable Filter Chips / Pills */}
+        {/* Scrollable Filter Chips / Pills - Strict 2-Color (Green & Black) */}
         <div className="stock-filter-scroll">
           <button
             type="button"
             onClick={() => { setFilter('all'); triggerHaptic('light'); }}
             className="stock-pill"
             style={{
-              background: filter === 'all' ? '#10b981' : '#f1f5f9',
-              color: filter === 'all' ? '#ffffff' : '#475569',
+              background: filter === 'all' ? '#10b981' : '#ffffff',
+              color: filter === 'all' ? '#ffffff' : '#0f172a',
               borderColor: filter === 'all' ? '#059669' : '#e2e8f0',
-              boxShadow: filter === 'all' ? '0 2px 8px rgba(16, 185, 129, 0.25)' : 'none'
+              boxShadow: filter === 'all' ? '0 2px 8px rgba(16, 185, 129, 0.25)' : 'none',
+              fontWeight: filter === 'all' ? '900' : '700'
             }}
           >
             <span>📦 সব পণ্য ({products.length})</span>
@@ -1229,10 +1233,11 @@ export default function StockPage() {
             onClick={() => { setFilter('low'); triggerHaptic('light'); }}
             className="stock-pill"
             style={{
-              background: filter === 'low' ? '#f59e0b' : '#fef3c7',
-              color: filter === 'low' ? '#ffffff' : '#b45309',
-              borderColor: filter === 'low' ? '#d97706' : '#fde68a',
-              boxShadow: filter === 'low' ? '0 2px 8px rgba(245, 158, 11, 0.25)' : 'none'
+              background: filter === 'low' ? '#0f172a' : '#ffffff',
+              color: filter === 'low' ? '#ffffff' : '#0f172a',
+              borderColor: filter === 'low' ? '#0f172a' : '#e2e8f0',
+              boxShadow: filter === 'low' ? '0 2px 8px rgba(15, 23, 42, 0.25)' : 'none',
+              fontWeight: filter === 'low' ? '900' : '700'
             }}
           >
             <span>⚠️ কম স্টক ({lowStockItems.length})</span>
@@ -1244,10 +1249,11 @@ export default function StockPage() {
               onClick={() => { setFilter('out'); triggerHaptic('light'); }}
               className="stock-pill"
               style={{
-                background: filter === 'out' ? '#ef4444' : '#fee2e2',
-                color: filter === 'out' ? '#ffffff' : '#b91c1c',
-                borderColor: filter === 'out' ? '#dc2626' : '#fecaca',
-                boxShadow: filter === 'out' ? '0 2px 8px rgba(239, 68, 68, 0.25)' : 'none'
+                background: filter === 'out' ? '#0f172a' : '#ffffff',
+                color: filter === 'out' ? '#ffffff' : '#0f172a',
+                borderColor: filter === 'out' ? '#0f172a' : '#e2e8f0',
+                boxShadow: filter === 'out' ? '0 2px 8px rgba(15, 23, 42, 0.25)' : 'none',
+                fontWeight: filter === 'out' ? '900' : '700'
               }}
             >
               <span>🚫 স্টক শেষ ({outOfStockItems.length})</span>
@@ -1260,10 +1266,10 @@ export default function StockPage() {
               onClick={() => { setFilter('expired'); triggerHaptic('light'); }}
               className="stock-pill"
               style={{
-                background: filter === 'expired' ? '#8b5cf6' : '#ede9fe',
-                color: filter === 'expired' ? '#ffffff' : '#6d28d9',
-                borderColor: filter === 'expired' ? '#7c3aed' : '#ddd6fe',
-                boxShadow: filter === 'expired' ? '0 2px 8px rgba(139, 92, 246, 0.25)' : 'none'
+                background: filter === 'expired' ? '#10b981' : '#ffffff',
+                color: filter === 'expired' ? '#ffffff' : '#0f172a',
+                borderColor: filter === 'expired' ? '#059669' : '#e2e8f0',
+                boxShadow: filter === 'expired' ? '0 2px 8px rgba(16, 185, 129, 0.25)' : 'none'
               }}
             >
               <span>⏳ মেয়াদ সতর্কতা ({expiredOrExpiring.length})</span>
@@ -1296,7 +1302,7 @@ export default function StockPage() {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#6366f1',
+                color: '#10b981',
                 fontWeight: '700',
                 fontSize: '11.5px',
                 cursor: 'pointer',
@@ -1408,7 +1414,7 @@ export default function StockPage() {
               onClick={handleSeedCategoryDefaults}
               disabled={seedingDefaults}
               style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                background: '#0f172a',
                 color: '#ffffff',
                 border: 'none',
                 padding: '8px 16px',
@@ -1416,7 +1422,7 @@ export default function StockPage() {
                 fontSize: '12.5px',
                 fontWeight: '800',
                 cursor: seedingDefaults ? 'wait' : 'pointer',
-                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.2)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px'
@@ -1479,32 +1485,32 @@ export default function StockPage() {
                                 </span>
                               )}
                               {p.genericName && fieldConfig.showGenericName && (
-                                <span style={{ fontSize: '10px', color: '#4f46e5', background: '#eef2ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #c7d2fe' }}>
+                                <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                                   🧪 {p.genericName}
                                 </span>
                               )}
                               {p.brand && fieldConfig.showBrand && (
-                                <span style={{ fontSize: '10px', color: '#0369a1', background: '#f0f9ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #bae6fd' }}>
+                                <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                                   🏢 {p.brand}
                                 </span>
                               )}
                               {p.size && fieldConfig.showSize && (
-                                <span style={{ fontSize: '10px', color: '#6d28d9', background: '#f5f3ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #ddd6fe' }}>
+                                <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                                   🏷️ {p.size}
                                 </span>
                               )}
                               {p.color && fieldConfig.showColor && (
-                                <span style={{ fontSize: '10px', color: '#475569', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px' }}>
+                                <span style={{ fontSize: '10px', color: '#475569', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                   🎨 {p.color}
                                 </span>
                               )}
                               {p.warranty && fieldConfig.showWarranty && (
-                                <span style={{ fontSize: '10px', color: '#0284c7', background: '#f0f9ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                                <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                   🛡️ {p.warranty}
                                 </span>
                               )}
                               {p.expiryDate && fieldConfig.showExpiryDate && (
-                                <span style={{ fontSize: '10px', color: '#b45309', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', fontWeight: '600', border: '1px solid #fde68a' }}>
+                                <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                                   ⏳ {p.expiryDate}
                                 </span>
                               )}
@@ -1644,7 +1650,7 @@ export default function StockPage() {
                           ) : (
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span className="num-font" style={{ fontSize: '14px', fontWeight: '900', color: isZero ? '#dc2626' : isLow ? '#d97706' : '#0f172a' }}>
+                                <span className="num-font" style={{ fontSize: '14px', fontWeight: '900', color: isZero ? '#dc2626' : '#0f172a' }}>
                                   {p.stock} <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>{p.unit}</span>
                                 </span>
                                 <button
@@ -1656,7 +1662,7 @@ export default function StockPage() {
                                 </button>
                               </div>
                               {p.subUnit && Number(p.conversionRatio) > 1 && (
-                                <div style={{ fontSize: '10.5px', color: '#4338ca', fontWeight: '800', marginTop: '1px' }}>
+                                <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: '800', marginTop: '1px' }}>
                                   ≈ {Math.round(p.stock * Number(p.conversionRatio) * 100) / 100} {p.subUnit}
                                 </div>
                               )}
@@ -1669,7 +1675,7 @@ export default function StockPage() {
                               🚨 স্টক শেষ
                             </span>
                           ) : isLow ? (
-                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '1px 6px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', alignSelf: 'flex-start' }}>
                               ⚠️ কম স্টক
                             </span>
                           ) : (
@@ -1759,9 +1765,9 @@ export default function StockPage() {
                           <button
                             onClick={() => openEditModal(p)}
                             style={{
-                              background: '#eff6ff',
-                              color: '#2563eb',
-                              border: '1px solid #bfdbfe',
+                              background: '#f8fafc',
+                              color: '#0f172a',
+                              border: '1px solid #cbd5e1',
                               padding: '4px 8px',
                               borderRadius: '6px',
                               fontSize: '11px',
@@ -1832,7 +1838,7 @@ export default function StockPage() {
                     width: '44px',
                     height: '44px',
                     borderRadius: '12px',
-                    background: isZero ? '#fee2e2' : isLow ? '#fef3c7' : '#f1f5f9',
+                    background: isZero ? '#fee2e2' : '#f1f5f9',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '22px',
@@ -1859,9 +1865,9 @@ export default function StockPage() {
                         padding: '2px 8px',
                         borderRadius: '99px',
                         flexShrink: 0,
-                        background: isZero ? '#fee2e2' : isLow ? '#fef3c7' : '#ecfdf5',
-                        color: isZero ? '#dc2626' : isLow ? '#b45309' : '#059669',
-                        border: `1px solid ${isZero ? '#fca5a5' : isLow ? '#fde68a' : '#a7f3d0'}`
+                        background: isZero ? '#fee2e2' : isLow ? '#f1f5f9' : '#ecfdf5',
+                        color: isZero ? '#dc2626' : isLow ? '#0f172a' : '#059669',
+                        border: `1px solid ${isZero ? '#fca5a5' : isLow ? '#cbd5e1' : '#a7f3d0'}`
                       }}>
                         {isZero ? '🚫 স্টক শেষ' : isLow ? '⚠️ কম স্টক' : '✓ পর্যাপ্ত'}
                       </span>
@@ -1874,17 +1880,17 @@ export default function StockPage() {
                         </span>
                       )}
                       {p.genericName && fieldConfig.showGenericName && (
-                        <span style={{ fontSize: '10px', color: '#4f46e5', background: '#eef2ff', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #c7d2fe' }}>
+                        <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                           🧪 {p.genericName}
                         </span>
                       )}
                       {p.brand && fieldConfig.showBrand && (
-                        <span style={{ fontSize: '10px', color: '#0369a1', background: '#f0f9ff', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #bae6fd' }}>
+                        <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                           🏢 {p.brand}
                         </span>
                       )}
                       {p.size && fieldConfig.showSize && (
-                        <span style={{ fontSize: '10px', color: '#6d28d9', background: '#f5f3ff', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #ddd6fe' }}>
+                        <span style={{ fontSize: '10px', color: '#0f172a', background: '#f8fafc', padding: '1px 6px', borderRadius: '5px', fontWeight: '700', border: '1px solid #e2e8f0' }}>
                           🏷️ {p.size} {p.color && fieldConfig.showColor ? `• ${p.color}` : ''}
                         </span>
                       )}
@@ -1931,7 +1937,7 @@ export default function StockPage() {
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '10px', color: '#64748b', display: 'block', fontWeight: '700' }}>বর্তমান স্টক</span>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                      <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: isZero ? '#dc2626' : isLow ? '#d97706' : '#0f172a' }}>
+                      <span className="num-font" style={{ fontSize: '16px', fontWeight: '900', color: isZero ? '#dc2626' : '#0f172a' }}>
                         {p.stock} <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>{p.unit}</span>
                       </span>
                       <button
@@ -1943,7 +1949,7 @@ export default function StockPage() {
                       </button>
                     </div>
                     {p.subUnit && Number(p.conversionRatio) > 1 && (
-                      <span style={{ fontSize: '10px', color: '#4338ca', fontWeight: '800', display: 'block', marginTop: '2px' }}>
+                      <span style={{ fontSize: '10px', color: '#475569', fontWeight: '800', display: 'block', marginTop: '2px' }}>
                         ≈ {Math.round(p.stock * Number(p.conversionRatio) * 10) / 10} {p.subUnit}
                       </span>
                     )}
@@ -2003,7 +2009,7 @@ export default function StockPage() {
                     </button>
                     <button
                       onClick={() => handleQuickAddStock(p, 50)}
-                      style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', borderRadius: '7px', padding: '5px 8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '7px', padding: '5px 8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                       title="৫০টি যোগ করুন"
                     >
                       +৫০
@@ -2043,7 +2049,7 @@ export default function StockPage() {
                   </button>
                   <button
                     onClick={() => openEditModal(p)}
-                    style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '4px 9px', borderRadius: '7px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                    style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', padding: '4px 9px', borderRadius: '7px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                     title="পণ্য এডিট করুন"
                   >
                     <span>✏️</span> এডিট
@@ -2536,7 +2542,7 @@ export default function StockPage() {
                       <button
                         type="button"
                         onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, purchasePrice: v })), true, 'কেনার দাম (টাকা)')}
-                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
+                        style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#059669', cursor: 'pointer', fontWeight: '800' }}
                       >
                         🎙️
                       </button>
@@ -2559,7 +2565,7 @@ export default function StockPage() {
                       <button
                         type="button"
                         onClick={() => startVoiceInputForField((v) => setAddForm(prev => ({ ...prev, stock: v })), true, 'প্রাথমিক স্টক (সংখ্যা)')}
-                        style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#ca8a04', cursor: 'pointer', fontWeight: '800' }}
+                        style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '1px 6px', fontSize: '10.5px', color: '#059669', cursor: 'pointer', fontWeight: '800' }}
                       >
                         🎙️
                       </button>
@@ -2915,7 +2921,7 @@ export default function StockPage() {
               />
               <label htmlFor="csv-file-input" style={{ cursor: 'pointer' }}>
                 <div style={{ fontSize: '36px', marginBottom: '8px' }}>📁</div>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#0284c7' }}>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
                   {importFile ? importFile.name : 'CSV ফাইল নির্বাচন করতে ক্লিক করুন'}
                 </div>
                 <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
@@ -2958,7 +2964,7 @@ export default function StockPage() {
                 disabled={importPreview.length === 0 || importing}
                 style={{
                   flex: 2,
-                  background: importPreview.length === 0 || importing ? '#94a3b8' : '#0284c7',
+                  background: importPreview.length === 0 || importing ? '#94a3b8' : '#10b981',
                   border: 'none',
                   padding: '12px',
                   borderRadius: '12px',

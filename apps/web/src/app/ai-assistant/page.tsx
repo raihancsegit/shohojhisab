@@ -240,7 +240,7 @@ export default function AiAssistantPage() {
       
       {/* Header Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e0847 0%, #4c1d95 50%, #7c3aed 100%)',
+        background: 'linear-gradient(135deg, #1e0847 0%, #4c1d95 50%, #10b981 100%)',
         borderRadius: '28px',
         padding: '24px 20px',
         color: '#fff',
@@ -253,12 +253,12 @@ export default function AiAssistantPage() {
         gap: '14px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #f59e0b, #ec4899)', display: 'grid', placeItems: 'center', fontSize: '28px' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #10b981, #10b981)', display: 'grid', placeItems: 'center', fontSize: '28px' }}>
             🏪
           </div>
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '900', margin: 0 }}>দোকানের ডিজিটাল হিসাব সহকারী</h1>
-            <span style={{ fontSize: '13px', color: '#e9d5ff' }}>মুখে বলুন — স্বয়ংক্রিয় হিসাব ও লাইভ উত্তর পান</span>
+            <span style={{ fontSize: '13px', color: '#cbd5e1' }}>মুখে বলুন — স্বয়ংক্রিয় হিসাব ও লাইভ উত্তর পান</span>
           </div>
         </div>
 
@@ -347,7 +347,7 @@ export default function AiAssistantPage() {
             style={{
               alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
               maxWidth: '85%',
-              background: m.sender === 'user' ? '#7c3aed' : '#f8fafc',
+              background: m.sender === 'user' ? '#10b981' : '#f8fafc',
               color: m.sender === 'user' ? '#fff' : '#0f172a',
               border: m.sender === 'user' ? 'none' : '1px solid #e2e8f0',
               padding: '14px 18px',
@@ -364,7 +364,7 @@ export default function AiAssistantPage() {
                 <Link
                   href={m.actionLink.href}
                   style={{
-                    background: '#7c3aed',
+                    background: '#10b981',
                     color: '#fff',
                     padding: '6px 14px',
                     borderRadius: '8px',
@@ -379,7 +379,7 @@ export default function AiAssistantPage() {
               </div>
             )}
 
-            <span style={{ fontSize: '11px', color: m.sender === 'user' ? '#e9d5ff' : '#94a3b8', display: 'block', marginTop: '6px', textAlign: 'right' }}>
+            <span style={{ fontSize: '11px', color: m.sender === 'user' ? '#cbd5e1' : '#94a3b8', display: 'block', marginTop: '6px', textAlign: 'right' }}>
               {m.time}
             </span>
           </div>
@@ -412,7 +412,7 @@ export default function AiAssistantPage() {
           className="shimmer-btn"
           disabled={loading}
           style={{
-            background: '#7c3aed',
+            background: '#10b981',
             color: '#fff',
             border: 'none',
             padding: '0 24px',

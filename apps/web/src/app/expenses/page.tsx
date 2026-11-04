@@ -376,7 +376,7 @@ export default function ExpensesPage() {
                   <button
                     type="button"
                     onClick={() => startVoiceInputForField(setAmount, true, 'খরচের টাকার পরিমাণ')}
-                    style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#2563eb', cursor: 'pointer', fontWeight: '800' }}
+                    style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#10b981', cursor: 'pointer', fontWeight: '800' }}
                   >
                     🎙️ মুখে বলুন
                   </button>

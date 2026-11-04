@@ -163,7 +163,7 @@ export default function CameraBarcodeScannerModal({ isOpen, onClose, onScanSucce
               position: 'absolute',
               width: '200px',
               height: '110px',
-              border: '2px dashed #6366f1',
+              border: '2px dashed #10b981',
               borderRadius: '12px',
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)',
               display: 'grid',
@@ -229,7 +229,7 @@ export default function CameraBarcodeScannerModal({ isOpen, onClose, onScanSucce
             <button
               type="submit"
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '12px 20px',

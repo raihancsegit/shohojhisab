@@ -62,7 +62,7 @@ export default function LoyaltyPage() {
       
       {/* Loyalty Header Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%)',
+        background: 'linear-gradient(135deg, #78350f 0%, #0f172a 50%, #059669 100%)',
         borderRadius: '28px',
         padding: '30px 26px',
         color: '#fff',
@@ -88,7 +88,7 @@ export default function LoyaltyPage() {
 
         <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px 20px', borderRadius: '18px', textAlign: 'center' }}>
           <span style={{ fontSize: '12px', opacity: 0.85 }}>সক্রিয় লয়্যালটি সদস্য</span>
-          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#fef08a' }}>
+          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#f8fafc' }}>
             {customers.length} জন
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function LoyaltyPage() {
                 <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#1e293b' }}>
                   {c.name}
                 </h3>
-                <span style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
+                <span style={{ fontSize: '11px', background: '#f8fafc', color: '#0f172a', padding: '2px 8px', borderRadius: '99px', fontWeight: '800' }}>
                   ⭐ {c.tier}
                 </span>
               </div>
@@ -137,14 +137,14 @@ export default function LoyaltyPage() {
 
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '12px', color: '#64748b' }}>বর্তমান পয়েন্ট ব্যালেন্স:</div>
-              <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#b45309' }}>
+              <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a' }}>
                 {c.points} Pts <span style={{ fontSize: '13px', color: '#16a34a' }}>(= ৳{Math.floor(c.points / 2)})</span>
               </div>
               <button
                 onClick={() => setActiveCust(c)}
                 disabled={c.points < 50}
                 style={{
-                  background: c.points >= 50 ? '#b45309' : '#cbd5e1',
+                  background: c.points >= 50 ? '#0f172a' : '#cbd5e1',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '10px',
@@ -171,7 +171,7 @@ export default function LoyaltyPage() {
               পয়েন্ট রিডিম করে ছাড় দিন
             </h2>
             <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '14px' }}>
-              গ্রাহক: <strong>{activeCust.name}</strong> • অবশিষ্ট পয়েন্ট: <strong className="num-font" style={{ color: '#b45309' }}>{activeCust.points}</strong>
+              গ্রাহক: <strong>{activeCust.name}</strong> • অবশিষ্ট পয়েন্ট: <strong className="num-font" style={{ color: '#0f172a' }}>{activeCust.points}</strong>
             </p>
 
             <input
@@ -181,11 +181,11 @@ export default function LoyaltyPage() {
               value={redeemPoints}
               onChange={(e) => setRedeemPoints(e.target.value)}
               className="num-font"
-              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #b45309', fontSize: '18px', fontWeight: '700', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '2px solid #0f172a', fontSize: '18px', fontWeight: '700', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
             />
 
             {redeemPoints && (
-              <div style={{ background: '#fef3c7', padding: '10px 14px', borderRadius: '12px', marginBottom: '18px', fontSize: '13px', color: '#92400e', fontWeight: '700' }}>
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', marginBottom: '18px', fontSize: '13px', color: '#0f172a', fontWeight: '700' }}>
                 বিল থেকে ছাড় হবে: ৳{Math.floor(Number(redeemPoints) / 2)}
               </div>
             )}
@@ -194,7 +194,7 @@ export default function LoyaltyPage() {
               <button onClick={() => setActiveCust(null)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>
                 বাতিল
               </button>
-              <button onClick={handleRedeem} disabled={!redeemPoints || Number(redeemPoints) > activeCust.points} style={{ flex: 2, padding: '12px', background: '#b45309', border: 'none', borderRadius: '12px', fontWeight: '700', color: '#fff', cursor: 'pointer' }}>
+              <button onClick={handleRedeem} disabled={!redeemPoints || Number(redeemPoints) > activeCust.points} style={{ flex: 2, padding: '12px', background: '#0f172a', border: 'none', borderRadius: '12px', fontWeight: '700', color: '#fff', cursor: 'pointer' }}>
                 ✓ ছাড় কার্যকর করুন
               </button>
             </div>

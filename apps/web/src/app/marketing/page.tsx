@@ -125,7 +125,7 @@ export default function MarketingPage() {
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <div style={{ background: 'rgba(0,0,0,0.2)', padding: '8px 16px', borderRadius: '14px', textAlign: 'right' }}>
             <span style={{ fontSize: '11.5px', opacity: 0.9 }}>📩 SMS ব্যালেন্স</span>
-            <div className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: '#fef08a' }}>
+            <div className="num-font" style={{ fontSize: '20px', fontWeight: '900', color: '#f8fafc' }}>
               {smsBalance} টি
             </div>
           </div>

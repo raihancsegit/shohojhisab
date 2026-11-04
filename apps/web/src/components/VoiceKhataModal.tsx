@@ -464,8 +464,8 @@ export default function VoiceKhataModal({
               type="button"
               onClick={() => handleProcessCommand('রহিমের বাকি কত?')}
               style={{
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
                 borderRadius: '12px',
                 padding: '10px 14px',
                 textAlign: 'left',
@@ -476,14 +476,14 @@ export default function VoiceKhataModal({
               }}
             >
               <div>
-                <strong style={{ fontSize: '13px', color: '#1e40af', display: 'block' }}>
+                <strong style={{ fontSize: '13px', color: '#059669', display: 'block' }}>
                   🔍 বকেয়া ব্যালেন্স জানার সময়:
                 </strong>
-                <span style={{ fontSize: '12px', color: '#2563eb' }}>
+                <span style={{ fontSize: '12px', color: '#10b981' }}>
                   &quot;রহিমের বাকি কত?&quot; বা &quot;আজকে কার কার টাকা দেওয়ার কথা?&quot;
                 </span>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: '800', background: '#3b82f6', color: '#fff', padding: '3px 8px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', background: '#10b981', color: '#fff', padding: '3px 8px', borderRadius: '6px' }}>
                 টেস্ট ➔
               </span>
             </button>

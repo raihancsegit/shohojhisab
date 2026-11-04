@@ -234,7 +234,7 @@ export function MultiUnitBreakdownPreview({
           <span>💡</span>
           <span>{unit}-এর খুচরা ও সাব-ইউনিট বিক্রয় মূল্য:</span>
         </strong>
-        <span style={{ fontSize: '11px', color: '#6366f1', fontWeight: '800' }}>অটো হিসাব</span>
+        <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>অটো হিসাব</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
@@ -243,7 +243,7 @@ export function MultiUnitBreakdownPreview({
             key={idx}
             style={{
               background: '#ffffff',
-              border: idx === 0 ? '1.5px solid #c7d2fe' : '1px solid #e2e8f0',
+              border: idx === 0 ? '1.5px solid #cbd5e1' : '1px solid #e2e8f0',
               borderRadius: '10px',
               padding: '8px 10px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
@@ -261,8 +261,8 @@ export function MultiUnitBreakdownPreview({
                 type="button"
                 onClick={() => onApplyUnitPrice(item.amount)}
                 style={{
-                  background: '#eef2ff',
-                  color: '#4f46e5',
+                  background: '#f8fafc',
+                  color: '#10b981',
                   border: 'none',
                   borderRadius: '6px',
                   padding: '2px 6px',

@@ -921,7 +921,7 @@ export default function VoicePOSCalculatorModal({
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: isMuted ? '#64748b' : isListening ? '#10b981' : '#f59e0b',
+                background: isMuted ? '#64748b' : isListening ? '#10b981' : '#10b981',
                 color: '#ffffff',
                 display: 'grid',
                 placeItems: 'center',
@@ -1032,7 +1032,7 @@ export default function VoicePOSCalculatorModal({
             ? '#f8fafc'
             : isListening
               ? 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)'
-              : 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+              : 'linear-gradient(135deg, #f8fafc 0%, #f8fafc 100%)',
           borderBottom: isListening && !isMuted ? '2px solid #10b981' : '1.5px solid #e2e8f0',
           padding: '12px 16px',
           display: 'flex',
@@ -1056,7 +1056,7 @@ export default function VoicePOSCalculatorModal({
                 ? '#94a3b8'
                 : isListening
                   ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                  : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  : 'linear-gradient(135deg, #10b981 0%, #10b981 100%)',
               color: '#ffffff',
               display: 'grid',
               placeItems: 'center',
@@ -1081,7 +1081,7 @@ export default function VoicePOSCalculatorModal({
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                background: isMuted ? '#94a3b8' : isListening ? '#10b981' : '#f59e0b',
+                background: isMuted ? '#94a3b8' : isListening ? '#10b981' : '#10b981',
                 animation: isListening && !isMuted ? 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' : 'none'
               }} />
               <span style={{
@@ -1089,7 +1089,7 @@ export default function VoicePOSCalculatorModal({
                 fontWeight: '900',
                 textTransform: 'uppercase',
                 letterSpacing: '0.4px',
-                color: isMuted ? '#64748b' : isListening ? '#047857' : '#b45309'
+                color: isMuted ? '#64748b' : isListening ? '#047857' : '#0f172a'
               }}>
                 {isMuted ? 'মাইক পজ করা' : isListening ? '🟢 লাইভ শুনছি... কথা বলুন' : '🟡 মাইকে চাপ দিয়ে কথা বলুন'}
               </span>
@@ -1168,8 +1168,8 @@ export default function VoicePOSCalculatorModal({
         {/* ⚡ Uncataloged / Missing Item 1-Tap Recovery Banner */}
         {unrecognizedSpokenItems.length > 0 && (
           <div style={{
-            background: '#fffbeb',
-            borderBottom: '1px solid #fef3c7',
+            background: '#f8fafc',
+            borderBottom: '1px solid #f8fafc',
             padding: '8px 14px',
             display: 'flex',
             alignItems: 'center',
@@ -1177,7 +1177,7 @@ export default function VoicePOSCalculatorModal({
             overflowX: 'auto',
             flexShrink: 0
           }}>
-            <span style={{ fontSize: '11px', fontWeight: '900', color: '#b45309', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', fontWeight: '900', color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>
               ⚠️ স্টকে তালিকাভুক্ত নয়:
             </span>
             {unrecognizedSpokenItems.map((it, idx) => (
@@ -1205,9 +1205,9 @@ export default function VoicePOSCalculatorModal({
                   speakFeedback(`${fallbackItem.banglaName} মেমোতে যোগ হয়েছে`);
                 }}
                 style={{
-                  background: '#fef3c7',
-                  border: '1px solid #fde68a',
-                  color: '#92400e',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
                   padding: '4px 10px',
                   borderRadius: '20px',
                   fontSize: '11.5px',
@@ -1370,9 +1370,9 @@ export default function VoicePOSCalculatorModal({
                     key={idx}
                     onClick={() => handleProcessVoiceInput(sample)}
                     style={{
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      color: '#059669',
                       padding: '6px 10px',
                       borderRadius: '8px',
                       fontSize: '11.5px',
@@ -1420,7 +1420,7 @@ export default function VoicePOSCalculatorModal({
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#0369a1' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: '800', color: '#059669' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                             <button
                               type="button"
@@ -1538,7 +1538,7 @@ export default function VoicePOSCalculatorModal({
                         >
                           -
                         </button>
-                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#0369a1', minWidth: '55px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '800', color: '#059669', minWidth: '55px', textAlign: 'center' }}>
                           {it.quantity} {it.unit}
                         </span>
                         <button
@@ -1604,7 +1604,7 @@ export default function VoicePOSCalculatorModal({
             </button>
             <button
               onClick={() => handleProcessVoiceInput('২০ টাকা ছাড়')}
-              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               🟡 &quot;২০ টাকা ছাড়&quot;
             </button>

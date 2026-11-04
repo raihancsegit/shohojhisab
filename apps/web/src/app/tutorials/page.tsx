@@ -20,7 +20,7 @@ const TUTORIALS: TutorialItem[] = [
     category: 'পণ্য ও স্টক',
     duration: '১ মিনিট ২০ সেকেন্ড',
     icon: '📦',
-    color: '#4f46e5',
+    color: '#10b981',
     steps: [
       '১. অ্যাপের মূল মেনু থেকে "পণ্য" অপশনে ট্যাপ করুন।',
       '২. উপরে ডানপাশের "+ নতুন পণ্য" বাটনে ক্লিক করুন।',
@@ -48,7 +48,7 @@ const TUTORIALS: TutorialItem[] = [
     category: 'লেনদেন ও বিক্রয়',
     duration: '২ মিনিট ১০ সেকেন্ড',
     icon: '📝',
-    color: '#d97706',
+    color: '#059669',
     steps: [
       '১. মূল ড্যাশবোর্ড থেকে "রিপোর্ট" বা "বিক্রয় তালিকা" ওপেন করুন।',
       '২. নির্দিষ্ট মেমো বা ইনভয়েসের ওপর ক্লিক করুন।',
@@ -75,7 +75,7 @@ const TUTORIALS: TutorialItem[] = [
     category: 'বিলিং',
     duration: '২ মিনিট',
     icon: '💳',
-    color: '#7c3aed',
+    color: '#10b981',
     steps: [
       '১. মূল মেনু থেকে "সাবস্ক্রিপশন" বাটনে চাপুন।',
       '২. আপনার পছন্দের প্যাকেজ (মাসিক / বাৎসরিক) সিলেক্ট করুন।',
@@ -88,7 +88,7 @@ const TUTORIALS: TutorialItem[] = [
     category: 'এসএমএস মার্কেটিং',
     duration: '১ মিনিট ৩০ সেকেন্ড',
     icon: '💬',
-    color: '#0284c7',
+    color: '#10b981',
     steps: [
       '১. "মার্কেটিং ও এসএমএস" মেনুতে যান।',
       '২. "এসএমএস ব্যালেন্স রিচার্জ" বাটনে ক্লিক করুন।',
@@ -139,7 +139,7 @@ const TUTORIALS: TutorialItem[] = [
     category: 'হার্ডওয়্যার ও প্রিন্টিং',
     duration: '২ মিনিট ১৫ সেকেন্ড',
     icon: '🖨️',
-    color: '#3b82f6',
+    color: '#10b981',
     steps: [
       '১. থার্মাল প্রিন্টার অন করে মোবাইলের ব্লুটুথ চালু করুন।',
       '২. সহজহিসাব পিওএস স্ক্রিনে "ব্লুটুথ প্রিন্ট" বাটনে চাপুন।',
@@ -168,7 +168,7 @@ export default function TutorialsPage() {
     }}>
       {/* Top Header matching App Reference */}
       <div style={{
-        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
         color: '#ffffff',
         padding: '16px 18px',
         display: 'flex',
@@ -465,7 +465,7 @@ export default function TutorialsPage() {
                   width: '100%',
                   padding: '12px',
                   borderRadius: '12px',
-                  background: '#4f46e5',
+                  background: '#10b981',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '800',

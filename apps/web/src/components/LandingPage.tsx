@@ -248,7 +248,7 @@ export default function LandingPage() {
       title: 'বাংলা এআই ভয়েস বিলিং (AI Voice Memo)',
       desc: 'কোনো টাইপিং বা খোঁজাখুঁজি ছাড়া মুখে বলুন "চাল ২ কেজি, তেল ১ বোতল"—সফটওয়্যার নিজ থেকেই শুনে মেমো তৈরি করে দেবে। ব্যস্ত দোকানে সময় বাঁচবে দ্বিগুণ।',
       badge: 'এআই প্রযুক্তি',
-      accentColor: '#6366f1'
+      accentColor: '#10b981'
     },
     {
       title: 'স্মার্ট বাকি খাতা ও WhatsApp অটো রসিদ',
@@ -266,13 +266,13 @@ export default function LandingPage() {
       title: 'স্টক অ্যালার্ট ও ফার্মেসি মেয়াদ রাডার',
       desc: 'দোকানের কোনো পণ্য কমে আসলে আগেই নোটিফিকেশন। ফার্মেসির ক্ষেত্রে মেয়াদ শেষ হওয়ার আগেই কালার কোডেড সতর্কবার্তা, ফলে নষ্ট মালের লোকসান হবে শূন্য।',
       badge: 'জিরো লোকসান',
-      accentColor: '#0284c7'
+      accentColor: '#10b981'
     },
     {
       title: 'প্রতি সন্ধ্যার ক্যাশ মিল ও নিট লাভ রিপোর্ট',
       desc: 'সারাদিন শেষে নগদ টাকা, বাকি বিক্রি, খরচ ও ক্যাশ ড্রয়ারের টাকা মিলিয়ে নিন মাত্র ২ মিনিটে। প্রতিদিনের নিট লাভ ও বিক্রির গ্রাফ এক নজরেই দেখতে পাবেন।',
       badge: 'আর্থিক স্বচ্ছতা',
-      accentColor: '#8b5cf6'
+      accentColor: '#10b981'
     }
   ];
 
@@ -885,7 +885,7 @@ export default function LandingPage() {
           }}>
             দোকানের হিসাব, বাকি খাতা ও POS—<br />
             <span style={{
-              background: 'linear-gradient(135deg, #059669 0%, #10b981 40%, #4338ca 100%)',
+              background: 'linear-gradient(135deg, #059669 0%, #10b981 40%, #059669 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
@@ -1036,7 +1036,7 @@ export default function LandingPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }} />
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
               <span style={{ fontSize: '13px', color: '#94a3b8', marginLeft: '10px', fontWeight: '800' }}>
                 ShohojHisab Live Interactive Station
@@ -1067,7 +1067,7 @@ export default function LandingPage() {
                 type="button"
                 onClick={() => setActiveDemoTab('voice')}
                 style={{
-                  background: activeDemoTab === 'voice' ? '#6366f1' : 'transparent',
+                  background: activeDemoTab === 'voice' ? '#10b981' : 'transparent',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
@@ -1103,7 +1103,7 @@ export default function LandingPage() {
                 type="button"
                 onClick={() => setActiveDemoTab('dayEnd')}
                 style={{
-                  background: activeDemoTab === 'dayEnd' ? '#8b5cf6' : 'transparent',
+                  background: activeDemoTab === 'dayEnd' ? '#10b981' : 'transparent',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
@@ -1167,12 +1167,12 @@ export default function LandingPage() {
                   </div>
 
                   <div style={{
-                    background: '#e0f2fe',
-                    border: '1px solid #bae6fd',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '12px',
                     padding: '10px 14px',
                     fontSize: '12px',
-                    color: '#0369a1',
+                    color: '#059669',
                     lineHeight: 1.5
                   }}>
                     বারকোড স্ক্যানার দিয়ে স্ক্যান করলেও নিমেষে সরাসরি এই লাইভ মেমোতে আইটেম যুক্ত হয়ে যাবে।
@@ -1287,7 +1287,7 @@ export default function LandingPage() {
           {activeDemoTab === 'voice' && (
             <div style={{ padding: '26px 22px', background: '#0f172a', color: '#ffffff', textAlign: 'center' }}>
               <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-                <span style={{ fontSize: '12px', background: 'rgba(99, 102, 241, 0.25)', color: '#a5b4fc', padding: '4px 12px', borderRadius: '99px', fontWeight: '800' }}>
+                <span style={{ fontSize: '12px', background: 'rgba(99, 102, 241, 0.25)', color: '#34d399', padding: '4px 12px', borderRadius: '99px', fontWeight: '800' }}>
                   বাংলা কথা থেকে ডিজিটাল মেমো তৈরি
                 </span>
                 <h3 style={{ fontSize: '20px', fontWeight: '900', margin: '12px 0 8px' }}>
@@ -1343,8 +1343,8 @@ export default function LandingPage() {
 
                 {/* Speech Recognition Status */}
                 {voiceSimStep === 'listening' && (
-                  <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid #6366f1', borderRadius: '16px', padding: '18px', marginBottom: '14px' }}>
-                    <div style={{ fontSize: '14px', color: '#818cf8', marginBottom: '8px', fontWeight: '800' }}>
+                  <div style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid #10b981', borderRadius: '16px', padding: '18px', marginBottom: '14px' }}>
+                    <div style={{ fontSize: '14px', color: '#34d399', marginBottom: '8px', fontWeight: '800' }}>
                       কথা শোনা হচ্ছে: "{voiceSimPhrase}"
                     </div>
                     <span style={{ fontSize: '11.5px', color: '#94a3b8', display: 'block' }}>
@@ -1414,7 +1414,7 @@ export default function LandingPage() {
                       আসসালামু আলাইকুম <strong>করিম ভাই</strong>,<br />
                       <strong>ভাই ভাই জেনারেল স্টোরে</strong> আপনার বকেয়া খাতার বর্তমান হিসাব <strong>৳ ৮৫০</strong>।<br /><br />
                       ক্যাশ মেমোর বিস্তারিত রসিদ দেখতে লিংকে চাপুন:<br />
-                      <span style={{ color: '#0284c7', textDecoration: 'underline' }}>memo.shohojhisab.com/v/8924</span><br /><br />
+                      <span style={{ color: '#10b981', textDecoration: 'underline' }}>memo.shohojhisab.com/v/8924</span><br /><br />
                       সুবিধামতো দোকানে এসে অথবা বিকাশে পরিশোধ করতে পারেন। ধন্যবাদ!
                     </div>
                   </div>
@@ -1454,7 +1454,7 @@ export default function LandingPage() {
                     <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>দৈনিক ক্যাশ মিল ও নিট লাভ</h4>
                     <span style={{ fontSize: '12px', color: '#64748b' }}>আজকের দিনের সমাপ্তি হিসাব (Day-End Cockpit)</span>
                   </div>
-                  <span style={{ fontSize: '11px', background: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: '99px', fontWeight: '800' }}>
+                  <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#059669', padding: '4px 10px', borderRadius: '99px', fontWeight: '800' }}>
                     স্বয়ংক্রিয় গণনা
                   </span>
                 </div>
@@ -1515,15 +1515,15 @@ export default function LandingPage() {
             <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>সফল স্থানীয় দোকানদার</div>
           </div>
           <div>
-            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#38bdf8' }}>৳ ১৫ কোটি+</div>
+            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#34d399' }}>৳ ১৫ কোটি+</div>
             <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>মাসিক ডিজিটাল লেনদেন</div>
           </div>
           <div>
-            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#f59e0b' }}>১০০%</div>
+            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#10b981' }}>১০০%</div>
             <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>নিরবচ্ছিন্ন অফলাইন সুবিধা</div>
           </div>
           <div>
-            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#a855f7' }}>৩ গুণ</div>
+            <div style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: '#10b981' }}>৩ গুণ</div>
             <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '700', marginTop: '4px' }}>দ্রুত বকেয়া টাকা আদায়</div>
           </div>
         </div>
@@ -1584,7 +1584,7 @@ export default function LandingPage() {
       {/* 📲 DEDICATED APP DOWNLOAD & INSTALL SECTION */}
       <section id="install" style={{
         padding: '75px 20px',
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #059669 100%)',
         color: '#ffffff',
         position: 'relative',
         overflow: 'hidden'
@@ -1613,7 +1613,7 @@ export default function LandingPage() {
                 আপনার ফোনে ShohojHisab অ্যাপ ইনস্টল করুন
               </h2>
 
-              <p style={{ fontSize: '15px', color: '#e0e7ff', lineHeight: 1.65, margin: '0 0 24px' }}>
+              <p style={{ fontSize: '15px', color: '#f1f5f9', lineHeight: 1.65, margin: '0 0 24px' }}>
                 কোনো বড় ফাইলের মেগাবাইট খরচ নেই। মাত্র ২ সেকেন্ডে আপনার মোবাইল বা কম্পিউটারের হোমস্ক্রিনে ইনস্টল হয়ে যাবে এবং সাধারণ যেকোনো অ্যাপের মতোই ইন্টারনেট ছাড়াও ১০০% অফলাইনে কাজ করবে।
               </p>
 
@@ -1661,7 +1661,7 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '18px', fontSize: '12.5px', color: '#c7d2fe' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px', fontSize: '12.5px', color: '#cbd5e1' }}>
                 <span>✓ মাত্র ২ MB সাইজ</span>
                 <span>✓ কোনো আপডেট ঝামেলা নেই</span>
                 <span>✓ বিদ্যুৎ/নেট ছাড়াই অফলাইন সাপোর্ট</span>
@@ -1682,7 +1682,7 @@ export default function LandingPage() {
                 }}
               >
                 <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '900' }}>অ্যান্ড্রয়েড ফোন (Android)</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#c7d2fe' }}>Chrome মেনু থেকে "Install app" বা "Add to Home screen" চাপুন।</p>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#cbd5e1' }}>Chrome মেনু থেকে "Install app" বা "Add to Home screen" চাপুন।</p>
               </div>
 
               <div
@@ -1697,7 +1697,7 @@ export default function LandingPage() {
                 }}
               >
                 <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '900' }}>আইফোন / আইপ্যাড (Apple iOS)</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#c7d2fe' }}>Safari ব্রাউজারের Share বাটন থেকে "Add to Home Screen" দিন।</p>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#cbd5e1' }}>Safari ব্রাউজারের Share বাটন থেকে "Add to Home Screen" দিন।</p>
               </div>
 
               <div
@@ -1712,7 +1712,7 @@ export default function LandingPage() {
                 }}
               >
                 <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '900' }}>কম্পিউটার (Windows / Mac)</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#c7d2fe' }}>Chrome বা Edge ব্রাউজারের অ্যাড্রেস বারের ইনস্টল আইকনে চাপুন।</p>
+                <p style={{ margin: 0, fontSize: '12.5px', color: '#cbd5e1' }}>Chrome বা Edge ব্রাউজারের অ্যাড্রেস বারের ইনস্টল আইকনে চাপুন।</p>
               </div>
             </div>
 
@@ -1724,7 +1724,7 @@ export default function LandingPage() {
       <section id="comparison" style={{ padding: '80px 20px', background: '#f1f5f9', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '900', color: '#4f46e5', background: '#eef2ff', padding: '5px 16px', borderRadius: '99px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '900', color: '#10b981', background: '#f8fafc', padding: '5px 16px', borderRadius: '99px' }}>
               সরাসরি তুলনা
             </span>
             <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: '900', color: '#0f172a', margin: '12px 0 8px' }}>
@@ -1913,7 +1913,7 @@ export default function LandingPage() {
               style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
             >
               <div>
-                <div style={{ color: '#f59e0b', fontSize: '16px', marginBottom: '12px' }}>
+                <div style={{ color: '#10b981', fontSize: '16px', marginBottom: '12px' }}>
                   ★★★★★
                 </div>
                 <p style={{ margin: '0 0 18px', fontSize: '13.5px', color: '#334155', lineHeight: 1.6, fontStyle: 'italic' }}>
@@ -2140,7 +2140,7 @@ export default function LandingPage() {
             textAlign: 'left'
           }}>
             <div>
-              <span style={{ fontSize: '11px', fontWeight: '900', color: '#4338ca', background: '#e0e7ff', padding: '3px 10px', borderRadius: '99px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '900', color: '#059669', background: '#f1f5f9', padding: '3px 10px', borderRadius: '99px' }}>
                 একাধিক শাখা ও বড় ব্যবসা
               </span>
               <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '10px 0 6px' }}>
@@ -2335,7 +2335,7 @@ export default function LandingPage() {
             <p style={{ fontSize: '13px', lineHeight: 1.6, margin: '0 0 14px' }}>
               বাংলাদেশের সকল স্থানীয় খুচরা ও পাইকারি দোকানের জন্য তৈরি ১০০% নির্ভরযোগ্য ডিজিটাল বিজনেস অপারেটিং সিস্টেম।
             </p>
-            <div style={{ fontSize: '12px', color: '#38bdf8' }}>
+            <div style={{ fontSize: '12px', color: '#34d399' }}>
               ঢাকা, বাংলাদেশ • সর্বস্বত্ব সংরক্ষিত
             </div>
           </div>
@@ -2348,7 +2348,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={handleInstallAppClick}
-                style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: '#38bdf8', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
+                style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: '#34d399', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}
               >
                 অ্যাপ ডাউনলোড ও ইনস্টল
               </button>
@@ -2584,15 +2584,15 @@ export default function LandingPage() {
             {installDeviceTab === 'ios' && (
               <div style={{ textAlign: 'left', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px', marginBottom: '20px', fontSize: '13px', lineHeight: 1.6, color: '#334155' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>১</div>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>১</div>
                   <div>সাফারি (Safari) ব্রাউজারের নিচের মাঝখানে Share বাটনে চাপ দিন।</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>২</div>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>২</div>
                   <div>একটু নিচে স্ক্রোল করে "Add to Home Screen" অপশনটিতে চাপ দিন।</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#0284c7', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>৩</div>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981', color: '#ffffff', display: 'grid', placeItems: 'center', fontSize: '11px', fontWeight: '900', flexShrink: 0 }}>৩</div>
                   <div>উপরে ডানে "Add" এ চাপ দিলেই আইফোনের হোম পেজে অ্যাপটি চলে আসবে!</div>
                 </div>
               </div>

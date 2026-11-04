@@ -223,7 +223,7 @@ export default function BarcodeGeneratorPage() {
                       key={qty}
                       type="button"
                       onClick={() => setQuantity(qty)}
-                      style={{ background: quantity === qty ? '#4f46e5' : '#f1f5f9', color: quantity === qty ? '#fff' : '#475569', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ background: quantity === qty ? '#10b981' : '#f1f5f9', color: quantity === qty ? '#fff' : '#475569', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
                     >
                       {qty}টি
                     </button>

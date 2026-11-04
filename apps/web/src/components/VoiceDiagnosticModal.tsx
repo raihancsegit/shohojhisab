@@ -367,8 +367,8 @@ export default function VoiceDiagnosticModal({
               background: '#ffffff',
               borderRadius: '12px',
               padding: '10px 14px',
-              border: '1.5px dashed #38bdf8',
-              color: '#0284c7',
+              border: '1.5px dashed #34d399',
+              color: '#10b981',
               fontSize: '14px',
               fontWeight: '800'
             }}>
@@ -404,8 +404,8 @@ export default function VoiceDiagnosticModal({
                   fontWeight: '900',
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  background: '#e0e7ff',
-                  color: '#4338ca'
+                  background: '#f1f5f9',
+                  color: '#059669'
                 }}>
                   🎯 টার্গেট: কাউন্টার {parseResult.targetCounterId}
                 </span>
@@ -543,7 +543,7 @@ export default function VoiceDiagnosticModal({
                   <span style={{ color: '#0f172a', fontWeight: '700' }}>&quot;{h.text}&quot;</span>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <span style={{
-                      color: h.result.type === 'add_items' ? '#059669' : h.result.type === 'noise_ignored' ? '#dc2626' : '#2563eb',
+                      color: h.result.type === 'add_items' ? '#059669' : h.result.type === 'noise_ignored' ? '#dc2626' : '#10b981',
                       fontWeight: '800'
                     }}>
                       {h.result.type === 'add_items' ? `${h.result.items?.length}টি পণ্য` : h.result.type === 'noise_ignored' ? 'নয়েজ ফিল্টার' : h.result.type}

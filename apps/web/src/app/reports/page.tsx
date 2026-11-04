@@ -454,16 +454,16 @@ export default function ReportsPage() {
         {/* 📊 4 CORE COMPACT KPI SUMMARY CARDS (Side-by-side 2-Column Mobile, 4-Column Desktop) */}
         <div className="reports-kpi-grid">
           {/* Card 1: Total Sales / Revenue */}
-          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #3b82f6', background: 'linear-gradient(135deg, #ffffff 0%, #eff6ff 100%)' }}>
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #10b981', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '800' }}>মোট বিক্রি (Revenue)</span>
+              <span style={{ fontSize: '12px', color: '#059669', fontWeight: '800' }}>মোট বিক্রি (Revenue)</span>
               <span style={{ fontSize: '18px' }}>📈</span>
             </div>
             <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', margin: '4px 0' }}>
               ৳{Number(summary.totalSales || 0).toLocaleString('en-US')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '800', background: '#dbeafe', padding: '2px 7px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '800', background: '#f8fafc', padding: '2px 7px', borderRadius: '6px' }}>
                 {summary.orderCount || 0}টি মেমো
               </span>
             </div>
@@ -486,16 +486,16 @@ export default function ReportsPage() {
           </div>
 
           {/* Card 3: Shop Expenses */}
-          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #f59e0b', background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)' }}>
+          <div className="ui-card kpi-card-compact" style={{ borderLeft: '4px solid #10b981', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', color: '#b45309', fontWeight: '800' }}>দোকান খরচ (Expense)</span>
+              <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: '800' }}>দোকান খরচ (Expense)</span>
               <span style={{ fontSize: '18px' }}>💸</span>
             </div>
-            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#d97706', margin: '4px 0' }}>
+            <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#059669', margin: '4px 0' }}>
               ৳{Number(summary.expenses || 0).toLocaleString('en-US')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ fontSize: '11px', color: '#b45309', fontWeight: '800', background: '#fef3c7', padding: '2px 7px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '11px', color: '#0f172a', fontWeight: '800', background: '#f8fafc', padding: '2px 7px', borderRadius: '6px' }}>
                 ভাড়া, চা ও বিল
               </span>
             </div>
@@ -548,7 +548,7 @@ export default function ReportsPage() {
                     </span>
                   </div>
                   <div style={{ height: '7px', background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
-                    <div style={{ width: `${barPercent}%`, height: '100%', background: barPercent > 50 ? '#10b981' : '#3b82f6', borderRadius: '99px', transition: 'width 0.3s' }}></div>
+                    <div style={{ width: `${barPercent}%`, height: '100%', background: barPercent > 50 ? '#10b981' : '#10b981', borderRadius: '99px', transition: 'width 0.3s' }}></div>
                   </div>
                 </div>
               );
@@ -596,15 +596,15 @@ export default function ReportsPage() {
             </div>
 
             {/* Mobile Banking */}
-            <div style={{ background: '#eff6ff', padding: '14px', borderRadius: '14px', border: '1.5px solid #bfdbfe' }}>
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '14px', border: '1.5px solid #cbd5e1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <strong style={{ fontSize: '14px', color: '#1e40af' }}>📱 বিকাশ / নগদ ডিজিটাল</strong>
-                <span className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#2563eb' }}>
+                <strong style={{ fontSize: '14px', color: '#059669' }}>📱 বিকাশ / নগদ ডিজিটাল</strong>
+                <span className="num-font" style={{ fontSize: '18px', fontWeight: '900', color: '#10b981' }}>
                   ৳{paymentBreakdown.digital.amount} ({paymentBreakdown.digital.percent}%)
                 </span>
               </div>
-              <div style={{ height: '8px', background: '#dbeafe', borderRadius: '99px', overflow: 'hidden' }}>
-                <div style={{ width: `${paymentBreakdown.digital.percent}%`, height: '100%', background: '#3b82f6' }}></div>
+              <div style={{ height: '8px', background: '#f8fafc', borderRadius: '99px', overflow: 'hidden' }}>
+                <div style={{ width: `${paymentBreakdown.digital.percent}%`, height: '100%', background: '#10b981' }}></div>
               </div>
             </div>
           </div>
@@ -672,16 +672,16 @@ export default function ReportsPage() {
           ) : (
             <div style={{ display: 'grid', gap: '8px' }}>
               {slowMoving.map((p: any, idx: number) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fef3c7' }}>
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f8fafc' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '16px' }}>{p.icon || '📦'}</span>
                     <div>
-                      <strong style={{ fontSize: '13.5px', color: '#92400e' }}>{p.name}</strong>
-                      <span style={{ fontSize: '11px', color: '#b45309', display: 'block' }}>মূল্য: ৳{p.sellingPrice}</span>
+                      <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{p.name}</strong>
+                      <span style={{ fontSize: '11px', color: '#0f172a', display: 'block' }}>মূল্য: ৳{p.sellingPrice}</span>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#d97706', background: '#fef3c7', padding: '2px 8px', borderRadius: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', background: '#f8fafc', padding: '2px 8px', borderRadius: '6px' }}>
                       স্টক: {p.stock} {p.unit}
                     </span>
                   </div>
@@ -724,7 +724,7 @@ export default function ReportsPage() {
                     </span>
                     <Link
                       href="/khata"
-                      style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none', display: 'block' }}
+                      style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', textDecoration: 'none', display: 'block' }}
                     >
                       খাতা দেখুন ➔
                     </Link>
@@ -919,7 +919,7 @@ export default function ReportsPage() {
                   return (
                     <tr key={inv.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '12px 14px', fontWeight: '800', color: '#0f172a' }}>
-                        <span style={{ fontFamily: 'monospace', color: '#2563eb' }}>
+                        <span style={{ fontFamily: 'monospace', color: '#10b981' }}>
                           #{inv.invoiceNo || inv.invoice_no || `INV-${inv.id ? String(inv.id).slice(-6) : idx + 1}`}
                         </span>
                       </td>
@@ -950,8 +950,8 @@ export default function ReportsPage() {
                           fontWeight: '800',
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          background: pMethod === 'cash' ? '#ecfdf5' : pMethod === 'due' ? '#fef2f2' : '#eff6ff',
-                          color: pMethod === 'cash' ? '#059669' : pMethod === 'due' ? '#dc2626' : '#2563eb'
+                          background: pMethod === 'cash' ? '#ecfdf5' : pMethod === 'due' ? '#fef2f2' : '#f8fafc',
+                          color: pMethod === 'cash' ? '#059669' : pMethod === 'due' ? '#dc2626' : '#10b981'
                         }}>
                           {pMethod === 'cash' ? '💵 নগদ' : pMethod === 'due' ? '📝 বাকি' : '📱 বিকাশ/ডিজিটাল'}
                         </span>
@@ -1001,7 +1001,7 @@ export default function ReportsPage() {
             }}
             pageSizeOptions={[10, 15, 25, 50, 100]}
             itemLabel="মেমো"
-            themeColor="#2563eb"
+            themeColor="#10b981"
           />
         )}
       </div>

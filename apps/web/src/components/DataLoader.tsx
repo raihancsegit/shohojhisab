@@ -39,9 +39,9 @@ export default function DataLoader({
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              border: '3.5px solid #e0e7ff',
-              borderTopColor: '#4f46e5',
-              borderRightColor: '#6366f1',
+              border: '3.5px solid #f1f5f9',
+              borderTopColor: '#10b981',
+              borderRightColor: '#10b981',
               animation: 'spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite'
             }}
           />
@@ -50,7 +50,7 @@ export default function DataLoader({
             style={{
               position: 'absolute',
               inset: '8px',
-              background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -91,7 +91,7 @@ export default function DataLoader({
               left: 0,
               height: '100%',
               width: '45%',
-              background: 'linear-gradient(90deg, #4f46e5, #818cf8)',
+              background: 'linear-gradient(90deg, #10b981, #34d399)',
               borderRadius: '999px',
               animation: 'shimmerProgress 1.4s ease-in-out infinite'
             }}
@@ -137,8 +137,8 @@ export default function DataLoader({
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              border: '3.5px solid #e0e7ff',
-              borderTopColor: '#4f46e5',
+              border: '3.5px solid #f1f5f9',
+              borderTopColor: '#10b981',
               animation: 'spin 0.75s linear infinite',
               marginBottom: '14px'
             }}
@@ -234,7 +234,7 @@ export default function DataLoader({
             <div style={{ height: '13px', width: '85%', background: '#f1f5f9', borderRadius: '4px', marginTop: 'auto' }} />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ height: '14px', width: '40px', background: '#f1f5f9', borderRadius: '4px' }} />
-              <div style={{ height: '14px', width: '28px', background: '#e0e7ff', borderRadius: '4px' }} />
+              <div style={{ height: '14px', width: '28px', background: '#f1f5f9', borderRadius: '4px' }} />
             </div>
           </div>
         ))}
@@ -249,7 +249,7 @@ export default function DataLoader({
         {/* Table Skeleton Header */}
         <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #6366f1', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #10b981', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
             <strong style={{ fontSize: '13px', color: '#334155', fontWeight: '800' }}>{text}</strong>
           </div>
           <div style={{ height: '12px', width: '70px', background: '#e2e8f0', borderRadius: '6px' }} />
@@ -295,7 +295,7 @@ export default function DataLoader({
               <div style={{ height: '16px', width: '55px', background: '#fee2e2', borderRadius: '6px' }} />
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '6px' }}>
-                <div style={{ height: '26px', width: '38px', background: '#e0e7ff', borderRadius: '8px' }} />
+                <div style={{ height: '26px', width: '38px', background: '#f1f5f9', borderRadius: '8px' }} />
                 <div style={{ height: '26px', width: '28px', background: '#f1f5f9', borderRadius: '8px' }} />
               </div>
             </div>
@@ -325,8 +325,8 @@ export default function DataLoader({
           width: '20px',
           height: '20px',
           borderRadius: '50%',
-          border: '2.5px solid #e0e7ff',
-          borderTopColor: '#4f46e5',
+          border: '2.5px solid #f1f5f9',
+          borderTopColor: '#10b981',
           animation: 'spin 0.7s linear infinite',
           flexShrink: 0
         }}

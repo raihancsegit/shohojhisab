@@ -434,7 +434,7 @@ export default function InstallmentsPage() {
         <button
           onClick={() => { setShowAddModal(true); triggerHaptic('light'); }}
           style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#fff',
             border: 'none',
             padding: '8px 16px',
@@ -462,7 +462,7 @@ export default function InstallmentsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '14px' }}>
         <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.02)' }}>
           <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700', display: 'block', lineHeight: 1.2 }}>চলমান কিস্তি</span>
-          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#4f46e5', marginTop: '2px' }}>
+          <div className="num-font" style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#10b981', marginTop: '2px' }}>
             {activeItems.length} <span style={{ fontSize: '11px', fontWeight: '600' }}>জন</span>
           </div>
         </div>
@@ -506,7 +506,7 @@ export default function InstallmentsPage() {
         <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px', borderRadius: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => { setStatusFilter('all'); triggerHaptic('light'); }}
-            style={{ background: statusFilter === 'all' ? '#4f46e5' : 'transparent', color: statusFilter === 'all' ? '#fff' : '#475569', border: 'none', padding: '6px 9px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
+            style={{ background: statusFilter === 'all' ? '#10b981' : 'transparent', color: statusFilter === 'all' ? '#fff' : '#475569', border: 'none', padding: '6px 9px', borderRadius: '8px', fontWeight: '700', fontSize: '11.5px', cursor: 'pointer' }}
           >
             সকল ({installments.length})
           </button>
@@ -556,7 +556,7 @@ export default function InstallmentsPage() {
                       <strong style={{ fontSize: '16px', color: '#0f172a' }}>{inst.customer_name}</strong>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>📞 {inst.customer_phone}</span>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#4f46e5', fontWeight: '800', marginTop: '2px' }}>
+                    <div style={{ fontSize: '13px', color: '#10b981', fontWeight: '800', marginTop: '2px' }}>
                       📱 পণ্য: {inst.product_name}
                     </div>
                     {inst.guarantor_name && (
@@ -602,11 +602,11 @@ export default function InstallmentsPage() {
                   </div>
                   <div>
                     <span style={{ color: '#64748b', display: 'block' }}>মাসিক কিস্তি</span>
-                    <strong className="num-font" style={{ fontSize: '14px', color: '#4f46e5' }}>৳{inst.monthly_installment}</strong>
+                    <strong className="num-font" style={{ fontSize: '14px', color: '#10b981' }}>৳{inst.monthly_installment}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#64748b', display: 'block' }}>পরবর্তী কিস্তির তারিখ</span>
-                    <strong style={{ fontSize: '12.5px', color: '#d97706' }}>📅 {inst.next_due_date}</strong>
+                    <strong style={{ fontSize: '12.5px', color: '#059669' }}>📅 {inst.next_due_date}</strong>
                   </div>
                 </div>
 
@@ -756,9 +756,9 @@ export default function InstallmentsPage() {
                     type="button"
                     onClick={() => startFieldVoice('customerName', false, 'গ্রাহকের নাম')}
                     style={{
-                      background: activeVoiceField === 'customerName' ? '#ef4444' : '#eef2ff',
-                      color: activeVoiceField === 'customerName' ? '#fff' : '#4f46e5',
-                      border: activeVoiceField === 'customerName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                      background: activeVoiceField === 'customerName' ? '#ef4444' : '#f8fafc',
+                      color: activeVoiceField === 'customerName' ? '#fff' : '#10b981',
+                      border: activeVoiceField === 'customerName' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                       borderRadius: '6px',
                       padding: '3px 8px',
                       fontSize: '11.5px',
@@ -801,9 +801,9 @@ export default function InstallmentsPage() {
                       type="button"
                       onClick={() => startFieldVoice('customerPhone', true, 'মোবাইল নম্বর')}
                       style={{
-                        background: activeVoiceField === 'customerPhone' ? '#ef4444' : '#eef2ff',
-                        color: activeVoiceField === 'customerPhone' ? '#fff' : '#4f46e5',
-                        border: activeVoiceField === 'customerPhone' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                        background: activeVoiceField === 'customerPhone' ? '#ef4444' : '#f8fafc',
+                        color: activeVoiceField === 'customerPhone' ? '#fff' : '#10b981',
+                        border: activeVoiceField === 'customerPhone' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
@@ -842,9 +842,9 @@ export default function InstallmentsPage() {
                       type="button"
                       onClick={() => startFieldVoice('customerAddress', false, 'ঠিকানা')}
                       style={{
-                        background: activeVoiceField === 'customerAddress' ? '#ef4444' : '#eef2ff',
-                        color: activeVoiceField === 'customerAddress' ? '#fff' : '#4f46e5',
-                        border: activeVoiceField === 'customerAddress' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                        background: activeVoiceField === 'customerAddress' ? '#ef4444' : '#f8fafc',
+                        color: activeVoiceField === 'customerAddress' ? '#fff' : '#10b981',
+                        border: activeVoiceField === 'customerAddress' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
@@ -887,9 +887,9 @@ export default function InstallmentsPage() {
                     type="button"
                     onClick={() => startFieldVoice('productName', false, 'পণ্যের নাম ও মডেল')}
                     style={{
-                      background: activeVoiceField === 'productName' ? '#ef4444' : '#eef2ff',
-                      color: activeVoiceField === 'productName' ? '#fff' : '#4f46e5',
-                      border: activeVoiceField === 'productName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                      background: activeVoiceField === 'productName' ? '#ef4444' : '#f8fafc',
+                      color: activeVoiceField === 'productName' ? '#fff' : '#10b981',
+                      border: activeVoiceField === 'productName' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                       borderRadius: '6px',
                       padding: '3px 8px',
                       fontSize: '11.5px',
@@ -1023,7 +1023,7 @@ export default function InstallmentsPage() {
                                 স্টক: {pStock} {prod.unit || 'পিস'} {pStock <= 0 ? '(স্টক শেষ)' : ''}
                               </span>
                             </div>
-                            <div className="num-font" style={{ fontSize: '13px', fontWeight: '900', color: '#4f46e5' }}>
+                            <div className="num-font" style={{ fontSize: '13px', fontWeight: '900', color: '#10b981' }}>
                               ৳{pPrice.toLocaleString('en-US')}
                             </div>
                           </div>
@@ -1042,9 +1042,9 @@ export default function InstallmentsPage() {
                       type="button"
                       onClick={() => startFieldVoice('totalAmount', true, 'মোট মূল্য')}
                       style={{
-                        background: activeVoiceField === 'totalAmount' ? '#ef4444' : '#eef2ff',
-                        color: activeVoiceField === 'totalAmount' ? '#fff' : '#4f46e5',
-                        border: activeVoiceField === 'totalAmount' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                        background: activeVoiceField === 'totalAmount' ? '#ef4444' : '#f8fafc',
+                        color: activeVoiceField === 'totalAmount' ? '#fff' : '#10b981',
+                        border: activeVoiceField === 'totalAmount' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
@@ -1085,9 +1085,9 @@ export default function InstallmentsPage() {
                       type="button"
                       onClick={() => startFieldVoice('downPayment', true, 'ডাউন পেমেন্ট')}
                       style={{
-                        background: activeVoiceField === 'downPayment' ? '#ef4444' : '#eef2ff',
-                        color: activeVoiceField === 'downPayment' ? '#fff' : '#4f46e5',
-                        border: activeVoiceField === 'downPayment' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                        background: activeVoiceField === 'downPayment' ? '#ef4444' : '#f8fafc',
+                        color: activeVoiceField === 'downPayment' ? '#fff' : '#10b981',
+                        border: activeVoiceField === 'downPayment' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
@@ -1148,9 +1148,9 @@ export default function InstallmentsPage() {
                       type="button"
                       onClick={() => startFieldVoice('guarantorName', false, 'জামিনদারের নাম')}
                       style={{
-                        background: activeVoiceField === 'guarantorName' ? '#ef4444' : '#eef2ff',
-                        color: activeVoiceField === 'guarantorName' ? '#fff' : '#4f46e5',
-                        border: activeVoiceField === 'guarantorName' ? '1px solid #dc2626' : '1px solid #c7d2fe',
+                        background: activeVoiceField === 'guarantorName' ? '#ef4444' : '#f8fafc',
+                        color: activeVoiceField === 'guarantorName' ? '#fff' : '#10b981',
+                        border: activeVoiceField === 'guarantorName' ? '1px solid #dc2626' : '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 7px',
                         fontSize: '11px',
@@ -1203,7 +1203,7 @@ export default function InstallmentsPage() {
                   </div>
                   <div>
                     <span style={{ color: '#64748b' }}>প্রতি মাসে: </span>
-                    <strong className="num-font" style={{ color: '#4f46e5', fontSize: '13.5px' }}>
+                    <strong className="num-font" style={{ color: '#10b981', fontSize: '13.5px' }}>
                       ৳{(Math.round(Math.max(0, (Number(form.totalAmount) || 0) - (Number(form.downPayment) || 0)) / (Math.max(1, Number(form.totalMonths) || 1)))).toLocaleString('en-US')}
                     </strong>
                   </div>
@@ -1213,7 +1213,7 @@ export default function InstallmentsPage() {
               <button
                 type="submit"
                 style={{
-                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#fff',
                   border: 'none',
                   padding: '13px',
@@ -1441,13 +1441,13 @@ export default function InstallmentsPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#4f46e5', marginBottom: '4px' }}>মাসিক কিস্তি (৳):</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#10b981', marginBottom: '4px' }}>মাসিক কিস্তি (৳):</label>
                   <input
                     type="number"
                     value={editForm.monthlyInstallment}
                     onChange={(e) => setEditForm({ ...editForm, monthlyInstallment: e.target.value })}
                     className="num-font"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #c7d2fe', fontSize: '13.5px', fontWeight: '800', color: '#4f46e5', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '13.5px', fontWeight: '800', color: '#10b981', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -1499,7 +1499,7 @@ export default function InstallmentsPage() {
                   disabled={isUpdating}
                   style={{
                     flex: 2,
-                    background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
                     border: 'none',
                     padding: '12px',

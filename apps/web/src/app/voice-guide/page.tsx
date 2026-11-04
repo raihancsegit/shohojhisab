@@ -443,13 +443,13 @@ export default function VoiceGuidePage() {
             borderRadius: '20px',
             fontSize: '13px',
             fontWeight: 600,
-            color: '#a5b4fc',
+            color: '#34d399',
             marginBottom: '12px'
           }}>
             <span>🎙️</span> সম্পূর্ণ ভয়েস নির্দেশিকা ও কমান্ড ডিরেক্টরি
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 800, margin: '0 0 10px', lineHeight: 1.3 }}>
-            কী দেখতে বা করতে হলে <span style={{ color: '#38bdf8' }}>মুখে কী বলবেন?</span>
+            কী দেখতে বা করতে হলে <span style={{ color: '#34d399' }}>মুখে কী বলবেন?</span>
           </h1>
           <p style={{ margin: 0, fontSize: '15px', color: '#cbd5e1', lineHeight: 1.5 }}>
             আপনার দোকানের ডিজিটাল হিসাব সহকারী সম্পূর্ণ বাংলা আঞ্চলিক কথ্য ভাষা বুঝতে পারে। নিচে দেওয়া নির্দেশিকা অনুযায়ী সরাসরি মুখে কথা বলুন।
@@ -574,9 +574,9 @@ export default function VoiceGuidePage() {
                   borderRadius: '24px',
                   fontSize: '13px',
                   fontWeight: isSelected ? 700 : 500,
-                  border: isSelected ? '2px solid #4f46e5' : '1px solid #e2e8f0',
-                  background: isSelected ? '#eef2ff' : '#ffffff',
-                  color: isSelected ? '#4338ca' : '#475569',
+                  border: isSelected ? '2px solid #10b981' : '1px solid #e2e8f0',
+                  background: isSelected ? '#f8fafc' : '#ffffff',
+                  color: isSelected ? '#059669' : '#475569',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
@@ -718,7 +718,7 @@ export default function VoiceGuidePage() {
                   flex: 1,
                   padding: '9px 12px',
                   borderRadius: '10px',
-                  background: testingId === cmd.id ? '#cbd5e1' : '#4f46e5',
+                  background: testingId === cmd.id ? '#cbd5e1' : '#10b981',
                   color: '#ffffff',
                   border: 'none',
                   fontSize: '13px',

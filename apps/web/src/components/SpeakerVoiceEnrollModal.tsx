@@ -666,8 +666,8 @@ export default function SpeakerVoiceEnrollModal({
               width: '36px',
               height: '36px',
               borderRadius: '10px',
-              background: '#eef2ff',
-              color: '#4f46e5',
+              background: '#f8fafc',
+              color: '#10b981',
               display: 'grid',
               placeItems: 'center',
               fontSize: '18px'
@@ -769,8 +769,8 @@ export default function SpeakerVoiceEnrollModal({
                 padding: '7px 10px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeTab === tab.id ? '#eef2ff' : 'transparent',
-                color: activeTab === tab.id ? '#4f46e5' : '#64748b',
+                background: activeTab === tab.id ? '#f8fafc' : 'transparent',
+                color: activeTab === tab.id ? '#10b981' : '#64748b',
                 fontWeight: activeTab === tab.id ? '800' : '600',
                 fontSize: '12px',
                 cursor: 'pointer',
@@ -854,7 +854,7 @@ export default function SpeakerVoiceEnrollModal({
                         padding: '8px 16px',
                         borderRadius: '10px',
                         border: 'none',
-                        background: '#4f46e5',
+                        background: '#10b981',
                         fontSize: '12.5px',
                         fontWeight: '800',
                         color: '#ffffff',
@@ -885,9 +885,9 @@ export default function SpeakerVoiceEnrollModal({
                           minWidth: '120px',
                           padding: '8px 12px',
                           borderRadius: '10px',
-                          border: speakerType === 'owner' ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
-                          background: speakerType === 'owner' ? '#eef2ff' : '#ffffff',
-                          color: speakerType === 'owner' ? '#4f46e5' : '#475569',
+                          border: speakerType === 'owner' ? '2px solid #10b981' : '1.5px solid #e2e8f0',
+                          background: speakerType === 'owner' ? '#f8fafc' : '#ffffff',
+                          color: speakerType === 'owner' ? '#10b981' : '#475569',
                           fontWeight: '800',
                           fontSize: '12.5px',
                           cursor: 'pointer',
@@ -920,9 +920,9 @@ export default function SpeakerVoiceEnrollModal({
                             minWidth: '160px',
                             padding: '8px 12px',
                             borderRadius: '10px',
-                            border: speakerType === 'staff' && !isCustomStaff ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
-                            background: speakerType === 'staff' && !isCustomStaff ? '#eef2ff' : '#ffffff',
-                            color: speakerType === 'staff' && !isCustomStaff ? '#4f46e5' : '#475569',
+                            border: speakerType === 'staff' && !isCustomStaff ? '2px solid #10b981' : '1.5px solid #e2e8f0',
+                            background: speakerType === 'staff' && !isCustomStaff ? '#f8fafc' : '#ffffff',
+                            color: speakerType === 'staff' && !isCustomStaff ? '#10b981' : '#475569',
                             fontWeight: '800',
                             fontSize: '12.5px',
                             cursor: 'pointer',
@@ -951,9 +951,9 @@ export default function SpeakerVoiceEnrollModal({
                           style={{
                             padding: '8px 14px',
                             borderRadius: '10px',
-                            border: isCustomStaff ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
-                            background: isCustomStaff ? '#eef2ff' : '#ffffff',
-                            color: isCustomStaff ? '#4f46e5' : '#475569',
+                            border: isCustomStaff ? '2px solid #10b981' : '1.5px solid #e2e8f0',
+                            background: isCustomStaff ? '#f8fafc' : '#ffffff',
+                            color: isCustomStaff ? '#10b981' : '#475569',
                             fontWeight: '800',
                             fontSize: '12.5px',
                             cursor: 'pointer'
@@ -975,7 +975,7 @@ export default function SpeakerVoiceEnrollModal({
                             width: '100%',
                             padding: '9px 14px',
                             borderRadius: '10px',
-                            border: '1.5px solid #4f46e5',
+                            border: '1.5px solid #10b981',
                             fontSize: '13px',
                             fontWeight: '700',
                             outline: 'none',
@@ -1041,7 +1041,7 @@ export default function SpeakerVoiceEnrollModal({
                     textAlign: 'center',
                     marginBottom: '16px'
                   }}>
-                    <div style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '20px', background: speakerType === 'owner' ? '#eef2ff' : '#ecfdf5', color: speakerType === 'owner' ? '#4f46e5' : '#059669', fontSize: '11.5px', fontWeight: '800', marginBottom: '8px' }}>
+                    <div style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '20px', background: speakerType === 'owner' ? '#f8fafc' : '#ecfdf5', color: speakerType === 'owner' ? '#10b981' : '#059669', fontSize: '11.5px', fontWeight: '800', marginBottom: '8px' }}>
                       {speakerType === 'owner' ? '👑 প্রধান মালিকের কণ্ঠ ভেরিফিকেশন অনুচ্ছেদ' : '👔 বিক্রয় কর্মীর কণ্ঠ ভেরিফিকেশন অনুচ্ছেদ'}
                     </div>
                     <div style={{
@@ -1210,8 +1210,8 @@ export default function SpeakerVoiceEnrollModal({
 
               {/* Status Header Card */}
               <div style={{
-                background: boundSpeakerId ? '#f0fdf4' : '#eff6ff',
-                border: `1.5px solid ${boundSpeakerId ? '#bbf7d0' : '#bfdbfe'}`,
+                background: boundSpeakerId ? '#f0fdf4' : '#f8fafc',
+                border: `1.5px solid ${boundSpeakerId ? '#bbf7d0' : '#cbd5e1'}`,
                 borderRadius: '14px',
                 padding: '14px 16px',
                 display: 'flex',
@@ -1220,12 +1220,12 @@ export default function SpeakerVoiceEnrollModal({
               }}>
                 <div style={{ fontSize: '26px' }}>{boundSpeakerId ? '🔒' : '📱'}</div>
                 <div>
-                  <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '900', color: boundSpeakerId ? '#166534' : '#1e40af' }}>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '900', color: boundSpeakerId ? '#166534' : '#059669' }}>
                     {boundSpeakerId
                       ? `লক সক্রিয়: ${profiles.find(p => p.id === boundSpeakerId)?.name || 'নির্দিষ্ট অপারেটর'}`
                       : 'উন্মুক্ত মোড: সব নিবন্ধিত কর্মী ও মালিক'}
                   </h4>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: boundSpeakerId ? '#15803d' : '#3b82f6', lineHeight: 1.45 }}>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: boundSpeakerId ? '#15803d' : '#10b981', lineHeight: 1.45 }}>
                     ফার্মেসিতে যখন পাশাপাশি একাধিক কর্মী ফোন নিয়ে দাঁড়ান, এই ফোনটি কেবল নির্বাচিত অপারেটরের কণ্ঠেই মেমো গ্রহণ করবে। পাশের কর্মীর গলার আওয়াজ অন্য ফোনে পড়বে না।
                   </p>
                 </div>
@@ -1243,8 +1243,8 @@ export default function SpeakerVoiceEnrollModal({
                     style={{
                       padding: '10px 14px',
                       borderRadius: '10px',
-                      border: `1.5px solid ${!boundSpeakerId ? '#4f46e5' : '#e2e8f0'}`,
-                      background: !boundSpeakerId ? '#f5f3ff' : '#ffffff',
+                      border: `1.5px solid ${!boundSpeakerId ? '#10b981' : '#e2e8f0'}`,
+                      background: !boundSpeakerId ? '#f8fafc' : '#ffffff',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1253,14 +1253,14 @@ export default function SpeakerVoiceEnrollModal({
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: !boundSpeakerId ? '#4f46e5' : '#1e293b' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: !boundSpeakerId ? '#10b981' : '#1e293b' }}>
                         🌐 সব নিবন্ধিত কর্মী ও মালিক (উন্মুক্ত মোড)
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>
                         দোকানের যেকোনো নিবন্ধিত ব্যক্তির কণ্ঠেই এই ফোনে মেমো তৈরি হবে
                       </div>
                     </div>
-                    {!boundSpeakerId && <span style={{ color: '#4f46e5', fontWeight: '900', fontSize: '16px' }}>✓</span>}
+                    {!boundSpeakerId && <span style={{ color: '#10b981', fontWeight: '900', fontSize: '16px' }}>✓</span>}
                   </div>
 
                   {/* Registered Profiles List */}
@@ -1337,8 +1337,8 @@ export default function SpeakerVoiceEnrollModal({
                         style={{
                           padding: '10px 12px',
                           borderRadius: '10px',
-                          border: `1.5px solid ${isSel ? '#3b82f6' : '#e2e8f0'}`,
-                          background: isSel ? '#eff6ff' : '#f8fafc',
+                          border: `1.5px solid ${isSel ? '#10b981' : '#e2e8f0'}`,
+                          background: isSel ? '#f8fafc' : '#f8fafc',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'flex-start',
@@ -1349,7 +1349,7 @@ export default function SpeakerVoiceEnrollModal({
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12.5px', fontWeight: '800', color: isSel ? '#1d4ed8' : '#1e293b' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: '800', color: isSel ? '#059669' : '#1e293b' }}>
                               {m.title}
                             </span>
                             <span style={{
@@ -1357,8 +1357,8 @@ export default function SpeakerVoiceEnrollModal({
                               fontWeight: '800',
                               padding: '1px 6px',
                               borderRadius: '4px',
-                              background: isSel ? '#dbeafe' : '#e2e8f0',
-                              color: isSel ? '#1e40af' : '#64748b'
+                              background: isSel ? '#f8fafc' : '#e2e8f0',
+                              color: isSel ? '#059669' : '#64748b'
                             }}>
                               {m.badge}
                             </span>
@@ -1367,7 +1367,7 @@ export default function SpeakerVoiceEnrollModal({
                             {m.desc}
                           </div>
                         </div>
-                        {isSel && <span style={{ color: '#2563eb', fontWeight: '900', fontSize: '16px' }}>✓</span>}
+                        {isSel && <span style={{ color: '#10b981', fontWeight: '900', fontSize: '16px' }}>✓</span>}
                       </div>
                     );
                   })}
@@ -1407,7 +1407,7 @@ export default function SpeakerVoiceEnrollModal({
                   <button
                     onClick={() => setActiveTab('enroll')}
                     style={{
-                      background: '#4f46e5',
+                      background: '#10b981',
                       color: '#ffffff',
                       border: 'none',
                       padding: '7px 14px',
@@ -1567,7 +1567,7 @@ export default function SpeakerVoiceEnrollModal({
                     else startLiveTest();
                   }}
                   style={{
-                    background: isTesting ? '#ef4444' : '#4f46e5',
+                    background: isTesting ? '#ef4444' : '#10b981',
                     color: '#ffffff',
                     border: 'none',
                     padding: '9px 20px',

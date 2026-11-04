@@ -3534,7 +3534,7 @@ export default function PosPage() {
                 <strong style={{ fontSize: 'clamp(12px, 3.5vw, 15px)', color: '#ffffff', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
                   ভয়েস মেমো
                 </strong>
-                <span style={{ fontSize: '9px', background: '#fef08a', color: '#854d0e', padding: '1px 5px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
+                <span style={{ fontSize: '9px', background: '#f8fafc', color: '#0f172a', padding: '1px 5px', borderRadius: '99px', fontWeight: '900', letterSpacing: '0.2px', flexShrink: 0 }}>
                   লাইভ মেমো
                 </span>
               </div>
@@ -3598,8 +3598,8 @@ export default function PosPage() {
           onClick={handleToggleCounterSleep}
           style={{
             background: isCounterSleepActive ? '#0f172a' : '#ffffff',
-            color: isCounterSleepActive ? '#38bdf8' : '#334155',
-            border: isCounterSleepActive ? '1.5px solid #38bdf8' : '1.5px solid #cbd5e1',
+            color: isCounterSleepActive ? '#34d399' : '#334155',
+            border: isCounterSleepActive ? '1.5px solid #34d399' : '1.5px solid #cbd5e1',
             borderRadius: '16px',
             padding: '6px 10px',
             display: 'flex',
@@ -3709,7 +3709,7 @@ export default function PosPage() {
       {(isExpressListening || isNumpadVoiceListening || isListening || liveInterimVoiceText) && (
         <div style={{
           background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-          border: '1.5px solid #38bdf8',
+          border: '1.5px solid #34d399',
           borderRadius: '16px',
           padding: '12px 16px',
           marginBottom: '12px',
@@ -3739,7 +3739,7 @@ export default function PosPage() {
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '11px', background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '11px', background: '#10b981', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', whiteSpace: 'nowrap' }}>
             লাইভ ভয়েস
           </span>
         </div>
@@ -3804,7 +3804,7 @@ export default function PosPage() {
             padding: '7px 12px',
             borderRadius: '10px',
             border: 'none',
-            background: posMode === 'catalog' ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : 'transparent',
+            background: posMode === 'catalog' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
             color: posMode === 'catalog' ? '#ffffff' : 'var(--text-secondary)',
             fontWeight: '800',
             fontSize: '12px',
@@ -3958,7 +3958,7 @@ export default function PosPage() {
                   ))
                 : 'টাকার অংক চাপুন...'}
               {numpadInput && (
-                <span style={{ color: '#38bdf8' }}> {numpadItems.length > 0 ? '+' : ''} ৳{numpadInput}</span>
+                <span style={{ color: '#34d399' }}> {numpadItems.length > 0 ? '+' : ''} ৳{numpadInput}</span>
               )}
             </div>
 
@@ -4034,8 +4034,8 @@ export default function PosPage() {
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                         <span style={{
-                          background: '#dbeafe',
-                          color: '#1d4ed8',
+                          background: '#f8fafc',
+                          color: '#059669',
                           padding: '1px 6px',
                           borderRadius: '6px',
                           fontSize: '10.5px',
@@ -4081,7 +4081,7 @@ export default function PosPage() {
               gap: '8px',
               flexWrap: 'wrap'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4f46e5', fontWeight: '700' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
                 <span>⚡</span>
                 <span>সাধারণ আইটেম (৳{parsedPending.total})</span>
               </div>
@@ -4090,7 +4090,7 @@ export default function PosPage() {
                   type="button"
                   onClick={() => handleNumpadAddCurrent()}
                   style={{
-                    background: '#4f46e5',
+                    background: '#10b981',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
@@ -4362,7 +4362,7 @@ export default function PosPage() {
               { label: '1', action: () => handleNumpadDigit('1') },
               { label: '2', action: () => handleNumpadDigit('2') },
               { label: '3', action: () => handleNumpadDigit('3') },
-              { label: '+ যোগ', action: () => handleNumpadAddCurrent(), bg: '#eef2ff', color: '#4f46e5', bold: true },
+              { label: '+ যোগ', action: () => handleNumpadAddCurrent(), bg: '#f8fafc', color: '#10b981', bold: true },
 
               { label: '00', action: () => handleNumpadDigit('00') },
               { label: '0', action: () => handleNumpadDigit('0') },
@@ -4412,7 +4412,7 @@ export default function PosPage() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#4f46e5',
+                  color: '#10b981',
                   fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer'
@@ -4644,7 +4644,7 @@ export default function PosPage() {
                   padding: '0 14px',
                   borderRadius: '10px',
                   border: 'none',
-                  background: '#4f46e5',
+                  background: '#10b981',
                   color: '#ffffff',
                   fontWeight: '800',
                   fontSize: '13px',
@@ -4691,7 +4691,7 @@ export default function PosPage() {
                       {Number(expressPreview.stock || 0) > 0 ? `স্টক: ${expressPreview.stock} ${expressPreview.unit || ''}` : '⚠️ স্টক নেই'}
                     </span>
                   ) : (
-                    <span style={{ color: '#d97706', fontWeight: '700' }}>
+                    <span style={{ color: '#059669', fontWeight: '700' }}>
                       কাস্টম
                     </span>
                   )}
@@ -4801,11 +4801,11 @@ export default function PosPage() {
               type="button"
               onClick={openCameraScanner}
               style={{
-                background: '#eef2ff',
-                border: '1px solid #c7d2fe',
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
                 borderRadius: '8px',
                 padding: '5px 8px',
-                color: '#4f46e5',
+                color: '#10b981',
                 cursor: 'pointer',
                 fontSize: '13px',
                 display: 'grid',
@@ -4925,7 +4925,7 @@ export default function PosPage() {
                               ৳{p.sellingPrice}/{p.unit}
                             </span>
                             {p.subUnit && Number(p.conversionRatio) > 1 && (
-                              <span style={{ fontSize: '10px', color: '#6366f1', background: '#eef2ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                              <span style={{ fontSize: '10px', color: '#10b981', background: '#f8fafc', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
                                 ১ {p.unit} = {p.conversionRatio} {p.subUnit} (৳{Math.round((p.sellingPrice / p.conversionRatio) * 100) / 100}/{p.subUnit})
                               </span>
                             )}
@@ -4983,7 +4983,7 @@ export default function PosPage() {
             triggerHaptic('light');
           }}
           style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#ffffff',
             border: 'none',
             padding: '12px 14px',
@@ -5024,9 +5024,9 @@ export default function PosPage() {
           type="button"
           onClick={() => { setSelectedCategory('all'); triggerHaptic('light'); }}
           style={{
-            background: selectedCategory === 'all' ? '#4f46e5' : '#ffffff',
+            background: selectedCategory === 'all' ? '#10b981' : '#ffffff',
             color: selectedCategory === 'all' ? '#ffffff' : '#475569',
-            border: selectedCategory === 'all' ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+            border: selectedCategory === 'all' ? '1px solid #10b981' : '1px solid #e2e8f0',
             padding: '4px 10px',
             borderRadius: '12px',
             fontSize: '11px',
@@ -5057,9 +5057,9 @@ export default function PosPage() {
           type="button"
           onClick={() => { setSelectedCategory(selectedCategory === 'fast' ? 'all' : 'fast'); triggerHaptic('light'); }}
           style={{
-            background: selectedCategory === 'fast' ? '#4f46e5' : '#ffffff',
+            background: selectedCategory === 'fast' ? '#10b981' : '#ffffff',
             color: selectedCategory === 'fast' ? '#ffffff' : '#475569',
-            border: selectedCategory === 'fast' ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+            border: selectedCategory === 'fast' ? '1px solid #10b981' : '1px solid #e2e8f0',
             padding: '4px 10px',
             borderRadius: '12px',
             fontSize: '11px',
@@ -5114,9 +5114,9 @@ export default function PosPage() {
             type="button"
             onClick={() => { setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id); triggerHaptic('light'); }}
             style={{
-              background: selectedCategory === cat.id ? '#4f46e5' : '#ffffff',
+              background: selectedCategory === cat.id ? '#10b981' : '#ffffff',
               color: selectedCategory === cat.id ? '#ffffff' : '#475569',
-              border: selectedCategory === cat.id ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+              border: selectedCategory === cat.id ? '1px solid #10b981' : '1px solid #e2e8f0',
               padding: '4px 9px',
               borderRadius: '12px',
               fontSize: '11px',
@@ -5143,7 +5143,7 @@ export default function PosPage() {
             onClick={handleHoldCart}
             style={{
               background: '#fff7ed',
-              border: '1px solid #fed7aa',
+              border: '1px solid #cbd5e1',
               borderRadius: '12px',
               padding: '4px 10px',
               fontSize: '11px',
@@ -5237,7 +5237,7 @@ export default function PosPage() {
                     <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669' }}>
                       ৳{tab.totalAmount}
                     </span>
-                    <span style={{ fontSize: '10px', color: '#2563eb', fontWeight: '700' }}>
+                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>
                       বিল ক্লোজ ➔
                     </span>
                   </div>
@@ -5286,8 +5286,8 @@ export default function PosPage() {
       {/* 👗 CLOTHING & FASHION SLEEK SIZE STRIP */}
       {industryId === 'cat-clothing' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(90deg, #f5f3ff 0%, #faf5ff 100%)',
-          border: '1px solid #ddd6fe',
+          background: 'linear-gradient(90deg, #f8fafc 0%, #faf5ff 100%)',
+          border: '1px solid #cbd5e1',
           borderRadius: '10px',
           padding: '5px 12px',
           marginBottom: '10px',
@@ -5316,9 +5316,9 @@ export default function PosPage() {
                   style={{
                     padding: '2px 8px',
                     borderRadius: '6px',
-                    border: isActive ? '1px solid #7c3aed' : '1px solid #ddd6fe',
-                    background: isActive ? '#7c3aed' : '#ffffff',
-                    color: isActive ? '#ffffff' : '#6d28d9',
+                    border: isActive ? '1px solid #10b981' : '1px solid #cbd5e1',
+                    background: isActive ? '#10b981' : '#ffffff',
+                    color: isActive ? '#ffffff' : '#059669',
                     fontSize: '10.5px',
                     fontWeight: '800',
                     cursor: 'pointer',
@@ -5337,7 +5337,7 @@ export default function PosPage() {
       {industryId === 'cat-shoes' && (
         <div className="desktop-only" style={{
           background: 'linear-gradient(90deg, #faf5ff 0%, #fdf4ff 100%)',
-          border: '1px solid #e9d5ff',
+          border: '1px solid #cbd5e1',
           borderRadius: '10px',
           padding: '5px 12px',
           marginBottom: '10px',
@@ -5383,8 +5383,8 @@ export default function PosPage() {
       {/* 📱 MOBILE & GADGET SLEEK RIBBON */}
       {industryId === 'cat-mobile' && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%)',
-          border: '1px solid #bae6fd',
+          background: 'linear-gradient(90deg, #f8fafc 0%, #f8fafc 100%)',
+          border: '1px solid #cbd5e1',
           borderRadius: '10px',
           padding: '5px 12px',
           marginBottom: '10px',
@@ -5395,10 +5395,10 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '15px' }}>📱</span>
-            <strong style={{ fontSize: '11.5px', color: '#0369a1' }}>মোবাইল</strong>
-            <span style={{ fontSize: '10.5px', color: '#0284c7' }}>• ওয়ারেন্টি</span>
+            <strong style={{ fontSize: '11.5px', color: '#059669' }}>মোবাইল</strong>
+            <span style={{ fontSize: '10.5px', color: '#10b981' }}>• ওয়ারেন্টি</span>
           </div>
-          <span style={{ background: '#0284c7', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800' }}>
+          <span style={{ background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800' }}>
             🛡️ ওয়ারেন্টি সক্রিয়
           </span>
         </div>
@@ -5407,8 +5407,8 @@ export default function PosPage() {
       {/* 🍽️ RESTAURANT SLEEK TABLE RIBBON */}
       {(industryId === 'cat-restaurant' || industryId === 'cat-tea') && (
         <div className="desktop-only" style={{
-          background: 'linear-gradient(90deg, #fff7ed 0%, #fffbeb 100%)',
-          border: '1px solid #fed7aa',
+          background: 'linear-gradient(90deg, #fff7ed 0%, #f8fafc 100%)',
+          border: '1px solid #cbd5e1',
           borderRadius: '10px',
           padding: '5px 12px',
           marginBottom: '10px',
@@ -5428,7 +5428,7 @@ export default function PosPage() {
               style={{
                 padding: '3px 8px',
                 borderRadius: '6px',
-                border: orderType === 'takeaway' ? '1.5px solid #ea580c' : '1px solid #fed7aa',
+                border: orderType === 'takeaway' ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
                 background: orderType === 'takeaway' ? '#ea580c' : '#fff',
                 color: orderType === 'takeaway' ? '#fff' : '#c2410c',
                 fontSize: '11px',
@@ -5446,7 +5446,7 @@ export default function PosPage() {
                 style={{
                   padding: '3px 7px',
                   borderRadius: '6px',
-                  border: (orderType === 'dine-in' && tableNumber === tbl) ? '1.5px solid #ea580c' : '1px solid #fed7aa',
+                  border: (orderType === 'dine-in' && tableNumber === tbl) ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
                   background: (orderType === 'dine-in' && tableNumber === tbl) ? '#ea580c' : '#fff',
                   color: (orderType === 'dine-in' && tableNumber === tbl) ? '#fff' : '#c2410c',
                   fontSize: '10.5px',
@@ -5529,8 +5529,8 @@ export default function PosPage() {
       {/* ⏸️ HELD CARTS (হোল্ডে রাখা কাস্টমার কার্ট) */}
       {heldCarts.length > 0 && (
         <div style={{
-          background: '#fffbeb',
-          border: '1.5px solid #fde68a',
+          background: '#f8fafc',
+          border: '1.5px solid #cbd5e1',
           borderRadius: '16px',
           padding: '10px 14px',
           marginBottom: '14px',
@@ -5540,7 +5540,7 @@ export default function PosPage() {
           overflowX: 'auto',
           boxShadow: '0 2px 6px rgba(245, 158, 11, 0.08)'
         }}>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', whiteSpace: 'nowrap', flexShrink: 0 }}>
             ⏸️ হোল্ডে থাকা কার্ট ({heldCarts.length}টি):
           </span>
           {heldCarts.map(h => (
@@ -5550,13 +5550,13 @@ export default function PosPage() {
               onClick={() => handleResumeCart(h)}
               style={{
                 background: '#ffffff',
-                border: '1px solid #f59e0b',
+                border: '1px solid #10b981',
                 padding: '6px 12px',
                 borderRadius: '10px',
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: '800',
-                color: '#b45309',
+                color: '#0f172a',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -5574,7 +5574,7 @@ export default function PosPage() {
 
       {industryId === 'cat-restaurant' && (
         <div style={{
-          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+          background: '#f8fafc',
           border: '1.5px solid #fcd34d',
           borderRadius: '16px',
           padding: '10px 16px',
@@ -5587,7 +5587,7 @@ export default function PosPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '20px' }}>🍲</span>
-            <strong style={{ fontSize: '13px', color: '#92400e' }}>অর্ডার ধরণ:</strong>
+            <strong style={{ fontSize: '13px', color: '#0f172a' }}>অর্ডার ধরণ:</strong>
             <button
               type="button"
               onClick={() => { setOrderType('dine-in'); triggerHaptic('light'); }}
@@ -5595,8 +5595,8 @@ export default function PosPage() {
                 padding: '6px 12px',
                 borderRadius: '10px',
                 border: 'none',
-                background: orderType === 'dine-in' ? '#d97706' : '#fff',
-                color: orderType === 'dine-in' ? '#fff' : '#92400e',
+                background: orderType === 'dine-in' ? '#059669' : '#fff',
+                color: orderType === 'dine-in' ? '#fff' : '#0f172a',
                 fontWeight: '800',
                 fontSize: '12px',
                 cursor: 'pointer'
@@ -5611,8 +5611,8 @@ export default function PosPage() {
                 padding: '6px 12px',
                 borderRadius: '10px',
                 border: 'none',
-                background: orderType === 'takeaway' ? '#d97706' : '#fff',
-                color: orderType === 'takeaway' ? '#fff' : '#92400e',
+                background: orderType === 'takeaway' ? '#059669' : '#fff',
+                color: orderType === 'takeaway' ? '#fff' : '#0f172a',
                 fontWeight: '800',
                 fontSize: '12px',
                 cursor: 'pointer'
@@ -5624,7 +5624,7 @@ export default function PosPage() {
 
           {orderType === 'dine-in' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', color: '#92400e', fontWeight: '800' }}>টেবিল:</span>
+              <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: '800' }}>টেবিল:</span>
               <div style={{ display: 'flex', gap: '4px' }}>
                 {['১', '২', '৩', '৪', '৫', '৬'].map(tNum => (
                   <button
@@ -5636,7 +5636,7 @@ export default function PosPage() {
                       height: '30px',
                       borderRadius: '8px',
                       border: 'none',
-                      background: tableNumber === tNum ? '#b45309' : '#fff',
+                      background: tableNumber === tNum ? '#0f172a' : '#fff',
                       color: tableNumber === tNum ? '#fff' : '#78350f',
                       fontWeight: '900',
                       fontSize: '12.5px',
@@ -5699,7 +5699,7 @@ export default function PosPage() {
               borderRadius: '16px',
               overflow: 'hidden',
               background: '#000',
-              border: '2px solid #3b82f6',
+              border: '2px solid #10b981',
               marginBottom: '14px'
             }}>
               <video
@@ -5743,8 +5743,8 @@ export default function PosPage() {
                     }}
                     style={{
                       background: 'rgba(59, 130, 246, 0.25)',
-                      border: '1px solid #3b82f6',
-                      color: '#93c5fd',
+                      border: '1px solid #10b981',
+                      color: '#a7f3d0',
                       padding: '4px 8px',
                       borderRadius: '8px',
                       fontSize: '11px',
@@ -5821,7 +5821,7 @@ export default function PosPage() {
                 </span>
                 {p.genericName && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px' }}>
-                    <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       🧪 {p.genericName}
                     </span>
                     <button
@@ -5831,13 +5831,13 @@ export default function PosPage() {
                         openSubstituteModal(p);
                       }}
                       style={{
-                        background: '#e0e7ff',
-                        border: '1px solid #c7d2fe',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '4px',
                         padding: '1px 5px',
                         fontSize: '9.5px',
                         fontWeight: '800',
-                        color: '#4338ca',
+                        color: '#059669',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         flexShrink: 0
@@ -5849,7 +5849,7 @@ export default function PosPage() {
                   </div>
                 )}
                 {p.size && (
-                  <span style={{ fontSize: '10.5px', color: '#7c3aed', fontWeight: '700', display: 'block', marginTop: '2px' }}>
+                  <span style={{ fontSize: '10.5px', color: '#10b981', fontWeight: '700', display: 'block', marginTop: '2px' }}>
                     🏷️ সাইজ: {p.size} {p.color ? `• ${p.color}` : ''}
                   </span>
                 )}
@@ -5858,7 +5858,7 @@ export default function PosPage() {
                     🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
                   </span>
                 ) : isExpiringSoon ? (
-                  <span style={{ fontSize: '9.5px', background: '#fef3c7', color: '#b45309', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                  <span style={{ fontSize: '9.5px', background: '#f8fafc', color: '#0f172a', padding: '1px 5px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
                     ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
                   </span>
                 ) : p.expiryDate ? (
@@ -5876,13 +5876,13 @@ export default function PosPage() {
                       onClick={() => addToCart(p, 1, p.subUnit || 'ট্যাবলেট', Math.round((p.sellingPrice / Number(p.conversionRatio)) * 100) / 100, true)}
                       style={{
                         flex: 1,
-                        background: '#eff6ff',
-                        border: '1px solid #bfdbfe',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
                         fontWeight: '800',
-                        color: '#1d4ed8',
+                        color: '#059669',
                         cursor: 'pointer'
                       }}
                       title="১টি ট্যাবলেট বিক্রি করুন"
@@ -5894,13 +5894,13 @@ export default function PosPage() {
                       onClick={() => addToCart(p, 0.5, p.unit || 'পাতা', undefined, true)}
                       style={{
                         flex: 1,
-                        background: '#fef3c7',
-                        border: '1px solid #fde68a',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
                         fontWeight: '800',
-                        color: '#b45309',
+                        color: '#0f172a',
                         cursor: 'pointer'
                       }}
                       title="হাফ পাতা বিক্রি করুন"
@@ -5990,13 +5990,13 @@ export default function PosPage() {
                       onClick={() => addToCart(p, 1, 'হালি', undefined, true)}
                       style={{
                         flex: 1,
-                        background: '#fef3c7',
-                        border: '1px solid #fde68a',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
                         fontWeight: '800',
-                        color: '#b45309',
+                        color: '#0f172a',
                         cursor: 'pointer'
                       }}
                       title="১ হালি বিক্রি করুন"
@@ -6030,7 +6030,7 @@ export default function PosPage() {
                       style={{
                         flex: 1,
                         background: '#fff7ed',
-                        border: '1px solid #fed7aa',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
@@ -6069,7 +6069,7 @@ export default function PosPage() {
                       style={{
                         flex: 1,
                         background: '#faf5ff',
-                        border: '1px solid #e9d5ff',
+                        border: '1px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '2px 4px',
                         fontSize: '10px',
@@ -6126,13 +6126,13 @@ export default function PosPage() {
                       onClick={() => addToCart(p, 1, p.subUnit, undefined, true)}
                       style={{
                         flex: 1,
-                        background: '#eef2ff',
-                        border: '1.5px solid #c7d2fe',
+                        background: '#f8fafc',
+                        border: '1.5px solid #cbd5e1',
                         borderRadius: '6px',
                         padding: '3px 4px',
                         fontSize: '10.5px',
                         fontWeight: '800',
-                        color: '#4338ca',
+                        color: '#059669',
                         cursor: 'pointer',
                         textAlign: 'center'
                       }}
@@ -6461,7 +6461,7 @@ export default function PosPage() {
                       <button type="button" onClick={() => setDirectQuantity(item.product.id, 0.25)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 0.25 ? '#10b981' : '#fff', color: item.quantity === 0.25 ? '#fff' : '#475569', cursor: 'pointer' }}>১ পোয়া</button>
                       <button type="button" onClick={() => setDirectQuantity(item.product.id, 0.5)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 0.5 ? '#10b981' : '#fff', color: item.quantity === 0.5 ? '#fff' : '#475569', cursor: 'pointer' }}>হাফ কেজি</button>
                       <button type="button" onClick={() => setDirectQuantity(item.product.id, 1)} style={{ flex: 1, padding: '2px 0', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: item.quantity === 1 ? '#10b981' : '#fff', color: item.quantity === 1 ? '#fff' : '#475569', cursor: 'pointer' }}>১ কেজি</button>
-                      <button type="button" onClick={() => handlePromptTakaAmount(item)} style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', cursor: 'pointer' }}>টাকায়</button>
+                      <button type="button" onClick={() => handlePromptTakaAmount(item)} style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9.5px', fontWeight: '800', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#10b981', cursor: 'pointer' }}>টাকায়</button>
                     </div>
                   )}
                 </div>
@@ -6566,7 +6566,7 @@ export default function PosPage() {
                 style={{
                   padding: '8px 6px',
                   borderRadius: '9px',
-                  background: cart.length === 0 ? '#cbd5e1' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  background: cart.length === 0 ? '#cbd5e1' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '900',
@@ -6661,11 +6661,11 @@ export default function PosPage() {
                                 style={{
                                   padding: '2px 6px',
                                   borderRadius: '6px',
-                                  border: '1.5px solid #6366f1',
+                                  border: '1.5px solid #10b981',
                                   fontSize: '11.5px',
                                   fontWeight: '800',
-                                  color: '#4338ca',
-                                  background: '#eef2ff',
+                                  color: '#059669',
+                                  background: '#f8fafc',
                                   cursor: 'pointer'
                                 }}
                                 title="একক পরিবর্তন করুন"
@@ -6742,7 +6742,7 @@ export default function PosPage() {
                     <button
                       type="button"
                       onClick={() => handlePromptTakaAmount(item)}
-                      style={{ padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', cursor: 'pointer' }}
+                      style={{ padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: '800', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#10b981', cursor: 'pointer' }}
                       title="যেমন: ৩০ টাকার ডাল বা ৫০ টাকার তেল"
                     >
                       💰 টাকায় পরিমাণ
@@ -6837,13 +6837,13 @@ export default function PosPage() {
                             )}
                             {/* Clothing Size */}
                             {it.product.size && (
-                              <span style={{ fontSize: '10px', background: '#f5f3ff', color: '#7c3aed', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                              <span style={{ fontSize: '10px', background: '#f8fafc', color: '#10b981', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
                                 সাইজ: {it.product.size}
                               </span>
                             )}
                             {/* Clothing Color */}
                             {it.product.color && (
-                              <span style={{ fontSize: '10px', background: '#f5f3ff', color: '#7c3aed', padding: '1px 5px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '10px', background: '#f8fafc', color: '#10b981', padding: '1px 5px', borderRadius: '4px' }}>
                                 {it.product.color}
                               </span>
                             )}
@@ -6865,11 +6865,11 @@ export default function PosPage() {
                                     style={{
                                       padding: '2px 4px',
                                       borderRadius: '6px',
-                                      border: '1.5px solid #6366f1',
+                                      border: '1.5px solid #10b981',
                                       fontSize: '11px',
                                       fontWeight: '800',
-                                      color: '#4338ca',
-                                      background: '#eef2ff',
+                                      color: '#059669',
+                                      background: '#f8fafc',
                                       cursor: 'pointer'
                                     }}
                                   >
@@ -7006,11 +7006,11 @@ export default function PosPage() {
               marginBottom: '14px',
               padding: paymentMethod === 'due' ? '12px' : '0px',
               borderRadius: '12px',
-              background: paymentMethod === 'due' ? '#fffbeb' : 'transparent',
-              border: paymentMethod === 'due' ? '1.5px solid #fde68a' : 'none'
+              background: paymentMethod === 'due' ? '#f8fafc' : 'transparent',
+              border: paymentMethod === 'due' ? '1.5px solid #cbd5e1' : 'none'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: '800', color: paymentMethod === 'due' ? '#b45309' : '#475569' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: '800', color: paymentMethod === 'due' ? '#0f172a' : '#475569' }}>
                   {paymentMethod === 'due' ? '📖 বাকি খাতার গ্রাহক (আবশ্যক):' : 'গ্রাহক নির্বাচন:'}
                 </label>
                 <button
@@ -7022,9 +7022,9 @@ export default function PosPage() {
                     }
                   }}
                   style={{
-                    background: showNewCustFields ? '#f1f5f9' : '#e0f2fe',
-                    color: showNewCustFields ? '#475569' : '#0369a1',
-                    border: '1px solid #bae6fd',
+                    background: showNewCustFields ? '#f1f5f9' : '#f8fafc',
+                    color: showNewCustFields ? '#475569' : '#059669',
+                    border: '1px solid #cbd5e1',
                     padding: '3px 8px',
                     borderRadius: '6px',
                     fontSize: '11px',
@@ -7046,7 +7046,7 @@ export default function PosPage() {
                     width: '100%',
                     padding: '10px',
                     borderRadius: '10px',
-                    border: paymentMethod === 'due' && selectedCustomer === 'none' ? '2px solid #f59e0b' : '1.5px solid #cbd5e1',
+                    border: paymentMethod === 'due' && selectedCustomer === 'none' ? '2px solid #10b981' : '1.5px solid #cbd5e1',
                     fontSize: '13.5px',
                     outline: 'none',
                     background: '#fff'
@@ -7072,7 +7072,7 @@ export default function PosPage() {
                       value={newCustName}
                       onChange={(e) => setNewCustName(e.target.value)}
                       placeholder="উদা: মো: রফিক উদ্দিন"
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #93c5fd', fontSize: '13px', outline: 'none' }}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #a7f3d0', fontSize: '13px', outline: 'none' }}
                     />
                   </div>
                   <div>
@@ -7084,7 +7084,7 @@ export default function PosPage() {
                       value={newCustPhone}
                       onChange={(e) => setNewCustPhone(e.target.value)}
                       placeholder="০১৭১১..."
-                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #93c5fd', fontSize: '13px', outline: 'none' }}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #a7f3d0', fontSize: '13px', outline: 'none' }}
                     />
                   </div>
                 </div>
@@ -7096,10 +7096,10 @@ export default function PosPage() {
                   marginTop: '10px',
                   padding: '10px',
                   borderRadius: '8px',
-                  background: '#fef3c7',
-                  border: '1px dashed #f59e0b',
+                  background: '#f8fafc',
+                  border: '1px dashed #10b981',
                   fontSize: '12px',
-                  color: '#92400e'
+                  color: '#0f172a'
                 }}>
                   {selectedCustomer !== 'none' ? (() => {
                     const cust = customers.find(c => c.id === selectedCustomer);
@@ -7113,9 +7113,9 @@ export default function PosPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                           <span>চলতি বিল:</span>
-                          <strong style={{ color: '#b45309' }}>+ ৳{finalTotalCart.toLocaleString('en-US')}</strong>
+                          <strong style={{ color: '#0f172a' }}>+ ৳{finalTotalCart.toLocaleString('en-US')}</strong>
                         </div>
-                        <div style={{ borderTop: '1px solid #fde68a', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: '#78350f' }}>
+                        <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: '#78350f' }}>
                           <span>মোট বাকি:</span>
                           <span style={{ fontSize: '13.5px' }}>৳{newDue.toLocaleString('en-US')}</span>
                         </div>
@@ -7124,10 +7124,10 @@ export default function PosPage() {
                   })() : showNewCustFields && newCustName.trim() ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700' }}>
                       <span>খাতে যোগ:</span>
-                      <strong style={{ color: '#b45309' }}>৳{finalTotalCart.toLocaleString('en-US')}</strong>
+                      <strong style={{ color: '#0f172a' }}>৳{finalTotalCart.toLocaleString('en-US')}</strong>
                     </div>
                   ) : (
-                    <div style={{ color: '#d97706', fontWeight: '600' }}>
+                    <div style={{ color: '#059669', fontWeight: '600' }}>
                       ⚠️ বাকির জন্য গ্রাহক নির্বাচন করুন।
                     </div>
                   )}
@@ -7235,7 +7235,7 @@ export default function PosPage() {
             {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
               <div style={{
                 background: paymentMethod === 'bkash' ? '#fdf2f8' : '#fff7ed',
-                border: `1.5px solid ${paymentMethod === 'bkash' ? '#fbcfe8' : '#fed7aa'}`,
+                border: `1.5px solid ${paymentMethod === 'bkash' ? '#cbd5e1' : '#cbd5e1'}`,
                 borderRadius: '16px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -7269,8 +7269,8 @@ export default function PosPage() {
 
             {/* Industry Specific Checkout Fields */}
             {industryId === 'cat-mobile' && (
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#1e40af', marginBottom: '4px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#059669', marginBottom: '4px' }}>
                   IMEI / সিরিয়াল:
                 </label>
                 <input
@@ -7280,7 +7280,7 @@ export default function PosPage() {
                   onChange={(e) => setImeiInput(e.target.value)}
                   style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px', background: '#fff' }}
                 />
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#1e40af', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#059669', marginBottom: '4px' }}>
                   ওয়ারেন্টি মেয়াদ:
                 </label>
                 <select
@@ -7312,7 +7312,7 @@ export default function PosPage() {
             )}
 
             {industryId === 'cat-bakery' && (
-              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
+              <div style={{ background: '#fff7ed', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '14px', marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: '#9a3412', marginBottom: '4px' }}>
                   কেকের বার্তা:
                 </label>
@@ -7455,13 +7455,13 @@ export default function PosPage() {
                 fontSize: '12.5px',
                 lineHeight: 1.4,
                 color: '#000',
-                border: '2px solid #0284c7',
+                border: '2px solid #10b981',
                 borderRadius: '10px',
                 padding: '14px',
                 marginBottom: '14px'
               }}>
-                <div style={{ textAlign: 'center', borderBottom: '2px solid #0284c7', paddingBottom: '8px', marginBottom: '10px' }}>
-                  <h3 style={{ margin: '0 0 2px', fontSize: '16px', fontWeight: '900', color: '#0369a1' }}>🛡️ অফিশিয়াল ওয়ারেন্টি কার্ড</h3>
+                <div style={{ textAlign: 'center', borderBottom: '2px solid #10b981', paddingBottom: '8px', marginBottom: '10px' }}>
+                  <h3 style={{ margin: '0 0 2px', fontSize: '16px', fontWeight: '900', color: '#059669' }}>🛡️ অফিশিয়াল ওয়ারেন্টি কার্ড</h3>
                   <p style={{ margin: 0, fontSize: '12.5px', fontWeight: '800' }}>{receipt.shopName}</p>
                   <p style={{ margin: 0, fontSize: '10.5px', color: '#475569' }}>📍 {receipt.location} • 📞 {receipt.phone}</p>
                 </div>
@@ -7470,11 +7470,11 @@ export default function PosPage() {
                   <div>মোবাইল: <strong>{receipt.customerPhone || 'প্রযোজ্য নয়'}</strong></div>
                   <div>মেমো নং: <strong>#{receipt.invoiceNo}</strong> • তারিখ: <strong>{receipt.date}</strong></div>
                 </div>
-                <div style={{ background: '#f0f9ff', border: '1px dashed #0284c7', padding: '8px', borderRadius: '6px', marginBottom: '8px', fontSize: '11.5px' }}>
+                <div style={{ background: '#f8fafc', border: '1px dashed #10b981', padding: '8px', borderRadius: '6px', marginBottom: '8px', fontSize: '11.5px' }}>
                   {(receipt.items || []).map((it: any, idx: number) => (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', marginBottom: '2px' }}>
                       <span>{it.product?.banglaName || it.product?.name || it.productName || 'ডিভাইস'}</span>
-                      <span style={{ color: '#0284c7' }}>১ বছর সার্ভিসিং ওয়ারেন্টি</span>
+                      <span style={{ color: '#10b981' }}>১ বছর সার্ভিসিং ওয়ারেন্টি</span>
                     </div>
                   ))}
                 </div>
@@ -7681,12 +7681,12 @@ export default function PosPage() {
                     ক্রেতা: {receipt.customerName}
                   </div>
                   {receipt.orderType && (
-                    <div style={{ textAlign: 'left', fontSize: '11px', color: '#b45309', fontWeight: '800', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', fontSize: '11px', color: '#0f172a', fontWeight: '800', marginTop: '2px' }}>
                       {receipt.orderType === 'dine-in' ? `🍽️ ডাইন-ইন (টেবিল #${receipt.tableNumber})` : '🛍️ পার্সেল (Takeaway)'}
                     </div>
                   )}
                   {receipt.imei && (
-                    <div style={{ textAlign: 'left', fontSize: '11px', color: '#1e40af', fontWeight: '800', marginTop: '2px' }}>
+                    <div style={{ textAlign: 'left', fontSize: '11px', color: '#059669', fontWeight: '800', marginTop: '2px' }}>
                       📱 IMEI: {receipt.imei}
                     </div>
                   )}
@@ -7850,7 +7850,7 @@ export default function PosPage() {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    background: '#d97706',
+                    background: '#059669',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '10px',
@@ -7880,7 +7880,7 @@ export default function PosPage() {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    background: '#0284c7',
+                    background: '#10b981',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '10px',
@@ -8105,7 +8105,7 @@ export default function PosPage() {
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowQuickAddModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>বাতিল</button>
-                <button type="submit" style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
+                <button type="submit" style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}>
                   ✓ যোগ করুন
                 </button>
               </div>
@@ -8408,21 +8408,21 @@ export default function PosPage() {
                     required
                     autoFocus
                     className="num-font"
-                    style={{ width: '100%', padding: '12px 12px 12px 34px', borderRadius: '12px', border: '2px solid #3b82f6', outline: 'none', boxSizing: 'border-box', fontSize: '20px', fontWeight: '900' }}
+                    style={{ width: '100%', padding: '12px 12px 12px 34px', borderRadius: '12px', border: '2px solid #10b981', outline: 'none', boxSizing: 'border-box', fontSize: '20px', fontWeight: '900' }}
                   />
                 </div>
               </div>
 
               {/* Live Weight Calculation Banner */}
               {gramTargetProduct && gramInputTaka && parseFloat(gramInputTaka) > 0 && (
-                <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '16px', padding: '14px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '14px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#059669', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
                     দোকানদারকে যত মাপতে হবে:
                   </span>
-                  <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#1d4ed8' }}>
+                  <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: '#059669' }}>
                     {Math.round((parseFloat(gramInputTaka) / (Number(gramTargetProduct.sellingPrice) || 1)) * 1000)} গ্রাম
                   </div>
-                  <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: '700' }}>
+                  <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '700' }}>
                     ({(parseFloat(gramInputTaka) / (Number(gramTargetProduct.sellingPrice) || 1)).toFixed(3)} {gramTargetProduct.unit || 'কেজি'})
                   </span>
                 </div>
@@ -8439,7 +8439,7 @@ export default function PosPage() {
                 <button
                   type="submit"
                   disabled={!gramInputTaka || parseFloat(gramInputTaka) <= 0}
-                  style={{ flex: 2, padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}
+                  style={{ flex: 2, padding: '12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}
                 >
                   ✓ মেমোতে যোগ করুন ➔
                 </button>
@@ -8562,7 +8562,7 @@ export default function PosPage() {
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#0f172a' }}>
                   🔄 বিকল্প ঔষধ তালিকা
                 </h3>
-                <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700' }}>
+                <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '700' }}>
                   🧪 {substituteBaseProd.genericName || substituteBaseProd.banglaName || substituteBaseProd.name}
                 </span>
               </div>

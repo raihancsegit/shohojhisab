@@ -199,7 +199,7 @@ export default function ChallanOcrPage() {
       
       {/* Top Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #059669 100%)',
         borderRadius: '24px',
         padding: '24px 20px',
         color: '#fff',
@@ -218,7 +218,7 @@ export default function ChallanOcrPage() {
           <h1 style={{ fontSize: 'clamp(20px, 4.5vw, 24px)', fontWeight: '900', letterSpacing: '-0.5px', margin: '0 0 4px' }}>
             মহাজনের চালান ফটো তুলুন — সরাসরি স্টকে মাল তুলুন!
           </h1>
-          <span style={{ fontSize: '13px', color: '#c7d2fe' }}>
+          <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
             {tenant?.shopName} • চালানের ছবি তুললেই পণ্য নাম, কেনা দর ও স্টক স্বয়ংক্রিয়ভাবে ইনভেন্টরিতে যুক্ত হবে।
           </span>
         </div>
@@ -329,7 +329,7 @@ export default function ChallanOcrPage() {
           />
 
           {!scannedResult && (
-            <div className="glass-card" style={{ padding: '30px 20px', textAlign: 'center', marginBottom: '20px', border: '2px dashed #818cf8', borderRadius: '20px', background: '#fcfdff' }}>
+            <div className="glass-card" style={{ padding: '30px 20px', textAlign: 'center', marginBottom: '20px', border: '2px dashed #34d399', borderRadius: '20px', background: '#fcfdff' }}>
               {capturedImage ? (
                 <div style={{ marginBottom: '18px' }}>
                   <img
@@ -347,7 +347,7 @@ export default function ChallanOcrPage() {
                     <button
                       onClick={() => processChallanScan(capturedImage)}
                       disabled={isScanning}
-                      style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                     >
                       ⚡ স্ক্যান প্রসেস করুন
                     </button>
@@ -371,7 +371,7 @@ export default function ChallanOcrPage() {
                       }}
                       disabled={isScanning}
                       style={{
-                        background: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
+                        background: 'linear-gradient(135deg, #059669 0%, #312e81 100%)',
                         color: '#fff',
                         border: 'none',
                         padding: '14px 26px',
@@ -394,8 +394,8 @@ export default function ChallanOcrPage() {
                       disabled={isScanning}
                       style={{
                         background: '#ffffff',
-                        color: '#4338ca',
-                        border: '1.5px solid #c7d2fe',
+                        color: '#059669',
+                        border: '1.5px solid #cbd5e1',
                         padding: '14px 20px',
                         borderRadius: '14px',
                         fontSize: '14px',
@@ -410,7 +410,7 @@ export default function ChallanOcrPage() {
               )}
 
               {isScanning && (
-                <div style={{ marginTop: '20px', padding: '14px', background: '#e0e7ff', borderRadius: '12px', color: '#3730a3', fontSize: '13.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <div style={{ marginTop: '20px', padding: '14px', background: '#f1f5f9', borderRadius: '12px', color: '#059669', fontSize: '13.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
                   <span>চালানের ছবি এনালাইসিস ও পণ্য লিস্ট তৈরি হচ্ছে...</span>
                 </div>
@@ -539,7 +539,7 @@ export default function ChallanOcrPage() {
                 style={{
                   background: '#f8fafc',
                   border: '1px dashed #cbd5e1',
-                  color: '#4f46e5',
+                  color: '#10b981',
                   padding: '6px 14px',
                   borderRadius: '8px',
                   fontSize: '12px',
@@ -628,8 +628,8 @@ export default function ChallanOcrPage() {
       {/* Tab 2: Predictive Bazaar Reorder Engine */}
       {activeTab === 'reorder' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div className="glass-card" style={{ padding: '20px', background: '#fefce8', border: '1.5px solid #fef08a', borderRadius: '16px' }}>
-            <strong style={{ fontSize: '15px', color: '#854d0e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="glass-card" style={{ padding: '20px', background: '#f8fafc', border: '1.5px solid #f8fafc', borderRadius: '16px' }}>
+            <strong style={{ fontSize: '15px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>🔮</span> হাটবার ও সাপ্তাহিক চাহিদার পূর্বাভাস
             </strong>
             <p style={{ fontSize: '13px', color: '#a16207', marginTop: '4px', lineHeight: 1.5 }}>
@@ -648,7 +648,7 @@ export default function ChallanOcrPage() {
                 alignItems: 'center',
                 flexWrap: 'wrap',
                 gap: '12px',
-                borderLeft: '4px solid #f59e0b',
+                borderLeft: '4px solid #10b981',
                 borderRadius: '16px'
               }}
             >

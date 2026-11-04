@@ -38,13 +38,13 @@ export default function DayEndPage() {
   });
 
   const noteMeta: { [denom: number]: { color: string; bg: string; border: string; label: string } } = {
-    1000: { color: '#831843', bg: 'rgba(131, 24, 67, 0.08)', border: '#fbcfe8', label: '১০০০ টাকার নোট' },
+    1000: { color: '#831843', bg: 'rgba(131, 24, 67, 0.08)', border: '#cbd5e1', label: '১০০০ টাকার নোট' },
     500: { color: '#047857', bg: 'rgba(5, 150, 105, 0.08)', border: '#a7f3d0', label: '৫০০ টাকার নোট' },
-    200: { color: '#b45309', bg: 'rgba(217, 119, 6, 0.08)', border: '#fde68a', label: '২০০ টাকার নোট' },
-    100: { color: '#1d4ed8', bg: 'rgba(37, 99, 235, 0.08)', border: '#bfdbfe', label: '১০০ টাকার নোট' },
-    50: { color: '#c2410c', bg: 'rgba(234, 88, 12, 0.08)', border: '#fed7aa', label: '৫০ টাকার নোট' },
+    200: { color: '#0f172a', bg: 'rgba(217, 119, 6, 0.08)', border: '#cbd5e1', label: '২০০ টাকার নোট' },
+    100: { color: '#059669', bg: 'rgba(37, 99, 235, 0.08)', border: '#cbd5e1', label: '১০০ টাকার নোট' },
+    50: { color: '#c2410c', bg: 'rgba(234, 88, 12, 0.08)', border: '#cbd5e1', label: '৫০ টাকার নোট' },
     20: { color: '#0f766e', bg: 'rgba(13, 148, 136, 0.08)', border: '#99f6e4', label: '২০ টাকার নোট' },
-    10: { color: '#be185d', bg: 'rgba(190, 24, 93, 0.08)', border: '#fbcfe8', label: '১০ টাকার নোট' },
+    10: { color: '#be185d', bg: 'rgba(190, 24, 93, 0.08)', border: '#cbd5e1', label: '১০ টাকার নোট' },
     5: { color: '#334155', bg: 'rgba(71, 85, 105, 0.08)', border: '#cbd5e1', label: '৫ টাকার নোট/কয়েন' },
     2: { color: '#334155', bg: 'rgba(71, 85, 105, 0.08)', border: '#cbd5e1', label: '২ টাকার নোট/কয়েন' },
     1: { color: '#334155', bg: 'rgba(71, 85, 105, 0.08)', border: '#cbd5e1', label: '১ টাকার কয়েন' },
@@ -231,8 +231,8 @@ export default function DayEndPage() {
                 type="button"
                 onClick={() => setShowNoteCounter(!showNoteCounter)}
                 style={{
-                  background: showNoteCounter ? '#4f46e5' : '#ede9fe',
-                  color: showNoteCounter ? '#fff' : '#6d28d9',
+                  background: showNoteCounter ? '#10b981' : '#ede9fe',
+                  color: showNoteCounter ? '#fff' : '#059669',
                   border: 'none',
                   padding: '3px 8px',
                   borderRadius: '6px',
@@ -467,9 +467,9 @@ export default function DayEndPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: cashDifference === 0 ? '#ecfdf5' : cashDifference > 0 ? '#eff6ff' : '#fef2f2',
-            border: cashDifference === 0 ? '1.5px solid #a7f3d0' : cashDifference > 0 ? '1.5px solid #bfdbfe' : '1.5px solid #fecaca',
-            color: cashDifference === 0 ? '#065f46' : cashDifference > 0 ? '#1e40af' : '#b91c1c'
+            background: cashDifference === 0 ? '#ecfdf5' : cashDifference > 0 ? '#f8fafc' : '#fef2f2',
+            border: cashDifference === 0 ? '1.5px solid #a7f3d0' : cashDifference > 0 ? '1.5px solid #cbd5e1' : '1.5px solid #fecaca',
+            color: cashDifference === 0 ? '#065f46' : cashDifference > 0 ? '#059669' : '#b91c1c'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>{cashDifference === 0 ? '✓' : cashDifference > 0 ? 'ℹ️' : '⚠️'}</span>

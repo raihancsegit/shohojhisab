@@ -86,7 +86,7 @@ export default function FeatureGate({
           <Link
             href="/subscription"
             style={{
-              color: '#4f46e5',
+              color: '#10b981',
               fontWeight: '700',
               textDecoration: 'underline'
             }}
@@ -111,8 +111,8 @@ export default function FeatureGate({
           width: '64px',
           height: '64px',
           borderRadius: '16px',
-          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-          color: '#b45309',
+          background: '#f8fafc',
+          color: '#0f172a',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -138,7 +138,7 @@ export default function FeatureGate({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#ffffff',
               padding: '12px 28px',
               borderRadius: '12px',

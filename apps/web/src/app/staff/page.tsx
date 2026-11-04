@@ -49,8 +49,8 @@ const ROLE_DEFINITIONS: Record<string, {
   manager: {
     label: 'ম্যানেজার',
     icon: '💼',
-    badgeBg: '#e0e7ff',
-    badgeColor: '#3730a3',
+    badgeBg: '#f1f5f9',
+    badgeColor: '#059669',
     description: 'দৈনিক বিক্রয়, স্টক, বাকি খাতা, খরচের ভাউচার, ডিলার কেনাকাটা ও সেলস রিপোর্ট (দোকানের মূল মালিক সেটিংস ছাড়া)',
     defaultPermissions: ['pos', 'stock', 'products_search', 'khata_view', 'khata_collect', 'dealers', 'expenses_create', 'expenses_view', 'reports_view', 'expiry', 'discount', 'soundbox']
   },
@@ -65,8 +65,8 @@ const ROLE_DEFINITIONS: Record<string, {
   pharmacist: {
     label: 'ফার্মাসিস্ট / স্টক ইনচার্জ',
     icon: '💊',
-    badgeBg: '#fef3c7',
-    badgeColor: '#92400e',
+    badgeBg: '#f8fafc',
+    badgeColor: '#0f172a',
     description: 'মেয়াদ রাডার, শর্ট লিস্ট, স্টক ইন, চালান OCR ও নতুন ঔষধ যুক্ত (আসল আর্থিক লাভ ও ক্যাশ কাউন্টার গোপন)',
     defaultPermissions: ['pos', 'stock', 'products_search', 'expiry', 'dealers', 'soundbox']
   },
@@ -507,7 +507,7 @@ export default function StaffManagementPage() {
 
       {/* Top Banner & Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #059669 100%)',
         borderRadius: '16px',
         padding: '14px 16px',
         color: '#ffffff',
@@ -526,7 +526,7 @@ export default function StaffManagementPage() {
             <h1 style={{ fontSize: 'clamp(17px, 4.5vw, 22px)', fontWeight: '900', margin: '0 0 4px', color: '#ffffff' }}>
               স্টাফ ম্যানেজমেন্ট, শিফট ও পেরোল খাতা
             </h1>
-            <p style={{ margin: 0, fontSize: 'clamp(11px, 3.2vw, 12.5px)', color: '#c7d2fe', maxWidth: '700px', lineHeight: 1.4 }}>
+            <p style={{ margin: 0, fontSize: 'clamp(11px, 3.2vw, 12.5px)', color: '#cbd5e1', maxWidth: '700px', lineHeight: 1.4 }}>
               কর্মচারীদের ৪-ডিজিটের লগইন পিন, ক্যাশিয়ার শিফট হস্তান্তর ও ক্যাশ ড্রয়ার মিলানো (Z-Report), ডিজিটাল হাজিরা, মাসিক বেতন ও কমিশন।
             </p>
           </div>
@@ -536,7 +536,7 @@ export default function StaffManagementPage() {
               <button
                 onClick={() => { triggerHaptic('light'); setShowCloseShiftModal(true); }}
                 style={{
-                  background: '#f59e0b',
+                  background: '#10b981',
                   color: '#ffffff',
                   border: 'none',
                   padding: '7px 13px',
@@ -647,7 +647,7 @@ export default function StaffManagementPage() {
               padding: '7px 12px',
               borderRadius: '10px',
               border: 'none',
-              background: activeTab === tab.id ? '#4f46e5' : 'transparent',
+              background: activeTab === tab.id ? '#10b981' : 'transparent',
               color: activeTab === tab.id ? '#ffffff' : '#64748b',
               fontWeight: '800',
               fontSize: '12px',
@@ -684,7 +684,7 @@ export default function StaffManagementPage() {
             <div style={{ background: '#ffffff', borderRadius: '14px', padding: '10px 12px', border: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                 <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>মোট স্টাফ</span>
-                <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '3px 6px', borderRadius: '6px', fontSize: '12px' }}>👥</span>
+                <span style={{ background: '#f1f5f9', color: '#059669', padding: '3px 6px', borderRadius: '6px', fontSize: '12px' }}>👥</span>
               </div>
               <div style={{ fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: '900', color: '#0f172a' }} className="num-font">
                 {totalStaffCount} জন
@@ -706,7 +706,7 @@ export default function StaffManagementPage() {
             <div style={{ background: '#ffffff', borderRadius: '18px', padding: '18px', border: '1.5px solid #e2e8f0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#64748b' }}>ম্যানেজার ও ইনচার্জ</span>
-                <span style={{ background: '#fef3c7', color: '#b45309', padding: '5px 8px', borderRadius: '8px', fontSize: '15px' }}>💼</span>
+                <span style={{ background: '#f8fafc', color: '#0f172a', padding: '5px 8px', borderRadius: '8px', fontSize: '15px' }}>💼</span>
               </div>
               <div style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a' }} className="num-font">
                 {managersCount} জন
@@ -719,7 +719,7 @@ export default function StaffManagementPage() {
                 <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#64748b' }}>স্টাফদের আজকের সেলস</span>
                 <span style={{ background: '#fae8ff', color: '#a21caf', padding: '5px 8px', borderRadius: '8px', fontSize: '15px' }}>⚡</span>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#4f46e5' }} className="num-font">
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#10b981' }} className="num-font">
                 ৳ {formatPrice(todayStaffSalesTotal)}
               </div>
               <p style={{ margin: '3px 0 0', fontSize: '11.5px', color: '#64748b', fontWeight: '600' }}>আজকের কাউন্টার মেমো থেকে</p>
@@ -763,9 +763,9 @@ export default function StaffManagementPage() {
                     style={{
                       padding: '7px 14px',
                       borderRadius: '10px',
-                      border: selectedRoleFilter === tab.id ? '1.5px solid #4f46e5' : '1px solid #e2e8f0',
-                      background: selectedRoleFilter === tab.id ? '#eef2ff' : '#ffffff',
-                      color: selectedRoleFilter === tab.id ? '#4f46e5' : '#64748b',
+                      border: selectedRoleFilter === tab.id ? '1.5px solid #10b981' : '1px solid #e2e8f0',
+                      background: selectedRoleFilter === tab.id ? '#f8fafc' : '#ffffff',
+                      color: selectedRoleFilter === tab.id ? '#10b981' : '#64748b',
                       fontSize: '12.5px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -878,7 +878,7 @@ export default function StaffManagementPage() {
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ color: '#64748b', fontSize: '11px', fontWeight: '700' }}>PIN:</span>
-                              <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#4f46e5' }} className="num-font">
+                              <span style={{ fontSize: '13px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#10b981' }} className="num-font">
                                 {isVisible ? staff.pin : '••••'}
                               </span>
                               <button
@@ -916,9 +916,9 @@ export default function StaffManagementPage() {
                               onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
                               style={{
                                 flex: 1,
-                                background: '#eef2ff',
-                                color: '#4f46e5',
-                                border: '1px solid #c7d2fe',
+                                background: '#f8fafc',
+                                color: '#10b981',
+                                border: '1px solid #cbd5e1',
                                 padding: '8px 10px',
                                 borderRadius: '10px',
                                 fontSize: '12px',
@@ -1062,7 +1062,7 @@ export default function StaffManagementPage() {
                                 📱 {staff.phone || '—'}
                               </div>
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: '#f8fafc', padding: '2px 6px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#4f46e5' }} className="num-font">
+                                <span style={{ fontSize: '12px', fontWeight: '900', letterSpacing: isVisible ? '2px' : '3px', color: '#10b981' }} className="num-font">
                                   {isVisible ? staff.pin : '••••'}
                                 </span>
                                 <button type="button" onClick={() => togglePin(staff.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
@@ -1107,7 +1107,7 @@ export default function StaffManagementPage() {
                               <div style={{ display: 'inline-flex', gap: '6px' }}>
                                 <button
                                   onClick={() => { triggerHaptic('light'); setShowIdCardModal(staff); }}
-                                  style={{ background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                                  style={{ background: '#f8fafc', color: '#10b981', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                                   title="আইডি ব্যাজ"
                                 >
                                   🪪 আইডি
@@ -1210,7 +1210,7 @@ export default function StaffManagementPage() {
               <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>কাউন্টারে বিক্রি শুরু করার পূর্বে প্রারম্ভিক ক্যাশ দিয়ে শিফট শুরু করুন।</p>
               <button
                 onClick={() => setShowOpenShiftModal(true)}
-                style={{ background: '#4f46e5', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}
+                style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }}
               >
                 ☀️ নতুন শিফট শুরু করুন (Start Shift)
               </button>
@@ -1253,7 +1253,7 @@ export default function StaffManagementPage() {
                         ) : s.difference < 0 ? (
                           <span style={{ color: '#dc2626', fontWeight: '800' }}>⚠️ শর্ট: -৳{Math.abs(s.difference)}</span>
                         ) : (
-                          <span style={{ color: '#2563eb', fontWeight: '800' }}>+৳{s.difference} বেশি</span>
+                          <span style={{ color: '#10b981', fontWeight: '800' }}>+৳{s.difference} বেশি</span>
                         )}
                       </td>
                       <td style={{ padding: '12px' }}>
@@ -1289,7 +1289,7 @@ export default function StaffManagementPage() {
             </p>
 
             {attMessage && (
-              <div style={{ background: '#eef2ff', color: '#4338ca', padding: '10px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+              <div style={{ background: '#f8fafc', color: '#059669', padding: '10px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
                 {attMessage}
               </div>
             )}
@@ -1392,7 +1392,7 @@ export default function StaffManagementPage() {
       {activeTab === 'commission' && (
         <div style={{ display: 'grid', gap: '20px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #10b981 100%)',
             borderRadius: '20px',
             padding: '24px',
             color: '#ffffff',
@@ -1406,7 +1406,7 @@ export default function StaffManagementPage() {
               <h2 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 4px' }}>
                 🏆 স্টাফ সেলস লিডারবোর্ড ও কমিশন ট্র্যাকার
               </h2>
-              <p style={{ margin: 0, fontSize: '13px', color: '#c7d2fe' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1' }}>
                 কর্মচারীদের বিক্রয় টার্গেট অর্জন ও স্বয়ংক্রিয় কমিশন হিসাব
               </p>
             </div>
@@ -1424,18 +1424,18 @@ export default function StaffManagementPage() {
                   background: '#ffffff',
                   borderRadius: '18px',
                   padding: '20px',
-                  border: idx === 0 ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                  border: idx === 0 ? '2px solid #10b981' : '1.5px solid #e2e8f0',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
                   position: 'relative'
                 }}>
                   {idx === 0 && (
-                    <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '900' }}>
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#f8fafc', color: '#0f172a', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '900' }}>
                       👑 টপ সেলার #১
                     </div>
                   )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'grid', placeItems: 'center', fontSize: '20px', fontWeight: '900' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f8fafc', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '20px', fontWeight: '900' }}>
                       {ROLE_DEFINITIONS[staff.role]?.icon || '👤'}
                     </div>
                     <div>
@@ -1450,7 +1450,7 @@ export default function StaffManagementPage() {
                       <span style={{ color: '#0f172a' }} className="num-font">৳ {formatPrice(achieved)} / ৳ {formatPrice(target)}</span>
                     </div>
                     <div style={{ width: '100%', height: '8px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                      <div style={{ width: `${percent}%`, height: '100%', background: percent >= 100 ? '#10b981' : '#4f46e5', borderRadius: '99px', transition: 'width 0.3s ease' }} />
+                      <div style={{ width: `${percent}%`, height: '100%', background: percent >= 100 ? '#10b981' : '#10b981', borderRadius: '99px', transition: 'width 0.3s ease' }} />
                     </div>
                   </div>
 
@@ -1490,7 +1490,7 @@ export default function StaffManagementPage() {
 
             <button
               onClick={() => { triggerHaptic('light'); setShowAdvanceModal(true); }}
-              style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '900', fontSize: '13px', cursor: 'pointer' }}
+              style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '900', fontSize: '13px', cursor: 'pointer' }}
             >
               💸 কর্মচারীকে অগ্রিম প্রদান (Advance Loan)
             </button>
@@ -1522,11 +1522,11 @@ export default function StaffManagementPage() {
                       <td style={{ padding: '12px' }} className="num-font">৳ {formatPrice(item.baseSalary)}</td>
                       <td style={{ padding: '12px', color: '#16a34a', fontWeight: '700' }} className="num-font">+ ৳ {formatPrice(item.earnedCommission)}</td>
                       <td style={{ padding: '12px', color: '#dc2626', fontWeight: '700' }} className="num-font">- ৳ {formatPrice(item.advanceDeductions)}</td>
-                      <td style={{ padding: '12px', fontWeight: '900', color: '#4f46e5', fontSize: '14px' }} className="num-font">৳ {formatPrice(item.netPayable)}</td>
+                      <td style={{ padding: '12px', fontWeight: '900', color: '#10b981', fontSize: '14px' }} className="num-font">৳ {formatPrice(item.netPayable)}</td>
                       <td style={{ padding: '12px' }}>
                         <span style={{
-                          background: item.status === 'paid' ? '#dcfce7' : '#fef3c7',
-                          color: item.status === 'paid' ? '#15803d' : '#b45309',
+                          background: item.status === 'paid' ? '#dcfce7' : '#f8fafc',
+                          color: item.status === 'paid' ? '#15803d' : '#0f172a',
                           padding: '3px 8px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800'
                         }}>
                           {item.status === 'paid' ? '✓ পরিশোধিত' : '⏳ বাকি'}
@@ -1566,7 +1566,7 @@ export default function StaffManagementPage() {
               <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <div>
                   <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>
-                    👤 <strong style={{ color: '#4f46e5' }}>{log.user_name || 'সিস্টেম'}</strong>: {log.details}
+                    👤 <strong style={{ color: '#10b981' }}>{log.user_name || 'সিস্টেম'}</strong>: {log.details}
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                     অ্যাকশন: <code>{log.action}</code>
@@ -1635,7 +1635,7 @@ export default function StaffManagementPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '6px', fontWeight: '900', color: '#0f172a', fontSize: '14px' }}>
                 <span>প্রত্যাশিত ক্যাশ ব্যালেন্স:</span>
-                <span style={{ color: '#4f46e5' }}>৳ {formatPrice(activeShift.expectedCashInDrawer || 0)}</span>
+                <span style={{ color: '#10b981' }}>৳ {formatPrice(activeShift.expectedCashInDrawer || 0)}</span>
               </div>
             </div>
 
@@ -1665,7 +1665,7 @@ export default function StaffManagementPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowCloseShiftModal(false)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: '800' }}>বাতিল</button>
-                <button type="submit" style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: '900' }}>✓ ক্লোজিং সম্পন্ন করুন</button>
+                <button type="submit" style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: '900' }}>✓ ক্লোজিং সম্পন্ন করুন</button>
               </div>
             </form>
           </div>
@@ -1699,7 +1699,7 @@ export default function StaffManagementPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button onClick={() => window.print()} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>🖨️ প্রিন্ট স্লিপ</button>
+              <button onClick={() => window.print()} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>🖨️ প্রিন্ট স্লিপ</button>
               <button onClick={() => setZReportData(null)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}>বন্ধ করুন</button>
             </div>
           </div>
@@ -1754,7 +1754,7 @@ export default function StaffManagementPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowAdvanceModal(false)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: '800' }}>বাতিল</button>
-                <button type="submit" style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', fontWeight: '900' }}>✓ অগ্রিম জমা করুন</button>
+                <button type="submit" style={{ padding: '10px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: '900' }}>✓ অগ্রিম জমা করুন</button>
               </div>
             </form>
           </div>
@@ -1892,7 +1892,7 @@ export default function StaffManagementPage() {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleTogglePermission(p.key)}
-                          style={{ width: '15px', height: '15px', accentColor: '#4f46e5' }}
+                          style={{ width: '15px', height: '15px', accentColor: '#10b981' }}
                         />
                         <span>{p.label}</span>
                       </label>
@@ -1904,7 +1904,7 @@ export default function StaffManagementPage() {
               {/* Submit Buttons */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginTop: '6px' }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '800', fontSize: '13.5px', cursor: 'pointer' }}>বাতিল</button>
-                <button type="submit" disabled={saving} style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#4f46e5', color: '#ffffff', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79, 70, 229, 0.4)' }}>
+                <button type="submit" disabled={saving} style={{ padding: '12px', borderRadius: '12px', border: 'none', background: '#10b981', color: '#ffffff', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79, 70, 229, 0.4)' }}>
                   {saving ? 'সংরক্ষণ হচ্ছে...' : '✓ স্টাফ সংরক্ষণ করুন'}
                 </button>
               </div>
@@ -1921,12 +1921,12 @@ export default function StaffManagementPage() {
               <button onClick={() => setShowIdCardModal(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', borderRadius: '20px', padding: '24px 20px', color: '#ffffff', boxShadow: '0 10px 25px rgba(79, 70, 229, 0.3)', marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#c7d2fe', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+            <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '20px', padding: '24px 20px', color: '#ffffff', boxShadow: '0 10px 25px rgba(79, 70, 229, 0.3)', marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
                 {tenant?.shopName || 'সহজ হিসাব ডিজিটাল দোকান'}
               </div>
-              <div style={{ fontSize: '11px', color: '#e0e7ff', marginBottom: '14px' }}>🏢 {showIdCardModal.branchName || 'প্রধান শাখা'}</div>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ffffff', color: '#4f46e5', fontSize: '32px', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
+              <div style={{ fontSize: '11px', color: '#f1f5f9', marginBottom: '14px' }}>🏢 {showIdCardModal.branchName || 'প্রধান শাখা'}</div>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ffffff', color: '#10b981', fontSize: '32px', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
                 {ROLE_DEFINITIONS[showIdCardModal.role]?.icon || '👤'}
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: '900', margin: '0 0 4px', color: '#ffffff' }}>{showIdCardModal.name}</h2>
@@ -1935,7 +1935,7 @@ export default function StaffManagementPage() {
               </div>
               <div style={{ background: '#ffffff', borderRadius: '14px', padding: '12px', color: '#0f172a' }}>
                 <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '4px' }}>কাউন্টার শিফট লগইন পিন</div>
-                <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '6px', color: '#4f46e5' }} className="num-font">{showIdCardModal.pin}</div>
+                <div style={{ fontSize: '24px', fontWeight: '900', letterSpacing: '6px', color: '#10b981' }} className="num-font">{showIdCardModal.pin}</div>
               </div>
             </div>
 

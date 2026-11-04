@@ -70,7 +70,7 @@ export default function PWAInstaller() {
     <>
       {/* Sleek PWA Install Header Bar */}
       <div style={{
-        background: 'linear-gradient(135deg, #3730a3 0%, #312e81 100%)',
+        background: 'linear-gradient(135deg, #059669 0%, #312e81 100%)',
         color: '#ffffff',
         padding: '8px 14px',
         display: 'flex',
@@ -90,7 +90,7 @@ export default function PWAInstaller() {
             onClick={handleInstallClick}
             style={{
               background: '#ffffff',
-              color: '#4338ca',
+              color: '#059669',
               border: 'none',
               padding: '5px 12px',
               borderRadius: '8px',
@@ -194,7 +194,7 @@ export default function PWAInstaller() {
 
               {/* iPhone Instructions */}
               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <strong style={{ color: '#0284c7', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <strong style={{ color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                   <span>🍎</span> আইফোন / iOS (Safari Browser):
                 </strong>
                 <ol style={{ margin: 0, paddingLeft: '18px', display: 'grid', gap: '4px' }}>

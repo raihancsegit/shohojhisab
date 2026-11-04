@@ -51,8 +51,8 @@ export default function SubscriptionPage() {
       yearlyPrice: 1499,
       popular: true,
       badge: '★ সর্বাধিক জনপ্রিয়',
-      color: '#7c3aed',
-      bgGradient: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+      color: '#10b981',
+      bgGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       features: [
         'সব স্টার্টার ফিচার অন্তর্ভুক্ত',
         '৩টি ডিভাইস সাপোর্ট (মালিক ও কর্মচারীর আলাদা পিন)',
@@ -75,8 +75,8 @@ export default function SubscriptionPage() {
       yearlyPrice: 2999,
       popular: false,
       badge: 'ফুল পাওয়ার',
-      color: '#0284c7',
-      bgGradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+      color: '#10b981',
+      bgGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       features: [
         'সব প্রো প্ল্যান ফিচার অন্তর্ভুক্ত',
         'আনলিমিটেড শাখা (Branches) ও সেন্ট্রাল ওয়্যারহাউস',
@@ -250,7 +250,7 @@ export default function SubscriptionPage() {
           }}>
             <span>🏬 দোকান: <strong>{tenant.shopName}</strong></span>
             <span>•</span>
-            <span>প্ল্যান: <strong style={{ color: '#4f46e5' }}>{tenant.planName || tenant.planId || 'প্রো শপ'} ({tenant.billingCycle === 'yearly' ? 'বাৎসরিক ১-বছর' : 'মাসিক'})</strong></span>
+            <span>প্ল্যান: <strong style={{ color: '#10b981' }}>{tenant.planName || tenant.planId || 'প্রো শপ'} ({tenant.billingCycle === 'yearly' ? 'বাৎসরিক ১-বছর' : 'মাসিক'})</strong></span>
             {tenant.startDate && (
               <>
                 <span>•</span>
@@ -384,7 +384,7 @@ export default function SubscriptionPage() {
                   top: '-14px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: p.popular ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#0f172a',
+                  background: p.popular ? 'linear-gradient(135deg, #10b981, #059669)' : '#0f172a',
                   color: '#ffffff',
                   fontSize: '11.5px',
                   fontWeight: '900',
@@ -506,8 +506,8 @@ export default function SubscriptionPage() {
               <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
                 <th style={{ padding: '12px 16px', color: '#475569', fontWeight: '800' }}>ফিচারসমূহ</th>
                 <th style={{ padding: '12px 16px', color: '#059669', fontWeight: '900', textAlign: 'center' }}>স্টার্টার</th>
-                <th style={{ padding: '12px 16px', color: '#7c3aed', fontWeight: '900', textAlign: 'center' }}>প্রো শপ ★</th>
-                <th style={{ padding: '12px 16px', color: '#0284c7', fontWeight: '900', textAlign: 'center' }}>মাল্টি-ব্রাঞ্চ</th>
+                <th style={{ padding: '12px 16px', color: '#10b981', fontWeight: '900', textAlign: 'center' }}>প্রো শপ ★</th>
+                <th style={{ padding: '12px 16px', color: '#10b981', fontWeight: '900', textAlign: 'center' }}>মাল্টি-ব্রাঞ্চ</th>
               </tr>
             </thead>
             <tbody>
@@ -527,8 +527,8 @@ export default function SubscriptionPage() {
                 <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '12px 16px', color: '#1e293b', fontWeight: '600' }}>{row.name}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'center', color: '#475569' }}>{row.basic}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#7c3aed', fontWeight: '700' }}>{row.pro}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#0284c7', fontWeight: '700' }}>{row.multi}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#10b981', fontWeight: '700' }}>{row.pro}</td>
+                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#10b981', fontWeight: '700' }}>{row.multi}</td>
                 </tr>
               ))}
             </tbody>
@@ -590,7 +590,7 @@ export default function SubscriptionPage() {
               {[
                 { id: 'bkash', name: 'bKash', color: '#e2136e', bg: '#fdf2f8' },
                 { id: 'nagad', name: 'Nagad', color: '#f97316', bg: '#fff7ed' },
-                { id: 'rocket', name: 'Rocket', color: '#8b5cf6', bg: '#f5f3ff' }
+                { id: 'rocket', name: 'Rocket', color: '#10b981', bg: '#f8fafc' }
               ].map(m => (
                 <button
                   key={m.id}
@@ -734,7 +734,7 @@ export default function SubscriptionPage() {
                   padding: '14px',
                   borderRadius: '12px',
                   border: 'none',
-                  background: paymentMethod === 'bkash' ? '#e2136e' : paymentMethod === 'nagad' ? '#f97316' : '#8b5cf6',
+                  background: paymentMethod === 'bkash' ? '#e2136e' : paymentMethod === 'nagad' ? '#f97316' : '#10b981',
                   color: '#ffffff',
                   fontWeight: '900',
                   fontSize: '15px',

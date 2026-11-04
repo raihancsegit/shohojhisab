@@ -284,20 +284,20 @@ export default function VoiceInstallmentModal({
         
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #059669 100%)',
           color: '#ffffff',
           padding: '16px 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '2px solid #4f46e5'
+          borderBottom: '2px solid #10b981'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '44px',
               height: '44px',
               borderRadius: '50%',
-              background: isListening ? '#ef4444' : '#6366f1',
+              background: isListening ? '#ef4444' : '#10b981',
               color: '#ffffff',
               display: 'grid',
               placeItems: 'center',
@@ -324,7 +324,7 @@ export default function VoiceInstallmentModal({
                   {isListening ? 'Live' : 'Paused'}
                 </span>
               </div>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#c7d2fe' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#cbd5e1' }}>
                 মুখে বলুন: নাম, পণ্যের মডেল, মোট দাম, ডাউন পেমেন্ট ও মেয়াদ
               </p>
             </div>
@@ -354,7 +354,7 @@ export default function VoiceInstallmentModal({
         <div style={{ padding: '16px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
           <div style={{
             background: '#ffffff',
-            border: isListening ? '2px solid #6366f1' : '1.5px solid #cbd5e1',
+            border: isListening ? '2px solid #10b981' : '1.5px solid #cbd5e1',
             borderRadius: '16px',
             padding: '14px 16px',
             minHeight: '72px',
@@ -373,9 +373,9 @@ export default function VoiceInstallmentModal({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <span style={{ width: '6px', height: '14px', background: '#6366f1', borderRadius: '4px', animation: 'pulse 1s infinite' }} />
-                  <span style={{ width: '6px', height: '24px', background: '#4f46e5', borderRadius: '4px', animation: 'pulse 0.8s infinite 0.2s' }} />
-                  <span style={{ width: '6px', height: '18px', background: '#6366f1', borderRadius: '4px', animation: 'pulse 1.2s infinite 0.4s' }} />
+                  <span style={{ width: '6px', height: '14px', background: '#10b981', borderRadius: '4px', animation: 'pulse 1s infinite' }} />
+                  <span style={{ width: '6px', height: '24px', background: '#10b981', borderRadius: '4px', animation: 'pulse 0.8s infinite 0.2s' }} />
+                  <span style={{ width: '6px', height: '18px', background: '#10b981', borderRadius: '4px', animation: 'pulse 1.2s infinite 0.4s' }} />
                 </div>
                 <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
                   পরিষ্কার বাংলায় বলুন... (স্বয়ংক্রিয়ভাবে কিস্তি হিসেব বের হবে)
@@ -407,8 +407,8 @@ export default function VoiceInstallmentModal({
           {/* Calculated KPI Preview */}
           {totalNum > 0 && (
             <div style={{
-              background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-              border: '1.5px solid #c7d2fe',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+              border: '1.5px solid #cbd5e1',
               borderRadius: '16px',
               padding: '12px 14px',
               marginBottom: '14px',
@@ -418,15 +418,15 @@ export default function VoiceInstallmentModal({
               textAlign: 'center'
             }}>
               <div>
-                <span style={{ fontSize: '11px', color: '#4338ca', fontWeight: '800', display: 'block' }}>মোট মূল্য</span>
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: '800', display: 'block' }}>মোট মূল্য</span>
                 <strong className="num-font" style={{ fontSize: '15px', color: '#1e1b4b' }}>৳{totalNum.toLocaleString('en-US')}</strong>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: '#4338ca', fontWeight: '800', display: 'block' }}>বাকি কিস্তি</span>
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: '800', display: 'block' }}>বাকি কিস্তি</span>
                 <strong className="num-font" style={{ fontSize: '15px', color: '#dc2626' }}>৳{remainingDue.toLocaleString('en-US')}</strong>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: '#4338ca', fontWeight: '800', display: 'block' }}>মাসিক কিস্তি ({monthsNum} মাস)</span>
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: '800', display: 'block' }}>মাসিক কিস্তি ({monthsNum} মাস)</span>
                 <strong className="num-font" style={{ fontSize: '15px', color: '#059669' }}>৳{monthlyInst.toLocaleString('en-US')}</strong>
               </div>
             </div>
@@ -561,7 +561,7 @@ export default function VoiceInstallmentModal({
                 }}
               >
                 <span>&quot;রহিম মিয়ার কাছে ২৪০০০ টাকার স্যামসাং মোবাইল কিস্তিতে বিক্রি, ডাউন পেমেন্ট ৬০০০ টাকা, ৪ মাস...&quot;</span>
-                <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#4f46e5', color: '#fff', padding: '2px 6px', borderRadius: '5px' }}>টেস্ট ➔</span>
+                <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#10b981', color: '#fff', padding: '2px 6px', borderRadius: '5px' }}>টেস্ট ➔</span>
               </button>
 
               <button
@@ -582,7 +582,7 @@ export default function VoiceInstallmentModal({
                 }}
               >
                 <span>&quot;করিম ভাইকে ৪৫ হাজার টাকার ওয়ালটন ফ্রিজ কিস্তিতে দিলাম, নগদ জমা ১৫ হাজার, ৬ মাস&quot;</span>
-                <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#4f46e5', color: '#fff', padding: '2px 6px', borderRadius: '5px' }}>টেস্ট ➔</span>
+                <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#10b981', color: '#fff', padding: '2px 6px', borderRadius: '5px' }}>টেস্ট ➔</span>
               </button>
             </div>
           </div>
@@ -613,7 +613,7 @@ export default function VoiceInstallmentModal({
             type="button"
             onClick={isListening ? stopListening : startListening}
             style={{
-              background: isListening ? '#ef4444' : '#4f46e5',
+              background: isListening ? '#ef4444' : '#10b981',
               color: '#ffffff',
               border: 'none',
               padding: '9px 15px',

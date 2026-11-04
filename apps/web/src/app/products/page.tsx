@@ -264,7 +264,7 @@ export default function ProductsPage() {
       
       {/* Products Top Header Card */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #059669 100%)',
         borderRadius: '24px',
         padding: '22px 18px',
         color: '#fff',
@@ -275,7 +275,7 @@ export default function ProductsPage() {
           <span style={{ fontSize: '12px', background: 'rgba(255,255,255,0.2)', padding: '3px 10px', borderRadius: '99px', fontWeight: '700' }}>
             {tenant?.industryIcon || '📦'} {tenant?.industryName} ক্যাটালগ
           </span>
-          <span style={{ fontSize: '11px', color: '#c7d2fe' }}>
+          <span style={{ fontSize: '11px', color: '#cbd5e1' }}>
             মোট {products.length}টি পণ্য
           </span>
         </div>
@@ -395,22 +395,22 @@ export default function ProductsPage() {
                     {p.banglaName || p.name}
                   </h4>
                   {p.genericName && fieldConfig.showGenericName && (
-                    <span style={{ fontSize: '11px', color: '#4f46e5', fontWeight: '700', display: 'block', marginTop: '1px' }}>
+                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', display: 'block', marginTop: '1px' }}>
                       🧪 {p.genericName}
                     </span>
                   )}
                   {p.size && fieldConfig.showSize && (
-                    <span style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
                       🏷️ {fieldConfig.sizeLabel ? fieldConfig.sizeLabel.replace(':', '') : 'সাইজ'}: {p.size} {p.color && fieldConfig.showColor ? `• ${p.color}` : ''}
                     </span>
                   )}
                   {p.brand && fieldConfig.showBrand && (
-                    <span style={{ fontSize: '10.5px', color: '#0369a1', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                    <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
                       🏢 {p.brand}
                     </span>
                   )}
                   {p.warranty && fieldConfig.showWarranty && (
-                    <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
+                    <span style={{ fontSize: '10.5px', color: '#10b981', fontWeight: '700', display: 'inline-block', marginRight: '6px' }}>
                       🛡️ {p.warranty}
                     </span>
                   )}
@@ -420,7 +420,7 @@ export default function ProductsPage() {
                         🔴 মেয়াদোত্তীর্ণ ({p.expiryDate})
                       </span>
                     ) : isExpiringSoon ? (
-                      <span style={{ fontSize: '10px', background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
+                      <span style={{ fontSize: '10px', background: '#f8fafc', color: '#0f172a', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-block', marginTop: '2px' }}>
                         ⚠️ মেয়াদ শীঘ্রই শেষ ({p.expiryDate})
                       </span>
                     ) : p.expiryDate ? (
@@ -447,7 +447,7 @@ export default function ProductsPage() {
                 <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                   <button
                     onClick={() => openEditModal(p)}
-                    style={{ background: '#eef2ff', color: '#4f46e5', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer' }}
+                    style={{ background: '#f8fafc', color: '#10b981', border: 'none', padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer' }}
                   >
                     ✏️ এডিট
                   </button>

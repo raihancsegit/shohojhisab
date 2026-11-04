@@ -27,7 +27,7 @@ export default function HelpAndSupportPage() {
     }}>
       {/* Top Header matching App Reference */}
       <div style={{
-        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
         color: '#ffffff',
         padding: '16px 18px',
         display: 'flex',
@@ -94,7 +94,7 @@ export default function HelpAndSupportPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '14px',
-                border: '1.5px solid #818cf8',
+                border: '1.5px solid #34d399',
                 borderRadius: '16px',
                 padding: '12px 18px',
                 background: '#f5f7ff',
@@ -107,10 +107,10 @@ export default function HelpAndSupportPage() {
                 width: '42px',
                 height: '42px',
                 borderRadius: '50%',
-                border: '1.5px solid #6366f1',
+                border: '1.5px solid #10b981',
                 display: 'grid',
                 placeItems: 'center',
-                color: '#4f46e5',
+                color: '#10b981',
                 fontSize: '18px',
                 background: '#ffffff'
               }}>
@@ -148,7 +148,7 @@ export default function HelpAndSupportPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
-                  border: '1.5px solid #e0e7ff',
+                  border: '1.5px solid #f1f5f9',
                   borderRadius: '16px',
                   padding: '16px 12px',
                   background: '#ffffff',

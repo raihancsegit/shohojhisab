@@ -195,7 +195,7 @@ function HeaderNav({
       <header style={{
         background: authTheme === 'dark'
           ? 'rgba(9, 13, 22, 0.96)'
-          : 'linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #312e81 100%)',
+          : 'linear-gradient(135deg, #090d16 0%, #0f172a 100%)',
         backdropFilter: 'blur(16px)',
         color: '#ffffff',
         borderBottom: authTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.12)',
@@ -207,7 +207,7 @@ function HeaderNav({
         {/* Offline Status & Pending Sync Indicator */}
         {(!isOnline || pendingSyncCount > 0) && (
           <div style={{
-            background: !isOnline ? '#065f46' : 'linear-gradient(90deg, #1e1b4b 0%, #312e81 100%)',
+            background: !isOnline ? '#065f46' : 'linear-gradient(90deg, #090d16 0%, #0f172a 100%)',
             color: '#ecfdf5',
             padding: '4px 14px',
             fontSize: '11px',
@@ -219,7 +219,7 @@ function HeaderNav({
             animation: 'fadeIn 0.2s ease'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: !isOnline ? '#4ade80' : '#38bdf8' }} />
+              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: !isOnline ? '#4ade80' : '#34d399' }} />
               <span>{!isOnline ? '🟢 অফলাইন মোড সক্রিয় (ইন্টারনেট ছাড়াও ১০০% বিক্রয়, স্টক ও খাতা চলবে)' : '✓ অনলাইন মোড সক্রিয়'}</span>
             </div>
             {pendingSyncCount > 0 && (
@@ -308,7 +308,7 @@ function HeaderNav({
                   <div className="header-shop-text">
                     <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>{tenant.shopName || 'সহজ হিসাব'}</span>
-                      <span style={{ fontSize: '8px', opacity: 0.75, color: '#93c5fd' }}>▼</span>
+                      <span style={{ fontSize: '8px', opacity: 0.75, color: 'rgba(255, 255, 255, 0.7)' }}>▼</span>
                     </h1>
                     <div className="header-shop-meta">
                       <span className="header-shop-badge">
@@ -338,9 +338,9 @@ function HeaderNav({
                         fontWeight: '800',
                         padding: '1px 8px',
                         borderRadius: '99px',
-                        background: 'rgba(99, 102, 241, 0.25)',
-                        border: '1px solid rgba(165, 180, 252, 0.35)',
-                        color: '#c7d2fe'
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        color: '#34d399'
                       }}>
                         {pageTitleInfo.badge}
                       </span>
@@ -399,12 +399,12 @@ function HeaderNav({
                   className="header-icon-btn desktop-only"
                   style={{
                     background: isSoundboxEnabled
-                      ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.4) 0%, rgba(79, 70, 229, 0.5) 100%)'
+                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.5) 100%)'
                       : 'rgba(255, 255, 255, 0.1)',
                     border: isSoundboxEnabled
-                      ? '1px solid rgba(165, 180, 252, 0.6)'
+                      ? '1px solid rgba(52, 211, 153, 0.6)'
                       : '1px solid rgba(255, 255, 255, 0.16)',
-                    boxShadow: isSoundboxEnabled ? '0 0 10px rgba(99, 102, 241, 0.4)' : 'none'
+                    boxShadow: isSoundboxEnabled ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none'
                   }}
                   title={isSoundboxEnabled ? 'সাউন্ডবক্স চালু (ভয়েস সক্রিয়)' : 'সাউন্ডবক্স বন্ধ'}
                 >
@@ -438,9 +438,9 @@ function HeaderNav({
                   }}
                   className="header-icon-btn"
                   style={{
-                    background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                    border: authTheme === 'dark' ? '1px solid rgba(253, 224, 71, 0.4)' : '1px solid rgba(255, 255, 255, 0.16)',
-                    color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    color: '#ffffff',
                   }}
                   title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন (Light Mode)' : 'ডার্ক মোড চালু করুন (Dark Mode)'}
                   aria-label="Toggle Theme Mode"
@@ -484,8 +484,8 @@ function HeaderNav({
                 }}
                 className="header-icon-btn"
                 style={{
-                  background: authTheme === 'dark' ? 'rgba(253, 224, 71, 0.25)' : 'rgba(255, 255, 255, 0.15)',
-                  color: authTheme === 'dark' ? '#fef08a' : '#ffffff',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  color: '#ffffff',
                   fontSize: '15px'
                 }}
                 title={authTheme === 'dark' ? 'লাইট মোডে ফিরুন' : 'ডার্ক মোড চালু করুন'}
@@ -1161,13 +1161,13 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       badgeColor = '#ef4444';
     } else if (diffDays === 1) {
       badgeText = 'আজই শেষ দিন';
-      badgeColor = '#f59e0b';
+      badgeColor = '#ef4444';
     } else if (diffDays <= 3) {
       badgeText = isTrial ? `ট্রায়াল: ${toBn(diffDays)} দিন বাকি` : `আর ${toBn(diffDays)} দিন বাকি`;
-      badgeColor = '#f59e0b';
+      badgeColor = '#10b981';
     } else {
       badgeText = isTrial ? `ট্রায়াল: ${toBn(diffDays)} দিন বাকি` : `আর ${toBn(diffDays)} দিন বাকি`;
-      badgeColor = isTrial ? '#8b5cf6' : '#10b981';
+      badgeColor = '#10b981';
     }
 
     return {

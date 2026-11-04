@@ -460,8 +460,8 @@ export default function VoiceStockInModal({
                   ✓ সনাক্তকৃত স্টক ইন বিবরণ
                 </span>
                 <span style={{
-                  background: parsedStock.product ? '#dcfce7' : '#fef3c7',
-                  color: parsedStock.product ? '#15803d' : '#92400e',
+                  background: parsedStock.product ? '#dcfce7' : '#f8fafc',
+                  color: parsedStock.product ? '#15803d' : '#0f172a',
                   fontSize: '11px',
                   fontWeight: '800',
                   padding: '3px 8px',
@@ -563,9 +563,9 @@ export default function VoiceStockInModal({
                     type="button"
                     onClick={() => handleProcessVoiceInput(sample)}
                     style={{
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      color: '#059669',
                       padding: '5px 10px',
                       borderRadius: '8px',
                       fontSize: '11.5px',

@@ -232,7 +232,7 @@ export default function VoiceProductEntryModal({
       }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #059669 100%)',
           padding: '18px 22px',
           color: '#ffffff',
           display: 'flex',
@@ -380,9 +380,9 @@ export default function VoiceProductEntryModal({
                   key={idx}
                   onClick={() => handleProcessVoiceInput(`${s.name} ৫০ ${s.unit} কেনা দর ${s.costPrice || Math.round(s.price * 0.75)} টাকা বিক্রয় দর ${s.price} টাকা`)}
                   style={{
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    color: '#1d4ed8',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    color: '#059669',
                     padding: '6px 12px',
                     borderRadius: '8px',
                     fontSize: '11.5px',
@@ -400,18 +400,18 @@ export default function VoiceProductEntryModal({
           {parsedProduct ? (
             <div style={{
               background: '#f8fafc',
-              border: '2px solid #818cf8',
+              border: '2px solid #34d399',
               borderRadius: '16px',
               padding: '18px',
               boxShadow: '0 8px 24px rgba(99, 102, 241, 0.08)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '900', color: '#4338ca' }}>
+                <span style={{ fontSize: '13px', fontWeight: '900', color: '#059669' }}>
                   ✓ সনাক্তকৃত নতুন পণ্যের বিবরণ
                 </span>
                 <span style={{
-                  background: '#dbeafe',
-                  color: '#1e40af',
+                  background: '#f8fafc',
+                  color: '#059669',
                   fontSize: '11px',
                   fontWeight: '800',
                   padding: '3px 8px',
@@ -481,7 +481,7 @@ export default function VoiceProductEntryModal({
               </div>
 
               {parsedProduct.size && (
-                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: '800', color: '#4338ca' }}>
+                <div style={{ marginTop: '10px', fontSize: '12px', fontWeight: '800', color: '#059669' }}>
                   🏷️ সাইজ/পাওয়ার: {parsedProduct.size}
                 </div>
               )}
@@ -508,9 +508,9 @@ export default function VoiceProductEntryModal({
                     type="button"
                     onClick={() => handleProcessVoiceInput(sample)}
                     style={{
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      color: '#059669',
                       padding: '5px 10px',
                       borderRadius: '8px',
                       fontSize: '11.5px',

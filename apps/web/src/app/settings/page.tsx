@@ -346,7 +346,7 @@ export default function SettingsHubPage() {
     }}>
       {/* Top Header matching App Reference */}
       <div style={{
-        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
         color: '#ffffff',
         padding: '16px 18px',
         display: 'flex',
@@ -451,7 +451,7 @@ export default function SettingsHubPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: '#e0e7ff',
+                  background: '#f1f5f9',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px'
@@ -492,7 +492,7 @@ export default function SettingsHubPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: '#fef3c7',
+                  background: '#f8fafc',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px'
@@ -502,7 +502,7 @@ export default function SettingsHubPage() {
                 <div>
                   <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     ফিচার ও মডিউলসমূহ
-                    <span style={{ fontSize: '10px', background: '#4f46e5', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>কিস্তি খাতা</span>
+                    <span style={{ fontSize: '10px', background: '#10b981', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>কিস্তি খাতা</span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
                     কিস্তি খাতা (EMI), মেয়াদ রাডার, মহাজন খাতা, ক্যাশ মিলানো চালু/বন্ধ
@@ -534,8 +534,8 @@ export default function SettingsHubPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: isVoiceLockOn ? '#dcfce7' : '#e0e7ff',
-                  color: isVoiceLockOn ? '#15803d' : '#4338ca',
+                  background: isVoiceLockOn ? '#dcfce7' : '#f1f5f9',
+                  color: isVoiceLockOn ? '#15803d' : '#059669',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px'
@@ -579,7 +579,7 @@ export default function SettingsHubPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: '#e0f2fe',
+                  background: '#f8fafc',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px'
@@ -620,7 +620,7 @@ export default function SettingsHubPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: '#fef3c7',
+                  background: '#f8fafc',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '22px'
@@ -791,7 +791,7 @@ export default function SettingsHubPage() {
               {/* 1. কাস্টমার বাকি খাতা (Customer Due Khata) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableCustomerKhata ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableCustomerKhata ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
@@ -828,7 +828,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableCustomerKhata ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableCustomerKhata ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -844,7 +844,7 @@ export default function SettingsHubPage() {
                       type="button"
                       onClick={() => router.push('/khata')}
                       style={{
-                        background: '#4f46e5',
+                        background: '#10b981',
                         color: '#ffffff',
                         border: 'none',
                         padding: '6px 14px',
@@ -866,20 +866,20 @@ export default function SettingsHubPage() {
               {/* 2. কিস্তি খাতা (Installments / EMI) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableInstallments ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableInstallments ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#e0e7ff', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f1f5f9', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
                       📅
                     </div>
                     <div>
                       <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         বাকির কিস্তি
-                        <span style={{ fontSize: '10px', background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px' }}>জনপ্রিয়</span>
+                        <span style={{ fontSize: '10px', background: '#f1f5f9', color: '#059669', padding: '1px 6px', borderRadius: '4px' }}>জনপ্রিয়</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
                         ফ্রিজ, খাট, আসবাবপত্র, মোবাইল বা যেকোনো পণ্যের মাসিক কিস্তি, ডাউনপেমেন্ট ও জামিনদার হিসাব।
@@ -903,7 +903,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableInstallments ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableInstallments ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -919,7 +919,7 @@ export default function SettingsHubPage() {
                       type="button"
                       onClick={() => router.push('/installments')}
                       style={{
-                        background: '#4f46e5',
+                        background: '#10b981',
                         color: '#ffffff',
                         border: 'none',
                         padding: '6px 14px',
@@ -941,7 +941,7 @@ export default function SettingsHubPage() {
               {/* 2. মেয়াদ রাডার ও এক্সপায়ারি ট্র্যাকার (Expiry Tracker) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableExpiryTracker ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableExpiryTracker ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
@@ -977,7 +977,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableExpiryTracker ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableExpiryTracker ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -992,14 +992,14 @@ export default function SettingsHubPage() {
               {/* 3. মহাজন / ডিলার খাতা (Dealer Khata) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableDealerKhata ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableDealerKhata ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef3c7', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f8fafc', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
                       🚚
                     </div>
                     <div>
@@ -1028,7 +1028,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableDealerKhata ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableDealerKhata ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -1043,7 +1043,7 @@ export default function SettingsHubPage() {
               {/* 4. ক্যাশ ড্রয়ার ও ডে-এন্ড মিলানো (Cash Drawer & Day-End) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableCashDrawer ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableCashDrawer ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
@@ -1079,7 +1079,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableCashDrawer ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableCashDrawer ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -1094,7 +1094,7 @@ export default function SettingsHubPage() {
               {/* 5. পাইকারি বিক্রয় রেট (Wholesale Pricing) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableWholesale ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableWholesale ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
@@ -1130,7 +1130,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableWholesale ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableWholesale ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -1145,14 +1145,14 @@ export default function SettingsHubPage() {
               {/* 6. বারকোড প্রিন্টার (Barcode Generator & Printer) */}
               <div style={{
                 background: '#f8fafc',
-                border: featuresState.enableBarcodePrinter ? '1.5px solid #6366f1' : '1px solid #e2e8f0',
+                border: featuresState.enableBarcodePrinter ? '1.5px solid #10b981' : '1px solid #e2e8f0',
                 borderRadius: '16px',
                 padding: '16px',
                 transition: 'all 0.2s ease'
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                   <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#e0f2fe', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f8fafc', display: 'grid', placeItems: 'center', fontSize: '20px', flexShrink: 0 }}>
                       🏷️
                     </div>
                     <div>
@@ -1181,7 +1181,7 @@ export default function SettingsHubPage() {
                     />
                     <span style={{
                       position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                      background: featuresState.enableBarcodePrinter ? '#6366f1' : '#cbd5e1',
+                      background: featuresState.enableBarcodePrinter ? '#10b981' : '#cbd5e1',
                       transition: '0.3s', borderRadius: '34px'
                     }}>
                       <span style={{
@@ -1226,7 +1226,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: partySettings.partyGrouping ? '#6366f1' : '#cbd5e1',
+                    background: partySettings.partyGrouping ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1252,7 +1252,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: partySettings.shippingAddress ? '#6366f1' : '#cbd5e1',
+                    background: partySettings.shippingAddress ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1278,7 +1278,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: partySettings.printShippingAddress ? '#6366f1' : '#cbd5e1',
+                    background: partySettings.printShippingAddress ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1304,7 +1304,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: partySettings.paymentReminderActive ? '#6366f1' : '#cbd5e1',
+                    background: partySettings.paymentReminderActive ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1375,7 +1375,7 @@ export default function SettingsHubPage() {
                 width: '100%',
                 padding: '14px',
                 borderRadius: '14px',
-                background: '#4f46e5',
+                background: '#10b981',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: '900',
@@ -1418,7 +1418,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.showInvoiceNumber ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.showInvoiceNumber ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1444,7 +1444,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.autoIncrementInvoiceNumber ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.autoIncrementInvoiceNumber ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1492,7 +1492,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.enableCashSaleDefault ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.enableCashSaleDefault ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1518,7 +1518,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.showItemPurchasePrice ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.showItemPurchasePrice ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1544,7 +1544,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.showItemSellingPrice ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.showItemSellingPrice ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1570,7 +1570,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.enableTaxPerTransaction ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.enableTaxPerTransaction ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1596,7 +1596,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.enableDiscountPerTransaction ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.enableDiscountPerTransaction ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1622,7 +1622,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.showProfitBasedOnSale ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.showProfitBasedOnSale ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1648,7 +1648,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.enableDeliveryCharge ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.enableDeliveryCharge ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1674,7 +1674,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.allowViewInvoice ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.allowViewInvoice ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1700,7 +1700,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.enableDiscountOnPayment ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.enableDiscountOnPayment ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1726,7 +1726,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: transactionSettings.sendSmsOnTransaction ? '#6366f1' : '#cbd5e1',
+                    background: transactionSettings.sendSmsOnTransaction ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1745,7 +1745,7 @@ export default function SettingsHubPage() {
                 width: '100%',
                 padding: '14px',
                 borderRadius: '14px',
-                background: '#4f46e5',
+                background: '#10b981',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: '900',
@@ -1775,7 +1775,7 @@ export default function SettingsHubPage() {
               display: 'grid',
               gap: '12px'
             }}>
-              <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>
+              <h4 style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '900', color: '#10b981' }}>
                 🏪 দোকানের তথ্য
               </h4>
               <div>
@@ -1843,7 +1843,7 @@ export default function SettingsHubPage() {
               display: 'grid',
               gap: '16px'
             }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#10b981' }}>
                 সিকিউরিটি
               </h4>
 
@@ -1859,7 +1859,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: generalSettings.enablePinCode ? '#6366f1' : '#cbd5e1',
+                    background: generalSettings.enablePinCode ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1886,7 +1886,7 @@ export default function SettingsHubPage() {
                 }}
               >
                 <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>পিন কোড পরিবর্তন করুন</span>
-                <span style={{ fontSize: '18px', color: '#6366f1', fontWeight: '900' }}>›</span>
+                <span style={{ fontSize: '18px', color: '#10b981', fontWeight: '900' }}>›</span>
               </div>
 
               {/* 3. Delete Pin Verification */}
@@ -1901,7 +1901,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: generalSettings.enableDeletePinVerification ? '#6366f1' : '#cbd5e1',
+                    background: generalSettings.enableDeletePinVerification ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1923,7 +1923,7 @@ export default function SettingsHubPage() {
               display: 'grid',
               gap: '16px'
             }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#10b981' }}>
                 পার্সোনালাইজেশন
               </h4>
 
@@ -1939,7 +1939,7 @@ export default function SettingsHubPage() {
                   />
                   <span style={{
                     position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
-                    background: generalSettings.enableNotifications ? '#6366f1' : '#cbd5e1',
+                    background: generalSettings.enableNotifications ? '#10b981' : '#cbd5e1',
                     transition: '0.3s', borderRadius: '34px'
                   }}>
                     <span style={{
@@ -1976,7 +1976,7 @@ export default function SettingsHubPage() {
               {/* Theme Selector (থিম) */}
               {/* Theme Selector (থিম - Instant Live Realtime Toggle) */}
               <div style={{ paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                <h5 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '900', color: '#6366f1' }}>
+                <h5 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '900', color: '#10b981' }}>
                   থিম
                 </h5>
 
@@ -1994,7 +1994,7 @@ export default function SettingsHubPage() {
                           localStorage.setItem(`sh_settings_general_${tenant.id}`, JSON.stringify({ ...generalSettings, themeMode: 'light' }));
                         }
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                      style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                     />
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
@@ -2010,7 +2010,7 @@ export default function SettingsHubPage() {
                           localStorage.setItem(`sh_settings_general_${tenant.id}`, JSON.stringify({ ...generalSettings, themeMode: 'dark' }));
                         }
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                      style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                     />
                   </label>
                 </div>
@@ -2025,7 +2025,7 @@ export default function SettingsHubPage() {
                 width: '100%',
                 padding: '14px',
                 borderRadius: '14px',
-                background: '#4f46e5',
+                background: '#10b981',
                 color: '#ffffff',
                 border: 'none',
                 fontWeight: '900',
@@ -2054,7 +2054,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={itemSettings.enableBarcode}
                   onChange={(e) => setItemSettings({ ...itemSettings, enableBarcode: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
 
@@ -2064,7 +2064,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={itemSettings.enableLowStockAlert}
                   onChange={(e) => setItemSettings({ ...itemSettings, enableLowStockAlert: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
 
@@ -2074,7 +2074,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={itemSettings.enableExpiryTracker}
                   onChange={(e) => setItemSettings({ ...itemSettings, enableExpiryTracker: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
 
@@ -2084,7 +2084,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={itemSettings.showItemPhotos}
                   onChange={(e) => setItemSettings({ ...itemSettings, showItemPhotos: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
             </div>
@@ -2092,7 +2092,7 @@ export default function SettingsHubPage() {
             <button
               onClick={() => handleSave('items')}
               style={{
-                width: '100%', padding: '14px', borderRadius: '14px', background: '#4f46e5',
+                width: '100%', padding: '14px', borderRadius: '14px', background: '#10b981',
                 color: '#ffffff', border: 'none', fontWeight: '900', fontSize: '15px', cursor: 'pointer'
               }}
             >
@@ -2120,8 +2120,8 @@ export default function SettingsHubPage() {
                     onClick={() => setPrintSettings({ ...printSettings, printerType: '58mm' })}
                     style={{
                       padding: '12px', borderRadius: '10px',
-                      border: printSettings.printerType === '58mm' ? '2px solid #4f46e5' : '1px solid #cbd5e1',
-                      background: printSettings.printerType === '58mm' ? '#e0e7ff' : '#ffffff',
+                      border: printSettings.printerType === '58mm' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: printSettings.printerType === '58mm' ? '#f1f5f9' : '#ffffff',
                       fontWeight: '800', color: '#1e293b', cursor: 'pointer'
                     }}
                   >
@@ -2132,8 +2132,8 @@ export default function SettingsHubPage() {
                     onClick={() => setPrintSettings({ ...printSettings, printerType: '80mm' })}
                     style={{
                       padding: '12px', borderRadius: '10px',
-                      border: printSettings.printerType === '80mm' ? '2px solid #4f46e5' : '1px solid #cbd5e1',
-                      background: printSettings.printerType === '80mm' ? '#e0e7ff' : '#ffffff',
+                      border: printSettings.printerType === '80mm' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: printSettings.printerType === '80mm' ? '#f1f5f9' : '#ffffff',
                       fontWeight: '800', color: '#1e293b', cursor: 'pointer'
                     }}
                   >
@@ -2163,7 +2163,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={printSettings.showCustomerDue}
                   onChange={(e) => setPrintSettings({ ...printSettings, showCustomerDue: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
 
@@ -2173,7 +2173,7 @@ export default function SettingsHubPage() {
                   type="checkbox"
                   checked={printSettings.showQrCode}
                   onChange={(e) => setPrintSettings({ ...printSettings, showQrCode: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                  style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                 />
               </div>
             </div>
@@ -2181,7 +2181,7 @@ export default function SettingsHubPage() {
             <button
               onClick={() => handleSave('printing')}
               style={{
-                width: '100%', padding: '14px', borderRadius: '14px', background: '#4f46e5',
+                width: '100%', padding: '14px', borderRadius: '14px', background: '#10b981',
                 color: '#ffffff', border: 'none', fontWeight: '900', fontSize: '15px', cursor: 'pointer'
               }}
             >
@@ -2228,7 +2228,7 @@ export default function SettingsHubPage() {
                     width: '42px',
                     height: '42px',
                     borderRadius: '12px',
-                    background: cloudSyncStatus?.configured ? '#ecfdf5' : '#fffbeb',
+                    background: cloudSyncStatus?.configured ? '#ecfdf5' : '#f8fafc',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '22px'
@@ -2252,8 +2252,8 @@ export default function SettingsHubPage() {
                   borderRadius: '99px',
                   fontSize: '12px',
                   fontWeight: '900',
-                  background: cloudSyncStatus?.configured ? '#dcfce7' : '#fef3c7',
-                  color: cloudSyncStatus?.configured ? '#15803d' : '#b45309',
+                  background: cloudSyncStatus?.configured ? '#dcfce7' : '#f8fafc',
+                  color: cloudSyncStatus?.configured ? '#15803d' : '#0f172a',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px'
@@ -2262,7 +2262,7 @@ export default function SettingsHubPage() {
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    background: cloudSyncStatus?.configured ? '#16a34a' : '#d97706'
+                    background: cloudSyncStatus?.configured ? '#16a34a' : '#059669'
                   }} />
                   {cloudSyncStatus?.configured ? 'সংযুক্ত (Active)' : 'অপেক্ষমান (Pending)'}
                 </span>
@@ -2331,8 +2331,8 @@ export default function SettingsHubPage() {
                     padding: '12px',
                     borderRadius: '12px',
                     background: '#ffffff',
-                    color: cloudSyncStatus?.configured ? '#4f46e5' : '#94a3b8',
-                    border: `1.5px solid ${cloudSyncStatus?.configured ? '#818cf8' : '#cbd5e1'}`,
+                    color: cloudSyncStatus?.configured ? '#10b981' : '#94a3b8',
+                    border: `1.5px solid ${cloudSyncStatus?.configured ? '#34d399' : '#cbd5e1'}`,
                     fontWeight: '800',
                     fontSize: '13px',
                     cursor: cloudSyncStatus?.configured ? 'pointer' : 'not-allowed',
@@ -2446,8 +2446,8 @@ export default function SettingsHubPage() {
                               fontWeight: '900',
                               padding: '2px 8px',
                               borderRadius: '99px',
-                              background: s.isCurrent ? '#dcfce7' : '#e0e7ff',
-                              color: s.isCurrent ? '#15803d' : '#4338ca'
+                              background: s.isCurrent ? '#dcfce7' : '#f1f5f9',
+                              color: s.isCurrent ? '#15803d' : '#059669'
                             }}>
                               {s.badge}
                             </span>
@@ -2467,7 +2467,7 @@ export default function SettingsHubPage() {
                             style={{
                               padding: '7px 12px',
                               borderRadius: '8px',
-                              background: '#4f46e5',
+                              background: '#10b981',
                               color: '#ffffff',
                               border: 'none',
                               fontSize: '12px',
@@ -2520,26 +2520,26 @@ export default function SettingsHubPage() {
 
               <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: '1.6', display: 'grid', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>১</span>
+                  <span style={{ background: '#f1f5f9', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>১</span>
                   <div>
                     <strong>supabase.com</strong>-এ গিয়ে সম্পূর্ণ ফ্রিতে ১টি একাউন্ট খুলুন এবং <strong>New Project</strong> তৈরি করুন।
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>২</span>
+                  <span style={{ background: '#f1f5f9', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>২</span>
                   <div>
                     প্রজেক্টের <strong>Project Settings → API</strong> থেকে <strong>Project URL</strong> এবং <strong>service_role (বা anon) key</strong> কপি করুন।
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <span style={{ background: '#e0e7ff', color: '#4338ca', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>৩</span>
+                  <span style={{ background: '#f1f5f9', color: '#059669', width: '22px', height: '22px', borderRadius: '50%', display: 'grid', placeItems: 'center', fontWeight: '900', flexShrink: 0, fontSize: '12px' }}>৩</span>
                   <div>
                     আপনার <strong>Render Dashboard</strong>-এ গিয়ে আপনার API সার্ভিসের <strong>Environment</strong> ট্যাবে নিচের ২টি ভ্যারিয়েবল যোগ করুন:
                     <div style={{
                       background: '#0f172a',
-                      color: '#38bdf8',
+                      color: '#34d399',
                       padding: '10px 12px',
                       borderRadius: '8px',
                       fontFamily: 'monospace',
@@ -2625,7 +2625,7 @@ export default function SettingsHubPage() {
               type="button"
               onClick={handlePinUpdate}
               style={{
-                width: '100%', padding: '12px', background: '#6366f1', color: '#ffffff',
+                width: '100%', padding: '12px', background: '#10b981', color: '#ffffff',
                 border: 'none', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer'
               }}
             >

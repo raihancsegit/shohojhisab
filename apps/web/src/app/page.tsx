@@ -386,9 +386,9 @@ export default function ShopkeeperDashboard() {
             </span>
             <span style={{
               fontSize: '11px',
-              color: isOnline ? '#059669' : '#d97706',
-              background: isOnline ? '#ecfdf5' : '#fffbeb',
-              border: isOnline ? '1px solid #a7f3d0' : '1px solid #fde68a',
+              color: isOnline ? '#059669' : '#059669',
+              background: isOnline ? '#ecfdf5' : '#f8fafc',
+              border: isOnline ? '1px solid #a7f3d0' : '1px solid #cbd5e1',
               padding: '2px 7px',
               borderRadius: '6px',
               fontWeight: '700',
@@ -396,7 +396,7 @@ export default function ShopkeeperDashboard() {
               alignItems: 'center',
               gap: '4px'
             }}>
-              <span className={isOnline ? "live-dot" : ""} style={{ width: '6px', height: '6px', borderRadius: '50%', background: isOnline ? '#10b981' : '#f59e0b', display: 'inline-block' }}></span>
+              <span className={isOnline ? "live-dot" : ""} style={{ width: '6px', height: '6px', borderRadius: '50%', background: isOnline ? '#10b981' : '#10b981', display: 'inline-block' }}></span>
               {isOnline ? '🟢 অনলাইন' : '⚡ অফলাইন'}
               {pendingSyncCount > 0 && <span style={{ background: '#ef4444', color: '#fff', padding: '1px 5px', borderRadius: '99px', fontSize: '9.5px' }}>{pendingSyncCount}</span>}
             </span>
@@ -533,7 +533,7 @@ export default function ShopkeeperDashboard() {
           <span style={{ fontSize: '22px', flexShrink: 0 }}>🎙️</span>
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ fontWeight: '900', fontSize: '12.5px', whiteSpace: 'nowrap' }}>ভয়েস বিলিং</div>
-            <div style={{ fontSize: '10px', color: '#c7d2fe', whiteSpace: 'nowrap' }}>মুখে বলে বিক্রি</div>
+            <div style={{ fontSize: '10px', color: '#cbd5e1', whiteSpace: 'nowrap' }}>মুখে বলে বিক্রি</div>
           </div>
         </Link>
 
@@ -574,7 +574,7 @@ export default function ShopkeeperDashboard() {
           }}
           style={{
             background: '#0f172a',
-            color: '#38bdf8',
+            color: '#34d399',
             border: '1.5px solid #1e293b',
             borderRadius: '16px',
             padding: '11px 12px',
@@ -591,7 +591,7 @@ export default function ShopkeeperDashboard() {
           <span style={{ fontSize: '22px', flexShrink: 0 }}>🌙</span>
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ fontWeight: '900', fontSize: '12px', color: '#ffffff', whiteSpace: 'nowrap' }}>কাউন্টার স্লিপ মোড</div>
-            <div style={{ fontSize: '10px', color: '#38bdf8', whiteSpace: 'nowrap' }}>স্ক্রিন অফে শুনবে</div>
+            <div style={{ fontSize: '10px', color: '#34d399', whiteSpace: 'nowrap' }}>স্ক্রিন অফে শুনবে</div>
           </div>
         </button>
       </div>
@@ -743,7 +743,7 @@ export default function ShopkeeperDashboard() {
       {/* ⏳ Pharmacy Smart Expiry Widget */}
       {normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' && (
         <div style={{
-          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
           color: '#ffffff',
           borderRadius: '16px',
           padding: '12px 16px',
@@ -757,14 +757,14 @@ export default function ShopkeeperDashboard() {
             <span style={{ fontSize: '24px' }}>⏳</span>
             <div>
               <div style={{ fontSize: '13.5px', fontWeight: '800' }}>ফার্মেসি মেয়াদ রাডার (Expiry Tracker)</div>
-              <div style={{ fontSize: '11px', color: '#bae6fd' }}>মেয়াদোত্তীর্ণ হতে চলা ঔষধ ও ড্রাগ মনিটর করুন</div>
+              <div style={{ fontSize: '11px', color: '#cbd5e1' }}>মেয়াদোত্তীর্ণ হতে চলা ঔষধ ও ড্রাগ মনিটর করুন</div>
             </div>
           </div>
           <Link
             href="/expiry-tracker"
             style={{
               background: '#ffffff',
-              color: '#0284c7',
+              color: '#10b981',
               padding: '6px 12px',
               borderRadius: '10px',
               fontSize: '12px',
@@ -990,7 +990,7 @@ export default function ShopkeeperDashboard() {
                   href="/khata"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #fed7aa',
+                    border: '1.5px solid #cbd5e1',
                     color: '#ea580c',
                     padding: '12px 6px',
                     borderRadius: '16px',
@@ -1412,7 +1412,7 @@ export default function ShopkeeperDashboard() {
                   <strong style={{ fontSize: '13.5px', color: '#1e293b' }}>স্টক মূল্য (পাইকারি মূলধন)</strong>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '14.5px', color: '#ca8a04', fontWeight: '900' }} className="num-font">
+                  <strong style={{ fontSize: '14.5px', color: '#059669', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••••' : `৳ ${totalStockWholesaleValue.toLocaleString('en-US')}`}
                   </strong>
                   <span style={{ fontSize: '16px', color: '#94a3b8' }}>›</span>

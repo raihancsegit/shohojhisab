@@ -248,7 +248,7 @@ function LoginFormContent() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#ffffff',
             padding: '6px 14px',
             borderRadius: '99px',
@@ -271,7 +271,7 @@ function LoginFormContent() {
           href="/"
           style={{
             fontSize: '12px',
-            color: '#4f46e5',
+            color: '#10b981',
             textDecoration: 'none',
             fontWeight: '800',
             display: 'inline-flex',
@@ -279,8 +279,8 @@ function LoginFormContent() {
             gap: '6px',
             padding: '5px 12px',
             borderRadius: '99px',
-            background: '#eef2ff',
-            border: '1px solid #c7d2fe',
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
             transition: 'all 0.15s ease'
           }}
           title="সহজ হিসাব হোম ও ল্যান্ডিং পেজে যান"
@@ -341,7 +341,7 @@ function LoginFormContent() {
               borderRadius: '9px',
               border: 'none',
               background: tab === 'register' && !isApprovalPendingNotice ? '#ffffff' : 'transparent',
-              color: tab === 'register' && !isApprovalPendingNotice ? '#4f46e5' : '#64748b',
+              color: tab === 'register' && !isApprovalPendingNotice ? '#10b981' : '#64748b',
               fontWeight: tab === 'register' && !isApprovalPendingNotice ? '900' : '700',
               fontSize: '11.5px',
               cursor: 'pointer',
@@ -360,7 +360,7 @@ function LoginFormContent() {
               borderRadius: '9px',
               border: 'none',
               background: tab === 'dealer' && !isApprovalPendingNotice ? '#ffffff' : 'transparent',
-              color: tab === 'dealer' && !isApprovalPendingNotice ? '#0284c7' : '#64748b',
+              color: tab === 'dealer' && !isApprovalPendingNotice ? '#10b981' : '#64748b',
               fontWeight: tab === 'dealer' && !isApprovalPendingNotice ? '900' : '700',
               fontSize: '11.5px',
               cursor: 'pointer',
@@ -398,7 +398,7 @@ function LoginFormContent() {
               width: '60px',
               height: '60px',
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              background: '#f8fafc',
               display: 'grid',
               placeItems: 'center',
               fontSize: '30px',
@@ -408,7 +408,7 @@ function LoginFormContent() {
             }}>
               ⏳
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#92400e', margin: '0 0 6px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px' }}>
               অ্যাকাউন্টটি অ্যাডমিন অনুমোদনের অপেক্ষায়
             </h2>
             <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, margin: '0 0 14px' }}>
@@ -435,8 +435,8 @@ function LoginFormContent() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px' }}>
                 <span style={{ color: '#64748b', fontWeight: '700' }}>নির্বাচিত প্যাকেজ:</span>
                 <span style={{
-                  background: '#e0e7ff',
-                  color: '#4338ca',
+                  background: '#f1f5f9',
+                  color: '#059669',
                   padding: '2px 8px',
                   borderRadius: '6px',
                   fontWeight: '800',
@@ -700,8 +700,8 @@ function LoginFormContent() {
                   <div
                     onClick={() => { setRegBillingCycle('monthly'); triggerHaptic('light'); }}
                     style={{
-                      border: regBillingCycle === 'monthly' ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
-                      background: regBillingCycle === 'monthly' ? '#eef2ff' : '#ffffff',
+                      border: regBillingCycle === 'monthly' ? '2px solid #10b981' : '1.5px solid #e2e8f0',
+                      background: regBillingCycle === 'monthly' ? '#f8fafc' : '#ffffff',
                       borderRadius: '12px',
                       padding: '8px 10px',
                       cursor: 'pointer',
@@ -709,7 +709,7 @@ function LoginFormContent() {
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ fontSize: '12px', fontWeight: '900', color: regBillingCycle === 'monthly' ? '#4338ca' : '#0f172a' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '900', color: regBillingCycle === 'monthly' ? '#059669' : '#0f172a' }}>
                       🌟 মাসিক প্ল্যান
                     </div>
                     <div style={{ fontSize: '13px', fontWeight: '900', color: '#059669', margin: '2px 0' }}>
@@ -797,7 +797,7 @@ function LoginFormContent() {
                   width: '100%',
                   padding: '12px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '900',
@@ -820,7 +820,7 @@ function LoginFormContent() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#4f46e5',
+                  color: '#10b981',
                   fontSize: '12px',
                   fontWeight: '800',
                   cursor: 'pointer'
@@ -911,7 +911,7 @@ function LoginFormContent() {
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#4f46e5',
+                      color: '#10b981',
                       fontSize: '11px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -949,8 +949,8 @@ function LoginFormContent() {
                         fontWeight: '900',
                         color: '#0f172a',
                         borderRadius: '12px',
-                        border: digit ? '2px solid #4f46e5' : '1.5px solid #cbd5e1',
-                        background: digit ? '#eef2ff' : '#f8fafc',
+                        border: digit ? '2px solid #10b981' : '1.5px solid #cbd5e1',
+                        background: digit ? '#f8fafc' : '#f8fafc',
                         outline: 'none',
                         transition: 'all 0.15s ease',
                         boxSizing: 'border-box',
@@ -969,7 +969,7 @@ function LoginFormContent() {
                   width: '100%',
                   padding: '12px',
                   borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '900',
@@ -992,9 +992,9 @@ function LoginFormContent() {
                   width: '100%',
                   padding: '9px 12px',
                   borderRadius: '12px',
-                  background: '#eef2ff',
-                  border: '1.5px solid #c7d2fe',
-                  color: '#4338ca',
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  color: '#059669',
                   fontWeight: '800',
                   fontSize: '12px',
                   cursor: 'pointer',
@@ -1034,8 +1034,8 @@ function LoginFormContent() {
                 width: '56px',
                 height: '56px',
                 borderRadius: '16px',
-                background: '#e0f2fe',
-                color: '#0284c7',
+                background: '#f8fafc',
+                color: '#10b981',
                 display: 'grid',
                 placeItems: 'center',
                 margin: '0 auto 10px',
@@ -1113,8 +1113,8 @@ function LoginFormContent() {
                         fontSize: '20px',
                         fontWeight: '900',
                         borderRadius: '12px',
-                        border: digit ? '2px solid #0284c7' : '1.5px solid #cbd5e1',
-                        background: digit ? '#f0f9ff' : '#ffffff',
+                        border: digit ? '2px solid #10b981' : '1.5px solid #cbd5e1',
+                        background: digit ? '#f8fafc' : '#ffffff',
                         outline: 'none',
                         boxSizing: 'border-box'
                       }}
@@ -1130,7 +1130,7 @@ function LoginFormContent() {
                   width: '100%',
                   padding: '13px',
                   borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '900',
@@ -1149,7 +1149,7 @@ function LoginFormContent() {
               <Link
                 href="/dealer-portal"
                 style={{
-                  color: '#0284c7',
+                  color: '#10b981',
                   fontSize: '12px',
                   fontWeight: '800',
                   textDecoration: 'none'
@@ -1239,7 +1239,7 @@ function LoginFormContent() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#4f46e5',
+                  color: '#10b981',
                   fontSize: '12.5px',
                   fontWeight: '800',
                   cursor: 'pointer'
@@ -1296,7 +1296,7 @@ function LoginFormContent() {
                 href="tel:09613660100"
                 style={{
                   display: 'block', padding: '12px', borderRadius: '12px',
-                  background: '#6366f1', color: '#ffffff', fontWeight: '800', fontSize: '14px', textDecoration: 'none'
+                  background: '#10b981', color: '#ffffff', fontWeight: '800', fontSize: '14px', textDecoration: 'none'
                 }}
               >
                 📞 কল করুন: ০৯৬১৩৬৬০১০০

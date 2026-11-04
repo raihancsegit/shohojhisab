@@ -372,7 +372,7 @@ export default function DealerPortalPage() {
               width: '72px',
               height: '72px',
               borderRadius: '20px',
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -462,7 +462,7 @@ export default function DealerPortalPage() {
                 width: '100%',
                 padding: '16px',
                 borderRadius: '14px',
-                background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
                 color: '#fff',
                 fontSize: '16px',
                 fontWeight: '800',
@@ -480,7 +480,7 @@ export default function DealerPortalPage() {
           </form>
 
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
-            <Link href="/login" style={{ fontSize: '13px', color: '#0284c7', textDecoration: 'none', fontWeight: '600' }}>
+            <Link href="/login" style={{ fontSize: '13px', color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>
               ← দোকানদার বা অ্যাডমিন লগইন পেজে ফিরুন
             </Link>
           </div>
@@ -554,7 +554,7 @@ export default function DealerPortalPage() {
                   ))}
                 </select>
               ) : (
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#38bdf8' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#34d399' }}>
                   {currentShop.shopName}
                 </span>
               )}
@@ -613,7 +613,7 @@ export default function DealerPortalPage() {
             <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
               💰 দোকানের কাছে বর্তমান পাওনা (বকেয়া)
             </span>
-            <span style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
+            <span style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
               ৳{(Number(dealer.payableDue) || 0).toLocaleString('en-US')}
             </span>
           </div>
@@ -627,7 +627,7 @@ export default function DealerPortalPage() {
             <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
               📦 মোট সম্পন্ন চালান
             </span>
-            <span style={{ fontSize: '24px', fontWeight: '800', color: '#38bdf8' }}>
+            <span style={{ fontSize: '24px', fontWeight: '800', color: '#34d399' }}>
               {supplies.length} টি
             </span>
           </div>
@@ -667,7 +667,7 @@ export default function DealerPortalPage() {
             fontWeight: '800',
             fontSize: '14px',
             cursor: 'pointer',
-            background: activeTab === 'deliver' ? '#0284c7' : 'transparent',
+            background: activeTab === 'deliver' ? '#10b981' : 'transparent',
             color: activeTab === 'deliver' ? '#fff' : '#64748b',
             boxShadow: activeTab === 'deliver' ? '0 4px 12px rgba(2, 132, 199, 0.3)' : 'none',
             display: 'flex',
@@ -690,7 +690,7 @@ export default function DealerPortalPage() {
             fontWeight: '800',
             fontSize: '14px',
             cursor: 'pointer',
-            background: activeTab === 'history' ? '#0284c7' : 'transparent',
+            background: activeTab === 'history' ? '#10b981' : 'transparent',
             color: activeTab === 'history' ? '#fff' : '#64748b',
             boxShadow: activeTab === 'history' ? '0 4px 12px rgba(2, 132, 199, 0.3)' : 'none',
             display: 'flex',
@@ -732,7 +732,7 @@ export default function DealerPortalPage() {
                   fontSize: '13px',
                   fontWeight: '700',
                   width: '120px',
-                  color: '#0284c7'
+                  color: '#10b981'
                 }}
               />
             </div>
@@ -1055,7 +1055,7 @@ export default function DealerPortalPage() {
                 >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '16px', color: '#0284c7' }}>
+                      <span style={{ fontWeight: '800', fontSize: '16px', color: '#10b981' }}>
                         #{s.challanNo}
                       </span>
                       <span style={{
@@ -1096,8 +1096,8 @@ export default function DealerPortalPage() {
                       <button
                         onClick={() => setViewingChallan(s)}
                         style={{
-                          background: '#e0f2fe',
-                          color: '#0284c7',
+                          background: '#f8fafc',
+                          color: '#10b981',
                           border: 'none',
                           padding: '6px 12px',
                           borderRadius: '8px',
@@ -1430,7 +1430,7 @@ export default function DealerPortalPage() {
                 </button>
                 <button
                   type="submit"
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#0284c7', color: '#fff', cursor: 'pointer', fontWeight: '800' }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', fontWeight: '800' }}
                 >
                   সংরক্ষণ করুন
                 </button>

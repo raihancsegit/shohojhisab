@@ -126,7 +126,7 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        <span style={{ background: '#eef2ff', color: '#4f46e5', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800' }}>
+        <span style={{ background: '#f8fafc', color: '#10b981', padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '800' }}>
           {notifications.length} টি নতুন
         </span>
       </div>
@@ -143,9 +143,9 @@ export default function NotificationsPage() {
             key={tab.id}
             onClick={() => { setFilter(tab.id as any); triggerHaptic('light'); }}
             style={{
-              background: filter === tab.id ? '#4f46e5' : '#ffffff',
+              background: filter === tab.id ? '#10b981' : '#ffffff',
               color: filter === tab.id ? '#ffffff' : '#475569',
-              border: filter === tab.id ? '1px solid #4f46e5' : '1px solid #e2e8f0',
+              border: filter === tab.id ? '1px solid #10b981' : '1px solid #e2e8f0',
               padding: '7px 14px',
               borderRadius: '10px',
               fontWeight: '800',
@@ -207,8 +207,8 @@ export default function NotificationsPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  background: '#eef2ff',
-                  color: '#4f46e5',
+                  background: '#f8fafc',
+                  color: '#10b981',
                   padding: '4px 10px',
                   borderRadius: '8px',
                   fontSize: '11.5px',

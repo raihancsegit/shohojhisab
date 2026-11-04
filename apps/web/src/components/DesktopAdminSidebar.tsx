@@ -73,7 +73,7 @@ export default function DesktopAdminSidebar({
       badgeColor = '#ef4444';
     } else if (diffDays <= 3) {
       text = `আর ${toBn(diffDays)} দিন বাকি`;
-      badgeColor = '#f59e0b';
+      badgeColor = '#10b981';
     } else {
       text = `আর ${toBn(diffDays)} দিন`;
       badgeColor = '#10b981';
@@ -182,7 +182,7 @@ export default function DesktopAdminSidebar({
               type="button"
               onClick={handleOpenShopSwitch}
               style={{
-                background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#ffffff',
                 border: 'none',
                 width: '38px',
@@ -456,7 +456,7 @@ export default function DesktopAdminSidebar({
                             padding: '1px 6px',
                             borderRadius: '99px',
                             color: '#ffffff',
-                            backgroundColor: item.badgeColor || '#6366f1',
+                            backgroundColor: item.badgeColor || '#10b981',
                             flexShrink: 0
                           }}
                         >
@@ -509,8 +509,8 @@ export default function DesktopAdminSidebar({
                 height: '32px',
                 borderRadius: '10px',
                 background: activeRoleMode === 'owner'
-                  ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                  : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                  : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
                 color: '#ffffff',
                 display: 'grid',
                 placeItems: 'center',
@@ -542,7 +542,7 @@ export default function DesktopAdminSidebar({
                     margin: '1px 0 0',
                     fontSize: '10px',
                     fontWeight: '700',
-                    color: activeRoleMode === 'owner' ? '#f59e0b' : '#818cf8'
+                    color: activeRoleMode === 'owner' ? '#10b981' : (isDark ? '#94a3b8' : '#64748b')
                   }}
                 >
                   {activeRoleMode === 'owner' ? 'মালিক মোড (সকল পারমিশন)' : 'স্টাফ মোড'}
@@ -568,9 +568,9 @@ export default function DesktopAdminSidebar({
                 style={{
                   padding: '7px 8px',
                   borderRadius: '8px',
-                  background: isDark ? 'rgba(253, 224, 71, 0.12)' : '#f1f5f9',
-                  border: isDark ? '1px solid rgba(253, 224, 71, 0.25)' : '1px solid #e2e8f0',
-                  color: isDark ? '#fef08a' : '#475569',
+                  background: isDark ? 'rgba(255, 255, 255, 0.08)' : '#f1f5f9',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #e2e8f0',
+                  color: isDark ? '#f8fafc' : '#475569',
                   fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer',
@@ -591,10 +591,10 @@ export default function DesktopAdminSidebar({
                   padding: '7px 8px',
                   borderRadius: '8px',
                   background: isSoundboxEnabled
-                    ? (isDark ? 'rgba(99, 102, 241, 0.25)' : '#e0e7ff')
+                    ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5')
                     : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
-                  border: isSoundboxEnabled ? '1px solid #818cf8' : (isDark ? '1px solid #1e293b' : '1px solid #e2e8f0'),
-                  color: isSoundboxEnabled ? (isDark ? '#818cf8' : '#3730a3') : (isDark ? '#94a3b8' : '#64748b'),
+                  border: isSoundboxEnabled ? '1px solid #10b981' : (isDark ? '1px solid #1e293b' : '1px solid #e2e8f0'),
+                  color: isSoundboxEnabled ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
                   fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer',

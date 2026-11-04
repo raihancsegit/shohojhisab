@@ -721,13 +721,13 @@ export default function SuperAdminPage() {
             width: '64px',
             height: '64px',
             borderRadius: '18px',
-            background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#fff',
             display: 'grid',
             placeItems: 'center',
             fontSize: '32px',
             margin: '0 auto 16px',
-            boxShadow: '0 8px 20px rgba(245, 158, 11, 0.35)'
+            boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35)'
           }}>
             👑
           </div>
@@ -1157,7 +1157,7 @@ export default function SuperAdminPage() {
                 <div style={{ fontSize: '13px', fontWeight: '900', color: '#ffffff', whiteSpace: 'nowrap' }}>
                   সুপার অ্যাডমিন
                 </div>
-                <div style={{ fontSize: '10.5px', color: '#f43f5e', fontWeight: '800' }}>
+                <div style={{ fontSize: '10.5px', color: '#ef4444', fontWeight: '800' }}>
                   রুট এক্সেস অনুমোদিত
                 </div>
               </div>
@@ -1218,12 +1218,12 @@ export default function SuperAdminPage() {
               {/* Drawer Top */}
               <div style={{ padding: '18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f59e0b', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#10b981', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px' }}>
                     👑
                   </div>
                   <div>
                     <strong style={{ fontSize: '15px', color: '#fff' }}>ShohojHisab</strong>
-                    <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800' }}>সুপার অ্যাডমিন</div>
+                    <div style={{ fontSize: '11px', color: '#10b981', fontWeight: '800' }}>সুপার অ্যাডমিন</div>
                   </div>
                 </div>
                 <button
@@ -1505,11 +1505,11 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* 2. Pending Approval */}
-                <div className="super-admin-stat-card" style={{ borderLeft: pendingCount > 0 ? '4px solid #f59e0b' : '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
+                <div className="super-admin-stat-card" style={{ borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '800' }}>অনুমোদন অপেক্ষমাণ</span>
-                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: pendingCount > 0 ? '#d97706' : (isDark ? '#ffffff' : '#0f172a'), margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
+                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a', margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
                         {pendingCount} টি
                       </div>
                     </div>
@@ -1726,7 +1726,7 @@ export default function SuperAdminPage() {
               <button
                 onClick={() => { setSearchQuery(''); setFilterStatus('all'); setFilterCategory('all'); }}
                 style={{
-                  background: isDark ? '#3b82f6' : '#0f172a',
+                  background: '#0f172a',
                   color: '#ffffff',
                   border: 'none',
                   padding: '10px 22px',
@@ -1761,7 +1761,7 @@ export default function SuperAdminPage() {
                       border: isDark ? '1px solid #1f2937' : '1px solid rgba(226, 232, 240, 0.95)',
                       borderLeft: isActivePaid || isTrial
                         ? '4px solid #10b981'
-                        : (isPending ? '4px solid #f59e0b' : '4px solid #64748b'),
+                        : (isPending ? '4px solid #10b981' : '4px solid #64748b'),
                       boxShadow: isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 18px rgba(15, 23, 42, 0.04)',
                       background: isDark ? '#111827' : '#ffffff',
                       position: 'relative'
@@ -1895,7 +1895,7 @@ export default function SuperAdminPage() {
                           <div style={{ fontSize: '14px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a' }}>
                             {t.planName || t.planId || 'প্রো শপ'} ({isTrial ? 'ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
                           </div>
-                          <div style={{ fontSize: '11px', color: isPending ? (isDark ? '#f59e0b' : '#b45309') : (isExpired ? '#ef4444' : '#10b981'), fontWeight: '800' }}>
+                          <div style={{ fontSize: '11px', color: isPending ? '#10b981' : (isExpired ? '#ef4444' : '#10b981'), fontWeight: '800' }}>
                             {isPending
                               ? 'অনুমোদনের পর সক্রিয় হবে'
                               : `মেয়াদ: ${t.paidTill || '২০২৭-১২-৩১'} পর্যন্ত`}
@@ -2371,7 +2371,7 @@ export default function SuperAdminPage() {
                   {(detailedAnalytics.shopRankings || []).map((sr: any, idx: number) => (
                     <tr key={sr.id} style={{ borderBottom: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' }}>
                       <td style={{ padding: '12px 14px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a' }}>
-                        <span style={{ color: idx === 0 ? '#f59e0b' : (isDark ? '#94a3b8' : '#64748b'), marginRight: '6px' }}>#{idx + 1}</span>
+                        <span style={{ color: idx === 0 ? '#10b981' : (isDark ? '#94a3b8' : '#64748b'), marginRight: '6px' }}>#{idx + 1}</span>
                         {sr.shop_name}
                       </td>
                       <td style={{ padding: '12px 14px', color: isDark ? '#94a3b8' : '#64748b' }}>
@@ -3437,7 +3437,7 @@ export default function SuperAdminPage() {
                 required
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)' }}>
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}>
                   পিন পরিবর্তন নিশ্চিত করুন
                 </button>
                 <button type="button" onClick={() => setResetPinShop(null)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>

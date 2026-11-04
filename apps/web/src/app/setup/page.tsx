@@ -22,7 +22,7 @@ export default function SetupWizardPage() {
       id: 'grocery',
       name: 'মুদি ও ডিপার্টমেন্টাল স্টোর',
       icon: '🛒',
-      color: '#7c3aed',
+      color: '#10b981',
       desc: 'চাল, ডাল, তেল, চিনি ও সাবান সহ ৫,০০০+ রেডিমেড মুদি পণ্যের বারকোড ক্যাটালগ',
       features: ['বারকোড অটো ডিটেকশন', 'কেজি/লিটার/বস্তা ইউনিট', 'দ্রুত ৩-ট্যাপ ক্যাশ মেমো']
     },
@@ -30,7 +30,7 @@ export default function SetupWizardPage() {
       id: 'pharmacy',
       name: 'ফার্মেসি ও ড্রাগ স্টোর',
       icon: '💊',
-      color: '#0284c7',
+      color: '#10b981',
       desc: 'নাপা, সেকলো, ম্যাক্সপ্রো সহ ২০,০০০+ ওষুধের জেনেরিক নাম ও ৩০ দিন পূর্বের মেয়াদ অ্যালার্ট',
       features: ['জেনেরিক নাম সার্চ', 'পাতা/বক্স ইউনিট ও দাম', 'মেয়াদোত্তীর্ণ অ্যালার্ট']
     },
@@ -38,7 +38,7 @@ export default function SetupWizardPage() {
       id: 'clothing',
       name: 'পোশাক ও ফ্যাশন শপ',
       icon: '👕',
-      color: '#db2777',
+      color: '#059669',
       desc: 'পাঞ্জাবি, শার্ট, প্যান্ট ও শাড়ির সাইজ (S, M, L, XL), কালার ও ব্র্যান্ড ট্র্যাকিং',
       features: ['সাইজ ও কালার ভ্যারিয়েন্ট', 'বারকোড ট্যাগ জেনারেটর', 'সহজ সাইজ এক্সচেঞ্জ']
     },
@@ -54,7 +54,7 @@ export default function SetupWizardPage() {
       id: 'electronics',
       name: 'মোবাইল ও ইলেকট্রনিক্স',
       icon: '📱',
-      color: '#4f46e5',
+      color: '#10b981',
       desc: 'স্মার্টফোন ও গ্যাজেটের IMEI ট্র্যাকিং, ওয়ারেন্টি কার্ড ও রিপেয়ারিং জবশিট',
       features: ['IMEI/সিরিয়াল সার্চ', 'ডিজিটাল ওয়ারেন্টি কার্ড', 'সার্ভিসিং স্ট্যাটাস']
     }
@@ -131,7 +131,7 @@ export default function SetupWizardPage() {
               width: '36px',
               height: '36px',
               borderRadius: '50%',
-              background: step >= s.num ? '#4f46e5' : '#e2e8f0',
+              background: step >= s.num ? '#10b981' : '#e2e8f0',
               color: step >= s.num ? '#fff' : '#64748b',
               display: 'flex',
               alignItems: 'center',
@@ -144,7 +144,7 @@ export default function SetupWizardPage() {
             <span style={{ fontSize: '13px', fontWeight: step === s.num ? '800' : '600', color: step === s.num ? '#1e293b' : '#94a3b8' }}>
               {s.label}
             </span>
-            {s.num < 3 && <div style={{ width: '30px', height: '2px', background: step > s.num ? '#4f46e5' : '#e2e8f0', margin: '0 4px' }} />}
+            {s.num < 3 && <div style={{ width: '30px', height: '2px', background: step > s.num ? '#10b981' : '#e2e8f0', margin: '0 4px' }} />}
           </div>
         ))}
       </div>
@@ -181,8 +181,8 @@ export default function SetupWizardPage() {
                     }
                   }}
                   style={{
-                    background: isSelected ? '#f5f3ff' : '#fff',
-                    border: isSelected ? '2.5px solid #6366f1' : '1.5px solid #e2e8f0',
+                    background: isSelected ? '#f8fafc' : '#fff',
+                    border: isSelected ? '2.5px solid #10b981' : '1.5px solid #e2e8f0',
                     borderRadius: '20px',
                     padding: '20px 24px',
                     cursor: 'pointer',
@@ -206,7 +206,7 @@ export default function SetupWizardPage() {
                       </p>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {ind.features.map((f, i) => (
-                          <span key={i} style={{ fontSize: '11px', background: isSelected ? '#e0e7ff' : '#f1f5f9', color: isSelected ? '#4338ca' : '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                          <span key={i} style={{ fontSize: '11px', background: isSelected ? '#f1f5f9' : '#f1f5f9', color: isSelected ? '#059669' : '#475569', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>
                             ✓ {f}
                           </span>
                         ))}
@@ -218,7 +218,7 @@ export default function SetupWizardPage() {
                     width: '24px',
                     height: '24px',
                     borderRadius: '50%',
-                    border: isSelected ? '7px solid #4f46e5' : '2px solid #cbd5e1',
+                    border: isSelected ? '7px solid #10b981' : '2px solid #cbd5e1',
                     background: '#fff',
                     flexShrink: 0
                   }} />
@@ -231,7 +231,7 @@ export default function SetupWizardPage() {
             <button
               onClick={() => setStep(2)}
               style={{
-                background: '#4f46e5',
+                background: '#10b981',
                 color: '#fff',
                 border: 'none',
                 padding: '14px 32px',
@@ -323,9 +323,9 @@ export default function SetupWizardPage() {
                     style={{
                       padding: '12px',
                       borderRadius: '12px',
-                      border: printerSize === '58mm' ? '2px solid #4f46e5' : '1px solid #cbd5e1',
-                      background: printerSize === '58mm' ? '#eef2ff' : '#fff',
-                      color: printerSize === '58mm' ? '#4338ca' : '#475569',
+                      border: printerSize === '58mm' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: printerSize === '58mm' ? '#f8fafc' : '#fff',
+                      color: printerSize === '58mm' ? '#059669' : '#475569',
                       fontWeight: '800',
                       fontSize: '13.5px',
                       cursor: 'pointer'
@@ -340,9 +340,9 @@ export default function SetupWizardPage() {
                     style={{
                       padding: '12px',
                       borderRadius: '12px',
-                      border: printerSize === '80mm' ? '2px solid #4f46e5' : '1px solid #cbd5e1',
-                      background: printerSize === '80mm' ? '#eef2ff' : '#fff',
-                      color: printerSize === '80mm' ? '#4338ca' : '#475569',
+                      border: printerSize === '80mm' ? '2px solid #10b981' : '1px solid #cbd5e1',
+                      background: printerSize === '80mm' ? '#f8fafc' : '#fff',
+                      color: printerSize === '80mm' ? '#059669' : '#475569',
                       fontWeight: '800',
                       fontSize: '13.5px',
                       cursor: 'pointer'
@@ -364,7 +364,7 @@ export default function SetupWizardPage() {
             </button>
             <button
               onClick={() => setStep(3)}
-              style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: '16px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', boxShadow: '0 8px 25px rgba(79, 70, 229, 0.35)' }}
+              style={{ background: '#10b981', color: '#fff', border: 'none', padding: '14px 32px', borderRadius: '16px', fontWeight: '800', fontSize: '16px', cursor: 'pointer', boxShadow: '0 8px 25px rgba(79, 70, 229, 0.35)' }}
             >
               পরবর্তী ধাপ (ক্যাটালগ নির্বাচন) ➔
             </button>

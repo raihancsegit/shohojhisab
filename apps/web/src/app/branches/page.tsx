@@ -158,7 +158,7 @@ export default function BranchesPage() {
             <h1 className="num-font" style={{ fontSize: '32px', fontWeight: '900', marginTop: '6px' }}>
               {branches.length} টি সক্রিয় শাখা
             </h1>
-            <span style={{ fontSize: '13px', color: '#e9d5ff' }}>
+            <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
               সেন্ট্রাল ইনভেন্টরি, ইন্টার-ব্রাঞ্চ স্টক ট্রান্সফার ও শাখা ম্যানেজমেন্ট
             </span>
           </div>
@@ -185,7 +185,7 @@ export default function BranchesPage() {
               onClick={() => setShowTransferModal(true)}
               disabled={branches.length < 2}
               style={{
-                background: branches.length >= 2 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#64748b',
+                background: branches.length >= 2 ? 'linear-gradient(135deg, #10b981, #059669)' : '#64748b',
                 color: '#fff',
                 border: 'none',
                 padding: '12px 18px',
@@ -223,7 +223,7 @@ export default function BranchesPage() {
                 className="glass-card"
                 style={{
                   padding: '22px',
-                  border: activeBranchId === b.id ? '2px solid #7c3aed' : '1px solid #e2e8f0',
+                  border: activeBranchId === b.id ? '2px solid #10b981' : '1px solid #e2e8f0',
                   background: activeBranchId === b.id ? '#fbf8ff' : '#fff'
                 }}
               >
@@ -237,7 +237,7 @@ export default function BranchesPage() {
                       📍 {b.location || 'স্থানীয় বাজার'}
                     </span>
                   </div>
-                  {b.isMainBranch && <span style={{ background: '#ede9fe', color: '#7c3aed', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>প্রধান শাখা</span>}
+                  {b.isMainBranch && <span style={{ background: '#ede9fe', color: '#10b981', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px' }}>প্রধান শাখা</span>}
                 </div>
 
                 <button
@@ -247,7 +247,7 @@ export default function BranchesPage() {
                     padding: '10px',
                     borderRadius: '10px',
                     border: activeBranchId === b.id ? 'none' : '1px solid #cbd5e1',
-                    background: activeBranchId === b.id ? '#7c3aed' : '#fff',
+                    background: activeBranchId === b.id ? '#10b981' : '#fff',
                     color: activeBranchId === b.id ? '#fff' : '#0f172a',
                     fontWeight: '800',
                     fontSize: '13px',
@@ -300,7 +300,7 @@ export default function BranchesPage() {
                     পণ্য: {tr.productName} ({tr.quantity}) • সময়: {tr.createdAt?.slice(0, 16).replace('T', ' ')}
                   </span>
                 </div>
-                <span className="num-font" style={{ fontSize: '12.5px', color: '#7c3aed', fontWeight: '800' }}>{tr.id}</span>
+                <span className="num-font" style={{ fontSize: '12.5px', color: '#10b981', fontWeight: '800' }}>{tr.id}</span>
               </div>
             ))}
 
@@ -446,7 +446,7 @@ export default function BranchesPage() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={() => setShowTransferModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#fff', fontWeight: '800' }}>বাতিল</button>
-                <button onClick={handleCreateTransfer} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#7c3aed', color: '#fff', fontWeight: '900', fontSize: '15px' }}>ট্রান্সফার নিশ্চিত করুন ✓</button>
+                <button onClick={handleCreateTransfer} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#10b981', color: '#fff', fontWeight: '900', fontSize: '15px' }}>ট্রান্সফার নিশ্চিত করুন ✓</button>
               </div>
             </div>
           </div>

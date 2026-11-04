@@ -485,7 +485,7 @@ export default function DealersPage() {
           <button
             onClick={() => openSupplyModal()}
             style={{
-              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#fff',
               border: 'none',
               padding: '8px 14px',
@@ -493,7 +493,7 @@ export default function DealersPage() {
               fontWeight: '800',
               fontSize: '12px',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px'
@@ -524,8 +524,8 @@ export default function DealersPage() {
             rel="noopener noreferrer"
             style={{
               background: 'rgba(255, 255, 255, 0.12)',
-              color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#34d399',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
               padding: '8px 12px',
               borderRadius: '10px',
               fontWeight: '800',
@@ -612,7 +612,7 @@ export default function DealersPage() {
                     <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700' }}>
                       🗓️ অর্ডার: {d.orderDay || 'সোম'} • ডেলিভারি: {d.deliveryDay || 'মঙ্গল'}
                     </span>
-                    <span style={{ fontSize: '10.5px', color: '#4f46e5', fontWeight: '800', background: '#eef2ff', padding: '1px 6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '10.5px', color: '#0f172a', fontWeight: '800', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
                       🔑 পিন: {d.pin || '1234'}
                     </span>
                   </div>
@@ -632,9 +632,9 @@ export default function DealersPage() {
                 <button
                   onClick={() => openSupplyModal(d)}
                   style={{
-                    background: '#eff6ff',
-                    color: '#0284c7',
-                    border: '1px solid #bae6fd',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    border: '1px solid #cbd5e1',
                     padding: '5px 9px',
                     borderRadius: '7px',
                     fontSize: '11px',
@@ -657,9 +657,9 @@ export default function DealersPage() {
                     triggerHaptic('light');
                   }}
                   style={{
-                    background: '#faf5ff',
-                    color: '#7c3aed',
-                    border: '1px solid #ddd6fe',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    border: '1px solid #cbd5e1',
                     padding: '5px 8px',
                     borderRadius: '7px',
                     fontSize: '11px',
@@ -675,9 +675,9 @@ export default function DealersPage() {
                   <button
                     onClick={() => setPreviewPhoto(d.challanPhoto)}
                     style={{
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      border: '1px solid #cbd5e1',
                       padding: '5px 8px',
                       borderRadius: '7px',
                       fontSize: '11px',
@@ -841,7 +841,7 @@ export default function DealersPage() {
                   htmlFor="challan-file-input"
                   style={{
                     display: 'inline-block',
-                    background: '#3b82f6',
+                    background: '#10b981',
                     color: '#fff',
                     padding: '8px 16px',
                     borderRadius: '10px',
@@ -1105,7 +1105,7 @@ export default function DealersPage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px', fontWeight: '800' }}>
+                <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#0f172a', padding: '2px 8px', borderRadius: '6px', fontWeight: '800' }}>
                   🚚 সরাসরি ডিলার চালান ও স্টক ইন
                 </span>
                 <h3 style={{ margin: '4px 0 0', fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>
@@ -1170,9 +1170,9 @@ export default function DealersPage() {
                     type="button"
                     onClick={handleAddSupplyItem}
                     style={{
-                      background: '#e0f2fe',
-                      color: '#0369a1',
-                      border: '1px solid #bae6fd',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      border: '1px solid #cbd5e1',
                       padding: '5px 10px',
                       borderRadius: '8px',
                       fontSize: '11.5px',
@@ -1310,7 +1310,7 @@ export default function DealersPage() {
 
                         <div style={{ textAlign: 'right', background: '#f8fafc', padding: '6px 8px', borderRadius: '8px' }}>
                           <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>লাইন মোট</span>
-                          <strong className="num-font" style={{ fontSize: '13px', color: '#0369a1' }}>
+                          <strong className="num-font" style={{ fontSize: '13px', color: '#0f172a' }}>
                             ৳{((Number(item.quantity) || 0) * (Number(item.purchasePrice) || 0)).toLocaleString('en-US')}
                           </strong>
                         </div>
@@ -1394,14 +1394,14 @@ export default function DealersPage() {
                   style={{
                     flex: 2,
                     padding: '12px',
-                    background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '12px',
                     fontWeight: '900',
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                   }}
                 >
                   {supplySubmitting ? 'স্টক ইন ও চালান এন্ট্রি হচ্ছে...' : '✓ চালান সংরক্ষণ ও স্টকে পণ্য যোগ'}
@@ -1567,10 +1567,10 @@ export default function DealersPage() {
             <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0', marginBottom: '14px', fontSize: '12.5px' }}>
               <div style={{ marginBottom: '4px' }}>কোম্পানি: <strong style={{ color: '#0f172a' }}>{pinModalDealer.companyName || pinModalDealer.company_name}</strong></div>
               <div style={{ marginBottom: '4px' }}>প্রতিনিধি: <strong>{pinModalDealer.representativeName || pinModalDealer.representative_name}</strong></div>
-              <div style={{ marginBottom: '4px' }}>মোবাইল (লগইন আইডি): <strong style={{ color: '#0284c7' }}>{pinModalDealer.phone}</strong></div>
+              <div style={{ marginBottom: '4px' }}>মোবাইল (লগইন আইডি): <strong style={{ color: '#0f172a' }}>{pinModalDealer.phone}</strong></div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
                 <span>বর্তমান পিন:</span>
-                <span style={{ fontSize: '14px', fontWeight: '900', color: '#4f46e5', background: '#eef2ff', padding: '2px 8px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>
                   {pinModalDealer.pin || '1234'}
                 </span>
               </div>
@@ -1595,7 +1595,7 @@ export default function DealersPage() {
                   onClick={() => handleResetPin(pinModalDealer.id)}
                   disabled={pinSubmitting || !newPin}
                   style={{
-                    background: '#4f46e5',
+                    background: '#0f172a',
                     color: '#fff',
                     border: 'none',
                     padding: '9px 14px',
@@ -1618,7 +1618,7 @@ export default function DealersPage() {
                 style={{
                   width: '100%',
                   padding: '11px',
-                  background: copiedLink ? '#ecfdf5' : '#0284c7',
+                  background: copiedLink ? '#ecfdf5' : '#10b981',
                   color: copiedLink ? '#065f46' : '#ffffff',
                   border: copiedLink ? '1.5px solid #86efac' : 'none',
                   borderRadius: '12px',

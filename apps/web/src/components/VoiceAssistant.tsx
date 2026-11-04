@@ -245,7 +245,7 @@ export default function VoiceAssistant() {
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: '700', color: '#f8fafc' }}>{it.name}</div>
                   <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    পরিমাণ: <strong style={{ color: '#38bdf8' }}>{it.qty} {it.unit}</strong> | কেনা দর: ৳{it.unitCost}
+                    পরিমাণ: <strong style={{ color: '#34d399' }}>{it.qty} {it.unit}</strong> | কেনা দর: ৳{it.unitCost}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -253,7 +253,7 @@ export default function VoiceAssistant() {
                   {it.isMatched ? (
                     <span style={{ fontSize: '9.5px', color: '#86efac', background: 'rgba(34, 197, 94, 0.2)', padding: '1px 6px', borderRadius: '8px' }}>স্টকে আছে</span>
                   ) : (
-                    <span style={{ fontSize: '9.5px', color: '#fde047', background: 'rgba(234, 179, 8, 0.2)', padding: '1px 6px', borderRadius: '8px' }}>নতুন পণ্য</span>
+                    <span style={{ fontSize: '9.5px', color: '#f8fafc', background: 'rgba(255, 255, 255, 0.15)', padding: '1px 6px', borderRadius: '8px' }}>নতুন পণ্য</span>
                   )}
                 </div>
               </div>
@@ -263,7 +263,7 @@ export default function VoiceAssistant() {
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '11px', color: '#94a3b8' }}>মোট চালানের টাকা:</div>
-              <div style={{ fontSize: '16px', fontWeight: '900', color: '#38bdf8' }}>৳{Number(scannedInvoiceData.totalAmount || 0).toLocaleString('en-US')}</div>
+              <div style={{ fontSize: '16px', fontWeight: '900', color: '#34d399' }}>৳{Number(scannedInvoiceData.totalAmount || 0).toLocaleString('en-US')}</div>
             </div>
             <button
               onClick={handleCommitScannedInvoice}
@@ -317,10 +317,10 @@ export default function VoiceAssistant() {
         {feedbackType && (
           <div style={{
             background: feedbackType === 'error'
-              ? 'linear-gradient(135deg, #991b1b, #7f1d1d)'
+              ? 'linear-gradient(135deg, #0f172a, #1e293b)'
               : feedbackType === 'success'
                 ? 'linear-gradient(135deg, #065f46, #047857)'
-                : 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                : 'linear-gradient(135deg, #0f172a, #1e293b)',
             color: '#ffffff',
             padding: '14px 16px',
             borderRadius: '20px',
@@ -347,9 +347,9 @@ export default function VoiceAssistant() {
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: '12px',
-                    background: currentMode === 'owner' ? 'rgba(234, 179, 8, 0.25)' : 'rgba(59, 130, 246, 0.25)',
-                    border: currentMode === 'owner' ? '1px solid rgba(234, 179, 8, 0.5)' : '1px solid rgba(59, 130, 246, 0.5)',
-                    color: currentMode === 'owner' ? '#fef08a' : '#bfdbfe',
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    color: '#34d399',
                     fontWeight: '800'
                   }}>
                     {currentMode === 'owner' ? `👑 মালিক (${activeSpeaker?.name || 'মালিক'})` : `👔 কর্মচারী (${activeSpeaker?.name || 'স্টাফ'})`}
@@ -456,7 +456,7 @@ export default function VoiceAssistant() {
                     🎙️
                   </span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '11px', color: '#93c5fd', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '11px', color: '#34d399', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span>{liveTranscript ? '🟢 রেকর্ড হচ্ছে:' : isListening ? '🎙️ মাইক প্রস্তুত, মুখে বলুন...' : 'কথা শেষে স্বয়ংক্রিয় প্রসেস হবে'}</span>
                       {isListening && !liveTranscript && (
                         <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#34d399' }} />
@@ -586,7 +586,7 @@ export default function VoiceAssistant() {
                       }}
                       style={{
                         background: 'rgba(255, 255, 255, 0.12)',
-                        color: '#e0e7ff',
+                        color: '#f8fafc',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '12px',
                         padding: '4px 8px',
@@ -620,8 +620,8 @@ export default function VoiceAssistant() {
             height: '54px',
             borderRadius: '50%',
             background: isListening
-              ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-              : 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
             color: '#ffffff',
             border: '2.5px solid rgba(255, 255, 255, 0.45)',
             display: 'grid',
@@ -629,8 +629,8 @@ export default function VoiceAssistant() {
             fontSize: '22px',
             cursor: 'pointer',
             boxShadow: isListening
-              ? '0 0 24px rgba(239, 68, 68, 0.75), 0 8px 24px rgba(0, 0, 0, 0.35)'
-              : '0 8px 24px rgba(79, 70, 229, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
+              ? '0 0 24px rgba(16, 185, 129, 0.75), 0 8px 24px rgba(0, 0, 0, 0.35)'
+              : '0 8px 24px rgba(16, 185, 129, 0.45), 0 2px 8px rgba(0,0,0,0.2)',
             transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
             transform: isListening ? 'scale(1.08)' : 'scale(1)',
             outline: 'none'
