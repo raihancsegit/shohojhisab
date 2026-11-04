@@ -1188,26 +1188,26 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   if (!isOpen) return null;
 
   const menuItems = [
-    { href: '/calculator', label: 'ক্যালকুলেটর কুইক সেল', icon: '🔢', iconBg: '#ecfdf5', iconColor: '#059669', badge: 'হট' },
-    { href: '/pos?voice=1', label: 'ভয়েস মেমো ও বিলিং', icon: '🎙️', iconBg: '#eff6ff', iconColor: '#2563eb', badge: 'স্মার্ট' },
-    { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒', iconBg: '#eef2ff', iconColor: '#4f46e5' },
-    { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', iconBg: '#ffedd5', iconColor: '#ea580c', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
-    { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', iconBg: '#e0e7ff', iconColor: '#4338ca', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
-    { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableDealerKhata') },
-    { href: '/dealer-portal', label: 'ডিলার পোর্টাল (সরাসরি চালান)', icon: '🚚', iconBg: '#e0f2fe', iconColor: '#0284c7', badge: 'পোর্টাল', show: isFeatureEnabled('enableDealerKhata') },
-    { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', iconBg: '#fef2f2', iconColor: '#dc2626' },
-    { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', iconBg: '#eef2ff', iconColor: '#4f46e5' },
-    { href: '/day-end', label: 'ক্যাশ মিলানো ও ড্রয়ার', icon: '🌙', iconBg: '#f0fdf4', iconColor: '#16a34a', show: isFeatureEnabled('enableCashDrawer') },
-    { href: '/staff', label: 'কর্মচারী ও পারমিশন (Staff)', icon: '👥', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'টিম' },
-    { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', iconBg: '#eef2ff', iconColor: '#4f46e5', show: isFeatureEnabled('enableMultiBranch') },
-    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#fee2e2', iconColor: '#b91c1c', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
-    { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
-    { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ' },
-    { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', iconBg: '#ffe4e6', iconColor: '#e11d48', badge: 'নোটিশ' },
-    { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
-    { href: '/support', label: 'হেল্প এন্ড সাপোর্ট', icon: '🎧', iconBg: '#eef2ff', iconColor: '#4f46e5' },
-    { href: '/tutorials', label: 'টিউটোরিয়াল ভিডিও', icon: '🎬', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'ভিডিও' },
-    { href: '/voice-guide', label: 'ভয়েস নির্দেশিকা (কমান্ড গাইড)', icon: '🎙️', iconBg: '#ecfdf5', iconColor: '#059669', badge: 'এআই' },
+    { href: '/calculator', label: 'ক্যালকুলেটর কুইক সেল', icon: '🔢', badge: 'হট' },
+    { href: '/pos?voice=1', label: 'ভয়েস মেমো ও বিলিং', icon: '🎙️', badge: 'স্মার্ট' },
+    { href: '/pos', label: 'বিক্রয় (POS কাউন্টার)', icon: '🛒' },
+    { href: '/khata', label: 'বাকির হিসাব (গ্রাহক খাতা)', icon: '📒', badge: 'জরুরি', show: isFeatureEnabled('enableCustomerKhata') },
+    { href: '/installments', label: 'বাকির কিস্তি', icon: '📅', badge: 'কিস্তি', show: isFeatureEnabled('enableInstallments') },
+    { href: '/dealers', label: 'ক্রয় (ডিলার চালান)', icon: '🛍️', show: isFeatureEnabled('enableDealerKhata') },
+    { href: '/dealer-portal', label: 'ডিলার পোর্টাল (সরাসরি চালান)', icon: '🚚', badge: 'পোর্টাল', show: isFeatureEnabled('enableDealerKhata') },
+    { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸' },
+    { href: '/stock', label: 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦' },
+    { href: '/day-end', label: 'ক্যাশ মিলানো ও ড্রয়ার', icon: '🌙', show: isFeatureEnabled('enableCashDrawer') },
+    { href: '/staff', label: 'কর্মচারী ও পারমিশন (Staff)', icon: '👥', badge: 'টিম' },
+    { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', show: isFeatureEnabled('enableMultiBranch') },
+    { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
+    { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊' },
+    { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', badge: 'প্যাকেজ' },
+    { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', badge: 'নোটিশ' },
+    { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️' },
+    { href: '/support', label: 'হেল্প এন্ড সাপোর্ট', icon: '🎧' },
+    { href: '/tutorials', label: 'টিউটোরিয়াল ভিডিও', icon: '🎬', badge: 'ভিডিও' },
+    { href: '/voice-guide', label: 'ভয়েস নির্দেশিকা (কমান্ড গাইড)', icon: '🎙️', badge: 'এআই' },
   ];
 
 
@@ -1237,11 +1237,11 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         zIndex: 2,
         overflowY: 'auto'
       }}>
-        {/* Modern Glassmorphic Indigo Header */}
+        {/* Modern Slate Navy Header */}
         <div style={{
           background: authTheme === 'dark'
-            ? 'linear-gradient(145deg, #090d16 0%, #111827 50%, #1e1b4b 100%)'
-            : 'linear-gradient(145deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+            ? 'linear-gradient(145deg, #090d16 0%, #0f172a 100%)'
+            : 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
           color: '#ffffff',
           padding: '20px 18px 16px',
           textAlign: 'center',
@@ -1280,13 +1280,13 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               width: '100%',
               height: '100%',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               border: '2px solid rgba(255, 255, 255, 0.35)',
               display: 'grid',
               placeItems: 'center',
               fontSize: '24px',
               color: '#ffffff',
-              boxShadow: '0 6px 16px rgba(0,0,0,0.25)'
+              boxShadow: '0 6px 16px rgba(16, 185, 129, 0.25)'
             }}>
               🏪
             </div>
@@ -1298,7 +1298,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 bottom: -2,
                 right: -2,
                 background: '#ffffff',
-                color: '#4f46e5',
+                color: '#0f172a',
                 width: '20px',
                 height: '20px',
                 borderRadius: '50%',
@@ -1470,8 +1470,8 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                   padding: '7px 10px',
                   borderRadius: '10px',
                   textDecoration: 'none',
-                  background: active ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#f5f3ff') : 'transparent',
-                  border: active ? '1px solid #c7d2fe' : '1px solid transparent',
+                  background: active ? (authTheme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5') : 'transparent',
+                  border: active ? '1px solid #10b981' : '1px solid transparent',
                   transition: 'all 0.12s ease'
                 }}
               >
@@ -1480,8 +1480,10 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                     width: '30px',
                     height: '30px',
                     borderRadius: '8px',
-                    background: item.iconBg,
-                    color: item.iconColor,
+                    background: active
+                      ? (authTheme === 'dark' ? 'rgba(16, 185, 129, 0.25)' : '#d1fae5')
+                      : (authTheme === 'dark' ? '#1e293b' : '#f1f5f9'),
+                    color: active ? '#059669' : (authTheme === 'dark' ? '#34d399' : '#0f172a'),
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '15px',
@@ -1489,7 +1491,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                   }}>
                     {item.icon}
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: active ? '800' : '650', color: active ? '#4f46e5' : (authTheme === 'dark' ? '#f1f5f9' : '#1e293b') }}>
+                  <span style={{ fontSize: '13px', fontWeight: active ? '800' : '650', color: active ? (authTheme === 'dark' ? '#34d399' : '#059669') : (authTheme === 'dark' ? '#f1f5f9' : '#1e293b') }}>
                     {item.label}
                   </span>
                 </div>
@@ -1501,8 +1503,9 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                       fontWeight: '800',
                       padding: '1px 6px',
                       borderRadius: '5px',
-                      background: item.badge === 'নতুন' ? '#ecfdf5' : '#fee2e2',
-                      color: item.badge === 'নতুন' ? '#059669' : '#dc2626'
+                      background: authTheme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+                      color: authTheme === 'dark' ? '#34d399' : '#059669',
+                      border: authTheme === 'dark' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #a7f3d0'
                     }}>
                       {item.badge}
                     </span>

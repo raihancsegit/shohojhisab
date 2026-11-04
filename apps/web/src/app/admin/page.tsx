@@ -842,7 +842,7 @@ export default function SuperAdminPage() {
       desc: 'অনুমোদন, মেয়াদ ও ব্যালেন্স',
       icon: '🏪',
       count: tenants.length,
-      badgeColor: '#3b82f6'
+      badgeColor: '#10b981'
     },
     {
       id: 'coupons',
@@ -850,7 +850,7 @@ export default function SuperAdminPage() {
       desc: 'ডিসকাউন্ট ও অফার কোড',
       icon: '🎟️',
       count: coupons.length,
-      badgeColor: '#8b5cf6'
+      badgeColor: '#10b981'
     },
     {
       id: 'analytics',
@@ -1479,7 +1479,7 @@ export default function SuperAdminPage() {
             return (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 {/* 1. Total Shops */}
-                <div className="super-admin-stat-card" style={{ borderLeft: '5px solid #3b82f6', background: isDark ? '#111827' : '#ffffff' }}>
+                <div className="super-admin-stat-card" style={{ borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '800' }}>মোট রেজিস্টার্ড দোকান</span>
@@ -1487,12 +1487,12 @@ export default function SuperAdminPage() {
                         {overview.totalShops} টি
                       </div>
                     </div>
-                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff', color: '#3b82f6', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)' }}>
+                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)' }}>
                       🏪
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-                    <span style={{ fontSize: '12px', color: '#2563eb', fontWeight: '800', background: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>
+                    <span style={{ fontSize: '12px', color: '#059669', fontWeight: '800', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>
                       চালু: {overview.activeShops} টি
                     </span>
                     <span style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
@@ -1505,15 +1505,15 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* 2. Pending Approval */}
-                <div className={`super-admin-stat-card ${pendingCount > 0 ? 'pulse-amber-glow' : ''}`} style={{ borderLeft: '5px solid #f59e0b', background: isDark ? '#111827' : '#ffffff' }}>
+                <div className="super-admin-stat-card" style={{ borderLeft: pendingCount > 0 ? '4px solid #f59e0b' : '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '800' }}>অনুমোদন অপেক্ষমাণ</span>
-                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#d97706', margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
+                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: pendingCount > 0 ? '#d97706' : (isDark ? '#ffffff' : '#0f172a'), margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
                         {pendingCount} টি
                       </div>
                     </div>
-                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7', color: '#b45309', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}>
+                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)' }}>
                       ⏳
                     </span>
                   </div>
@@ -1521,13 +1521,10 @@ export default function SuperAdminPage() {
                     {pendingCount > 0 ? (
                       <button
                         onClick={() => setFilterStatus('pending_approval')}
+                        className="super-admin-action-btn"
                         style={{
                           fontSize: '12px',
-                          color: '#b45309',
-                          fontWeight: '800',
-                          background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
-                          padding: '3px 10px',
+                          padding: '4px 10px',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           display: 'inline-flex',
@@ -1546,7 +1543,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* 3. Monthly Recurring Revenue (MRR) */}
-                <div className="super-admin-stat-card" style={{ borderLeft: '5px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
+                <div className="super-admin-stat-card" style={{ borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '800' }}>মাসিক সম্ভাব্য MRR</span>
@@ -1564,20 +1561,20 @@ export default function SuperAdminPage() {
                 </div>
 
                 {/* 4. Total Sales Volume (GMV) */}
-                <div className="super-admin-stat-card" style={{ borderLeft: '5px solid #8b5cf6', background: isDark ? '#111827' : '#ffffff' }}>
+                <div className="super-admin-stat-card" style={{ borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '800' }}>দোকানসমূহের মোট বিক্রি</span>
-                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: '#7c3aed', margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
+                      <div className="num-font" style={{ fontSize: '32px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a', margin: '6px 0 4px', letterSpacing: '-0.5px' }}>
                         ৳{overview.totalSalesVolume?.toLocaleString('en-US')}
                       </div>
                     </div>
-                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(139, 92, 246, 0.15)' : '#f5f3ff', color: '#7c3aed', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.15)' }}>
+                    <span style={{ width: '44px', height: '44px', borderRadius: '14px', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '22px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)' }}>
                       📈
                     </span>
                   </div>
                   <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700', marginTop: '6px' }}>
-                    মোট <strong style={{ color: '#7c3aed' }}>{overview.totalTransactions}</strong> টি মেমো সম্পন্ন
+                    মোট <strong style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{overview.totalTransactions}</strong> টি মেমো সম্পন্ন
                   </div>
                 </div>
               </div>
@@ -1672,15 +1669,15 @@ export default function SuperAdminPage() {
               </div>
             </div>
 
-            {/* Segmented Status Pills */}
+            {/* Segmented Status Pills - Unified 2-Color Design */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingBottom: '4px' }}>
               {[
-                { key: 'all', label: 'সকল দোকান', count: tenants.length, icon: '🏪', color: isDark ? '#3b82f6' : '#0f172a' },
-                { key: 'pending_approval', label: 'অনুমোদন অপেক্ষমাণ', count: tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length, icon: '⏳', color: '#b45309', glow: true },
-                { key: 'trial', label: '৭ দিনের ফ্রি ট্রায়াল', count: tenants.filter(t => t.billingCycle === 'trial' || t.isTrial || t.status === 'trial').length, icon: '🎁', color: '#7e22ce' },
-                { key: 'active', label: 'চালু পেইড দোকান', count: tenants.filter(t => t.status === 'active' && t.billingCycle !== 'trial' && !t.isTrial).length, icon: '✅', color: '#059669' },
-                { key: 'expired', label: 'মেয়াদোত্তীর্ণ', count: tenants.filter(t => t.status === 'expired').length, icon: '⚠️', color: '#dc2626' },
-                { key: 'suspended', label: 'স্থগিত দোকান', count: tenants.filter(t => t.status === 'suspended').length, icon: '⏸', color: '#64748b' }
+                { key: 'all', label: 'সকল দোকান', count: tenants.length, icon: '🏪' },
+                { key: 'pending_approval', label: 'অনুমোদন অপেক্ষমাণ', count: tenants.filter(t => t.status === 'pending_approval' || t.status === 'pending').length, icon: '⏳', glow: true },
+                { key: 'trial', label: '৭ দিনের ফ্রি ট্রায়াল', count: tenants.filter(t => t.billingCycle === 'trial' || t.isTrial || t.status === 'trial').length, icon: '🎁' },
+                { key: 'active', label: 'চালু পেইড দোকান', count: tenants.filter(t => t.status === 'active' && t.billingCycle !== 'trial' && !t.isTrial).length, icon: '✅' },
+                { key: 'expired', label: 'মেয়াদোত্তীর্ণ', count: tenants.filter(t => t.status === 'expired').length, icon: '⚠️' },
+                { key: 'suspended', label: 'স্থগিত দোকান', count: tenants.filter(t => t.status === 'suspended').length, icon: '⏸' }
               ].map(p => {
                 const isSelected = filterStatus === p.key;
                 return (
@@ -1689,10 +1686,11 @@ export default function SuperAdminPage() {
                     onClick={() => { setFilterStatus(p.key as any); triggerHaptic('light'); }}
                     className="super-admin-pill-btn"
                     style={{
-                      border: isSelected ? `2px solid ${p.color}` : (isDark ? '1.5px solid #334155' : '1.5px solid #e2e8f0'),
-                      background: isSelected ? (p.color + '22') : (isDark ? '#1e293b' : '#ffffff'),
-                      color: isSelected ? (isDark ? '#ffffff' : p.color) : (isDark ? '#94a3b8' : '#64748b'),
-                      boxShadow: isSelected ? `0 2px 8px ${p.color}33` : 'none'
+                      border: isSelected ? '1.5px solid #10b981' : (isDark ? '1.5px solid #334155' : '1.5px solid #e2e8f0'),
+                      background: isSelected ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5') : (isDark ? '#1e293b' : '#ffffff'),
+                      color: isSelected ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
+                      boxShadow: isSelected ? '0 2px 8px rgba(16, 185, 129, 0.2)' : 'none',
+                      fontWeight: isSelected ? '900' : '700'
                     }}
                   >
                     <span>{p.icon}</span>
@@ -1701,13 +1699,13 @@ export default function SuperAdminPage() {
                       fontSize: '11px',
                       padding: '1px 7px',
                       borderRadius: '99px',
-                      background: isSelected ? p.color : (isDark ? '#334155' : '#f1f5f9'),
+                      background: isSelected ? '#10b981' : (isDark ? '#334155' : '#f1f5f9'),
                       color: isSelected ? '#ffffff' : (isDark ? '#cbd5e1' : '#475569')
                     }}>
                       {p.count}
                     </span>
                     {p.glow && p.count > 0 && !isSelected && (
-                      <span className="pulse-amber-glow" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+                      <span className="pulse-amber-glow" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
                     )}
                   </button>
                 );
@@ -1761,13 +1759,9 @@ export default function SuperAdminPage() {
                       padding: '22px 24px',
                       borderRadius: '22px',
                       border: isDark ? '1px solid #1f2937' : '1px solid rgba(226, 232, 240, 0.95)',
-                      borderLeft: isPending
-                        ? '6px solid #f59e0b'
-                        : isTrial
-                        ? '6px solid #8b5cf6'
-                        : isActivePaid
-                        ? '6px solid #10b981'
-                        : '6px solid #ef4444',
+                      borderLeft: isActivePaid || isTrial
+                        ? '4px solid #10b981'
+                        : (isPending ? '4px solid #f59e0b' : '4px solid #64748b'),
                       boxShadow: isDark ? '0 4px 20px rgba(0, 0, 0, 0.4)' : '0 4px 18px rgba(15, 23, 42, 0.04)',
                       background: isDark ? '#111827' : '#ffffff',
                       position: 'relative'
@@ -1776,27 +1770,17 @@ export default function SuperAdminPage() {
                     {/* Header Row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        {/* Shop Avatar */}
+                        {/* Shop Avatar - Unified Neutral */}
                         <div style={{
                           width: '56px',
                           height: '56px',
                           borderRadius: '18px',
-                          background: isDark
-                            ? (isPending ? 'rgba(245, 158, 11, 0.15)' : isTrial ? 'rgba(139, 92, 246, 0.15)' : isActivePaid ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)')
-                            : (isPending ? '#fef3c7' : isTrial ? '#f3e8ff' : isActivePaid ? '#ecfdf5' : '#fee2e2'),
-                          color: isPending
-                            ? (isDark ? '#f59e0b' : '#b45309')
-                            : isTrial
-                            ? (isDark ? '#a855f7' : '#7e22ce')
-                            : isActivePaid
-                            ? (isDark ? '#10b981' : '#059669')
-                            : (isDark ? '#f87171' : '#dc2626'),
+                          background: isDark ? '#1e293b' : '#f8fafc',
+                          color: isDark ? '#34d399' : '#059669',
                           display: 'grid',
                           placeItems: 'center',
                           fontSize: '28px',
-                          border: isDark
-                            ? `1.5px solid ${isPending ? 'rgba(245, 158, 11, 0.3)' : isTrial ? 'rgba(139, 92, 246, 0.3)' : isActivePaid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                            : `1.5px solid ${isPending ? '#fde68a' : isTrial ? '#d8b4fe' : isActivePaid ? '#a7f3d0' : '#fca5a5'}`
+                          border: isDark ? '1.5px solid #334155' : '1.5px solid #e2e8f0'
                         }}>
                           {t.industryIcon || '🏪'}
                         </div>
@@ -1808,7 +1792,7 @@ export default function SuperAdminPage() {
                               {t.shopName}
                             </h3>
 
-                            {/* Status Tag */}
+                            {/* Status Tag - Unified 2-Color */}
                             <span style={{
                               fontSize: '11.5px',
                               fontWeight: '800',
@@ -1817,25 +1801,21 @@ export default function SuperAdminPage() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '5px',
-                              background: isDark
-                                ? (isPending ? 'rgba(245, 158, 11, 0.18)' : isTrial ? 'rgba(139, 92, 246, 0.18)' : isActivePaid ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)')
-                                : (isPending ? '#fef3c7' : isTrial ? '#f3e8ff' : isActivePaid ? '#ecfdf5' : '#fee2e2'),
-                              color: isPending
-                                ? (isDark ? '#fcd34d' : '#b45309')
-                                : isTrial
-                                ? (isDark ? '#c084fc' : '#7e22ce')
-                                : isActivePaid
+                              background: (isActivePaid || isTrial)
+                                ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5')
+                                : (isDark ? '#1e293b' : '#f1f5f9'),
+                              color: (isActivePaid || isTrial)
                                 ? (isDark ? '#34d399' : '#059669')
-                                : (isDark ? '#f87171' : '#dc2626'),
-                              border: isDark
-                                ? `1px solid ${isPending ? 'rgba(245, 158, 11, 0.3)' : isTrial ? 'rgba(139, 92, 246, 0.3)' : isActivePaid ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
-                                : `1px solid ${isPending ? '#fde68a' : isTrial ? '#d8b4fe' : isActivePaid ? '#a7f3d0' : '#fca5a5'}`
+                                : (isDark ? '#cbd5e1' : '#475569'),
+                              border: (isActivePaid || isTrial)
+                                ? (isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #a7f3d0')
+                                : (isDark ? '1px solid #334155' : '1.5px solid #e2e8f0')
                             }}>
                               <span style={{
                                 width: '6px',
                                 height: '6px',
                                 borderRadius: '50%',
-                                background: isPending ? '#f59e0b' : isTrial ? '#8b5cf6' : isActivePaid ? '#10b981' : '#ef4444',
+                                background: (isActivePaid || isTrial) ? '#10b981' : '#64748b',
                                 display: 'inline-block'
                               }} />
                               {isPending
@@ -1912,7 +1892,7 @@ export default function SuperAdminPage() {
                           textAlign: 'right'
                         }}>
                           <div style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700' }}>প্ল্যান ও মেয়াদ</div>
-                          <div style={{ fontSize: '14px', fontWeight: '900', color: isTrial ? (isDark ? '#c084fc' : '#7e22ce') : (isDark ? '#818cf8' : '#4f46e5') }}>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a' }}>
                             {t.planName || t.planId || 'প্রো শপ'} ({isTrial ? 'ফ্রি ট্রায়াল' : t.billingCycle === 'yearly' ? '১ বছর' : 'মাসিক'})
                           </div>
                           <div style={{ fontSize: '11px', color: isPending ? (isDark ? '#f59e0b' : '#b45309') : (isExpired ? '#ef4444' : '#10b981'), fontWeight: '800' }}>
@@ -1927,10 +1907,11 @@ export default function SuperAdminPage() {
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button
                               onClick={() => handleApproveShop(t.id, 'trial')}
+                              className="super-admin-action-btn"
                               style={{
-                                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                                background: isDark ? '#1e293b' : '#0f172a',
                                 color: '#fff',
-                                border: 'none',
+                                border: isDark ? '1px solid #334155' : '1px solid #0f172a',
                                 padding: '10px 16px',
                                 borderRadius: '12px',
                                 fontWeight: '900',
@@ -1938,8 +1919,7 @@ export default function SuperAdminPage() {
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '6px',
-                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.35)'
+                                gap: '6px'
                               }}
                             >
                               <span>🎁 ৭ দিন ফ্রি ট্রায়াল অনুমোদন</span>
@@ -2025,34 +2005,43 @@ export default function SuperAdminPage() {
                         </select>
                       </div>
 
-                      {/* Extend Validity Quick Buttons */}
+                      {/* Extend Validity Quick Buttons - Unified 2-Color Design */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#475569' }}>মেয়াদ বৃদ্ধি:</span>
                         <button
                           onClick={() => handleExtendTrial(t.id, 7)}
                           className="super-admin-action-btn"
-                          style={{ padding: '6px 12px', borderRadius: '10px', background: isDark ? 'rgba(168, 85, 247, 0.15)' : '#f3e8ff', border: isDark ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid #d8b4fe', color: isDark ? '#d8b4fe' : '#7e22ce', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                         >
                           🎁 +৭ দিন ট্রায়াল
                         </button>
                         <button
                           onClick={() => handleExtendValidity(t.id, 1)}
                           className="super-admin-action-btn"
-                          style={{ padding: '6px 12px', borderRadius: '10px', background: isDark ? '#1e293b' : '#ffffff', border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', color: isDark ? '#f8fafc' : '#0f172a', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                         >
                           +১ মাস
                         </button>
                         <button
                           onClick={() => handleExtendValidity(t.id, 6)}
                           className="super-admin-action-btn"
-                          style={{ padding: '6px 12px', borderRadius: '10px', background: isDark ? '#1e293b' : '#ffffff', border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', color: isDark ? '#f8fafc' : '#0f172a', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                         >
                           +৬ মাস
                         </button>
                         <button
                           onClick={() => handleExtendValidity(t.id, 12)}
                           className="super-admin-action-btn"
-                          style={{ padding: '6px 12px', borderRadius: '10px', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', border: isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #86efac', color: isDark ? '#6ee7b7' : '#065f46', fontSize: '12px', fontWeight: '900', cursor: 'pointer' }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: '900',
+                            cursor: 'pointer',
+                            borderColor: '#10b981',
+                            color: isDark ? '#34d399' : '#059669',
+                            background: isDark ? 'rgba(16, 185, 129, 0.12)' : '#ecfdf5'
+                          }}
                         >
                           +১ বছর 🔥
                         </button>
@@ -2066,14 +2055,14 @@ export default function SuperAdminPage() {
                         <button
                           onClick={() => setSmsRechargeShop(t)}
                           className="super-admin-action-btn"
-                          style={{ padding: '6px 12px', borderRadius: '10px', background: isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff', border: isDark ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #bfdbfe', color: isDark ? '#93c5fd' : '#1d4ed8', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                         >
                           + রিচার্জ
                         </button>
                       </div>
                     </div>
 
-                    {/* Bottom Action Toolbar - Highlighted & Categorized */}
+                    {/* Bottom Action Toolbar - Clean Unified 2-Color Design */}
                     <div style={{
                       display: 'flex',
                       gap: '8px',
@@ -2082,7 +2071,7 @@ export default function SuperAdminPage() {
                       paddingTop: '6px',
                       borderTop: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9'
                     }}>
-                      {/* 1. EDIT BUTTON - PROMINENT & HIGH-CONTRAST */}
+                      {/* 1. EDIT BUTTON - PROMINENT SLATE BUTTON */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -2111,10 +2100,11 @@ export default function SuperAdminPage() {
                             smsBalance: t.smsBalance !== undefined && t.smsBalance !== null ? Number(t.smsBalance) : (t.sms_balance !== undefined ? Number(t.sms_balance) : 50)
                           });
                         }}
+                        className="super-admin-action-btn"
                         style={{
-                          background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                          background: isDark ? '#1e293b' : '#0f172a',
                           color: '#ffffff',
-                          border: 'none',
+                          border: isDark ? '1.5px solid #334155' : '1.5px solid #0f172a',
                           padding: '8px 16px',
                           borderRadius: '11px',
                           fontWeight: '900',
@@ -2122,8 +2112,7 @@ export default function SuperAdminPage() {
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 3px 10px rgba(79, 70, 229, 0.28)'
+                          gap: '6px'
                         }}
                       >
                         <span>✏️</span>
@@ -2135,17 +2124,11 @@ export default function SuperAdminPage() {
                         onClick={() => { setResetPinShop(t); setNewPinInput(''); }}
                         className="super-admin-action-btn"
                         style={{
-                          background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
-                          color: isDark ? '#fbbf24' : '#b45309',
-                          border: isDark ? '1px solid rgba(245, 158, 11, 0.3)' : '1.5px solid #fde68a',
                           padding: '8px 14px',
                           borderRadius: '11px',
                           fontWeight: '800',
                           fontSize: '12.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          cursor: 'pointer'
                         }}
                       >
                         <span>🔑</span>
@@ -2157,17 +2140,11 @@ export default function SuperAdminPage() {
                         onClick={() => openFeatureModal(t)}
                         className="super-admin-action-btn"
                         style={{
-                          background: isDark ? 'rgba(147, 51, 234, 0.15)' : '#f5f3ff',
-                          color: isDark ? '#c084fc' : '#6d28d9',
-                          border: isDark ? '1px solid rgba(147, 51, 234, 0.3)' : '1.5px solid #ddd6fe',
                           padding: '8px 14px',
                           borderRadius: '11px',
                           fontWeight: '800',
                           fontSize: '12.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          cursor: 'pointer'
                         }}
                       >
                         <span>⚙️</span>
@@ -2179,17 +2156,11 @@ export default function SuperAdminPage() {
                         onClick={() => handleOpenInspect(t)}
                         className="super-admin-action-btn"
                         style={{
-                          background: isDark ? 'rgba(14, 165, 233, 0.15)' : '#f0f9ff',
-                          color: isDark ? '#7dd3fc' : '#0369a1',
-                          border: isDark ? '1px solid rgba(14, 165, 233, 0.3)' : '1.5px solid #bae6fd',
                           padding: '8px 14px',
                           borderRadius: '11px',
                           fontWeight: '800',
                           fontSize: '12.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          cursor: 'pointer'
                         }}
                       >
                         <span>🔍</span>
@@ -2201,25 +2172,11 @@ export default function SuperAdminPage() {
                         onClick={() => toggleShopStatus(t.id, t.status)}
                         className="super-admin-action-btn"
                         style={{
-                          background: t.status === 'active'
-                            ? (isDark ? 'rgba(239, 68, 68, 0.15)' : '#fff1f2')
-                            : (isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4'),
-                          color: t.status === 'active'
-                            ? (isDark ? '#f87171' : '#e11d48')
-                            : (isDark ? '#6ee7b7' : '#16a34a'),
-                          border: `1.5px solid ${
-                            t.status === 'active'
-                              ? (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecdd3')
-                              : (isDark ? 'rgba(16, 185, 129, 0.3)' : '#bbf7d0')
-                          }`,
                           padding: '8px 14px',
                           borderRadius: '11px',
                           fontWeight: '800',
                           fontSize: '12.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          cursor: 'pointer'
                         }}
                       >
                         <span>{t.status === 'active' ? '⏸' : '▶'}</span>
@@ -2231,18 +2188,13 @@ export default function SuperAdminPage() {
                         onClick={() => handleDeleteShop(t)}
                         className="super-admin-action-btn"
                         style={{
-                          background: isDark ? '#1e293b' : '#ffffff',
-                          color: '#dc2626',
-                          border: isDark ? '1px solid rgba(239, 68, 68, 0.3)' : '1.5px solid #fecaca',
                           padding: '8px 14px',
                           borderRadius: '11px',
                           fontWeight: '800',
                           fontSize: '12.5px',
                           cursor: 'pointer',
                           marginLeft: 'auto',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          color: '#ef4444'
                         }}
                       >
                         <span>🗑️</span>
@@ -2272,7 +2224,7 @@ export default function SuperAdminPage() {
             <button
               onClick={() => setShowCouponModal(true)}
               style={{
-                background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#fff',
                 border: 'none',
                 padding: '10px 18px',
@@ -2280,7 +2232,7 @@ export default function SuperAdminPage() {
                 fontWeight: '800',
                 fontSize: '13.5px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
               }}
             >
               ➕ নতুন কুপন তৈরি করুন
@@ -2302,8 +2254,8 @@ export default function SuperAdminPage() {
               <tbody>
                 {coupons.map((c: any) => (
                   <tr key={c.id} style={{ borderBottom: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: '900', color: '#4f46e5' }}>
-                      <span style={{ background: isDark ? 'rgba(99, 102, 241, 0.15)' : '#eef2ff', color: isDark ? '#a5b4fc' : '#4338ca', padding: '4px 10px', borderRadius: '6px', border: isDark ? '1px dashed #6366f1' : '1px dashed #c7d2fe' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: '900', color: '#10b981' }}>
+                      <span style={{ background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', color: isDark ? '#34d399' : '#059669', padding: '4px 10px', borderRadius: '6px', border: isDark ? '1px dashed rgba(16, 185, 129, 0.4)' : '1px dashed #a7f3d0' }}>
                         {c.code}
                       </span>
                     </td>
@@ -2356,17 +2308,17 @@ export default function SuperAdminPage() {
               <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b' }}>দোকানদারদের মোট বকেয়া</div>
             </div>
 
-            <div className="super-admin-stat-card" style={{ padding: '20px', borderLeft: '4px solid #3b82f6', background: isDark ? '#111827' : '#ffffff' }}>
+            <div className="super-admin-stat-card" style={{ padding: '20px', borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
               <div style={{ fontSize: '12.5px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700' }}>ডাটাবেজে মোট পণ্য সংখ্যা</div>
-              <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: isDark ? '#60a5fa' : '#2563eb', margin: '6px 0' }}>
+              <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a', margin: '6px 0' }}>
                 {overview.totalProductsCount?.toLocaleString('en-US')} টি
               </div>
               <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b' }}>সকল দোকান মিলিয়ে</div>
             </div>
 
-            <div className="super-admin-stat-card" style={{ padding: '20px', borderLeft: '4px solid #8b5cf6', background: isDark ? '#111827' : '#ffffff' }}>
+            <div className="super-admin-stat-card" style={{ padding: '20px', borderLeft: '4px solid #10b981', background: isDark ? '#111827' : '#ffffff' }}>
               <div style={{ fontSize: '12.5px', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700' }}>মোট কাস্টমার সংখ্যা</div>
-              <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: isDark ? '#c084fc' : '#7c3aed', margin: '6px 0' }}>
+              <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: isDark ? '#ffffff' : '#0f172a', margin: '6px 0' }}>
                 {overview.totalCustomersCount?.toLocaleString('en-US')} জন
               </div>
               <div style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#64748b' }}>লেজার ও খাতা রেজিস্টার্ড</div>
@@ -2543,16 +2495,16 @@ export default function SuperAdminPage() {
                   triggerHaptic('light');
                 }}
                 style={{
-                  background: settingsSubTab === tab.id ? (isDark ? '#3b82f6' : '#0f172a') : (isDark ? '#1e293b' : '#ffffff'),
+                  background: settingsSubTab === tab.id ? '#10b981' : (isDark ? '#1e293b' : '#ffffff'),
                   color: settingsSubTab === tab.id ? '#ffffff' : (isDark ? '#94a3b8' : '#475569'),
-                  border: settingsSubTab === tab.id ? (isDark ? '1.5px solid #3b82f6' : '1.5px solid #0f172a') : (isDark ? '1.5px solid #334155' : '1.5px solid #cbd5e1'),
+                  border: settingsSubTab === tab.id ? '1.5px solid #10b981' : (isDark ? '1.5px solid #334155' : '1.5px solid #cbd5e1'),
                   padding: '9px 16px',
                   borderRadius: '12px',
                   fontWeight: '800',
                   fontSize: '13px',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: settingsSubTab === tab.id ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none',
+                  boxShadow: settingsSubTab === tab.id ? '0 4px 12px rgba(16, 185, 129, 0.25)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -3406,7 +3358,7 @@ export default function SuperAdminPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)' }}>
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}>
                   কুপন সেভ করুন
                 </button>
                 <button type="button" onClick={() => setShowCouponModal(false)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>

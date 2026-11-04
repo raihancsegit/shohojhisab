@@ -88,16 +88,16 @@ export default function DesktopAdminSidebar({
       title: 'বিক্রয় ও কাউন্টার',
       items: [
         { href: '/', label: 'ড্যাশবোর্ড', icon: '🏠', show: true },
-        { href: '/pos', label: industryTheme.posLabel || 'POS কাউন্টার (বিক্রি)', icon: '🛒', show: true, badge: 'হট', badgeColor: '#ef4444' },
+        { href: '/pos', label: industryTheme.posLabel || 'POS কাউন্টার (বিক্রি)', icon: '🛒', show: true, badge: 'হট', badgeColor: '#10b981' },
         { href: '/calculator', label: 'ক্যালকুলেটর কুইক সেল', icon: '🔢', show: true },
-        { href: '/pos?voice=1', label: 'ভয়েস মেমো ও বিলিং', icon: '🎙️', show: true, badge: 'এআই', badgeColor: '#6366f1' },
+        { href: '/pos?voice=1', label: 'ভয়েস মেমো ও বিলিং', icon: '🎙️', show: true, badge: 'এআই', badgeColor: '#10b981' },
       ]
     },
     {
       title: 'খাতা ও লেনদেন',
       items: [
-        { href: '/khata', label: industryTheme.khataLabel || 'বাকির হিসাব (খাতা)', icon: '📒', show: isFeatureEnabled('enableCustomerKhata'), badge: 'জরুরি', badgeColor: '#ea580c' },
-        { href: '/installments', label: 'বাকির কিস্তি কালেকশন', icon: '📅', show: isFeatureEnabled('enableInstallments'), badge: 'কিস্তি', badgeColor: '#4338ca' },
+        { href: '/khata', label: industryTheme.khataLabel || 'বাকির হিসাব (খাতা)', icon: '📒', show: isFeatureEnabled('enableCustomerKhata'), badge: 'জরুরি', badgeColor: '#10b981' },
+        { href: '/installments', label: 'বাকির কিস্তি কালেকশন', icon: '📅', show: isFeatureEnabled('enableInstallments'), badge: 'কিস্তি', badgeColor: '#10b981' },
         { href: '/expenses', label: 'ব্যয় / দৈনিক খরচ', icon: '💸', show: true },
         { href: '/day-end', label: 'ক্যাশ ড্রয়ার ও ক্লোজিং', icon: '🌙', show: isFeatureEnabled('enableCashDrawer') },
       ]
@@ -107,7 +107,7 @@ export default function DesktopAdminSidebar({
       items: [
         { href: '/stock', label: industryTheme.stockLabel || 'পণ্য (স্টক ইনভেন্টরি)', icon: '📦', show: true },
         { href: '/dealers', label: industryTheme.dealerLabel || 'ক্রয় (ডিলার চালান)', icon: '🛍️', show: isFeatureEnabled('enableDealerKhata') },
-        { href: '/dealer-portal', label: 'ডিলার পোর্টাল (সরাসরি চালান)', icon: '🚚', show: isFeatureEnabled('enableDealerKhata'), badge: 'পোর্টাল', badgeColor: '#0284c7' },
+        { href: '/dealer-portal', label: 'ডিলার পোর্টাল (সরাসরি চালান)', icon: '🚚', show: isFeatureEnabled('enableDealerKhata'), badge: 'পোর্টাল', badgeColor: '#10b981' },
         { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', show: normalizeIndustryId(activeIndustryId, tenant?.shopName) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
       ]
     },
@@ -120,10 +120,10 @@ export default function DesktopAdminSidebar({
     {
       title: 'ব্যবসা প্রশাসন',
       items: [
-        { href: '/staff', label: 'কর্মচারী ও পারমিশন', icon: '👥', show: true, badge: 'টিম', badgeColor: '#8b5cf6' },
+        { href: '/staff', label: 'কর্মচারী ও পারমিশন', icon: '👥', show: true, badge: 'টিম', badgeColor: '#10b981' },
         { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', show: isFeatureEnabled('enableMultiBranch') },
         { href: '/subscription', label: 'প্যাকেজ ও লাইসেন্স', icon: '💳', show: true },
-        { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', show: true, badge: 'নোটিশ', badgeColor: '#f43f5e' },
+        { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', show: true, badge: 'নোটিশ', badgeColor: '#10b981' },
         { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', show: true },
       ]
     },
@@ -255,7 +255,7 @@ export default function DesktopAdminSidebar({
             type="button"
             onClick={onToggleCollapse}
             style={{
-              background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               color: '#ffffff',
               border: 'none',
               width: '40px',
@@ -265,7 +265,7 @@ export default function DesktopAdminSidebar({
               placeItems: 'center',
               fontSize: '20px',
               cursor: 'pointer',
-              boxShadow: '0 3px 10px rgba(79, 70, 229, 0.35)'
+              boxShadow: '0 3px 10px rgba(16, 185, 129, 0.35)'
             }}
             title="সাইডবার বড় করুন (Expand)"
           >
@@ -408,16 +408,16 @@ export default function DesktopAdminSidebar({
                         borderRadius: '11px',
                         textDecoration: 'none',
                         color: isActive
-                          ? (isDark ? '#818cf8' : '#4338ca')
+                          ? (isDark ? '#34d399' : '#059669')
                           : (isDark ? '#cbd5e1' : '#334155'),
                         backgroundColor: isActive
-                          ? (isDark ? 'rgba(99, 102, 241, 0.16)' : '#eef2ff')
+                          ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5')
                           : 'transparent',
                         fontWeight: isActive ? '900' : '700',
                         fontSize: '12.5px',
                         transition: 'all 0.15s ease',
                         borderLeft: isActive
-                          ? `3px solid ${isDark ? '#818cf8' : '#4f46e5'}`
+                          ? '3px solid #10b981'
                           : '3px solid transparent'
                       }}
                       className="admin-sidebar-nav-link"
