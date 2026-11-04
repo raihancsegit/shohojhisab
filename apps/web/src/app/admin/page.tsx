@@ -917,13 +917,13 @@ export default function SuperAdminPage() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#ffffff',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '20px',
                 flexShrink: 0,
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)'
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
               }}>
                 👑
               </div>
@@ -932,7 +932,7 @@ export default function SuperAdminPage() {
                   <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff', margin: 0, letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
                     ShohojHisab
                   </h2>
-                  <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '11px', color: '#34d399', fontWeight: '800', whiteSpace: 'nowrap' }}>
                     সুপার অ্যাডমিন প্ল্যাটফর্ম
                   </span>
                 </div>
@@ -986,7 +986,7 @@ export default function SuperAdminPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>মাসিক আয়</div>
-                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#38bdf8' }}>৳{(overview.monthlyRecurringRevenue || 0).toLocaleString('en-US')}</div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#34d399' }}>৳{(overview.monthlyRecurringRevenue || 0).toLocaleString('en-US')}</div>
                 </div>
               </div>
             </div>
@@ -1417,8 +1417,8 @@ export default function SuperAdminPage() {
               type="button"
               onClick={logout}
               style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
+                background: isDark ? '#1e293b' : '#ffffff',
+                border: isDark ? '1px solid #334155' : '1.5px solid #cbd5e1',
                 color: '#ef4444',
                 padding: '8px 14px',
                 borderRadius: '10px',
@@ -1836,9 +1836,9 @@ export default function SuperAdminPage() {
                                 fontWeight: '800',
                                 padding: '3px 10px',
                                 borderRadius: '99px',
-                                background: remainingDays !== null && remainingDays > 0 ? (isDark ? 'rgba(168, 85, 247, 0.15)' : '#faf5ff') : (isDark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2'),
-                                color: remainingDays !== null && remainingDays > 0 ? (isDark ? '#d8b4fe' : '#6b21a8') : (isDark ? '#fca5a5' : '#b91c1c'),
-                                border: `1px solid ${remainingDays !== null && remainingDays > 0 ? (isDark ? 'rgba(168, 85, 247, 0.3)' : '#e9d5ff') : (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5')}`
+                                background: remainingDays !== null && remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5') : (isDark ? '#1e293b' : '#fee2e2'),
+                                color: remainingDays !== null && remainingDays > 0 ? (isDark ? '#34d399' : '#059669') : (isDark ? '#f87171' : '#dc2626'),
+                                border: `1px solid ${remainingDays !== null && remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0') : (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5')}`
                               }}>
                                 {remainingDays !== null && remainingDays > 0
                                   ? `⏳ আর ${remainingDays} দিন ফ্রি`
@@ -1852,22 +1852,22 @@ export default function SuperAdminPage() {
                                 fontWeight: '800',
                                 padding: '3px 10px',
                                 borderRadius: '99px',
-                                background: remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4') : (isDark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2'),
-                                color: remainingDays > 0 ? (isDark ? '#6ee7b7' : '#15803d') : (isDark ? '#fca5a5' : '#b91c1c'),
-                                border: `1px solid ${remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.3)' : '#bbf7d0') : (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5')}`
+                                background: remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5') : (isDark ? '#1e293b' : '#fee2e2'),
+                                color: remainingDays > 0 ? (isDark ? '#34d399' : '#059669') : (isDark ? '#f87171' : '#dc2626'),
+                                border: `1px solid ${remainingDays > 0 ? (isDark ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0') : (isDark ? 'rgba(239, 68, 68, 0.3)' : '#fca5a5')}`
                               }}>
                                 {remainingDays > 0 ? `✅ ${remainingDays} দিন বাকি` : '⚠️ মেয়াদ শেষ'}
                               </span>
                             )}
                           </div>
 
-                          {/* Metadata Chips */}
+                          {/* Metadata Chips - Unified Neutral */}
                           <div style={{ fontSize: '13px', color: isDark ? '#94a3b8' : '#64748b', marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <span style={{ background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#e2e8f0' : '#475569', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid #334155' : '1px solid #e2e8f0' }}>
                               👤 <strong>{t.ownerName}</strong>
                             </span>
                             <span style={{ background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#e2e8f0' : '#475569', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid #334155' : '1px solid #e2e8f0' }} className="num-font">
-                              📱 <strong style={{ color: isDark ? '#60a5fa' : '#0f172a' }}>{t.phone}</strong>
+                              📱 <strong style={{ color: isDark ? '#ffffff' : '#0f172a' }}>{t.phone}</strong>
                             </span>
                             <span style={{ background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#e2e8f0' : '#475569', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid #334155' : '1px solid #e2e8f0' }}>
                               📍 {t.location || 'স্থানীয় বাজার'}
@@ -1875,7 +1875,7 @@ export default function SuperAdminPage() {
                             <span style={{ background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#e2e8f0' : '#475569', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid #334155' : '1px solid #e2e8f0' }}>
                               🏷️ {t.industryName || 'ব্যবসা'}
                             </span>
-                            <span style={{ background: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb', color: isDark ? '#fbbf24' : '#92400e', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid #fde68a', fontWeight: '800' }}>
+                            <span style={{ background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#e2e8f0' : '#475569', padding: '2px 8px', borderRadius: '6px', border: isDark ? '1px solid #334155' : '1px solid #e2e8f0', fontWeight: '800' }}>
                               🔑 পিন: <strong>{t.pin || '1234'}</strong>
                             </span>
                           </div>
@@ -2335,7 +2335,7 @@ export default function SuperAdminPage() {
                 <div key={pb.planId} style={{ background: isDark ? '#161f30' : '#f8fafc', padding: '18px', borderRadius: '16px', border: isDark ? '1.5px solid #283548' : '1.5px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <strong style={{ fontSize: '15px', color: isDark ? '#f8fafc' : '#1e293b' }}>{pb.banglaName || pb.name}</strong>
-                    <span style={{ fontSize: '12px', fontWeight: '800', background: isDark ? 'rgba(99, 102, 241, 0.2)' : '#e0e7ff', color: isDark ? '#a5b4fc' : '#4338ca', padding: '2px 8px', borderRadius: '99px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5', color: isDark ? '#34d399' : '#059669', padding: '2px 8px', borderRadius: '99px' }}>
                       ৳{pb.monthlyPrice}/মাস
                     </span>
                   </div>
@@ -2377,7 +2377,7 @@ export default function SuperAdminPage() {
                       <td style={{ padding: '12px 14px', color: isDark ? '#94a3b8' : '#64748b' }}>
                         {sr.owner_name} ({sr.phone})
                       </td>
-                      <td style={{ padding: '12px 14px', fontWeight: '900', color: isDark ? '#c084fc' : '#7c3aed' }}>
+                      <td style={{ padding: '12px 14px', fontWeight: '900', color: isDark ? '#34d399' : '#059669' }}>
                         ৳{Number(sr.totalSales || 0).toLocaleString('en-US')}
                         <span style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#94a3b8', display: 'block' }}>{sr.orderCount || 0} টি মেমো</span>
                       </td>
@@ -2430,13 +2430,14 @@ export default function SuperAdminPage() {
                       <td style={{ padding: '12px 14px', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
                         {st.shop_name || 'দোকান'}
                       </td>
-                      <td style={{ padding: '12px 14px', color: isDark ? '#818cf8' : '#4f46e5', fontWeight: '800' }}>
+                      <td style={{ padding: '12px 14px', color: isDark ? '#34d399' : '#059669', fontWeight: '800' }}>
                         {st.plan_bangla_name || st.plan_id} ({st.billing_cycle === 'yearly' ? 'বাৎসরিক' : 'মাসিক'})
                       </td>
                       <td style={{ padding: '12px 14px' }}>
                         <span style={{
-                          background: st.payment_method === 'bkash' ? (isDark ? 'rgba(219, 39, 119, 0.15)' : '#fdf2f8') : (isDark ? 'rgba(234, 88, 12, 0.15)' : '#fff7ed'),
-                          color: st.payment_method === 'bkash' ? (isDark ? '#f472b6' : '#db2777') : (isDark ? '#fb923c' : '#ea580c'),
+                          background: isDark ? '#1e293b' : '#f8fafc',
+                          color: isDark ? '#cbd5e1' : '#0f172a',
+                          border: isDark ? '1px solid #334155' : '1px solid #e2e8f0',
                           padding: '3px 8px',
                           borderRadius: '6px',
                           fontWeight: '800',
@@ -2662,20 +2663,20 @@ export default function SuperAdminPage() {
 
               <form onSubmit={handleSaveSettings} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#db2777', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                     অফিসিয়াল বিকাশ নম্বর *
                   </label>
                   <input
                     type="text"
                     value={platformSettings.bkashMerchant || ''}
                     onChange={(e) => setPlatformSettings({ ...platformSettings, bkashMerchant: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #fbcfe8', fontSize: '15px', fontWeight: '800' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '15px', fontWeight: '800' }}
                     required
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#db2777', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                     বিকাশ অ্যাকাউন্টের ধরন
                   </label>
                   <select
@@ -2690,20 +2691,20 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#ea580c', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                     অফিসিয়াল নগদ নম্বর *
                   </label>
                   <input
                     type="text"
                     value={platformSettings.nagadMerchant || ''}
                     onChange={(e) => setPlatformSettings({ ...platformSettings, nagadMerchant: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '2px solid #ffedd5', fontSize: '15px', fontWeight: '800' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '15px', fontWeight: '800' }}
                     required
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#ea580c', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                     নগদ অ্যাকাউন্টের ধরন
                   </label>
                   <select
@@ -2717,7 +2718,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#4f46e5', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '6px' }}>
                     রকেট / উপায় নম্বর
                   </label>
                   <input
@@ -2872,7 +2873,7 @@ export default function SuperAdminPage() {
                     type="submit"
                     disabled={savingSettings}
                     style={{
-                      background: '#2563eb',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       color: '#ffffff',
                       padding: '12px 28px',
                       borderRadius: '12px',
@@ -2880,7 +2881,7 @@ export default function SuperAdminPage() {
                       fontWeight: '800',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)'
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)'
                     }}
                   >
                     {savingSettings ? 'সংরক্ষণ হচ্ছে...' : '✓ এসএমএস সেটিংস সংরক্ষণ করুন'}
@@ -2928,7 +2929,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#4f46e5', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
                     এন্টারপ্রাইজ / মাল্টি-ব্রাঞ্চ মাসিক ফি (টাকা)
                   </label>
                   <input
@@ -2952,7 +2953,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#b45309', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '800', color: '#334155', marginBottom: '6px' }}>
                     মেয়াদ শেষের পর গ্রেস পিরিয়ড (গ্রেস দিন)
                   </label>
                   <input
@@ -2980,7 +2981,7 @@ export default function SuperAdminPage() {
                     type="submit"
                     disabled={savingSettings}
                     style={{
-                      background: '#7c3aed',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       color: '#ffffff',
                       padding: '12px 28px',
                       borderRadius: '12px',
@@ -2988,7 +2989,7 @@ export default function SuperAdminPage() {
                       fontWeight: '800',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(124, 58, 237, 0.25)'
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)'
                     }}
                   >
                     {savingSettings ? 'সংরক্ষণ হচ্ছে...' : '✓ প্ল্যান ও বিলিং পলিসি সংরক্ষণ করুন'}
@@ -3215,8 +3216,8 @@ export default function SuperAdminPage() {
                     >
                       <div>
                         <span style={{
-                          background: '#e0e7ff',
-                          color: '#4338ca',
+                          background: '#ecfdf5',
+                          color: '#059669',
                           padding: '2px 8px',
                           borderRadius: '6px',
                           fontWeight: '800',
@@ -3259,9 +3260,9 @@ export default function SuperAdminPage() {
                     style={{
                       padding: '5px 12px',
                       borderRadius: '8px',
-                      border: smsCountInput === val ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                      background: smsCountInput === val ? '#eff6ff' : '#f8fafc',
-                      color: smsCountInput === val ? '#1d4ed8' : '#475569',
+                      border: smsCountInput === val ? '1.5px solid #10b981' : '1px solid #cbd5e1',
+                      background: smsCountInput === val ? '#ecfdf5' : '#f8fafc',
+                      color: smsCountInput === val ? '#059669' : '#475569',
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer'
@@ -3280,7 +3281,7 @@ export default function SuperAdminPage() {
                 required
               />
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)' }}>
+                <button type="submit" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none', padding: '11px', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}>
                   রিচার্জ নিশ্চিত করুন
                 </button>
                 <button type="button" onClick={() => setSmsRechargeShop(null)} style={{ padding: '11px 18px', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
@@ -3398,7 +3399,7 @@ export default function SuperAdminPage() {
                     type="checkbox"
                     checked={Boolean(shopFeatures[f.key])}
                     onChange={(e) => setShopFeatures({ ...shopFeatures, [f.key]: e.target.checked })}
-                    style={{ width: '18px', height: '18px', accentColor: '#7c3aed' }}
+                    style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
                   />
                   <span>{f.label}</span>
                 </label>
@@ -3841,7 +3842,7 @@ export default function SuperAdminPage() {
                 </div>
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                   <span style={{ color: '#64748b', display: 'block', fontSize: '11.5px' }}>এসএমএস ব্যালেন্স:</span>
-                  <strong style={{ fontSize: '14px', color: '#2563eb' }}>{inspectData.smsBalance || 0}</strong>
+                  <strong style={{ fontSize: '14px', color: '#059669' }}>{inspectData.smsBalance || 0}</strong>
                 </div>
               </div>
             ) : (

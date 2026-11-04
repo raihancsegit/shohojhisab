@@ -345,7 +345,7 @@ export default function ShopkeeperDashboard() {
           textAlign: 'center',
           padding: `${Math.min(pullDistance, 36)}px 0 12px`,
           transition: isRefreshing ? 'all 0.2s ease' : 'none',
-          color: '#4f46e5',
+          color: '#059669',
           fontWeight: '800',
           fontSize: '13px',
           display: 'flex',
@@ -435,7 +435,7 @@ export default function ShopkeeperDashboard() {
           <Link
             href="/pos?voice=1"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              background: '#0f172a',
               color: '#ffffff',
               padding: '8px 12px',
               borderRadius: '10px',
@@ -445,7 +445,7 @@ export default function ShopkeeperDashboard() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)',
               transition: 'transform 0.15s ease'
             }}
             className="clickable-card"
@@ -516,7 +516,7 @@ export default function ShopkeeperDashboard() {
           href="/pos?voice=1"
           onClick={() => triggerHaptic('light')}
           style={{
-            background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
             color: '#ffffff',
             borderRadius: '16px',
             padding: '11px 12px',
@@ -524,7 +524,7 @@ export default function ShopkeeperDashboard() {
             display: 'flex',
             alignItems: 'center',
             gap: '9px',
-            boxShadow: '0 4px 12px rgba(79, 70, 229, 0.18)',
+            boxShadow: '0 4px 12px rgba(15, 23, 42, 0.18)',
             transition: 'transform 0.15s ease',
             minWidth: 0
           }}
@@ -636,9 +636,9 @@ export default function ShopkeeperDashboard() {
                   }
                 }}
                 style={{
-                  background: isActive ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' : '#f1f5f9',
+                  background: isActive ? '#10b981' : '#f1f5f9',
                   color: isActive ? '#ffffff' : '#475569',
-                  border: isActive ? '1px solid #4338ca' : '1px solid #e2e8f0',
+                  border: isActive ? '1px solid #10b981' : '1px solid #e2e8f0',
                   borderRadius: '10px',
                   padding: item.id === 'custom' ? '6px 10px' : '6px 12px',
                   fontSize: '12.5px',
@@ -724,7 +724,7 @@ export default function ShopkeeperDashboard() {
               }}
               style={{
                 width: '100%',
-                background: (!customStartDate || !customEndDate) ? '#94a3b8' : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                background: (!customStartDate || !customEndDate) ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '12px',
@@ -794,24 +794,24 @@ export default function ShopkeeperDashboard() {
 
         return (
           <>
-            {/* 👑 Royal Indigo Hero Cockpit Card */}
+            {/* 👑 Hero Cockpit Card - Slate Navy 2-Color */}
             <div style={{
-              background: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
               color: '#ffffff',
               borderRadius: '24px',
               padding: '22px 20px',
               marginBottom: '20px',
-              boxShadow: '0 12px 30px -5px rgba(49, 46, 129, 0.4)',
+              boxShadow: '0 12px 30px -5px rgba(15, 23, 42, 0.35)',
               position: 'relative',
               overflow: 'hidden'
             }}>
               {/* Top Row: Subtitle + Memo Count + Voice Readout + Privacy Eye Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.16)', color: '#e0e7ff', padding: '3px 10px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.12)', color: '#cbd5e1', padding: '3px 10px', borderRadius: '8px' }}>
                     📊 {periodLabel}
                   </span>
-                  <span style={{ fontSize: '11.5px', background: '#ecfdf5', color: '#065f46', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11.5px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
                     {((metrics as any)?.todayOrderCount !== undefined ? (metrics as any).todayOrderCount : metrics.orderCount || 0)}টি মেমো বিক্রি
                   </span>
                 </div>
@@ -875,7 +875,7 @@ export default function ShopkeeperDashboard() {
 
               {/* Centerpiece: মোট বিক্রি (Total Sales) */}
               <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-                <div style={{ fontSize: '13px', color: '#c7d2fe', fontWeight: '800', marginBottom: '2px' }}>
+                <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '800', marginBottom: '2px' }}>
                   {periodLabel} এর মোট বিক্রি
                 </div>
                 <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }} className="num-font">
@@ -890,29 +890,29 @@ export default function ShopkeeperDashboard() {
                 gap: '8px',
                 marginBottom: '16px'
               }}>
-                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
                   <span style={{ fontSize: '10.5px', color: '#a7f3d0', fontWeight: '800', display: 'block' }}>💵 নগদ বিক্রি</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayCashSales !== undefined ? (metrics as any).todayCashSales : metrics.cashSales || 0).toLocaleString('en-US')}`}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fecdd3', fontWeight: '800', display: 'block' }}>🔴 বাকি বিক্রি</span>
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#fca5a5', fontWeight: '800', display: 'block' }}>🔴 বাকি বিক্রি</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayDueSales !== undefined ? (metrics as any).todayDueSales : 0).toLocaleString('en-US')}`}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fed7aa', fontWeight: '800', display: 'block' }}>💹 {periodLabel} নিট লাভ</span>
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#34d399', fontWeight: '800', display: 'block' }}>💹 {periodLabel} নিট লাভ</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {activeRoleMode === 'owner' ? (privacyMode ? '••••' : `৳ ${((metrics as any)?.todayNetProfit !== undefined ? (metrics as any).todayNetProfit : metrics.netProfit || 0).toLocaleString('en-US')}`) : '🔒 মোড'}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fbcfe8', fontWeight: '800', display: 'block' }}>💸 {periodLabel} দোকান খরচ</span>
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '10.5px', color: '#cbd5e1', fontWeight: '800', display: 'block' }}>💸 {periodLabel} দোকান খরচ</span>
                   <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayExpenses !== undefined ? (metrics as any).todayExpenses : metrics.expenses || 0).toLocaleString('en-US')}`}
                   </strong>
@@ -944,7 +944,7 @@ export default function ShopkeeperDashboard() {
                 <div style={{ width: '1px', height: '28px', background: '#f1f5f9' }} />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eff6ff', color: '#2563eb', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
                     🏦
                   </div>
                   <div>
@@ -1014,13 +1014,13 @@ export default function ShopkeeperDashboard() {
                   href="/installments"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #c7d2fe',
-                    color: '#4338ca',
+                    border: '1.5px solid #e2e8f0',
+                    color: '#0f172a',
                     padding: '12px 6px',
                     borderRadius: '16px',
                     textAlign: 'center',
                     textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(67, 56, 202, 0.1)',
+                    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -1037,13 +1037,13 @@ export default function ShopkeeperDashboard() {
                 href="/stock"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #99f6e4',
-                  color: '#0d9488',
+                  border: '1.5px solid #e2e8f0',
+                  color: '#0f172a',
                   padding: '12px 6px',
                   borderRadius: '16px',
                   textAlign: 'center',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(13, 148, 136, 0.1)',
+                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -1059,13 +1059,13 @@ export default function ShopkeeperDashboard() {
                 href="/expenses"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #fecdd3',
-                  color: '#e11d48',
+                  border: '1.5px solid #e2e8f0',
+                  color: '#0f172a',
                   padding: '12px 6px',
                   borderRadius: '16px',
                   textAlign: 'center',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(225, 29, 72, 0.1)',
+                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -1078,7 +1078,7 @@ export default function ShopkeeperDashboard() {
               </Link>
             </div>
 
-            {/* 📊 FLOATING-BADGE KPI METRIC CARDS (Industry & Feature Tailored) */}
+            {/* 📊 FLOATING-BADGE KPI METRIC CARDS (Industry & Feature Tailored - Clean 2-Color) */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -1092,12 +1092,12 @@ export default function ShopkeeperDashboard() {
                   href="/khata"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #fed7aa',
+                    border: '1.5px solid #e2e8f0',
                     borderRadius: '20px',
                     padding: '16px 14px 14px',
                     position: 'relative',
                     textDecoration: 'none',
-                    boxShadow: '0 4px 14px rgba(254, 215, 170, 0.25)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -1113,12 +1113,12 @@ export default function ShopkeeperDashboard() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: '#ffedd5',
-                    color: '#ea580c',
+                    background: '#f8fafc',
+                    color: '#0f172a',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(234, 88, 12, 0.2)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                     border: '2px solid #ffffff'
                   }}>
                     📒
@@ -1127,9 +1127,9 @@ export default function ShopkeeperDashboard() {
                     <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {theme.khataLabel || 'কাস্টমার বাকি'} <span style={{ fontSize: '10px' }}>ⓘ</span>
                     </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#ea580c', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                       <span>{privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}</span>
-                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
                     </div>
                   </div>
                 </Link>
@@ -1141,12 +1141,12 @@ export default function ShopkeeperDashboard() {
                   href="/installments"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #c7d2fe',
+                    border: '1.5px solid #e2e8f0',
                     borderRadius: '20px',
                     padding: '16px 14px 14px',
                     position: 'relative',
                     textDecoration: 'none',
-                    boxShadow: '0 4px 14px rgba(199, 210, 254, 0.25)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -1162,12 +1162,12 @@ export default function ShopkeeperDashboard() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: '#e0e7ff',
-                    color: '#4338ca',
+                    background: '#f8fafc',
+                    color: '#0f172a',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(67, 56, 202, 0.2)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                     border: '2px solid #ffffff'
                   }}>
                     📅
@@ -1176,9 +1176,9 @@ export default function ShopkeeperDashboard() {
                     <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       কিস্তি হিসাব ও আদায় <span style={{ fontSize: '10px' }}>ⓘ</span>
                     </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#4338ca', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                       <span>বাকির কিস্তি</span>
-                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
                     </div>
                   </div>
                 </Link>
@@ -1190,12 +1190,12 @@ export default function ShopkeeperDashboard() {
                   href="/dealers"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #bae6fd',
+                    border: '1.5px solid #e2e8f0',
                     borderRadius: '20px',
                     padding: '16px 14px 14px',
                     position: 'relative',
                     textDecoration: 'none',
-                    boxShadow: '0 4px 14px rgba(186, 230, 253, 0.25)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
@@ -1211,12 +1211,12 @@ export default function ShopkeeperDashboard() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: '#e0f2fe',
-                    color: '#0284c7',
+                    background: '#f8fafc',
+                    color: '#0f172a',
                     display: 'grid',
                     placeItems: 'center',
                     fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                     border: '2px solid #ffffff'
                   }}>
                     🚚
@@ -1225,9 +1225,9 @@ export default function ShopkeeperDashboard() {
                     <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {theme.dealerLabel || 'ডিলার দেনা'} <span style={{ fontSize: '10px' }}>ⓘ</span>
                     </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0284c7', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                       <span>{privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}</span>
-                      <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
                     </div>
                   </div>
                 </Link>
@@ -1238,12 +1238,12 @@ export default function ShopkeeperDashboard() {
                 href="/stock"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #99f6e4',
+                  border: '1.5px solid #e2e8f0',
                   borderRadius: '20px',
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 14px rgba(153, 246, 228, 0.25)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -1260,12 +1260,12 @@ export default function ShopkeeperDashboard() {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: '#ccfbf1',
-                  color: '#0d9488',
+                  background: '#f8fafc',
+                  color: '#0f172a',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(13, 148, 136, 0.2)',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                   border: '2px solid #ffffff'
                 }}>
                   {theme.stockIcon || '📦'}
@@ -1276,7 +1276,7 @@ export default function ShopkeeperDashboard() {
                   </span>
                   <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                     <span>{products.length} আইটেম</span>
-                    <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                    <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
                   </div>
                 </div>
               </Link>
@@ -1286,12 +1286,12 @@ export default function ShopkeeperDashboard() {
                 href="/khata"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #fde047',
+                  border: '1.5px solid #e2e8f0',
                   borderRadius: '20px',
                   padding: '16px 14px 14px',
                   position: 'relative',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 14px rgba(253, 224, 71, 0.25)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -1308,12 +1308,12 @@ export default function ShopkeeperDashboard() {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: '#fef9c3',
-                  color: '#ca8a04',
+                  background: '#f8fafc',
+                  color: '#0f172a',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(202, 138, 4, 0.2)',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                   border: '2px solid #ffffff'
                 }}>
                   👥
@@ -1324,7 +1324,7 @@ export default function ShopkeeperDashboard() {
                   </span>
                   <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
                     <span>{customers.length} জন</span>
-                    <span style={{ color: '#4f46e5', fontSize: '16px' }}>→</span>
+                    <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
                   </div>
                 </div>
               </Link>

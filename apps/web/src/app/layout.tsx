@@ -360,7 +360,7 @@ function HeaderNav({
               </Link>
             ) : (
               <Link href="/login" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-                <div style={{ background: '#ffffff', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', fontSize: '17px', color: '#4f46e5', fontWeight: '900', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
+                <div style={{ background: '#ffffff', width: '32px', height: '32px', borderRadius: '9px', display: 'grid', placeItems: 'center', fontSize: '17px', color: '#10b981', fontWeight: '900', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
                   S
                 </div>
                 <div className="header-shop-text">
@@ -553,9 +553,9 @@ function HeaderNav({
                       padding: '9px 14px',
                       fontSize: '13px',
                       fontWeight: active ? '800' : '600',
-                      color: active ? (authTheme === 'dark' ? '#818cf8' : theme.primaryColor) : (authTheme === 'dark' ? '#94a3b8' : '#475569'),
+                      color: active ? (authTheme === 'dark' ? '#34d399' : theme.primaryColor) : (authTheme === 'dark' ? '#94a3b8' : '#475569'),
                       textDecoration: 'none',
-                      borderBottom: active ? `2.5px solid ${authTheme === 'dark' ? '#818cf8' : theme.primaryColor}` : '2.5px solid transparent',
+                      borderBottom: active ? `2.5px solid ${authTheme === 'dark' ? '#34d399' : theme.primaryColor}` : '2.5px solid transparent',
                       background: active ? (authTheme === 'dark' ? '#131b2e' : '#ffffff') : 'transparent',
                       borderRadius: '8px 8px 0 0',
                       display: 'flex',
@@ -610,7 +610,7 @@ function HeaderNav({
                   🔄 ক্যাশিয়ার / স্টাফ সুইচ
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '12px', color: authTheme === 'dark' ? '#94a3b8' : '#64748b' }}>
-                  বর্তমান: <strong style={{ color: '#6366f1' }}>{currentStaffUser?.name || (activeRoleMode === 'owner' ? 'দোকান মালিক' : 'কর্মচারী')}</strong>
+                  বর্তমান: <strong style={{ color: '#10b981' }}>{currentStaffUser?.name || (activeRoleMode === 'owner' ? 'দোকান মালিক' : 'কর্মচারী')}</strong>
                 </p>
               </div>
               <button
@@ -671,7 +671,7 @@ function HeaderNav({
                 <button
                   onClick={() => handlePinSubmit(pinInput)}
                   style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#fff',
                     border: 'none',
                     padding: '0 18px',
@@ -679,7 +679,7 @@ function HeaderNav({
                     fontWeight: '800',
                     fontSize: '13.5px',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)'
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)'
                   }}
                 >
                   প্রবেশ
@@ -703,10 +703,10 @@ function HeaderNav({
                       justifyContent: 'space-between',
                       padding: '10px 12px',
                       background: activeRoleMode === 'owner'
-                        ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.2)' : '#eef2ff')
+                        ? (authTheme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5')
                         : (authTheme === 'dark' ? '#1f2937' : '#f8fafc'),
                       border: activeRoleMode === 'owner'
-                        ? '1.5px solid #6366f1'
+                        ? '1.5px solid #10b981'
                         : (authTheme === 'dark' ? '1px solid #374151' : '1px solid #e2e8f0'),
                       borderRadius: '12px',
                       cursor: 'pointer',
@@ -721,7 +721,7 @@ function HeaderNav({
                         <div style={{ fontSize: '11px', color: authTheme === 'dark' ? '#94a3b8' : '#64748b' }}>সম্পূর্ণ এক্সেস ও নিট লাভ</div>
                       </div>
                     </div>
-                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#6366f1' }}>PIN: 1234</span>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#059669' }}>PIN: 1234</span>
                   </button>
 
                   {/* Registered Staff Members */}
@@ -771,8 +771,8 @@ function HeaderNav({
               style={{
                 display: 'block',
                 textAlign: 'center',
-                background: authTheme === 'dark' ? '#1f2937' : '#f1f5f9',
-                color: authTheme === 'dark' ? '#818cf8' : '#4f46e5',
+                background: authTheme === 'dark' ? '#1f2937' : '#ecfdf5',
+                color: authTheme === 'dark' ? '#34d399' : '#059669',
                 padding: '11px',
                 borderRadius: '12px',
                 fontSize: '12.5px',
@@ -851,7 +851,7 @@ function HeaderNav({
                   🏬 দোকান ও ক্যাটাগরি সুইচ
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                  বর্তমান: <strong style={{ color: '#6366f1' }}>{tenant?.shopName}</strong> ({theme.name})
+                  বর্তমান: <strong style={{ color: '#10b981' }}>{tenant?.shopName}</strong> ({theme.name})
                 </p>
               </div>
               <button
@@ -890,10 +890,10 @@ function HeaderNav({
                       justifyContent: 'space-between',
                       padding: '11px 14px',
                       background: isCurrent
-                        ? (authTheme === 'dark' ? 'rgba(99, 102, 241, 0.25)' : '#eef2ff')
+                        ? (authTheme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5')
                         : (authTheme === 'dark' ? '#0f172a' : '#f8fafc'),
                       border: isCurrent
-                        ? '1.5px solid #6366f1'
+                        ? '1.5px solid #10b981'
                         : (authTheme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'),
                       borderRadius: '14px',
                       cursor: 'pointer',
@@ -912,7 +912,7 @@ function HeaderNav({
                       </div>
                     </div>
                     {isCurrent ? (
-                      <span style={{ fontSize: '11px', background: '#4f46e5', color: '#fff', padding: '3px 8px', borderRadius: '99px', fontWeight: '800' }}>
+                      <span style={{ fontSize: '11px', background: '#10b981', color: '#fff', padding: '3px 8px', borderRadius: '99px', fontWeight: '800' }}>
                         সক্রিয়
                       </span>
                     ) : (
@@ -933,8 +933,9 @@ function HeaderNav({
                 style={{
                   flex: 1,
                   textAlign: 'center',
-                  background: 'rgba(79, 70, 229, 0.1)',
-                  color: '#4f46e5',
+                  background: authTheme === 'dark' ? '#1e293b' : '#f1f5f9',
+                  color: authTheme === 'dark' ? '#34d399' : '#059669',
+                  border: authTheme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
                   padding: '9px',
                   borderRadius: '10px',
                   fontSize: '12px',
@@ -950,7 +951,7 @@ function HeaderNav({
                 style={{
                   flex: 1,
                   textAlign: 'center',
-                  background: '#4f46e5',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: '#fff',
                   padding: '9px',
                   borderRadius: '10px',
@@ -1346,8 +1347,8 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             margin: '10px 10px 4px',
             padding: '12px 14px',
             borderRadius: '16px',
-            background: authTheme === 'dark' ? 'rgba(30, 27, 75, 0.6)' : '#f8fafc',
-            border: `1.5px solid ${authTheme === 'dark' ? 'rgba(99, 102, 241, 0.3)' : '#e2e8f0'}`,
+            background: authTheme === 'dark' ? '#1e293b' : '#f8fafc',
+            border: `1.5px solid ${authTheme === 'dark' ? '#334155' : '#e2e8f0'}`,
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
           }}>
             {/* Header: Plan & Badge */}
@@ -1357,7 +1358,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 <span style={{
                   fontSize: '12.5px',
                   fontWeight: '900',
-                  color: authTheme === 'dark' ? '#e0e7ff' : '#0f172a'
+                  color: authTheme === 'dark' ? '#f8fafc' : '#0f172a'
                 }}>
                   {tenant?.planName || 'প্রো প্যাকেজ'}
                 </span>
@@ -1376,7 +1377,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
             </div>
 
             {/* Plan cycle tag */}
-            <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: '800', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: '#059669', fontWeight: '800', marginBottom: '8px' }}>
               💎 {subInfo.planLabel}
             </div>
 
@@ -1418,9 +1419,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 width: `${subInfo.percentage}%`,
                 background: subInfo.isExpired
                   ? '#ef4444'
-                  : subInfo.percentage < 20
-                  ? '#f59e0b'
-                  : 'linear-gradient(90deg, #6366f1, #10b981)',
+                  : 'linear-gradient(90deg, #10b981, #059669)',
                 borderRadius: '99px',
                 transition: 'width 0.3s ease'
               }} />
@@ -1440,7 +1439,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 borderRadius: '8px',
                 background: subInfo.isExpired
                   ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                  : 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: '#ffffff',
                 textDecoration: 'none',
                 fontSize: '11px',
@@ -1635,11 +1634,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
-            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#5b50e6', letterSpacing: '0.3px' }}>
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
+            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0f172a', letterSpacing: '0.3px' }}>
               বিক্রয়
             </span>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
@@ -1667,7 +1666,8 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.15)'
+                border: '1.5px solid #a7f3d0',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)'
               }}>
                 🔢
               </div>
@@ -1693,12 +1693,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#eff6ff',
-                color: '#4f46e5',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.15)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 🎙️
               </div>
@@ -1725,11 +1726,12 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 height: '52px',
                 borderRadius: '16px',
                 background: '#f8fafc',
-                color: '#3b82f6',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 📦
               </div>
@@ -1755,12 +1757,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#fdf2f8',
-                color: '#ec4899',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(236, 72, 153, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 🛍️
               </div>
@@ -1787,12 +1790,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                   width: '52px',
                   height: '52px',
                   borderRadius: '16px',
-                  background: '#fff7ed',
-                  color: '#ea580c',
+                  background: '#f8fafc',
+                  color: '#0f172a',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '24px',
-                  boxShadow: '0 2px 8px rgba(234, 88, 12, 0.12)'
+                  border: '1.5px solid #e2e8f0',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}>
                   🤲
                 </div>
@@ -1820,12 +1824,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                   width: '52px',
                   height: '52px',
                   borderRadius: '16px',
-                  background: '#e0e7ff',
-                  color: '#4338ca',
+                  background: '#f8fafc',
+                  color: '#0f172a',
                   display: 'grid',
                   placeItems: 'center',
                   fontSize: '24px',
-                  boxShadow: '0 2px 8px rgba(67, 56, 202, 0.12)'
+                  border: '1.5px solid #e2e8f0',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}>
                   📅
                 </div>
@@ -1844,11 +1849,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
-            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#5b50e6', letterSpacing: '0.3px' }}>
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
+            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0f172a', letterSpacing: '0.3px' }}>
               ক্রয়
             </span>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
@@ -1871,12 +1876,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#eff6ff',
-                color: '#2563eb',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 🛒
               </div>
@@ -1902,12 +1908,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#ecfdf5',
-                color: '#059669',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 🔄
               </div>
@@ -1933,12 +1940,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#f0fdf4',
-                color: '#16a34a',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 💸
               </div>
@@ -1956,11 +1964,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
-            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#5b50e6', letterSpacing: '0.3px' }}>
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
+            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0f172a', letterSpacing: '0.3px' }}>
               অর্ডার
             </span>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
@@ -1983,12 +1991,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#eff6ff',
-                color: '#3b82f6',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 📋
               </div>
@@ -2014,12 +2023,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#fefce8',
-                color: '#ca8a04',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(202, 138, 4, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 📝
               </div>
@@ -2046,10 +2056,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 height: '52px',
                 borderRadius: '16px',
                 background: '#f8fafc',
-                color: '#64748b',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
-                fontSize: '24px'
+                fontSize: '24px',
+                border: '1.5px solid #e2e8f0'
               }}>
                 🏷️
               </div>
@@ -2067,11 +2078,11 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
             gap: '12px',
             marginBottom: '16px'
           }}>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
-            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#5b50e6', letterSpacing: '0.3px' }}>
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
+            <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0f172a', letterSpacing: '0.3px' }}>
               অন্যান্য
             </span>
-            <div style={{ flex: 1, borderBottom: '1.5px dotted #c7d2fe' }} />
+            <div style={{ flex: 1, borderBottom: '1.5px solid #e2e8f0' }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
@@ -2094,12 +2105,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#eff6ff',
-                color: '#4f46e5',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(79, 70, 229, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 📊
               </div>
@@ -2125,12 +2137,13 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#f0fdf4',
-                color: '#16a34a',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(22, 163, 74, 0.12)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 ⚖️
               </div>
@@ -2156,16 +2169,17 @@ function ActionSheetModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 width: '52px',
                 height: '52px',
                 borderRadius: '16px',
-                background: '#fef2f2',
-                color: '#ef4444',
+                background: '#f8fafc',
+                color: '#0f172a',
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: '24px',
-                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)'
+                border: '1.5px solid #e2e8f0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
               }}>
                 🎙️
               </div>
-              <span style={{ fontSize: '12px', fontWeight: '800', color: '#dc2626' }}>ভয়েস হিসাব</span>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155' }}>ভয়েস হিসাব</span>
             </button>
           </div>
         </div>
@@ -2245,7 +2259,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
+          color: pathname === '/' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -2266,7 +2280,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === tab2.href ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
+          color: pathname === tab2.href ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         {tab2.icon}
@@ -2278,7 +2292,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
         type="button"
         onClick={() => { triggerHaptic('medium'); onOpenActionSheet(); }}
         style={{
-          background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
           color: '#ffffff',
           border: isDark ? '3px solid #131b2e' : '3px solid #ffffff',
           width: '52px',
@@ -2288,7 +2302,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           placeItems: 'center',
           cursor: 'pointer',
           marginTop: '-24px',
-          boxShadow: '0 8px 20px rgba(79, 70, 229, 0.45)',
+          boxShadow: '0 8px 20px rgba(16, 185, 129, 0.45)',
           flexShrink: 0
         }}
         title="নতুন হিসাব বা বিক্রি যুক্ত করুন"
@@ -2310,7 +2324,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/stock' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
+          color: pathname === '/stock' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/stock' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
@@ -2333,7 +2347,7 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           gap: '4px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/pos' ? (isDark ? '#818cf8' : '#4f46e5') : (isDark ? '#94a3b8' : '#64748b')
+          color: pathname === '/pos' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/pos' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">

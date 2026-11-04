@@ -21,15 +21,15 @@ export interface IndustryTheme {
   terms: string[];
 }
 
-// Unified, cohesive, professional Royal Indigo palette across the ENTIRE system
+// Unified, cohesive, professional 2-Color Emerald & Slate palette across the ENTIRE system
 const UNIFIED_PALETTE = {
-  primaryColor: '#4f46e5',
-  primaryGradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-  accentBg: '#eef2ff',
-  accentBorder: '#c7d2fe',
-  textPrimary: '#3730a3',
-  headerBadgeBg: '#e0e7ff',
-  headerBadgeText: '#4338ca',
+  primaryColor: '#10b981',
+  primaryGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  accentBg: '#ecfdf5',
+  accentBorder: '#a7f3d0',
+  textPrimary: '#059669',
+  headerBadgeBg: '#ecfdf5',
+  headerBadgeText: '#065f46',
 };
 
 export const INDUSTRY_THEMES: Record<string, IndustryTheme> = {
