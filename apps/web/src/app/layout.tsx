@@ -305,9 +305,6 @@ function HeaderNav({
                   }}
                   title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
                 >
-                  <div className="header-shop-icon">
-                    {theme.icon}
-                  </div>
                   <div className="header-shop-text">
                     <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>{tenant.shopName || 'সহজ হিসাব'}</span>
@@ -431,25 +428,6 @@ function HeaderNav({
                 >
                   🎙️
                 </button>
-
-                {/* Notification Bell */}
-                <Link
-                  href="/notifications"
-                  className="header-icon-btn"
-                  title="বিজ্ঞপ্তি"
-                >
-                  🔔
-                  <span style={{
-                    position: 'absolute',
-                    top: '4px',
-                    right: '4px',
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    background: '#f43f5e',
-                    boxShadow: '0 0 4px #f43f5e'
-                  }} />
-                </Link>
 
                 {/* Instant Dark / Light Mode Toggle */}
                 <button
@@ -1225,6 +1203,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     { href: '/expiry-tracker', label: 'মেয়াদোত্তীর্ণ রাডার (Expiry)', icon: '⏳', iconBg: '#fee2e2', iconColor: '#b91c1c', show: normalizeIndustryId(tenant?.industryId) === 'cat-pharmacy' || isFeatureEnabled('enableExpiryTracker') },
     { href: '/reports', label: 'রিপোর্টস ও লাভ-ক্ষতি', icon: '📊', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/subscription', label: 'প্যাকেজ ও সাবস্ক্রিপশন', icon: '💳', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'প্যাকেজ' },
+    { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', iconBg: '#ffe4e6', iconColor: '#e11d48', badge: 'নোটিশ' },
     { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', iconBg: '#f1f5f9', iconColor: '#475569' },
     { href: '/support', label: 'হেল্প এন্ড সাপোর্ট', icon: '🎧', iconBg: '#eef2ff', iconColor: '#4f46e5' },
     { href: '/tutorials', label: 'টিউটোরিয়াল ভিডিও', icon: '🎬', iconBg: '#eef2ff', iconColor: '#4f46e5', badge: 'ভিডিও' },

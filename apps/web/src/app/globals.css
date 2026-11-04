@@ -1702,7 +1702,9 @@ html.dark .shimmer-sweep {
 
 .super-admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -1712,9 +1714,8 @@ html.dark .shimmer-sweep {
   max-width: 280px;
   flex-shrink: 0;
   height: 100vh;
-  position: sticky;
-  top: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 50;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1739,7 +1740,10 @@ html.dark .shimmer-sweep {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg-canvas, #f8fafc);
 }
 
@@ -1795,6 +1799,169 @@ html.dark .shimmer-sweep {
   font-weight: 800;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
+
+/* Super Admin Modern UI Enhancements */
+.super-admin-stat-card {
+  border-radius: 20px;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.super-admin-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+.dark .super-admin-stat-card {
+  background: #111827;
+  border-color: #1f2937;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .super-admin-stat-card:hover {
+  border-color: #374151;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.super-admin-shop-card {
+  border-radius: 22px;
+  padding: 22px 24px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.super-admin-shop-card:hover {
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.09);
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+.dark .super-admin-shop-card {
+  background: #111827;
+  border-color: #1f2937;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.dark .super-admin-shop-card:hover {
+  border-color: #374151;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.super-admin-pill-btn {
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.super-admin-pill-btn:hover {
+  transform: translateY(-1px);
+}
+
+.super-admin-action-btn {
+  padding: 8px 14px;
+  border-radius: 11px;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.super-admin-action-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.25); }
+  50% { box-shadow: 0 0 22px rgba(245, 158, 11, 0.55); }
+}
+
+.pulse-amber-glow {
+  animation: pulseGlow 2.5s infinite;
+}
+
+/* ============================================================
+   SUPER ADMIN DASHBOARD - ULTRA MODERN THEME ENHANCEMENTS
+   ============================================================ */
+
+.dark .super-admin-layout {
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
+}
+
+.dark .super-admin-layout .ui-card {
+  background: #111827 !important;
+  border-color: #1f2937 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .super-admin-layout input:not([type="checkbox"]):not([type="radio"]),
+.dark .super-admin-layout select,
+.dark .super-admin-layout textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.dark .super-admin-layout input::placeholder,
+.dark .super-admin-layout textarea::placeholder {
+  color: #64748b !important;
+}
+
+.dark .super-admin-layout label {
+  color: #cbd5e1 !important;
+}
+
+.dark .super-admin-layout th {
+  color: #94a3b8 !important;
+}
+
+.dark .super-admin-layout td {
+  color: #cbd5e1 !important;
+}
+
+.dark .super-admin-layout tr {
+  border-color: #1f2937 !important;
+}
+
+/* Scrollbar styling for admin */
+.super-admin-layout ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.super-admin-layout ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.super-admin-layout ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 99px;
+}
+.dark .super-admin-layout ::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.5);
+}
+
 
 
 

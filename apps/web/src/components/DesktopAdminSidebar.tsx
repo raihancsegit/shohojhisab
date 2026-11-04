@@ -123,6 +123,7 @@ export default function DesktopAdminSidebar({
         { href: '/staff', label: 'কর্মচারী ও পারমিশন', icon: '👥', show: true, badge: 'টিম', badgeColor: '#8b5cf6' },
         { href: '/branches', label: 'দোকানের শাখা (Branches)', icon: '🏢', show: isFeatureEnabled('enableMultiBranch') },
         { href: '/subscription', label: 'প্যাকেজ ও লাইসেন্স', icon: '💳', show: true },
+        { href: '/notifications', label: 'বিজ্ঞপ্তি ও অ্যালার্ট', icon: '🔔', show: true, badge: 'নোটিশ', badgeColor: '#f43f5e' },
         { href: '/settings', label: 'দোকানের সেটিংস', icon: '⚙️', show: true },
       ]
     },
