@@ -4,11 +4,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useVoiceAgent } from '../hooks/useVoiceAgent';
 import { useAuth } from '../context/AuthContext';
+import SpeakerVoiceEnrollModal from './SpeakerVoiceEnrollModal';
+import { isSpeakerLockEnabled, getSpeakerVoiceProfiles } from '../lib/speakerProfileEngine';
+import { voiceProximityManager, ProximityDistanceMode } from '../lib/voiceProximityGate';
 
 export default function VoiceAssistant() {
   const pathname = usePathname();
   const router = useRouter();
   const { tenant } = useAuth();
+  const effectiveTenantId = tenant?.id || (() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
+      if (raw) return JSON.parse(raw)?.id;
+    } catch (e) {}
+    return 'default';
+  })();
   const [showTypeInput, setShowTypeInput] = useState<boolean>(false);
   const [manualText, setManualText] = useState<string>('');
   const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -16,6 +26,27 @@ export default function VoiceAssistant() {
   const [isScanningInvoice, setIsScanningInvoice] = useState<boolean>(false);
   const [scannedInvoiceData, setScannedInvoiceData] = useState<any>(null);
   const [isCommittingStock, setIsCommittingStock] = useState<boolean>(false);
+  const [showVoiceEnrollModal, setShowVoiceEnrollModal] = useState<boolean>(false);
+  const [isVoiceLockActive, setIsVoiceLockActive] = useState<boolean>(false);
+  const [hasVoiceProfile, setHasVoiceProfile] = useState<boolean>(false);
+  const [proximityMode, setProximityMode] = useState<ProximityDistanceMode>('near');
+
+  useEffect(() => {
+    const checkVoiceLock = () => {
+      const tKey = effectiveTenantId;
+      const profiles = getSpeakerVoiceProfiles(tKey);
+      setHasVoiceProfile(profiles.length > 0);
+      setIsVoiceLockActive(isSpeakerLockEnabled(tKey));
+      setProximityMode(voiceProximityManager.getMode());
+    };
+    checkVoiceLock();
+    window.addEventListener('storage', checkVoiceLock);
+    window.addEventListener('lbos-voice-profiles-updated', checkVoiceLock);
+    return () => {
+      window.removeEventListener('storage', checkVoiceLock);
+      window.removeEventListener('lbos-voice-profiles-updated', checkVoiceLock);
+    };
+  }, [effectiveTenantId, showVoiceEnrollModal]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -36,13 +67,6 @@ export default function VoiceAssistant() {
     undoAction
   } = useVoiceAgent();
 
-  const effectiveTenantId = tenant?.id || (() => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('lbos_active_tenant') : null;
-      if (raw) return JSON.parse(raw)?.id;
-    } catch (e) {}
-    return 'default';
-  })();
 
   // Track Online / Offline State
   useEffect(() => {
@@ -312,6 +336,19 @@ export default function VoiceAssistant() {
         </div>
       )}
 
+      {showVoiceEnrollModal && (
+        <SpeakerVoiceEnrollModal
+          isOpen={showVoiceEnrollModal}
+          onClose={() => setShowVoiceEnrollModal(false)}
+          tenantId={effectiveTenantId}
+          onProfileUpdated={() => {
+            const tKey = effectiveTenantId;
+            setIsVoiceLockActive(isSpeakerLockEnabled(tKey));
+            setHasVoiceProfile(getSpeakerVoiceProfiles(tKey).length > 0);
+          }}
+        />
+      )}
+
       <div className="floating-voice-widget">
         {/* 💬 Live Transcript / Feedback Pop-up */}
         {feedbackType && (
@@ -336,6 +373,100 @@ export default function VoiceAssistant() {
             animation: 'fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             fontFamily: "'Hind Siliguri', 'Outfit', sans-serif"
           }}>
+            {/* 🛡️ Voice Lock & Near-Field Proximity Shield Bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '6px',
+              paddingBottom: '8px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              fontSize: '11px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceEnrollModal(true)}
+                  style={{
+                    background: isVoiceLockActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.2)',
+                    border: isVoiceLockActive ? '1px solid rgba(52, 211, 153, 0.5)' : '1px solid rgba(245, 158, 11, 0.45)',
+                    color: isVoiceLockActive ? '#34d399' : '#fbbf24',
+                    padding: '2px 8px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="ভয়েস লক ও স্পিকার প্রোফাইল সেটিংস"
+                >
+                  <span>{isVoiceLockActive ? '🔒' : '⚠️'}</span>
+                  <span>{isVoiceLockActive ? 'ভয়েস লক অন (মালিকের কণ্ঠ)' : 'ভয়েস লক অফ (এনরোল করুন)'}</span>
+                </button>
+
+                {/* Proximity Distance Mode Switcher */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      voiceProximityManager.setMode('near');
+                      setProximityMode('near');
+                    }}
+                    style={{
+                      background: proximityMode === 'near' ? 'rgba(16, 185, 129, 0.4)' : 'transparent',
+                      color: proximityMode === 'near' ? '#34d399' : 'rgba(255,255,255,0.6)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '2px 5px',
+                      fontSize: '9.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                    title="কাউন্টার মোড (~৩০ সেমি) - সাধারণ দোকানের জন্য আদর্শ"
+                  >
+                    কাউন্টার (~৩০সেমি)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      voiceProximityManager.setMode('strict_pharmacy');
+                      setProximityMode('strict_pharmacy');
+                    }}
+                    style={{
+                      background: proximityMode === 'strict_pharmacy' ? 'rgba(16, 185, 129, 0.4)' : 'transparent',
+                      color: proximityMode === 'strict_pharmacy' ? '#34d399' : 'rgba(255,255,255,0.6)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '2px 5px',
+                      fontSize: '9.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                    title="টিভি শিল্ড মোড (~১৫ সেমি) - দোকান বা কাউন্টারে উচ্চ শব্দ ও টিভি থাকলে"
+                  >
+                    টিভি শিল্ড (~১৫সেমি)
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={cancelVoice}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  opacity: 0.8,
+                  fontSize: '14px',
+                  padding: '2px 6px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
             {/* Header: Mode Badge & Dismiss button */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

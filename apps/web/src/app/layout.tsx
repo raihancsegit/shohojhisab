@@ -11,6 +11,7 @@ import VoiceAssistant from '../components/VoiceAssistant';
 import SpeakerVoiceEnrollModal from '../components/SpeakerVoiceEnrollModal';
 import CounterBlackSleepOverlay from '../components/CounterBlackSleepOverlay';
 import { getIndustryTheme, normalizeIndustryId } from '../lib/industryConfig';
+import { isSpeakerLockEnabled, getSpeakerVoiceProfiles } from '../lib/speakerProfileEngine';
 import { getOfflineOutbox, syncOfflineOutbox } from '../lib/offlineDataLayer';
 import { useRenderKeepAlive } from '../lib/renderKeepAlive';
 import DesktopAdminSidebar from '../components/DesktopAdminSidebar';
@@ -32,6 +33,24 @@ function HeaderNav({
   const [showModeModal, setShowModeModal] = useState(false);
   const [showShopSwitchModal, setShowShopSwitchModal] = useState(false);
   const [showVoiceEnrollModal, setShowVoiceEnrollModal] = useState(false);
+  const [isVoiceLockActive, setIsVoiceLockActive] = useState(false);
+  const [hasVoiceProfile, setHasVoiceProfile] = useState(false);
+
+  useEffect(() => {
+    const checkVoiceLock = () => {
+      const tKey = tenant?.id || 'default';
+      const profiles = getSpeakerVoiceProfiles(tKey);
+      setHasVoiceProfile(profiles.length > 0);
+      setIsVoiceLockActive(isSpeakerLockEnabled(tKey));
+    };
+    checkVoiceLock();
+    window.addEventListener('storage', checkVoiceLock);
+    window.addEventListener('lbos-voice-profiles-updated', checkVoiceLock);
+    return () => {
+      window.removeEventListener('storage', checkVoiceLock);
+      window.removeEventListener('lbos-voice-profiles-updated', checkVoiceLock);
+    };
+  }, [tenant?.id, showVoiceEnrollModal]);
   const [availableShops, setAvailableShops] = useState<any[]>([]);
   const [pinInput, setPinInput] = useState('');
   const [modeError, setModeError] = useState('');
@@ -411,22 +430,43 @@ function HeaderNav({
                   {isSoundboxEnabled ? '🔊' : '🔈'}
                 </button>
 
-                {/* 🎙️ Voice Lock / Speaker Biometrics Global Modal Button (Desktop Only) */}
+                {/* 🔒 Voice Lock & Anti-TV Noise Shield Button (Mobile + Desktop) */}
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
                     setShowVoiceEnrollModal(true);
                   }}
-                  className="header-icon-btn desktop-only"
+                  className="header-icon-btn"
                   style={{
-                    background: 'rgba(16, 185, 129, 0.18)',
-                    border: '1px solid rgba(52, 211, 153, 0.45)',
-                    color: '#34d399'
+                    background: isVoiceLockActive
+                      ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%)'
+                      : 'rgba(245, 158, 11, 0.15)',
+                    border: isVoiceLockActive
+                      ? '1px solid rgba(52, 211, 153, 0.6)'
+                      : '1px solid rgba(245, 158, 11, 0.45)',
+                    color: isVoiceLockActive ? '#34d399' : '#fbbf24',
+                    padding: '0 8px',
+                    width: 'auto',
+                    minWidth: '34px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    fontWeight: '800'
                   }}
-                  title="কণ্ঠ রেজিস্টার ও ভয়েস লক ফিল্টার"
+                  title={
+                    isVoiceLockActive
+                      ? '🔒 ভয়েস লক অন (টিভি ও ভিড় শিল্ড সক্রিয় - শুধু মালিকের কথায় কাজ হবে)'
+                      : hasVoiceProfile
+                        ? '🔓 ভয়েস লক অফ (ক্লিক করে অন করুন)'
+                        : '🎙️ আপনার কণ্ঠ রেকর্ড করুন (টিভি ও ভিড়ের কথা ফিল্টার করতে)'
+                  }
                 >
-                  🎙️
+                  <span>{isVoiceLockActive ? '🔒' : '🎙️'}</span>
+                  <span className="desktop-only" style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>
+                    {isVoiceLockActive ? 'ভয়েস লক অন' : 'ভয়েস লক'}
+                  </span>
                 </button>
 
                 {/* Instant Dark / Light Mode Toggle */}
@@ -1132,7 +1172,7 @@ function SideMenuDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     }
     start.setHours(0, 0, 0, 0);
 
-    const isTrial = tenant?.billingCycle === 'trial' || tenant?.status === 'trial';
+    const isTrial = (tenant as any)?.billingCycle === 'trial' || (tenant as any)?.status === 'trial';
     const days = tenant?.billingCycle === 'yearly' ? 365 : (isTrial ? 7 : 30);
 
     // 2. Determine clean Expiry Date:

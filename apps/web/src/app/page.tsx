@@ -293,12 +293,12 @@ export default function ShopkeeperDashboard() {
 
   // Fast local storage check to instantly show Landing Page for guests without loader flash
   const isGuest = typeof window !== 'undefined' && !localStorage.getItem('lbos_user_role') && !localStorage.getItem('lbos_active_tenant');
-  if (isGuest && !tenant && userRole !== 'admin') {
+  if (isGuest && !tenant && (userRole as any) !== 'admin') {
     return <LandingPage />;
   }
 
   // If user is super admin, redirect to super admin panel immediately
-  if (userRole === 'admin') {
+  if ((userRole as any) === 'admin') {
     if (typeof window !== 'undefined') {
       router.push('/admin');
     }

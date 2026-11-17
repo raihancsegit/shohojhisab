@@ -30,6 +30,20 @@ export default function ProductsPage() {
 
   // Form Fields
   const [banglaName, setBanglaName] = useState('');
+  const [author, setAuthor] = useState('');
+  const [publisher, setPublisher] = useState('');
+  const [genre, setGenre] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [rack, setRack] = useState('');
+  const [edition, setEdition] = useState('');
+  const [pages, setPages] = useState('');
+  const [coverType, setCoverType] = useState('পেপারব্যাক');
+  const [mrp, setMrp] = useState('');
+  const [bookDiscount, setBookDiscount] = useState('20');
+  const [selectedAuthorFilter, setSelectedAuthorFilter] = useState<string | null>(null);
+  const [selectedPublisherFilter, setSelectedPublisherFilter] = useState<string | null>(null);
+  const [selectedRackFilter, setSelectedRackFilter] = useState<string | null>(null);
+  const [selectedGenreFilter, setSelectedGenreFilter] = useState<string | null>(null);
   const [engName, setEngName] = useState('');
   const [barcode, setBarcode] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
@@ -88,6 +102,16 @@ export default function ProductsPage() {
     setColor('');
     setBrand('');
     setWarranty('');
+    setAuthor('');
+    setPublisher('');
+    setGenre('');
+    setIsbn('');
+    setRack('');
+    setEdition('');
+    setPages('');
+    setCoverType('পেপারব্যাক');
+    setMrp('');
+    setBookDiscount('20');
     setShowModal(true);
   };
 
@@ -106,8 +130,18 @@ export default function ProductsPage() {
     setExpiryDate(p.expiryDate || '');
     setSize(p.size || '');
     setColor(p.color || '');
-    setBrand(p.brand || '');
+    setBrand(p.brand || p.publisher || '');
     setWarranty(p.warranty || '');
+    setAuthor(p.author || '');
+    setPublisher(p.publisher || p.brand || '');
+    setGenre(p.genre || '');
+    setIsbn(p.isbn || p.barcode || '');
+    setRack(p.rack || '');
+    setEdition(p.edition || '');
+    setPages(p.pages ? String(p.pages) : '');
+    setCoverType(p.coverType || 'পেপারব্যাক');
+    setMrp(p.mrp ? String(p.mrp) : (p.sellingPrice ? String(p.sellingPrice) : ''));
+    setBookDiscount(p.bookDiscount ? String(p.bookDiscount) : '20');
     setShowModal(true);
   };
 
@@ -132,8 +166,18 @@ export default function ProductsPage() {
       expiryDate: expiryDate || null,
       size: size || null,
       color: color || null,
-      brand: brand || null,
-      warranty: warranty || null
+      brand: brand || publisher || null,
+      warranty: warranty || null,
+      author: author.trim() || null,
+      publisher: (publisher || brand).trim() || null,
+      genre: genre.trim() || null,
+      isbn: isbn.trim() || barcode || null,
+      rack: rack.trim() || null,
+      edition: edition.trim() || null,
+      pages: Number(pages) || null,
+      coverType: coverType || null,
+      mrp: Number(mrp) || Number(sellingPrice) || 0,
+      bookDiscount: Number(bookDiscount) || 0
     };
 
     try {
@@ -251,11 +295,23 @@ export default function ProductsPage() {
   const totalStockValue = products.reduce((acc, p) => acc + (p.sellingPrice * p.stock), 0);
   const lowStockCount = products.filter(p => p.stock <= (p.lowStockThreshold || 5)).length;
 
+  const isBookIndustry = fieldConfig.isBookStore || tenant?.industryId === 'cat-bookstore' || tenant?.industryId === 'cat-stationery';
+
+  const uniqueAuthors = useMemo(() => Array.from(new Set(products.map(p => p.author).filter(Boolean))), [products]);
+  const uniquePublishers = useMemo(() => Array.from(new Set(products.map(p => p.publisher || p.brand).filter(Boolean))), [products]);
+  const uniqueRacks = useMemo(() => Array.from(new Set(products.map(p => p.rack).filter(Boolean))), [products]);
+  const uniqueGenres = useMemo(() => Array.from(new Set(products.map(p => p.genre).filter(Boolean))), [products]);
+
   const filtered = products.filter(p => {
+    if (selectedAuthorFilter && p.author !== selectedAuthorFilter) return false;
+    if (selectedPublisherFilter && (p.publisher !== selectedPublisherFilter && p.brand !== selectedPublisherFilter)) return false;
+    if (selectedRackFilter && p.rack !== selectedRackFilter) return false;
+    if (selectedGenreFilter && p.genre !== selectedGenreFilter) return false;
+
     const q = search.trim().toLowerCase();
     if (!q) return true;
     const tokens = q.split(/\s+/).filter(Boolean);
-    const searchableText = `${p.banglaName || ''} ${p.name || ''} ${p.barcode || ''} ${p.genericName || ''} ${p.brand || ''} ${p.size || ''} ${p.color || ''} ${p.category || ''}`.toLowerCase();
+    const searchableText = `${p.banglaName || ''} ${p.name || ''} ${p.barcode || ''} ${p.author || ''} ${p.publisher || ''} ${p.brand || ''} ${p.genre || ''} ${p.isbn || ''} ${p.rack || ''} ${p.edition || ''} ${p.genericName || ''} ${p.size || ''} ${p.color || ''}`.toLowerCase();
     return tokens.every(token => searchableText.includes(token));
   });
 
@@ -337,6 +393,92 @@ export default function ProductsPage() {
         </div>
       )}
 
+      {/* Book Store Quick Category / Author / Rack Filter Pills */}
+      {isBookIndustry && (
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '10px' }} className="no-scrollbar">
+          <button
+            type="button"
+            onClick={() => { setSelectedAuthorFilter(null); setSelectedPublisherFilter(null); setSelectedRackFilter(null); setSelectedGenreFilter(null); }}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '99px',
+              fontSize: '12px',
+              fontWeight: '800',
+              border: 'none',
+              background: (!selectedAuthorFilter && !selectedPublisherFilter && !selectedRackFilter && !selectedGenreFilter)
+                ? 'linear-gradient(135deg, #10b981, #059669)'
+                : '#f1f5f9',
+              color: (!selectedAuthorFilter && !selectedPublisherFilter && !selectedRackFilter && !selectedGenreFilter) ? '#fff' : '#475569',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: (!selectedAuthorFilter && !selectedPublisherFilter && !selectedRackFilter && !selectedGenreFilter) ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none'
+            }}
+          >
+            📚 সকল বই ({products.length})
+          </button>
+          {uniqueAuthors.slice(0, 8).map((auth: any, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSelectedAuthorFilter(selectedAuthorFilter === auth ? null : auth)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '99px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: '1px solid #e2e8f0',
+                background: selectedAuthorFilter === auth ? '#059669' : '#ffffff',
+                color: selectedAuthorFilter === auth ? '#fff' : '#334155',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ✍️ {auth}
+            </button>
+          ))}
+          {uniqueRacks.slice(0, 6).map((rk: any, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSelectedRackFilter(selectedRackFilter === rk ? null : rk)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '99px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: '1px solid #a7f3d0',
+                background: selectedRackFilter === rk ? '#047857' : '#ecfdf5',
+                color: selectedRackFilter === rk ? '#fff' : '#047857',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              📍 তাক {rk}
+            </button>
+          ))}
+          {uniquePublishers.slice(0, 6).map((pub: any, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSelectedPublisherFilter(selectedPublisherFilter === pub ? null : pub)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '99px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                border: '1px solid #e2e8f0',
+                background: selectedPublisherFilter === pub ? '#3b82f6' : '#f8fafc',
+                color: selectedPublisherFilter === pub ? '#fff' : '#475569',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              🏢 {pub}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Modern Search Input */}
       <div style={{ marginBottom: '14px' }}>
         <div className="stock-search-wrap">
@@ -394,6 +536,31 @@ export default function ProductsPage() {
                   <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: '#0f172a' }}>
                     {p.banglaName || p.name}
                   </h4>
+                  {/* Book Store Metadata */}
+                  {(p.author || p.publisher || p.rack) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '3px' }}>
+                      {p.author && (
+                        <span style={{ fontSize: '11px', color: '#059669', fontWeight: '700' }}>
+                          ✍️ {p.author}
+                        </span>
+                      )}
+                      {p.publisher && (
+                        <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '700' }}>
+                          • 🏢 {p.publisher}
+                        </span>
+                      )}
+                      {p.rack && (
+                        <span style={{ fontSize: '10px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '1px 5px', borderRadius: '4px', fontWeight: '800' }}>
+                          📍 তাক {p.rack}
+                        </span>
+                      )}
+                      {p.genre && (
+                        <span style={{ fontSize: '10px', background: '#f1f5f9', color: '#475569', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>
+                          📖 {p.genre}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {p.genericName && fieldConfig.showGenericName && (
                     <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', display: 'block', marginTop: '1px' }}>
                       🧪 {p.genericName}

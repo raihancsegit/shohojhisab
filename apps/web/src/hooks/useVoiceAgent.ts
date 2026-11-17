@@ -11,9 +11,11 @@ import {
   pingVoiceVerification,
   isSpeakerLockEnabled,
   stopBiometricMonitoring,
+  ensureBiometricMonitoring,
   SpeakerVoiceProfile,
   SpeakerVerificationResult
 } from '../lib/speakerProfileEngine';
+import { voiceProximityManager } from '../lib/voiceProximityGate';
 
 export interface VoiceAgentOptions {
   tenantId?: string;
@@ -185,7 +187,21 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     let speakerRole: 'owner' | 'staff' = 'owner';
     let speakerName = 'দোকান মালিক';
 
-    // 🛡️ Biometric Speaker Verification & Anti-Laptop Shield
+    // 🛡️ 1. Near-Field Acoustic Check: Must be speaking near the phone/counter
+    if (!voiceProximityManager.isNearSpeechActive(2600) && voiceProximityManager.getMode() !== 'all') {
+      triggerHaptic?.('warning');
+      playWarningSound();
+      setFeedbackType('error');
+      setCurrentMode('stranger');
+      setFeedbackText('🛡️ দূরবর্তী শব্দ বা টিভি ফিল্টার হয়েছে (কাছে এসে স্পষ্ট করে বলুন)');
+      if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = setTimeout(() => {
+        setFeedbackType(null);
+      }, 3000);
+      return;
+    }
+
+    // 🛡️ 2. Biometric Speaker Verification & Anti-TV / Anti-Stranger Shield
     if (isSpeakerLockEnabled(tenantKey)) {
       const speakerCheck: SpeakerVerificationResult = verifyCurrentVoice(tenantKey, undefined, query);
 
@@ -196,9 +212,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         setCurrentMode('stranger');
 
         if (speakerCheck.reason === 'background_noise_or_tv') {
-          setFeedbackText('🛡️ ল্যাপটপ বা পেছনের শব্দ ফিল্টার হয়েছে (বাতিল)');
+          setFeedbackText('🛡️ টিভি বা ব্যাকগ্রাউন্ড শব্দ ফিল্টার হয়েছে (বাতিল)');
         } else {
-          setFeedbackText('🛡️ অননুমোদিত ব্যক্তির কণ্ঠ বাতিল (শুধুমাত্র নিবন্ধিত মালিক বা কর্মচারীর কথা নেওয়া হবে)');
+          setFeedbackText('🔒 অননুমোদিত ব্যক্তির কণ্ঠ বাতিল (ভয়েস লক: শুধুমাত্র নিবন্ধিত মালিকের কথা নেওয়া হবে)');
         }
 
         if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
@@ -405,6 +421,20 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
 
+        // 🛡️ Near-Field Proximity Gate: Reject ambient TV / distant crowd audio
+        const isNear = voiceProximityManager.isNearSpeechActive(2000);
+        if (!isNear && voiceProximityManager.getMode() !== 'all') {
+          latestTranscriptRef.current = '';
+          setLiveTranscript('');
+          setFeedbackType('error');
+          setFeedbackText('🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (কাছ থেকে বলুন)');
+          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+          autoDismissTimerRef.current = setTimeout(() => {
+            setFeedbackType(null);
+          }, 2400);
+          return;
+        }
+
         // Feed biometric analyzer with active voice ping
         pingVoiceVerification(effectiveTenantId);
 
@@ -526,8 +556,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       return;
     }
 
-    // Stop any active Web Audio stream to ensure SpeechRecognition has 100% exclusive mic
-    stopBiometricMonitoring();
+    // Start Near-Field Proximity Gate & Biometric Monitoring (filters TV & distant crowd)
+    ensureBiometricMonitoring().catch(() => {});
+    voiceProximityManager.start().catch(() => {});
 
     // Cancel active TTS output to avoid echo
     if (typeof window !== 'undefined') {

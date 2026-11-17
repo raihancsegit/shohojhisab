@@ -149,7 +149,12 @@ export default function ThermalReceipt({ invoice, tenant, onClose }: ThermalRece
                 const itemPrice = item.totalPrice || ((item.unitPrice || item.sellingPrice || item.product?.sellingPrice || 0) * item.quantity);
                 return (
                   <tr key={i} style={{ borderBottom: '0.5px dotted #ccc' }}>
-                    <td style={{ padding: '3px 0', fontWeight: '600' }}>{itemName}</td>
+                    <td style={{ padding: '3px 0', fontWeight: '600' }}>
+                      <div>{itemName}</div>
+                      {(item.product?.author || item.author) && (
+                        <div style={{ fontSize: '9px', color: '#555' }}>লেখক: {item.product?.author || item.author}</div>
+                      )}
+                    </td>
                     <td style={{ padding: '3px 0', textAlign: 'center' }}>{item.quantity}</td>
                     <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '700' }}>৳{itemPrice}</td>
                   </tr>

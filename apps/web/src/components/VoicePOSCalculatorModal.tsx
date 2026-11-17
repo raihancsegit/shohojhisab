@@ -1197,6 +1197,7 @@ export default function VoicePOSCalculatorModal({
                     unit: it.unit || 'পিস',
                     unitPrice: price,
                     totalPrice: price * (it.quantity || 1),
+                    category: (it as any).category || 'general',
                     isExistingProduct: false
                   };
                   setItems(prev => [...prev, fallbackItem]);

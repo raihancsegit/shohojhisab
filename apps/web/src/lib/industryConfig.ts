@@ -33,6 +33,25 @@ const UNIFIED_PALETTE = {
 };
 
 export const INDUSTRY_THEMES: Record<string, IndustryTheme> = {
+  'cat-bookstore': {
+    id: 'cat-bookstore',
+    name: 'বইয়ের দোকান ও লাইব্রেরি',
+    icon: '📚',
+    ...UNIFIED_PALETTE,
+    posLabel: 'বুক কাউন্টার',
+    posIcon: '📖',
+    posDesc: 'বই বিক্রি, কমিশন ও মেমো',
+    khataLabel: 'বাকি খাতা',
+    stockLabel: 'বই ইনভেন্টরি',
+    stockIcon: '📚',
+    dealerLabel: 'প্রকাশনী খাতা',
+    reportsLabel: 'বই বিক্রি রিপোর্ট',
+    receiptSubtitle: 'বই বিক্রয়, সাহিত্য ও প্রকাশনা কর্নার',
+    terms: [
+      '১. বিক্রিত বই ৭ দিনের মধ্যে অক্ষত অবস্থায় ক্যাশ মেমোসহ পরিবর্তনযোগ্য।',
+      '২. বইয়ের ভেতর দাগ বা নাম লেখা থাকলে ফেরত বা পরিবর্তনযোগ্য নয়।'
+    ]
+  },
   'cat-pharmacy': {
     id: 'cat-pharmacy',
     name: 'ফার্মেসি ও ড্রাগ স্টোর',
@@ -346,6 +365,13 @@ export function getIndustryTheme(industryId?: string, fallbackShopName?: string)
 }
 
 export const INDUSTRY_UNITS: Record<string, Array<{ value: string; label: string }>> = {
+  'cat-bookstore': [
+    { value: 'কপি', label: 'কপি (Copy)' },
+    { value: 'পিস', label: 'পিস (Pcs)' },
+    { value: 'সেট', label: 'সেট (Set)' },
+    { value: 'বান্ডিল', label: 'বান্ডিল (Bundle)' },
+    { value: 'কার্টন', label: 'কার্টন (Carton)' }
+  ],
   'cat-pharmacy': [
     { value: 'পাতা', label: 'পাতা (Strip)' },
     { value: 'ট্যাবলেট', label: 'ট্যাবলেট (Tab)' },
@@ -822,6 +848,14 @@ export interface IndustryProductSuggestion {
 }
 
 export const INDUSTRY_PRODUCT_SUGGESTIONS: Record<string, IndustryProductSuggestion[]> = {
+  'cat-bookstore': [
+    { name: 'প্যারাডক্সিক্যাল সাজিদ', unit: 'কপি', price: 225, costPrice: 180, icon: '📚', brand: 'সমকালীন প্রকাশন' },
+    { name: 'বেলা ফুরাবার আগে', unit: 'কপি', price: 224, costPrice: 168, icon: '📖', brand: 'সমকালীন প্রকাশন' },
+    { name: 'শেষের কবিতা', unit: 'কপি', price: 150, costPrice: 110, icon: '📚', brand: 'বিশ্বসাহিত্য কেন্দ্র' },
+    { name: 'হিমু সমগ্র', unit: 'কপি', price: 350, costPrice: 250, icon: '📙', brand: 'অনন্যা প্রকাশন' },
+    { name: 'সীরাতে ইবনে হিশাম', unit: 'কপি', price: 338, costPrice: 240, icon: '📗', brand: 'ইসলামিক ফাউন্ডেশন' },
+    { name: 'প্র্যাকটিক্যাল সাইকোলজি', unit: 'কপি', price: 280, costPrice: 190, icon: '📘', brand: 'জ্ঞানকোষ' }
+  ],
   'cat-pharmacy': [
     { name: 'নাপা এক্সট্রা ৫০০ মি.গ্রা.', unit: 'পাতা', price: 30, costPrice: 22, icon: '💊', generic: 'Paracetamol 500mg + Caffeine 65mg', brand: 'Beximco' },
     { name: 'সেকলো ২০ মি.গ্রা.', unit: 'পাতা', price: 70, costPrice: 58, icon: '🧪', generic: 'Omeprazole 20mg', brand: 'Square' },
@@ -1085,6 +1119,47 @@ export function getIndustryLotPlaceholder(industryId?: string): string {
 }
 
 export interface IndustryFieldConfig {
+  isBookStore?: boolean;
+  showAuthor?: boolean;
+  authorLabel?: string;
+  authorPlaceholder?: string;
+
+  showPublisher?: boolean;
+  publisherLabel?: string;
+  publisherPlaceholder?: string;
+
+  showGenre?: boolean;
+  genreLabel?: string;
+  genrePlaceholder?: string;
+
+  showIsbn?: boolean;
+  isbnLabel?: string;
+  isbnPlaceholder?: string;
+
+  showRack?: boolean;
+  rackLabel?: string;
+  rackPlaceholder?: string;
+
+  showEdition?: boolean;
+  editionLabel?: string;
+  editionPlaceholder?: string;
+
+  showPages?: boolean;
+  pagesLabel?: string;
+  pagesPlaceholder?: string;
+
+  showCoverType?: boolean;
+  coverTypeLabel?: string;
+  coverTypeOptions?: string[];
+
+  showMrp?: boolean;
+  mrpLabel?: string;
+  mrpPlaceholder?: string;
+
+  showBookDiscount?: boolean;
+  bookDiscountLabel?: string;
+  bookDiscountPlaceholder?: string;
+
   showGenericName: boolean;
   genericNameLabel: string;
   genericNamePlaceholder: string;

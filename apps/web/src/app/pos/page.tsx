@@ -21,7 +21,7 @@ import { parseVoicePOSCommand, scoreCatalogCandidate } from '../../lib/voicePOSP
 import { saveVaultSnapshot, autoRestoreIfWiped, getVaultData } from '../../lib/dataVault';
 import { queueOfflineAction } from '../../lib/offlineDataLayer';
 import { formatBDDateTime, formatBDDate, formatBDTime } from '../../lib/dateUtils';
-import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, getBoundSpeakerId, getSpeakerVoiceProfiles, stopBiometricMonitoring } from '../../lib/speakerProfileEngine';
+import { verifyCurrentVoice, pingVoiceVerification, isSpeakerLockEnabled, getBoundSpeakerId, getSpeakerVoiceProfiles, stopBiometricMonitoring, ensureBiometricMonitoring } from '../../lib/speakerProfileEngine';
 import { voiceProximityManager } from '../../lib/voiceProximityGate';
 import { counterSleepManager } from '../../lib/counterSleepManager';
 import { playWarningSound } from '../../lib/audioFeedbackUtils';
@@ -2089,6 +2089,20 @@ export default function PosPage() {
     });
   };
 
+  const clearCart = () => {
+    setCart([]);
+    setDiscount('0');
+    setSelectedCustomer('none');
+    setCashTendered('');
+  };
+
+  const handleQuickCheckout = (method: 'cash' | 'due') => {
+    setPaymentMethod(method);
+    setTimeout(() => {
+      handleCheckout();
+    }, 50);
+  };
+
   // ⚡ Express Natural Language Item Parser & Add Handler (ভয়েস বা লিখে সরাসরি মেমোতে আইটেম যোগ)
   const handleAddExpressItem = (textToParse?: string) => {
     const rawText = (textToParse !== undefined ? textToParse : expressInput).trim();
@@ -2099,7 +2113,7 @@ export default function PosPage() {
 
       // 1. Remove Item Command (e.g. "শেষেরটা কাটো", "তেল বাদ দাও")
       if (res.type === 'remove_item') {
-        if (posMode === 'calculator' || posMode === 'numpad') {
+        if (posMode === 'numpad') {
           if (numpadItems.length === 0) {
             setVoiceNotice('⚠️ মেমোতে কোনো আইটেম নেই।');
             return;
@@ -2161,7 +2175,7 @@ export default function PosPage() {
 
       // 2. Clear Memo Command (e.g. "মেমো মুছো", "ক্লিয়ার করো")
       if (res.type === 'clear_memo') {
-        if (posMode === 'calculator' || posMode === 'numpad') {
+        if (posMode === 'numpad') {
           handleNumpadClear();
         } else {
           clearCart();
@@ -2178,7 +2192,7 @@ export default function PosPage() {
 
       // 3. Cash Checkout Command (e.g. "ক্যাশ বিক্রি", "বিল করো")
       if (res.type === 'cash_checkout') {
-        if (posMode === 'calculator' || posMode === 'numpad') {
+        if (posMode === 'numpad') {
           handleNumpadCheckout('cash');
         } else {
           handleQuickCheckout('cash');
@@ -2193,13 +2207,13 @@ export default function PosPage() {
         if (res.customerName) {
           const matchCust = customers.find(c => (c.name || '').toLowerCase().includes(res.customerName!.toLowerCase()));
           if (matchCust) {
-            setSelectedCustomer(matchCust);
+            setSelectedCustomer(matchCust.id);
             setNumpadCustomer(matchCust.id);
           } else {
             setNumpadNewCustName(res.customerName);
           }
         }
-        if (posMode === 'calculator' || posMode === 'numpad') {
+        if (posMode === 'numpad') {
           handleNumpadCheckout('due');
         } else {
           handleQuickCheckout('due');
@@ -2211,7 +2225,7 @@ export default function PosPage() {
 
       // 5. Discount Command (e.g. "২০ টাকা ছাড়")
       if (res.type === 'discount' && res.discountAmount) {
-        setDiscount(res.discountAmount);
+        setDiscount(String(res.discountAmount));
         playBeep(900);
         triggerHaptic('light');
         setVoiceNotice(`✓ ৳${res.discountAmount} ছাড় কার্যকর হয়েছে।`);
@@ -2241,7 +2255,7 @@ export default function PosPage() {
 
       // 6. Add Items Command
       if (res.type === 'add_items' && res.items && res.items.length > 0) {
-        if (posMode === 'calculator' || posMode === 'numpad') {
+        if (posMode === 'numpad') {
           res.items.forEach(it => {
             const pMatch = products.find(p => p.id === it.productId) ||
                            products.find(p => {
@@ -2375,7 +2389,7 @@ export default function PosPage() {
             triggerHaptic('warning');
             return;
           }
-          if (posMode === 'calculator' || posMode === 'numpad') {
+          if (posMode === 'numpad') {
             handleQuickProductTap(directProd);
           } else {
             addToCart(directProd, 1);
@@ -2867,7 +2881,6 @@ export default function PosPage() {
     posTranscriptBufferRef.current = '';
 
     const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    stopBiometricMonitoring();
 
     const recognition = new SpeechRecognition();
     recognition.lang = 'bn-BD';
@@ -2882,9 +2895,13 @@ export default function PosPage() {
     const boundOpName = boundOpId ? boundProfiles.find(p => p.id === boundOpId)?.name : null;
     const initialNotice = boundOpName
       ? `🎙️ [লক: ${boundOpName}] শুনছি... বলুন`
-      : '🎙️ শুনছি... বলুন: যেমন "নাপা ২ পাতা" বা "তেল ১ লিটার"';
+      : '🎙️ শুনছি... বলুন: যেমন "নাপা ২ পাতা" বা "প্যারাডক্সিক্যাল সাজিদ ১ কপি"';
     setVoiceNotice(initialNotice);
     triggerHaptic('medium');
+
+    // 🛡️ Start Near-Field Proximity & Biometric monitoring for TV/stranger filter
+    voiceProximityManager.start().catch(() => {});
+    ensureBiometricMonitoring().catch(() => {});
 
     recognition.onresult = (event: any) => {
       let interim = '';
@@ -2933,6 +2950,15 @@ export default function PosPage() {
             }
           }
 
+          // 🛡️ 1. Near-Field Acoustic Check: Reject TV & distant customer noise
+          if (!voiceProximityManager.isNearSpeechActive(2400) && voiceProximityManager.getMode() !== 'all') {
+            triggerHaptic('warning');
+            playWarningSound();
+            setVoiceNotice('🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (কাছে এসে বলুন)');
+            setTimeout(() => setVoiceNotice(''), 4000);
+            return;
+          }
+
           const tenantKey = tenant?.id || 'default';
           const speakerCheck = verifyCurrentVoice(tenantKey, currentStaffUser?.id, finalToParse);
 
@@ -2974,7 +3000,7 @@ export default function PosPage() {
       if (counterSleepManager.getState().isEnabled) {
         setTimeout(() => {
           try {
-            startVoiceSearch();
+            startVoiceInput();
           } catch (e) {}
         }, 350);
       }
@@ -4600,7 +4626,7 @@ export default function PosPage() {
                   type="text"
                   value={expressInput}
                   onChange={(e) => setExpressInput(e.target.value)}
-                  placeholder={voiceConfig.example ? `যেমন: "${voiceConfig.example}"` : 'যেমন: চাল ২ কেজি, চিনি ১ কেজি...'}
+                  placeholder={voiceConfig.quickSaleBannerHint ? `যেমন: "${voiceConfig.quickSaleBannerHint}"` : 'যেমন: চাল ২ কেজি, চিনি ১ কেজি...'}
                   style={{
                     width: '100%',
                     height: '42px',
@@ -4920,6 +4946,21 @@ export default function PosPage() {
                           <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>
                             {p.banglaName || p.name}
                           </strong>
+                          {/* Book Details (Author, Rack) */}
+                          {(p.author || p.rack) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                              {p.author && (
+                                <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: '700' }}>
+                                  ✍️ {p.author}
+                                </span>
+                              )}
+                              {p.rack && (
+                                <span style={{ fontSize: '9.5px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', padding: '0 4px', borderRadius: '4px', fontWeight: '800' }}>
+                                  📍 তাক {p.rack}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '11px', color: '#059669', fontWeight: '800' }}>
                               ৳{p.sellingPrice}/{p.unit}
@@ -6370,6 +6411,21 @@ export default function PosPage() {
                       <strong style={{ fontSize: '12px', color: '#0f172a', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {item.product.banglaName || item.product.name}
                       </strong>
+                      {/* Book metadata in Cart Item */}
+                      {(item.product.author || item.product.rack) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                          {item.product.author && (
+                            <span style={{ fontSize: '10px', color: '#059669', fontWeight: '700' }}>
+                              ✍️ {item.product.author}
+                            </span>
+                          )}
+                          {item.product.rack && (
+                            <span style={{ fontSize: '9px', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '0 3px', borderRadius: '3px', fontWeight: '800' }}>
+                              📍 তাক {item.product.rack}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <span style={{ fontSize: '10.5px', color: '#64748b' }}>
                         দর: ৳{item.unitPrice} /{item.selectedUnit || item.product.unit || 'পিস'}
                       </span>
@@ -6505,6 +6561,33 @@ export default function PosPage() {
                   }}
                 />
               </div>
+            </div>
+            {/* Quick Discount Shortcut Buttons (especially useful for Book Store 15%-30% commission) */}
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              {[15, 20, 25, 30].map(pct => {
+                const subtotal = cart.reduce((acc, it) => acc + (it.totalPrice || 0), 0);
+                const discVal = Math.round(subtotal * (pct / 100));
+                return (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => setDiscount(String(discVal))}
+                    style={{
+                      background: discount === String(discVal) ? '#059669' : '#f1f5f9',
+                      color: discount === String(discVal) ? '#fff' : '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                    title={`${pct}% ছাড় = ৳${discVal}`}
+                  >
+                    {pct}%
+                  </button>
+                );
+              })}
             </div>
 
             {/* Grand Total */}

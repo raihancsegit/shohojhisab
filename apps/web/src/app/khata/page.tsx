@@ -204,7 +204,7 @@ export default function KhataPage() {
       // Check if offline
       if (!navigator.onLine) {
         queueOfflineAction({
-          type: 'customer_due',
+          type: 'add_customer_due' as any,
           payload: {
             tenantId: currentTenantId,
             customerId: showAddDueModal.id,
@@ -262,6 +262,7 @@ export default function KhataPage() {
         alert(err.error || 'বাকি যোগ করতে সমস্যা হয়েছে');
       }
     } catch (e: any) {
+      const addedAmount = Number(addDueAmount) || 0;
       const summary = addDueItems.trim() || (selectedDueProducts.length > 0 ? selectedDueProducts.map(i => `${i.name} (${i.quantity} ${i.unit || ''})`).join(', ') : 'বাকি পণ্য সামগ্রী');
       const itemsPayload = selectedDueProducts.map(i => ({
         productId: i.productId,
@@ -276,7 +277,7 @@ export default function KhataPage() {
         payload: {
           customerId: showAddDueModal.id,
           customerName: showAddDueModal.name,
-          amount: dueAmt,
+          amount: addedAmount,
           itemsSummary: summary,
           items: itemsPayload
         }
@@ -284,7 +285,7 @@ export default function KhataPage() {
 
       // Update local customers state & vault
       setCustomers(prev => {
-        const updated = prev.map(c => c.id === showAddDueModal.id ? { ...c, totalDue: Number(c.totalDue || c.total_due || 0) + dueAmt, total_due: Number(c.totalDue || c.total_due || 0) + dueAmt } : c);
+        const updated = prev.map(c => c.id === showAddDueModal.id ? { ...c, totalDue: Number(c.totalDue || c.total_due || 0) + addedAmount, total_due: Number(c.totalDue || c.total_due || 0) + addedAmount } : c);
         if (currentTenantId) {
           saveVaultSnapshot(currentTenantId, { customers: updated });
         }
@@ -437,7 +438,7 @@ export default function KhataPage() {
       return;
     }
     try {
-      const vault = getVaultData(currentTenantId);
+      const vault = getVaultData(currentTenantId) as any;
       if (vault?.dealers?.length) {
         setDealers(vault.dealers);
       }
@@ -446,7 +447,7 @@ export default function KhataPage() {
         const list = await res.json();
         const arr = Array.isArray(list) ? list : [];
         setDealers(arr);
-        saveVaultSnapshot(currentTenantId, { dealers: arr });
+        saveVaultSnapshot(currentTenantId, { dealers: arr } as any);
       }
     } catch (e) {
       console.error('Failed to load dealers', e);
@@ -515,7 +516,7 @@ export default function KhataPage() {
       };
 
       queueOfflineAction({
-        type: 'add_customer',
+        type: 'add_customer' as any,
         payload: newCust
       });
 
@@ -553,7 +554,7 @@ export default function KhataPage() {
     // Offline check
     if (!navigator.onLine) {
       queueOfflineAction({
-        type: 'customer_payment',
+        type: 'due_payment' as any,
         payload: {
           tenantId: currentTenantId,
           customerId: showPayModal.id,
@@ -597,7 +598,7 @@ export default function KhataPage() {
       }
     } catch (e) {
       queueOfflineAction({
-        type: 'customer_payment',
+        type: 'due_payment' as any,
         payload: {
           tenantId: currentTenantId,
           customerId: showPayModal.id,
@@ -688,7 +689,7 @@ export default function KhataPage() {
   const handleConfirmDeleteEntry = async () => {
     if (!entryToDeleteConfirm?.id) return;
     setDeleteEntrySubmitting(true);
-    triggerHaptic('heavy');
+    triggerHaptic('medium');
     const entry = entryToDeleteConfirm;
     const isPayment = entry.isPayment || entry.paymentMethod === 'due_payment' || entry.payment_method === 'due_payment';
     const entryLabel = isPayment ? `৳${entry.paidAmount} টাকার জমা এন্ট্রি` : `৳${entry.dueAmount || entry.totalAmount} টাকার বাকি মেমো #${entry.invoiceNo}`;
@@ -737,7 +738,7 @@ export default function KhataPage() {
         })
       });
       if (res.ok) {
-        playCashSound();
+        playSuccessChime();
         triggerHaptic('success');
         setNotice(`✓ কাস্টমার "${editingCustomer.name}"-এর তথ্য সফলভাবে আপডেট হয়েছে!`);
         if (selectedLedger?.customer?.id === editingCustomer.id) {
@@ -785,7 +786,7 @@ export default function KhataPage() {
         })
       });
       if (res.ok) {
-        playCashSound();
+        playSuccessChime();
         triggerHaptic('success');
         setNotice('✓ বাকি/জমা এন্ট্রি সফলভাবে সংশোধন করা হয়েছে!');
         if (selectedLedger?.customer) {

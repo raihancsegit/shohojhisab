@@ -11,10 +11,12 @@ export interface OfflineAiResult {
   reply: string;
   speech: string;
   action?: string;
+  actionType?: string;
   actionLink?: { text: string; href: string } | null;
   navigateTo?: string;
   data?: any;
   isOffline: boolean;
+  recognizedText?: string;
 }
 
 /**
@@ -590,6 +592,8 @@ export function executeOfflineAiShopCommand(
         }
 
         return {
+          success: false,
+          isOffline: true,
           recognizedText: cleanedText,
           speech: `⚠️ ${alertSpeech}`,
           actionType: 'notification',

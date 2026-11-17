@@ -485,19 +485,29 @@ export default function StockPage() {
       return;
     }
     triggerHaptic('success');
-    const headers = ['তারিখ ও সময়', 'পণ্যের নাম', 'লেনদেনের ধরন', 'পরিমাণ', 'একক', 'একক দর (টাকা)', 'মোট মূল্য (টাকা)', 'উৎস / চালান', 'নোট'];
-    const rows = ledgerLogs.map(l => [
-      formatBDDateTime(l.created_at),
-      l.product_name,
-      l.type === 'stock_in' ? 'স্টক ইন (নতুন মাল)' : l.type === 'sale' ? 'বিক্রয় (স্টক আউট)' : l.type === 'return' ? 'ফেরত' : 'সমন্বয়',
-      l.quantity,
-      l.unit || 'পিস',
-      l.unit_price || 0,
-      Math.round((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)),
-      l.source_ref || '',
-      l.note || ''
-    ]);
-    exportToCSV(`Stock_Audit_Ledger_${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+    const exportData = ledgerLogs.map(l => ({
+      date: formatBDDateTime(l.created_at),
+      productName: l.product_name,
+      type: l.type === 'stock_in' ? 'স্টক ইন (নতুন মাল)' : l.type === 'sale' ? 'বিক্রয় (স্টক আউট)' : l.type === 'return' ? 'ফেরত' : 'সমন্বয়',
+      quantity: l.quantity,
+      unit: l.unit || 'পিস',
+      unitPrice: l.unit_price || 0,
+      totalPrice: Math.round((Number(l.quantity) || 0) * (Number(l.unit_price) || 0)),
+      sourceRef: l.source_ref || '',
+      note: l.note || ''
+    }));
+    const exportHeaders = [
+      { key: 'date', label: 'তারিখ ও সময়' },
+      { key: 'productName', label: 'পণ্যের নাম' },
+      { key: 'type', label: 'লেনদেনের ধরন' },
+      { key: 'quantity', label: 'পরিমাণ' },
+      { key: 'unit', label: 'একক' },
+      { key: 'unitPrice', label: 'একক দর (টাকা)' },
+      { key: 'totalPrice', label: 'মোট মূল্য (টাকা)' },
+      { key: 'sourceRef', label: 'উৎস / চালান' },
+      { key: 'note', label: 'নোট' }
+    ];
+    exportToCSV(`Stock_Audit_Ledger_${new Date().toISOString().slice(0, 10)}`, exportData, exportHeaders);
   };
 
   const lowStockItems = products.filter(p => p.stock > 0 && p.stock <= (p.lowStockThreshold || 5));
@@ -796,7 +806,7 @@ export default function StockPage() {
   const handleConfirmDeleteProduct = async () => {
     if (!deleteProdConfirm?.id) return;
     setDeleteSubmitting(true);
-    triggerHaptic('heavy');
+    triggerHaptic('medium');
 
     const p = deleteProdConfirm;
     try {
@@ -2226,7 +2236,7 @@ export default function StockPage() {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
-                        {fieldConfig.ratioPrompt || `১ ${editForm.unit || 'মূল এককে'} কত ${editForm.subUnit || 'সাব-একক'}?`}
+                        {typeof fieldConfig.ratioPrompt === 'function' ? fieldConfig.ratioPrompt(editForm.unit || 'মূল এককে', editForm.subUnit || 'সাব-একক') : `১ ${editForm.unit || 'মূল এককে'} কত ${editForm.subUnit || 'সাব-একক'}?`}
                       </label>
                       <input
                         type="number"
@@ -2609,7 +2619,7 @@ export default function StockPage() {
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '3px' }}>
-                        {fieldConfig.ratioPrompt || `১ ${addForm.unit || 'মূল এককে'} কত ${addForm.subUnit || 'সাব-একক'}?`}
+                        {typeof fieldConfig.ratioPrompt === 'function' ? fieldConfig.ratioPrompt(addForm.unit || 'মূল এককে', addForm.subUnit || 'সাব-একক') : `১ ${addForm.unit || 'মূল এককে'} কত ${addForm.subUnit || 'সাব-একক'}?`}
                       </label>
                       <input
                         type="number"

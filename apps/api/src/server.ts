@@ -645,6 +645,16 @@ try { db.prepare("ALTER TABLE staff_users ADD COLUMN sales_target REAL DEFAULT 0
 
 try { db.prepare("ALTER TABLE products ADD COLUMN sub_unit TEXT").run(); } catch (e) {}
 try { db.prepare("ALTER TABLE products ADD COLUMN conversion_ratio REAL DEFAULT 1").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN author TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN publisher TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN genre TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN isbn TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN rack TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN edition TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN pages INTEGER").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN cover_type TEXT").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN mrp REAL").run(); } catch (e) {}
+try { db.prepare("ALTER TABLE products ADD COLUMN book_discount REAL").run(); } catch (e) {}
 
 // Dealer supplies schema migrations
 try { db.prepare("ALTER TABLE dealer_supplies ADD COLUMN dealer_name TEXT").run(); } catch (e) {}
@@ -921,6 +931,18 @@ function getPlanFeaturesJson(planId: string): string {
 
 // Comprehensive Starter Pack Templates for all 12 Shop Categories
 const STARTER_PACKS: { [catId: string]: any[] } = {
+  'cat-bookstore': [
+    { barcode: '9789849645212', name: 'Paradoxical Sajid 1', banglaName: 'প্যারাডক্সিক্যাল সাজিদ ১', purchasePrice: 180, sellingPrice: 225, mrp: 300, bookDiscount: 25, stock: 25, unit: 'কপি', icon: '📚', author: 'আরিফ আজাদ', publisher: 'সমকালীন প্রকাশন', genre: 'ইসলামিক', rack: 'A-1', edition: '২০২৪' },
+    { barcode: '9789849645229', name: 'Paradoxical Sajid 2', banglaName: 'প্যারাডক্সিক্যাল সাজিদ ২', purchasePrice: 195, sellingPrice: 240, mrp: 320, bookDiscount: 25, stock: 20, unit: 'কপি', icon: '📚', author: 'আরিফ আজাদ', publisher: 'সমকালীন প্রকাশন', genre: 'ইসলামিক', rack: 'A-1', edition: '২০২৪' },
+    { barcode: '9789849645236', name: 'Bela Furabar Age', banglaName: 'বেলা ফুরাবার আগে', purchasePrice: 168, sellingPrice: 224, mrp: 280, bookDiscount: 20, stock: 30, unit: 'কপি', icon: '📖', author: 'আরিফ আজাদ', publisher: 'সমকালীন প্রকাশন', genre: 'মোটিভেশনাল', rack: 'A-1', edition: '২০২৩' },
+    { barcode: '9789849312345', name: 'Shesher Kobita', banglaName: 'শেষের কবিতা', purchasePrice: 110, sellingPrice: 150, mrp: 200, bookDiscount: 25, stock: 15, unit: 'কপি', icon: '📚', author: 'রবীন্দ্রনাথ ঠাকুর', publisher: 'বিশ্বসাহিত্য কেন্দ্র', genre: 'উপন্যাস', rack: 'B-2', edition: 'ক্লাসিক' },
+    { barcode: '9789849312352', name: 'Himu Shomogro 1', banglaName: 'হিমু সমগ্র ১', purchasePrice: 250, sellingPrice: 350, mrp: 500, bookDiscount: 30, stock: 12, unit: 'কপি', icon: '📙', author: 'হুমায়ূন আহমেদ', publisher: 'অনন্যা প্রকাশন', genre: 'উপন্যাস', rack: 'C-1', edition: 'হার্ডকভার' },
+    { barcode: '9789849312369', name: 'Misir Ali Shomogro', banglaName: 'মিসির আলি সমগ্র ১', purchasePrice: 260, sellingPrice: 360, mrp: 520, bookDiscount: 30, stock: 10, unit: 'কপি', icon: '📘', author: 'হুমায়ূন আহমেদ', publisher: 'প্রথমা প্রকাশন', genre: 'রহস্য/উপন্যাস', rack: 'C-2', edition: 'হার্ডকভার' },
+    { barcode: '9789840612347', name: 'Seerate Ibne Hisham', banglaName: 'সীরাতে ইবনে হিশাম', purchasePrice: 240, sellingPrice: 338, mrp: 450, bookDiscount: 25, stock: 15, unit: 'কপি', icon: '📗', author: 'ইবনে হিশাম', publisher: 'ইসলামিক ফাউন্ডেশন', genre: 'সীরাত/ইতিহাস', rack: 'D-1', edition: 'বোর্ড বাঁধাই' },
+    { barcode: '9789840612354', name: 'Al Quranul Kareem Tafseer', banglaName: 'আল কোরআনুল কারীম (সহজ অনুবাদ)', purchasePrice: 380, sellingPrice: 480, mrp: 600, bookDiscount: 20, stock: 18, unit: 'কপি', icon: '📗', author: 'ড. মুজিবুর রহমান', publisher: 'দারুসসালাম', genre: 'ধর্মীয়/তাফসীর', rack: 'D-2', edition: 'প্রিমিয়াম' },
+    { barcode: '9789840612361', name: 'Practical Psychology', banglaName: 'প্র্যাকটিক্যাল সাইকোলজি', purchasePrice: 190, sellingPrice: 280, mrp: 350, bookDiscount: 20, stock: 14, unit: 'কপি', icon: '📘', author: 'ড. মোহিত কামাল', publisher: 'জ্ঞানকোষ প্রকাশনী', genre: 'মনোবিজ্ঞান', rack: 'E-3', edition: '২০২৪' },
+    { barcode: '9789840612378', name: 'Chotoder Boi Cartoon', banglaName: 'ছোটদের এসো গল্প পড়ি', purchasePrice: 65, sellingPrice: 95, mrp: 120, bookDiscount: 20, stock: 40, unit: 'কপি', icon: '🎨', author: 'আহসান হাবীব', publisher: 'কাকলী প্রকাশনী', genre: 'শিশুতোষ', rack: 'F-1', edition: 'রঙিন' }
+  ],
   'cat-grocery': [
     { barcode: '89411001', name: 'Teer Soybean Oil 1L', banglaName: 'তীর সয়াবিন তেল', purchasePrice: 165, sellingPrice: 180, stock: 40, unit: 'লিটার', icon: '🛢️', brand: 'Teer' },
     { barcode: '89411002', name: 'Rupchanda Oil 2L', banglaName: 'রূপচাঁদা সয়াবিন তেল', purchasePrice: 330, sellingPrice: 360, stock: 24, unit: 'লিটার', icon: '🛢️', brand: 'Rupchanda' },
@@ -1073,8 +1095,8 @@ function autoImportStarterPack(tenantId: string, categoryId: string) {
   const normCat = normalizeIndustryCategory(categoryId);
   const pack = STARTER_PACKS[normCat] || STARTER_PACKS['cat-grocery'];
   const insertP = db.prepare(`
-    INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, low_stock_threshold, generic_name, expiry_date, brand, size, color, author, publisher, genre, isbn, rack, edition, mrp, book_discount, icon, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertLog = db.prepare(`
     INSERT INTO stock_logs (id, tenant_id, product_id, product_name, type, quantity, unit, base_quantity, unit_price, source_ref, note, created_at)
@@ -5449,6 +5471,16 @@ fastify.get('/api/products', async (request) => {
     brand: r.brand,
     size: r.size,
     color: r.color,
+    author: r.author || null,
+    publisher: r.publisher || r.brand || null,
+    genre: r.genre || null,
+    isbn: r.isbn || r.barcode || null,
+    rack: r.rack || null,
+    edition: r.edition || null,
+    pages: r.pages || null,
+    coverType: r.cover_type || null,
+    mrp: r.mrp || r.selling_price || 0,
+    bookDiscount: r.book_discount || 0,
     imageEmoji: r.icon || '📦'
   }));
 });
@@ -5523,8 +5555,8 @@ fastify.post('/api/products', async (request, reply) => {
     const finalBarcode = barcode || ('894' + Math.floor(10000000 + Math.random() * 90000000));
 
     const stmt = db.prepare(`
-      INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, sub_unit, conversion_ratio, low_stock_threshold, generic_name, expiry_date, brand, size, color, icon, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO products (id, tenant_id, barcode, name, bangla_name, category_id, purchase_price, selling_price, stock, unit, sub_unit, conversion_ratio, low_stock_threshold, generic_name, expiry_date, brand, size, color, author, publisher, genre, isbn, rack, edition, pages, cover_type, mrp, book_discount, icon, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       id,
@@ -5532,7 +5564,7 @@ fastify.post('/api/products', async (request, reply) => {
       finalBarcode,
       name,
       banglaName,
-      body.categoryId || 'cat-grocery',
+      body.categoryId || 'cat-bookstore',
       Number(body.purchasePrice) || 0,
       Number(body.sellingPrice) || 0,
       initialStock,
@@ -5542,10 +5574,20 @@ fastify.post('/api/products', async (request, reply) => {
       Number(body.lowStockThreshold) || 5,
       body.genericName || null,
       body.expiryDate || null,
-      body.brand || null,
+      body.brand || body.publisher || null,
       body.size || null,
       body.color || null,
-      body.imageEmoji || '📦',
+      body.author || null,
+      body.publisher || body.brand || null,
+      body.genre || null,
+      body.isbn || finalBarcode,
+      body.rack || null,
+      body.edition || null,
+      Number(body.pages) || null,
+      body.coverType || null,
+      Number(body.mrp) || Number(body.sellingPrice) || 0,
+      Number(body.bookDiscount) || 0,
+      body.imageEmoji || (body.author || body.rack ? '📚' : '📦'),
       now
     );
 
