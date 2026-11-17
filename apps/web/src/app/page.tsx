@@ -848,24 +848,25 @@ export default function ShopkeeperDashboard() {
 
         return (
           <>
-            {/* 👑 Hero Cockpit Card - Slate Navy 2-Color */}
+            {/* 👑 Master Luxury Fin-Tech Hero Balance Card */}
             <div style={{
-              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              background: 'radial-gradient(circle at 85% 15%, rgba(16, 185, 129, 0.28) 0%, transparent 55%), linear-gradient(145deg, #0b1329 0%, #0f172a 50%, #064e3b 100%)',
               color: '#ffffff',
               borderRadius: '24px',
               padding: '22px 20px',
               marginBottom: '20px',
-              boxShadow: '0 12px 30px -5px rgba(15, 23, 42, 0.35)',
+              border: '1px solid rgba(52, 211, 153, 0.25)',
+              boxShadow: '0 16px 36px -8px rgba(6, 78, 59, 0.35), 0 4px 14px rgba(15, 23, 42, 0.25)',
               position: 'relative',
               overflow: 'hidden'
             }}>
-              {/* Top Row: Subtitle + Memo Count + Voice Readout + Privacy Eye Button */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              {/* Top Row: Period Badge + Memo Count + Speech Assistant + Privacy Toggle */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.12)', color: '#cbd5e1', padding: '3px 10px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: '800', background: 'rgba(255, 255, 255, 0.12)', color: '#e2e8f0', padding: '3px 10px', borderRadius: '99px', border: '1px solid rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)' }}>
                     📊 {periodLabel}
                   </span>
-                  <span style={{ fontSize: '11.5px', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '11px', background: 'rgba(52, 211, 153, 0.18)', color: '#34d399', fontWeight: '800', padding: '3px 9px', borderRadius: '99px', border: '1px solid rgba(52, 211, 153, 0.35)' }}>
                     {((metrics as any)?.todayOrderCount !== undefined ? (metrics as any).todayOrderCount : metrics.orderCount || 0)}টি মেমো বিক্রি
                   </span>
                 </div>
@@ -887,17 +888,18 @@ export default function ShopkeeperDashboard() {
                       );
                     }}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.18)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '36px',
-                      height: '36px',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      borderRadius: '10px',
+                      width: '34px',
+                      height: '34px',
                       color: '#ffffff',
-                      fontSize: '17px',
+                      fontSize: '16px',
                       cursor: 'pointer',
                       display: 'grid',
                       placeItems: 'center',
-                      transition: 'background 0.2s ease'
+                      backdropFilter: 'blur(8px)',
+                      transition: 'all 0.2s ease'
                     }}
                     title="হিসাব শুনুন (সহকারী ভয়েস স্পিকার)"
                   >
@@ -908,17 +910,18 @@ export default function ShopkeeperDashboard() {
                     type="button"
                     onClick={togglePrivacyMode}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.18)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '36px',
-                      height: '36px',
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      borderRadius: '10px',
+                      width: '34px',
+                      height: '34px',
                       color: '#ffffff',
-                      fontSize: '17px',
+                      fontSize: '16px',
                       cursor: 'pointer',
                       display: 'grid',
                       placeItems: 'center',
-                      transition: 'background 0.2s ease'
+                      backdropFilter: 'blur(8px)',
+                      transition: 'all 0.2s ease'
                     }}
                     title={privacyMode ? 'ব্যালেন্স দেখতে চাপুন' : 'ব্যালেন্স গোপন রাখতে চাপুন'}
                   >
@@ -929,10 +932,10 @@ export default function ShopkeeperDashboard() {
 
               {/* Centerpiece: মোট বিক্রি (Total Sales) */}
               <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-                <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '800', marginBottom: '2px' }}>
+                <div style={{ fontSize: '12.5px', color: '#a7f3d0', fontWeight: '800', marginBottom: '2px', letterSpacing: '0.2px' }}>
                   {periodLabel} এর মোট বিক্রি
                 </div>
-                <div style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }} className="num-font">
+                <div style={{ fontSize: 'clamp(30px, 6.8vw, 40px)', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.5px' }} className="num-font">
                   {privacyMode ? '৳ ••••••' : `৳ ${((metrics as any)?.todaySales !== undefined ? (metrics as any).todaySales : metrics.totalSales || 0).toLocaleString('en-US')}`}
                 </div>
               </div>
@@ -942,68 +945,69 @@ export default function ShopkeeperDashboard() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '8px',
-                marginBottom: '16px'
+                marginBottom: '14px'
               }}>
-                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#a7f3d0', fontWeight: '800', display: 'block' }}>💵 নগদ বিক্রি</span>
-                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '9px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '11px', color: '#a7f3d0', fontWeight: '800', display: 'block' }}>💵 নগদ বিক্রি</span>
+                  <strong style={{ fontSize: '15.5px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayCashSales !== undefined ? (metrics as any).todayCashSales : metrics.cashSales || 0).toLocaleString('en-US')}`}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#fca5a5', fontWeight: '800', display: 'block' }}>🔴 বাকি বিক্রি</span>
-                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '9px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '11px', color: '#fca5a5', fontWeight: '800', display: 'block' }}>🔴 বাকি বিক্রি</span>
+                  <strong style={{ fontSize: '15.5px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayDueSales !== undefined ? (metrics as any).todayDueSales : 0).toLocaleString('en-US')}`}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#34d399', fontWeight: '800', display: 'block' }}>💹 {periodLabel} নিট লাভ</span>
-                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '9px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '11px', color: '#34d399', fontWeight: '800', display: 'block' }}>💹 {periodLabel} নিট লাভ</span>
+                  <strong style={{ fontSize: '15.5px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {activeRoleMode === 'owner' ? (privacyMode ? '••••' : `৳ ${((metrics as any)?.todayNetProfit !== undefined ? (metrics as any).todayNetProfit : metrics.netProfit || 0).toLocaleString('en-US')}`) : '🔒 মোড'}
                   </strong>
                 </div>
 
-                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '12px', padding: '8px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
-                  <span style={{ fontSize: '10.5px', color: '#cbd5e1', fontWeight: '800', display: 'block' }}>💸 {periodLabel} দোকান খরচ</span>
-                  <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
+                <div style={{ background: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '9px 12px', border: '1px solid rgba(255, 255, 255, 0.12)' }}>
+                  <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: '800', display: 'block' }}>💸 {periodLabel} দোকান খরচ</span>
+                  <strong style={{ fontSize: '15.5px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${((metrics as any)?.todayExpenses !== undefined ? (metrics as any).todayExpenses : metrics.expenses || 0).toLocaleString('en-US')}`}
                   </strong>
                 </div>
               </div>
 
-              {/* White Bottom Sub-Pill: হাতে আছে (Cash in hand) vs ব্যাংকে আছে (Bank) */}
+              {/* Integrated Frosted Glass Bottom Sub-Pill: হাতে নগদ ক্যাশ vs ব্যাংকে ব্যালেন্স */}
               <div style={{
-                background: '#ffffff',
+                background: 'rgba(0, 0, 0, 0.24)',
                 borderRadius: '16px',
-                padding: '12px 16px',
+                padding: '11px 16px',
                 display: 'grid',
                 gridTemplateColumns: '1fr 1px 1fr',
                 alignItems: 'center',
-                boxShadow: '0 4px 14px rgba(0,0,0,0.06)'
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(8px)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(16, 185, 129, 0.22)', color: '#34d399', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900', border: '1px solid rgba(52, 211, 153, 0.35)' }}>
                     💵
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>হাতে নগদ ক্যাশ</span>
-                    <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: '900' }} className="num-font">
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', display: 'block' }}>হাতে নগদ ক্যাশ</span>
+                    <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                       {privacyMode ? '••••••' : `৳ ${Math.max(0, liveCashInHand).toLocaleString('en-US')}`}
                     </strong>
                   </div>
                 </div>
 
-                <div style={{ width: '1px', height: '28px', background: '#f1f5f9' }} />
+                <div style={{ width: '1px', height: '28px', background: 'rgba(255, 255, 255, 0.12)' }} />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900' }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'rgba(56, 189, 248, 0.22)', color: '#38bdf8', display: 'grid', placeItems: 'center', fontSize: '14px', fontWeight: '900', border: '1px solid rgba(56, 189, 248, 0.35)' }}>
                     🏦
                   </div>
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'block' }}>ব্যাংকে ব্যালেন্স</span>
-                    <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: '900' }} className="num-font">
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', display: 'block' }}>ব্যাংকে ব্যালেন্স</span>
+                    <strong style={{ fontSize: '15px', color: '#ffffff', fontWeight: '900' }} className="num-font">
                       {privacyMode ? '••••••' : `৳ ${liveBankBalance.toLocaleString('en-US')}`}
                     </strong>
                   </div>
@@ -1011,540 +1015,283 @@ export default function ShopkeeperDashboard() {
               </div>
             </div>
 
-            {/* ⚡ 4/5-Grid Fast Action Cockpit with Feature Toggle Intelligence */}
+            {/* ⚡ 4-Card Primary Business Cockpit */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(auto-fit, minmax(75px, 1fr))`,
-              gap: '10px',
-              marginBottom: '16px'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '12px',
+              marginBottom: '18px'
             }}>
+              {/* Tile 1: POS / নতুন মেমো */}
               <Link
                 href="/pos"
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#ffffff',
-                  padding: '12px 6px',
-                  borderRadius: '16px',
-                  textAlign: 'center',
+                  background: '#ffffff',
+                  border: '1.5px solid #a7f3d0',
+                  borderRadius: '18px',
+                  padding: '14px',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
+                  justifyContent: 'space-between',
+                  minHeight: '92px',
+                  boxShadow: '0 4px 14px -2px rgba(16, 185, 129, 0.12)'
                 }}
                 className="clickable-card"
               >
-                <span style={{ fontSize: '20px' }}>⚡</span>
-                <span style={{ fontSize: '11.5px', fontWeight: '900' }}>নতুন মেমো</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: '18px', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)' }}>
+                    ⚡
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', whiteSpace: 'nowrap' }}>কাউন্টার ➔</span>
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', fontWeight: '800', lineHeight: 1.25 }}>
+                    {theme.posLabel || 'নতুন মেমো'}
+                  </strong>
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>দ্রুত বিক্রয় ও মেমো</span>
+                </div>
               </Link>
 
+              {/* Tile 2: বাকি খাতা */}
               {isFeatureEnabled('enableCustomerKhata') && (
                 <Link
                   href="/khata"
                   style={{
                     background: '#ffffff',
-                    border: '1.5px solid #cbd5e1',
-                    color: '#ea580c',
-                    padding: '12px 6px',
-                    borderRadius: '16px',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  className="clickable-card"
-                >
-                  <span style={{ fontSize: '20px' }}>📒</span>
-                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির খাতা</span>
-                </Link>
-              )}
-
-              {isFeatureEnabled('enableInstallments') && (
-                <Link
-                  href="/installments"
-                  style={{
-                    background: '#ffffff',
                     border: '1.5px solid #e2e8f0',
-                    color: '#0f172a',
-                    padding: '12px 6px',
-                    borderRadius: '16px',
-                    textAlign: 'center',
+                    borderRadius: '18px',
+                    padding: '14px',
                     textDecoration: 'none',
-                    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px'
+                    justifyContent: 'space-between',
+                    minHeight: '92px',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
                   }}
                   className="clickable-card"
                 >
-                  <span style={{ fontSize: '20px' }}>📅</span>
-                  <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>বাকির কিস্তি</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#ecfdf5', color: '#059669', display: 'grid', placeItems: 'center', fontSize: '18px', border: '1px solid #a7f3d0' }}>
+                      📒
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', whiteSpace: 'nowrap' }}>খাতা ➔</span>
+                  </div>
+                  <div style={{ marginTop: '8px' }}>
+                    <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', fontWeight: '800', lineHeight: 1.25 }}>
+                      {theme.khataLabel || 'কাস্টমার বাকি'}
+                    </strong>
+                    <span className="num-font" style={{ fontSize: '13.5px', fontWeight: '900', color: '#059669' }}>
+                      {privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}
+                    </span>
+                  </div>
                 </Link>
               )}
 
+              {/* Tile 3: পণ্য ও স্টক */}
               <Link
                 href="/stock"
                 style={{
                   background: '#ffffff',
                   border: '1.5px solid #e2e8f0',
-                  color: '#0f172a',
-                  padding: '12px 6px',
-                  borderRadius: '16px',
-                  textAlign: 'center',
+                  borderRadius: '18px',
+                  padding: '14px',
                   textDecoration: 'none',
-                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
+                  justifyContent: 'space-between',
+                  minHeight: '92px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
                 }}
                 className="clickable-card"
               >
-                <span style={{ fontSize: '20px' }}>📦</span>
-                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>মাল/স্টক</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#f0f9ff', color: '#0284c7', display: 'grid', placeItems: 'center', fontSize: '18px', border: '1px solid #bae6fd' }}>
+                    📦
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0284c7', whiteSpace: 'nowrap' }}>স্টক ➔</span>
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', fontWeight: '800', lineHeight: 1.25 }}>
+                    {theme.stockLabel || 'মজুত পণ্য'}
+                  </strong>
+                  <span style={{ fontSize: '11.5px', color: lowStockCount > 0 ? '#dc2626' : '#64748b', fontWeight: lowStockCount > 0 ? '800' : '600' }}>
+                    {products.length}টি পণ্য {lowStockCount > 0 ? `(${lowStockCount} কম)` : ''}
+                  </span>
+                </div>
               </Link>
 
+              {/* Tile 4: দোকান খরচ */}
               <Link
                 href="/expenses"
                 style={{
                   background: '#ffffff',
                   border: '1.5px solid #e2e8f0',
-                  color: '#0f172a',
-                  padding: '12px 6px',
-                  borderRadius: '16px',
-                  textAlign: 'center',
+                  borderRadius: '18px',
+                  padding: '14px',
                   textDecoration: 'none',
-                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px'
+                  justifyContent: 'space-between',
+                  minHeight: '92px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
                 }}
                 className="clickable-card"
               >
-                <span style={{ fontSize: '20px' }}>💸</span>
-                <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#0f172a' }}>খরচ লিখুন</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '11px', background: '#fef2f2', color: '#ef4444', display: 'grid', placeItems: 'center', fontSize: '18px', border: '1px solid #fecaca' }}>
+                    💸
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#ef4444', whiteSpace: 'nowrap' }}>খরচ ➔</span>
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', fontWeight: '800', lineHeight: 1.25 }}>
+                    দোকান খরচ
+                  </strong>
+                  <span className="num-font" style={{ fontSize: '13.5px', fontWeight: '900', color: '#e11d48' }}>
+                    {privacyMode ? '••••' : `৳ ${(metrics.expenses || 0).toLocaleString('en-US')}`}
+                  </span>
+                </div>
               </Link>
             </div>
 
-            {/* 📊 FLOATING-BADGE KPI METRIC CARDS (Industry & Feature Tailored - Clean 2-Color) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '18px 14px',
-              marginBottom: '20px',
-              paddingTop: '6px'
-            }}>
-              {/* Card 1: কাস্টমার বাকি (Customer Due) */}
-              {isFeatureEnabled('enableCustomerKhata') && (
-                <Link
-                  href="/khata"
-                  style={{
-                    background: '#ffffff',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '20px',
-                    padding: '16px 14px 14px',
-                    position: 'relative',
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '88px',
-                    transition: 'transform 0.15s ease'
-                  }}
-                  className="clickable-card"
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: '-14px',
-                    left: '18px',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                    border: '2px solid #ffffff'
-                  }}>
-                    📒
-                  </div>
-                  <div style={{ marginTop: '8px' }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {theme.khataLabel || 'কাস্টমার বাকি'} <span style={{ fontSize: '10px' }}>ⓘ</span>
-                    </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                      <span>{privacyMode ? '••••••' : `৳ ${totalMarketDue.toLocaleString('en-US')}`}</span>
-                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* Card 1.5: কিস্তি খাতা (Installments / EMI) */}
-              {isFeatureEnabled('enableInstallments') && (
-                <Link
-                  href="/installments"
-                  style={{
-                    background: '#ffffff',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '20px',
-                    padding: '16px 14px 14px',
-                    position: 'relative',
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '88px',
-                    transition: 'transform 0.15s ease'
-                  }}
-                  className="clickable-card"
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: '-14px',
-                    left: '18px',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                    border: '2px solid #ffffff'
-                  }}>
-                    📅
-                  </div>
-                  <div style={{ marginTop: '8px' }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      কিস্তি হিসাব ও আদায় <span style={{ fontSize: '10px' }}>ⓘ</span>
-                    </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                      <span>বাকির কিস্তি</span>
-                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {/* Card 2: ডিলার / মহাজন দেনা (Dealer Payable) */}
+            {/* 📋 3 Executive Summary Bars (Dealer Due, Working Capital, Day-End Drawer) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px', marginBottom: '22px' }}>
+              {/* Bar 1: মহাজন / ডিলার দেনা */}
               {isFeatureEnabled('enableDealerKhata') && (
                 <Link
                   href="/dealers"
                   style={{
                     background: '#ffffff',
                     border: '1.5px solid #e2e8f0',
-                    borderRadius: '20px',
-                    padding: '16px 14px 14px',
-                    position: 'relative',
-                    textDecoration: 'none',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+                    borderRadius: '16px',
+                    padding: '12px 16px',
                     display: 'flex',
-                    flexDirection: 'column',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    minHeight: '88px',
-                    transition: 'transform 0.15s ease'
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                   }}
                   className="clickable-card"
                 >
-                  <div style={{
-                    position: 'absolute',
-                    top: '-14px',
-                    left: '18px',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: '#f8fafc',
-                    color: '#0f172a',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '15px',
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                    border: '2px solid #ffffff'
-                  }}>
-                    🚚
-                  </div>
-                  <div style={{ marginTop: '8px' }}>
-                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {theme.dealerLabel || 'ডিলার দেনা'} <span style={{ fontSize: '10px' }}>ⓘ</span>
-                    </span>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                      <span>{privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}</span>
-                      <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#f8fafc', color: '#0f172a', display: 'grid', placeItems: 'center', fontSize: '16px', border: '1px solid #e2e8f0' }}>
+                      🚚
                     </div>
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block', fontWeight: '800' }}>{theme.dealerLabel || 'মহাজন / ডিলার দেনা'}</strong>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>বকেয়া পরিশোধের তালিকা</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: '900' }} className="num-font">
+                      {privacyMode ? '••••••' : `৳ ${totalDealerDue.toLocaleString('en-US')}`}
+                    </strong>
+                    <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
                   </div>
                 </Link>
               )}
 
-              {/* Card 3: পণ্য ও স্টক (Products Count) */}
+              {/* Bar 2: স্টক মূল্য (পাইকারি মূলধন) */}
               <Link
                 href="/stock"
                 style={{
                   background: '#ffffff',
                   border: '1.5px solid #e2e8f0',
-                  borderRadius: '20px',
-                  padding: '16px 14px 14px',
-                  position: 'relative',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '88px',
-                  transition: 'transform 0.15s ease'
-                }}
-                className="clickable-card"
-              >
-                {/* Floating Round Badge at Top */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-14px',
-                  left: '18px',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#f8fafc',
-                  color: '#0f172a',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                  border: '2px solid #ffffff'
-                }}>
-                  {theme.stockIcon || '📦'}
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800' }}>
-                    {theme.stockLabel || 'পণ্য ও স্টক'}
-                  </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{products.length} আইটেম</span>
-                    <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Card 4: কাস্টমার খাতা (Customer Count) */}
-              <Link
-                href="/khata"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '20px',
-                  padding: '16px 14px 14px',
-                  position: 'relative',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '88px',
-                  transition: 'transform 0.15s ease'
-                }}
-                className="clickable-card"
-              >
-                {/* Floating Round Badge at Top */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-14px',
-                  left: '18px',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#f8fafc',
-                  color: '#0f172a',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '15px',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-                  border: '2px solid #ffffff'
-                }}>
-                  👥
-                </div>
-                <div style={{ marginTop: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '800' }}>
-                    {theme.name?.includes('ফার্মেসি') ? 'রোগী ও কাস্টমার' : theme.name?.includes('পোশাক') ? 'ফ্যাশন খদ্দের' : 'মোট কাস্টমার'}
-                  </span>
-                  <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }} className="num-font">
-                    <span>{customers.length} জন</span>
-                    <span style={{ color: '#10b981', fontSize: '16px' }}>→</span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            {/* 📋 3 HORIZONTAL QUICK ACTION INFO BARS (Responsive 1-Col Mobile, 3-Col Desktop) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-              {/* Bar 1: মোট ব্যয়/খরচ > */}
-              <Link
-                href="/expenses"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '18px',
-                  padding: '14px 16px',
+                  borderRadius: '16px',
+                  padding: '12px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
                 }}
                 className="clickable-card"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#fee2e2', color: '#ef4444', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
-                    💸
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>মোট ব্যয় / খরচ</strong>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>দোকানের রানিং খরচ</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '15.5px', color: '#e11d48', fontWeight: '900' }} className="num-font">
-                    {privacyMode ? '••••' : `৳ ${(metrics.expenses || 0).toLocaleString('en-US')}`}
-                  </strong>
-                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
-                </div>
-              </Link>
-
-              {/* Bar 2: মোট স্টক > */}
-              <Link
-                href="/stock"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '18px',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}
-                className="clickable-card"
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
-                    🛒
-                  </div>
-                  <div>
-                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>মোট স্টক পণ্য</strong>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>বর্তমান মজুত পরিমাণ</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '15.5px', color: '#059669', fontWeight: '900' }} className="num-font">
-                    {totalProductStockCount.toLocaleString('en-US')} টি
-                  </strong>
-                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
-                </div>
-              </Link>
-
-              {/* Bar 3: স্টক মূল্য > */}
-              <Link
-                href="/stock"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #e2e8f0',
-                  borderRadius: '18px',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}
-                className="clickable-card"
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#fef3c7', color: '#d97706', display: 'grid', placeItems: 'center', fontSize: '16px', border: '1px solid #fde68a' }}>
                     🪙
                   </div>
                   <div>
-                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>স্টক মূল্য (মূলধন)</strong>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>কেনা দরে মোট ক্যাপিটাল</span>
+                    <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block', fontWeight: '800' }}>স্টক পাইকারি মূলধন</strong>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>দোকানে ইনভেন্টরি সম্পদ</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '15.5px', color: '#059669', fontWeight: '900' }} className="num-font">
+                  <strong style={{ fontSize: '15px', color: '#059669', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••••' : `৳ ${totalStockWholesaleValue.toLocaleString('en-US')}`}
                   </strong>
                   <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
                 </div>
               </Link>
+
+              {/* Bar 3: রাতের ড্রয়ার / ক্যাশ মিলানো */}
+              <Link
+                href="/day-end"
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                }}
+                className="clickable-card"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#ede9fe', color: '#7c3aed', display: 'grid', placeItems: 'center', fontSize: '16px', border: '1px solid #ddd6fe' }}>
+                    🌙
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block', fontWeight: '800' }}>ক্যাশ মিলানো (ড্রয়ার)</strong>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>দিনের সমাপ্তি ও হিসাব মিলান</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11.5px', color: '#7c3aed', fontWeight: '800' }}>হিসাব মেলান</span>
+                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
+                </div>
+              </Link>
+
+              {/* Bar 4: কিস্তি খাতা (if enabled) */}
+              {isFeatureEnabled('enableInstallments') && (
+                <Link
+                  href="/installments"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '16px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                  }}
+                  className="clickable-card"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#ecfdf5', color: '#059669', display: 'grid', placeItems: 'center', fontSize: '16px', border: '1px solid #a7f3d0' }}>
+                      📅
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block', fontWeight: '800' }}>কিস্তি খাতা ও আদায়</strong>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>গ্রাহকের মাসিক কিস্তি ট্র্যাক</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: '800' }}>কিস্তি খাতা</span>
+                    <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
+                  </div>
+                </Link>
+              )}
             </div>
           </>
         );
       })()}
-
-
-
-      {/* Quick Action Navigation Tiles */}
-      <div style={{ marginBottom: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  দোকানের প্রধান খাতা ও কার্যক্রম
-                </h3>
-                <span style={{ fontSize: '13px', color: '#64748b' }}>যেখানে ক্লিক করবেন সরাসরি সেই খাতায় কাজ করতে পারবেন</span>
-              </div>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-              gap: '12px'
-            }}>
-              {[
-                { href: '/pos', icon: theme.posIcon, title: theme.posLabel, desc: theme.posDesc },
-                { href: '/khata', icon: '📒', title: theme.khataLabel, desc: 'বকেয়া ও তাগাদা এসএমএস' },
-                { href: '/stock', icon: theme.stockIcon, title: theme.stockLabel, desc: lowStockCount > 0 ? `${lowStockCount}টি কম স্টক` : 'মজুত পণ্য ও দাম' },
-                { href: '/expenses', icon: '💸', title: 'দোকান খরচ', desc: 'চা, ভাড়া ও বিল' },
-                { href: '/dealers', icon: '🚚', title: theme.dealerLabel, desc: 'ডিলার দেনা-পাওনা' },
-                { href: '/day-end', icon: '🌙', title: 'ক্যাশ মিলানো', desc: 'রাতের ড্রয়ার হিসাব' },
-              ].map(action => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="ui-card launcher-card clickable-card"
-                  style={{
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    padding: '20px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <div className="launcher-icon-circle">
-                    {action.icon}
-                  </div>
-                  <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', marginBottom: '3px', fontWeight: '800', lineHeight: 1.25 }}>
-                    {action.title}
-                  </strong>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    {action.desc}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
 
           {/* Recent Sales Table */}
           <div className="ui-card" style={{ padding: '18px 20px', marginBottom: '24px', borderRadius: '20px' }}>
