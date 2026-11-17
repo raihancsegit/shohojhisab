@@ -1146,46 +1146,16 @@ export default function KhataPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
             onClick={handleExportKhata}
-            style={{
-              background: '#047857',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '10px',
-              fontWeight: '800',
-              fontSize: '12px',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(4, 120, 87, 0.2)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
-            }}
+            className="btn-secondary-action"
           >
             <span>📥</span> এক্সেল / CSV
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            style={{
-              background: theme.primaryGradient,
-              color: '#fff',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '10px',
-              fontWeight: '800',
-              fontSize: '12px',
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              whiteSpace: 'nowrap',
-              flexShrink: 0
-            }}
+            className="btn-primary-action"
           >
             <span>➕</span> নতুন বাকি খাতা
           </button>
@@ -1193,29 +1163,29 @@ export default function KhataPage() {
       </div>
 
       {/* 🌟 2-Color Hero Cockpit Cards (Green & Black/Slate) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '18px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '18px' }}>
         {/* 🟢 মোট পাবো (Customer Receivable) */}
         <div className="ui-card" style={{
           background: '#ffffff',
           border: '1.5px solid #10b981',
-          borderRadius: '16px',
-          padding: '12px 14px',
+          borderRadius: '18px',
+          padding: '14px 16px',
           position: 'relative',
           overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
+          boxShadow: '0 4px 14px -2px rgba(16, 185, 129, 0.12)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '4px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
               <span>🟢</span> মোট পাবো
             </span>
-            <span style={{ fontSize: '10.5px', fontWeight: '800', background: '#ecfdf5', color: '#059669', padding: '1px 6px', borderRadius: '99px', border: '1px solid #a7f3d0', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <span className="badge-pill" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
               {receivableCount} জন
             </span>
           </div>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#059669', margin: '3px 0', whiteSpace: 'nowrap' }}>
+          <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#059669', margin: '4px 0', whiteSpace: 'nowrap' }}>
             ৳{totalReceivable.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             মোট খরিদ্দার: {customers.length} জন
           </div>
         </div>
@@ -1224,41 +1194,33 @@ export default function KhataPage() {
         <div className="ui-card" style={{
           background: '#ffffff',
           border: '1.5px solid #cbd5e1',
-          borderRadius: '16px',
-          padding: '12px 14px',
+          borderRadius: '18px',
+          padding: '14px 16px',
           position: 'relative',
           overflow: 'hidden',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+          boxShadow: '0 4px 14px -2px rgba(15, 23, 42, 0.05)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '4px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
               <span>🚚</span> মোট দেবো
             </span>
             <Link
               href="/dealers"
+              className="badge-pill"
               style={{
-                fontSize: '10.5px',
-                fontWeight: '800',
                 background: '#f1f5f9',
                 color: '#0f172a',
-                padding: '1px 7px',
-                borderRadius: '99px',
                 border: '1px solid #e2e8f0',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px'
+                textDecoration: 'none'
               }}
             >
               {payableCount} জন ডিলার ➔
             </Link>
           </div>
-          <div className="num-font" style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', margin: '3px 0', whiteSpace: 'nowrap' }}>
+          <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '4px 0', whiteSpace: 'nowrap' }}>
             ৳{totalPayable.toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap' }}>
             মহাজন দেনা
           </div>
         </div>
@@ -1267,36 +1229,30 @@ export default function KhataPage() {
         <div className="ui-card" style={{
           background: 'var(--bg-card, #ffffff)',
           border: '1.5px solid #cbd5e1',
-          borderRadius: '16px',
-          padding: '14px 16px',
+          borderRadius: '18px',
+          padding: '16px 20px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          gridColumn: '1 / -1'
+          gridColumn: '1 / -1',
+          boxShadow: '0 4px 14px -2px rgba(15, 23, 42, 0.05)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '8px' }}>
+            <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
               <span>⚖️</span> নীট খাতা স্থিতি
             </span>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              padding: '2px 8px',
-              borderRadius: '99px',
+            <span className="badge-pill" style={{
               background: netBalance >= 0 ? '#ecfdf5' : '#fff1f2',
               color: netBalance >= 0 ? '#065f46' : '#991b1b',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              display: 'inline-flex',
-              alignItems: 'center'
+              border: netBalance >= 0 ? '1px solid #a7f3d0' : '1px solid #fecaca'
             }}>
               {netBalance >= 0 ? 'পাওনা উদ্বৃত্ত' : 'দেনা অতিরিক্ত'}
             </span>
           </div>
-          <div className="num-font" style={{ fontSize: '28px', fontWeight: '900', color: netBalance >= 0 ? '#047857' : '#b91c1c', margin: '3px 0', whiteSpace: 'nowrap' }}>
+          <div className="num-font" style={{ fontSize: '30px', fontWeight: '900', color: netBalance >= 0 ? '#047857' : '#b91c1c', margin: '4px 0', whiteSpace: 'nowrap' }}>
             ৳{Math.abs(netBalance).toLocaleString('en-US')}
           </div>
-          <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
             {netBalance >= 0
               ? 'মহাজনদের দেনা শোধের পরও আপনার উদ্বৃত্ত থাকবে'
               : 'গ্রাহকদের বাকি আদায়ের পরও মহাজনদের বাড়তি পরিশোধ করতে হবে'}

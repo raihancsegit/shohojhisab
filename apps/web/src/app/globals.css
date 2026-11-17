@@ -1097,47 +1097,204 @@ html.dark .admin-sidebar-nav-link:hover {
 /* Clean Crisp Card Style (Ultra Modern & Light) */
 .ui-card, .mobile-card {
   background: var(--surface);
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
   padding: 20px;
   border: 1px solid var(--card-border);
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 12px -2px rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
 .ui-card:hover, .mobile-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--card-shadow-hover);
+  box-shadow: 0 10px 24px -4px rgba(16, 185, 129, 0.12), 0 3px 8px -2px rgba(15, 23, 42, 0.05);
   border-color: #cbd5e1;
 }
 
 .clickable-card {
   cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .clickable-card:active {
-  transform: scale(0.985);
+  transform: scale(0.975);
 }
 
 /* Launcher Quick Action Circles */
+.launcher-card {
+  border-radius: 18px !important;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.launcher-card:hover {
+  border-color: #a7f3d0;
+  box-shadow: 0 8px 22px -4px rgba(16, 185, 129, 0.16);
+  transform: translateY(-2px);
+}
+
 .launcher-icon-circle {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: #ecfdf5;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
   color: #10b981;
   display: grid;
   place-items: center;
   font-size: 22px;
   margin: 0 auto 8px;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
   border: 1px solid #a7f3d0;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
 }
 
 .launcher-card:hover .launcher-icon-circle {
-  transform: scale(1.05);
-  background: #d1fae5;
+  transform: scale(1.08);
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
   color: #059669;
+}
+
+/* ==========================================================================
+   PREMIUM FINTECH BUTTON SYSTEM & MICRO-INTERACTIONS
+   ========================================================================== */
+.btn-primary-action {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px -2px rgba(16, 185, 129, 0.38), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.btn-primary-action:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 18px -2px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-primary-action:active {
+  transform: scale(0.96) translateY(0);
+  box-shadow: 0 2px 6px -1px rgba(16, 185, 129, 0.3);
+}
+
+.btn-dark-action {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.28);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.btn-dark-action:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-dark-action:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.btn-secondary-action {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.btn-secondary-action:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.btn-secondary-action:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.btn-danger-action {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px -2px rgba(239, 68, 68, 0.35);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.btn-danger-action:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 6px 16px -2px rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-danger-action:active {
+  transform: scale(0.96) translateY(0);
+}
+
+.badge-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2.5px 8px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
 /* Custom Clean Scrollbar */
@@ -1276,89 +1433,90 @@ input:focus, select:focus, textarea:focus {
    MOBILE SCREEN PERFECTION & FLUID RESPONSIVENESS (< 768px)
    ========================================================================== */
 @media (max-width: 768px) {
-  /* Headings & Text Scaling */
+  /* Fluid Bold Headings & Modern Typography Hierarchy */
   h1 {
-    font-size: 17px !important;
-    line-height: 1.3 !important;
+    font-size: clamp(18px, 4.8vw, 22px) !important;
+    font-weight: 900 !important;
+    line-height: 1.28 !important;
+    letter-spacing: -0.02em !important;
     margin-top: 4px !important;
     margin-bottom: 4px !important;
   }
   h2 {
-    font-size: 15px !important;
+    font-size: clamp(15.5px, 4vw, 19px) !important;
+    font-weight: 800 !important;
     line-height: 1.3 !important;
+    letter-spacing: -0.015em !important;
     margin-top: 3px !important;
     margin-bottom: 3px !important;
   }
   h3 {
-    font-size: 13.5px !important;
-    line-height: 1.3 !important;
+    font-size: clamp(14px, 3.8vw, 16.5px) !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
     margin-top: 2px !important;
     margin-bottom: 2px !important;
   }
   p {
-    font-size: 11.5px !important;
-    line-height: 1.4 !important;
+    font-size: 12px !important;
+    line-height: 1.48 !important;
+    color: var(--text-secondary);
   }
   
   .page-title {
-    font-size: 17px !important;
+    font-size: clamp(17px, 4.5vw, 21px) !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.02em !important;
   }
   .page-subtitle {
-    font-size: 11.5px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
   }
 
-  /* App Container & Cards */
+  /* App Container & Cards - Generous Breathing Room */
   .app-container {
-    padding-left: 10px !important;
-    padding-right: 10px !important;
-    padding-top: 10px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 12px !important;
     padding-bottom: 95px !important;
   }
   main {
     padding-bottom: 95px !important;
   }
   .ui-card, .mobile-card {
-    padding: 12px 12px !important;
-    border-radius: 14px !important;
-    margin-bottom: 10px !important;
+    padding: 16px 14px !important;
+    border-radius: 18px !important;
+    margin-bottom: 12px !important;
   }
 
-  /* Stat & KPI Cards Scaling */
+  /* Stat & KPI Numbers */
   .num-font {
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif !important;
+    font-feature-settings: 'tnum' 1 !important;
+    font-variant-numeric: tabular-nums !important;
     letter-spacing: -0.02em !important;
   }
   
-  /* Buttons Scaling */
+  /* Modern Touch-responsive Buttons */
   button, .clickable-card {
     touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   button:active, .clickable-card:active {
-    transform: scale(0.97) !important;
-  }
-
-  /* Action Buttons */
-  .btn-action-main,
-  button[style*="padding: '12px"],
-  button[style*="padding: '10px 20px"] {
-    padding: 8px 12px !important;
-    font-size: 12px !important;
-    border-radius: 10px !important;
-  }
-
-  /* Stat numbers */
-  div[style*="fontSize: '26px'"],
-  div[style*="fontSize: '24px'"],
-  div[style*="fontSize: '22px'"],
-  div[style*="fontSize: '32px'"] {
-    font-size: 18px !important;
-    font-weight: 900 !important;
+    transform: scale(0.96) !important;
+    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   /* Badges & Pills */
   span[style*="borderRadius: '99px'"],
-  div[style*="borderRadius: '99px'"] {
-    font-size: 10.5px !important;
-    padding: 2px 8px !important;
+  div[style*="borderRadius: '99px'"],
+  .badge-pill {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    padding: 2.5px 8px !important;
+    border-radius: 99px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 }
 

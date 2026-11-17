@@ -1385,33 +1385,38 @@ export default function ShopkeeperDashboard() {
             </div>
 
             {/* 📋 3 HORIZONTAL QUICK ACTION INFO BARS (Responsive 1-Col Mobile, 3-Col Desktop) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '22px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '24px' }}>
               {/* Bar 1: মোট ব্যয়/খরচ > */}
               <Link
                 href="/expenses"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #f1f5f9',
-                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '18px',
                   padding: '14px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   textDecoration: 'none',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-                  transition: 'background 0.15s ease'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
                 className="clickable-card"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>💸</span>
-                  <strong style={{ fontSize: '13.5px', color: '#1e293b' }}>মোট ব্যয় / খরচ</strong>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#fee2e2', color: '#ef4444', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+                    💸
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>মোট ব্যয় / খরচ</strong>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>দোকানের রানিং খরচ</span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '14.5px', color: '#e11d48', fontWeight: '900' }} className="num-font">
+                  <strong style={{ fontSize: '15.5px', color: '#e11d48', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••' : `৳ ${(metrics.expenses || 0).toLocaleString('en-US')}`}
                   </strong>
-                  <span style={{ fontSize: '16px', color: '#94a3b8' }}>›</span>
+                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
                 </div>
               </Link>
 
@@ -1420,27 +1425,32 @@ export default function ShopkeeperDashboard() {
                 href="/stock"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #f1f5f9',
-                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '18px',
                   padding: '14px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   textDecoration: 'none',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-                  transition: 'background 0.15s ease'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
                 className="clickable-card"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>🛒</span>
-                  <strong style={{ fontSize: '13.5px', color: '#1e293b' }}>মোট স্টক (পিস/ইউনিট)</strong>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+                    🛒
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>মোট স্টক পণ্য</strong>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>বর্তমান মজুত পরিমাণ</span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '14.5px', color: '#059669', fontWeight: '900' }} className="num-font">
+                  <strong style={{ fontSize: '15.5px', color: '#059669', fontWeight: '900' }} className="num-font">
                     {totalProductStockCount.toLocaleString('en-US')} টি
                   </strong>
-                  <span style={{ fontSize: '16px', color: '#94a3b8' }}>›</span>
+                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
                 </div>
               </Link>
 
@@ -1449,27 +1459,32 @@ export default function ShopkeeperDashboard() {
                 href="/stock"
                 style={{
                   background: '#ffffff',
-                  border: '1.5px solid #f1f5f9',
-                  borderRadius: '16px',
+                  border: '1.5px solid #e2e8f0',
+                  borderRadius: '18px',
                   padding: '14px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   textDecoration: 'none',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-                  transition: 'background 0.15s ease'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
                 }}
                 className="clickable-card"
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '18px' }}>🪙</span>
-                  <strong style={{ fontSize: '13.5px', color: '#1e293b' }}>স্টক মূল্য (পাইকারি মূলধন)</strong>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'grid', placeItems: 'center', fontSize: '18px', flexShrink: 0 }}>
+                    🪙
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '13.5px', color: '#1e293b', display: 'block', fontWeight: '800' }}>স্টক মূল্য (মূলধন)</strong>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>কেনা দরে মোট ক্যাপিটাল</span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <strong style={{ fontSize: '14.5px', color: '#059669', fontWeight: '900' }} className="num-font">
+                  <strong style={{ fontSize: '15.5px', color: '#059669', fontWeight: '900' }} className="num-font">
                     {privacyMode ? '••••••' : `৳ ${totalStockWholesaleValue.toLocaleString('en-US')}`}
                   </strong>
-                  <span style={{ fontSize: '16px', color: '#94a3b8' }}>›</span>
+                  <span style={{ fontSize: '16px', color: '#cbd5e1' }}>›</span>
                 </div>
               </Link>
             </div>
@@ -1510,16 +1525,20 @@ export default function ShopkeeperDashboard() {
                   style={{
                     textDecoration: 'none',
                     textAlign: 'center',
-                    padding: '18px 14px'
+                    padding: '20px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   <div className="launcher-icon-circle">
                     {action.icon}
                   </div>
-                  <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block', marginBottom: '3px', lineHeight: 1.2 }}>
+                  <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block', marginBottom: '3px', fontWeight: '800', lineHeight: 1.25 }}>
                     {action.title}
                   </strong>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
                     {action.desc}
                   </span>
                 </Link>
@@ -1528,30 +1547,17 @@ export default function ShopkeeperDashboard() {
           </div>
 
           {/* Recent Sales Table */}
-          <div className="ui-card" style={{ padding: '16px', marginBottom: '24px' }}>
+          <div className="ui-card" style={{ padding: '18px 20px', marginBottom: '24px', borderRadius: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#0f172a', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   🧾 সাম্প্রতিক বিক্রয় ও মেমো
                 </h3>
-                <span style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>ক্যাশ ও বাকি বিক্রয়ের রসিদ তালিকা</span>
+                <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>ক্যাশ ও বাকি বিক্রয়ের রসিদ তালিকা</span>
               </div>
               <Link
                 href="/pos"
-                style={{
-                  background: '#0f172a',
-                  color: '#fff',
-                  padding: '7px 12px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
+                className="btn-dark-action"
               >
                 + নতুন মেমো ➔
               </Link>

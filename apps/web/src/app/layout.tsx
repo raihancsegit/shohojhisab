@@ -2261,12 +2261,14 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
       bottom: 0,
       left: 0,
       right: 0,
-      background: isDark ? '#131b2e' : '#ffffff',
-      borderTop: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0',
+      background: isDark ? 'rgba(19, 27, 46, 0.94)' : 'rgba(255, 255, 255, 0.92)',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
+      borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0',
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
-      padding: '8px 6px 12px',
+      padding: '6px 6px 12px',
       zIndex: 90,
       boxShadow: isDark ? '0 -4px 20px rgba(0,0,0,0.5)' : '0 -4px 20px rgba(0,0,0,0.06)'
     }}>
@@ -2278,17 +2280,20 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px',
+          gap: '3px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
+          borderRadius: '12px',
+          background: pathname === '/' ? (isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.1)') : 'transparent',
+          color: pathname === '/' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
+          transition: 'all 0.15s ease'
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
-        <span style={{ fontSize: '11px', fontWeight: pathname === '/' ? '900' : '700' }}>হোম</span>
+        <span style={{ fontSize: '10.5px', fontWeight: pathname === '/' ? '900' : '700' }}>হোম</span>
       </Link>
 
       {/* 2. Khata or Installments */}
@@ -2299,14 +2304,17 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px',
+          gap: '3px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === tab2.href ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
+          borderRadius: '12px',
+          background: pathname === tab2.href ? (isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.1)') : 'transparent',
+          color: pathname === tab2.href ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
+          transition: 'all 0.15s ease'
         }}
       >
         {tab2.icon}
-        <span style={{ fontSize: '11px', fontWeight: pathname === tab2.href ? '900' : '700' }}>{tab2.label}</span>
+        <span style={{ fontSize: '10.5px', fontWeight: pathname === tab2.href ? '900' : '700' }}>{tab2.label}</span>
       </Link>
 
       {/* 3. Center Elevated Plus Button */}
@@ -2317,15 +2325,16 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
           color: '#ffffff',
           border: isDark ? '3px solid #131b2e' : '3px solid #ffffff',
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
+          width: '50px',
+          height: '50px',
+          borderRadius: '16px',
           display: 'grid',
           placeItems: 'center',
           cursor: 'pointer',
-          marginTop: '-24px',
-          boxShadow: '0 8px 20px rgba(16, 185, 129, 0.45)',
-          flexShrink: 0
+          marginTop: '-22px',
+          boxShadow: '0 8px 24px -2px rgba(16, 185, 129, 0.5)',
+          flexShrink: 0,
+          transition: 'transform 0.15s ease'
         }}
         title="নতুন হিসাব বা বিক্রি যুক্ত করুন"
       >
@@ -2343,19 +2352,22 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px',
+          gap: '3px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/stock' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
+          borderRadius: '12px',
+          background: pathname === '/stock' ? (isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.1)') : 'transparent',
+          color: pathname === '/stock' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
+          transition: 'all 0.15s ease'
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/stock' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/stock' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
           <line x1="16.5" y1="9.4" x2="7.5" y2="4.21" />
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
           <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
           <line x1="12" y1="22.08" x2="12" y2="12" />
         </svg>
-        <span style={{ fontSize: '11px', fontWeight: pathname === '/stock' ? '900' : '700' }}>স্টক</span>
+        <span style={{ fontSize: '10.5px', fontWeight: pathname === '/stock' ? '900' : '700' }}>স্টক</span>
       </Link>
 
       {/* 5. POS Sale */}
@@ -2366,18 +2378,21 @@ function BottomMobileNav({ onOpenActionSheet }: { onOpenActionSheet: () => void 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px',
+          gap: '3px',
           textDecoration: 'none',
           padding: '4px 10px',
-          color: pathname === '/pos' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b')
+          borderRadius: '12px',
+          background: pathname === '/pos' ? (isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.1)') : 'transparent',
+          color: pathname === '/pos' ? (isDark ? '#34d399' : '#059669') : (isDark ? '#94a3b8' : '#64748b'),
+          transition: 'all 0.15s ease'
         }}
       >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/pos' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/pos' ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
           <circle cx="9" cy="21" r="1" />
           <circle cx="20" cy="21" r="1" />
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
         </svg>
-        <span style={{ fontSize: '11px', fontWeight: pathname === '/pos' ? '900' : '700' }}>বিক্রি</span>
+        <span style={{ fontSize: '10.5px', fontWeight: pathname === '/pos' ? '900' : '700' }}>বিক্রি</span>
       </Link>
     </nav>
   );
