@@ -5278,7 +5278,7 @@ export default function PosPage() {
                     <span style={{ fontSize: '13px', fontWeight: '800', color: '#059669' }}>
                       ৳{tab.totalAmount}
                     </span>
-                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700' }}>
+                    <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '700', whiteSpace: 'nowrap' }}>
                       বিল ক্লোজ ➔
                     </span>
                   </div>

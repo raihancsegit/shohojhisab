@@ -1528,24 +1528,29 @@ export default function ShopkeeperDashboard() {
           </div>
 
           {/* Recent Sales Table */}
-          <div className="ui-card" style={{ padding: '22px', marginBottom: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div>
-                <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#0f172a', margin: '0 0 3px' }}>
-                  🧾 আজকের সাম্প্রতিক ক্যাশ মেমো ও বিক্রয়
+          <div className="ui-card" style={{ padding: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  🧾 সাম্প্রতিক বিক্রয় ও মেমো
                 </h3>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>ক্যাশ ও বাকি বিক্রয়ের রসিদ তালিকা</span>
+                <span style={{ fontSize: '11.5px', color: '#64748b', whiteSpace: 'nowrap', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>ক্যাশ ও বাকি বিক্রয়ের রসিদ তালিকা</span>
               </div>
               <Link
                 href="/pos"
                 style={{
                   background: '#0f172a',
                   color: '#fff',
-                  padding: '8px 14px',
+                  padding: '7px 12px',
                   borderRadius: '10px',
                   fontSize: '12px',
                   fontWeight: '800',
-                  textDecoration: 'none'
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
               >
                 + নতুন মেমো ➔

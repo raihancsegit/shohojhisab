@@ -262,17 +262,7 @@ function HeaderNav({
         )}
 
         {/* Top Main Bar */}
-        <div style={{
-          maxWidth: '1440px',
-          width: '100%',
-          margin: '0 auto',
-          padding: '7px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '8px',
-          boxSizing: 'border-box'
-        }}>
+        <div className="header-top-bar">
           {/* Left: Mobile hamburger & Shop Logo, Desktop Admin Sidebar toggle & Breadcrumb */}
           <div className="header-shop-container">
             {userRole === 'shopkeeper' && (
@@ -325,9 +315,9 @@ function HeaderNav({
                   title="দোকান বা ক্যাটাগরি পরিবর্তন করতে চাপুন"
                 >
                   <div className="header-shop-text">
-                    <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>{tenant.shopName || 'সহজ হিসাব'}</span>
-                      <span style={{ fontSize: '8px', opacity: 0.75, color: 'rgba(255, 255, 255, 0.7)' }}>▼</span>
+                    <h1 className="header-shop-title" style={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0, overflow: 'hidden' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{tenant.shopName || 'সহজ হিসাব'}</span>
+                      <span style={{ fontSize: '8px', opacity: 0.75, color: 'rgba(255, 255, 255, 0.7)', flexShrink: 0 }}>▼</span>
                     </h1>
                     <div className="header-shop-meta">
                       <span className="header-shop-badge">
@@ -437,7 +427,7 @@ function HeaderNav({
                     triggerHaptic('light');
                     setShowVoiceEnrollModal(true);
                   }}
-                  className="header-icon-btn"
+                  className="header-icon-btn header-voicelock-btn"
                   style={{
                     background: isVoiceLockActive
                       ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.35) 100%)'
@@ -445,15 +435,7 @@ function HeaderNav({
                     border: isVoiceLockActive
                       ? '1px solid rgba(52, 211, 153, 0.6)'
                       : '1px solid rgba(245, 158, 11, 0.45)',
-                    color: isVoiceLockActive ? '#34d399' : '#fbbf24',
-                    padding: '0 8px',
-                    width: 'auto',
-                    minWidth: '34px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    fontWeight: '800'
+                    color: isVoiceLockActive ? '#34d399' : '#fbbf24'
                   }}
                   title={
                     isVoiceLockActive

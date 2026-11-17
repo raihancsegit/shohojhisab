@@ -1347,7 +1347,21 @@ export default function StockPage() {
           </div>
           <button
             onClick={generateReorderSheet}
-            style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+            style={{
+              background: '#dc2626',
+              color: '#fff',
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
           >
             অর্ডার ফর্দ ➔
           </button>

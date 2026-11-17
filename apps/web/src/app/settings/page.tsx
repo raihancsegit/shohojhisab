@@ -854,7 +854,8 @@ export default function SettingsHubPage() {
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '4px',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       📒 সরাসরি বাকি খাতায় যান ➔
@@ -929,7 +930,8 @@ export default function SettingsHubPage() {
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '4px',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       📅 সরাসরি কিস্তি খাতায় যান ➔

@@ -724,7 +724,7 @@ export default function ReportsPage() {
                     </span>
                     <Link
                       href="/khata"
-                      style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', textDecoration: 'none', display: 'block' }}
+                      style={{ fontSize: '11px', color: '#10b981', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}
                     >
                       খাতা দেখুন ➔
                     </Link>

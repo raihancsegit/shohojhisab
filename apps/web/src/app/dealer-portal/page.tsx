@@ -1103,7 +1103,12 @@ export default function DealerPortalPage() {
                           borderRadius: '8px',
                           fontSize: '12px',
                           fontWeight: '700',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
                         }}
                       >
                         বিস্তারিত রসিদ ➔

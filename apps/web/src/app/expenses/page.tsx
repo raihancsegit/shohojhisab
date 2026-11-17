@@ -243,7 +243,7 @@ export default function ExpensesPage() {
             </span>
           </div>
         </div>
-        <span style={{ background: '#ef4444', color: '#fff', padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800', flexShrink: 0 }}>
+        <span style={{ background: '#ef4444', color: '#fff', padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800', flexShrink: 0, whiteSpace: 'nowrap' }}>
           বলুন ➔
         </span>
       </div>
