@@ -61,7 +61,8 @@ export default function VoicePOSCalculatorModal({
   }, [isOpen, tenantKey]);
 
   useEffect(() => {
-    if (isOpen && isVoiceLockOn) {
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (isOpen && isVoiceLockOn && !isMobile) {
       ensureBiometricMonitoring().catch(() => {});
     }
   }, [isOpen, isVoiceLockOn]);
@@ -929,23 +930,24 @@ export default function VoicePOSCalculatorModal({
               {isMuted ? '🔇' : '🎙️'}
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.01em' }}>
-                  আল্ট্রা লাইভ ভয়েস মেমো
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+                <h2 className="voice-header-title" style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#ffffff', letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+                  ভয়েস মেমো
                 </h2>
                 <span style={{
                   fontSize: '9.5px',
                   fontWeight: '900',
-                  padding: '2px 7px',
+                  padding: '2px 6px',
                   borderRadius: '99px',
                   background: isMuted ? '#475569' : '#10b981',
                   color: '#ffffff',
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap'
                 }}>
-                  {isMuted ? 'Paused' : 'Continuous Live'}
+                  {isMuted ? 'পজ' : 'লাইভ'}
                 </span>
               </div>
-              <p className="voice-header-subtitle" style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
+              <p className="voice-header-subtitle" style={{ margin: '2px 0 0', fontSize: '11px', color: '#94a3b8', whiteSpace: 'nowrap' }}>
                 মুখে বলুন: <em>&quot;{voiceConfig.quickSaleBannerHint}&quot;</em>
               </p>
             </div>
@@ -968,19 +970,20 @@ export default function VoicePOSCalculatorModal({
                 background: isVoiceLockOn ? 'rgba(16, 185, 129, 0.22)' : 'rgba(148, 163, 184, 0.15)',
                 color: isVoiceLockOn ? '#34d399' : '#94a3b8',
                 border: isVoiceLockOn ? '1px solid #10b981' : '1px solid #475569',
-                padding: '7px 11px',
-                borderRadius: '10px',
-                fontSize: '11.5px',
+                padding: '6px 9px',
+                borderRadius: '9px',
+                fontSize: '11px',
                 fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
+                whiteSpace: 'nowrap',
                 transition: 'all 0.2s ease'
               }}
               title="ভয়েস লক অন বা অফ করুন"
             >
-              <span>{isVoiceLockOn ? '🛡️ ভয়েস লক অন' : '🔓 ভয়েস লক অফ'}</span>
+              <span>{isVoiceLockOn ? '🛡️ লক অন' : '🔓 লক অফ'}</span>
             </button>
 
             <button

@@ -261,7 +261,7 @@ export interface AdaptiveSubUnitConfig {
   chips: AdaptiveSubUnitChip[];
 }
 
-export function getAdaptiveSubUnitChips(
+function getAdaptiveSubUnitChips(
   activeItem: any | null,
   industryId: string,
   products: any[]

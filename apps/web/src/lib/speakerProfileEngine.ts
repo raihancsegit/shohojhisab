@@ -424,24 +424,24 @@ if (typeof window !== 'undefined') {
 export function isRecognizedShopCommand(text: string): boolean {
   if (!text || text.trim().length < 2) return false;
   const t = text.trim();
+  const lower = t.toLowerCase();
 
-  // 1. Core POS, Accounting & Checkout operations (Bangla & English keywords)
-  const posActionRegex = /(বিক্রি|বেচা|সেল|sale|sell|যোগ|মেমো|রশিদ|রসিদ|চালান|রিসিপ্ট|প্রিন্ট|print|টাকা|ক্যাশ|নগদ|বাকি|বকেয়া|বাকি\s*জমা|পরিশোধ|জমা|খরচ|ব্যয়|expense|স্টক|মাল\s*ইন|মাল|কত\s*আছে|চেক|ইনভেন্টরি|হিসাব|আজকের\s*বিক্রি|ড্যাশবোর্ড|রিপোর্ট|লাভ|মুনাফা|কাস্টমার|খাতা|ড্রয়ার|সার্চ|খোঁজ|অর্ডার|কার্ট|বাদ|মুছে|ক্লিয়ার|ডিসকাউন্ট|ছাড়|বিল|টোটাল|সর্বমোট|ভাউচার)/i;
+  // 1. Core POS, Navigation, Accounting & Checkout operations (Bangla & English keywords)
+  const posActionRegex = /(বিক্রি|বেচা|সেল|sale|sell|যোগ|মেমো|রশিদ|রসিদ|চালান|রিসিপ্ট|প্রিন্ট|print|টাকা|ক্যাশ|নগদ|বাকি|বকেয়া|বাকি\s*জমা|পরিশোধ|জমা|খরচ|ব্যয়|expense|expenses|স্টক|ইস্টক|ষ্টক|মাল\s*ইন|মাল|কত\s*আছে|চেক|ইনভেন্টরি|হিসাব|আজকের|ড্যাশবোর্ড|রিপোর্ট|লাভ|মুনাফা|কাস্টমার|খাতা|ড্রয়ার|সার্চ|খোঁজ|অর্ডার|কার্ট|বাদ|মুছে|ক্লিয়ার|ডিসকাউন্ট|ছাড়|বিল|টোটাল|সর্বমোট|ভাউচার|দিন\s*শেষ|ক্লোজিং|মহাজন|ডিলার|মেয়াদ|কিস্তি|খোল|খোলো|খুলুন|যাও|যান|যাব|চলো|দেখা|দেখাও|দেখব|পেজ|পাতা|বলো|জানাও|\bbikri\b|\bsell\b|\bsale\b|\bpos\b|\bmemo\b|\bcounter\b|\bstock\b|\binventory\b|\bkhata\b|\bbaki\b|\bdue\b|\bkhoroch\b|\bexpense\b|\bexpenses\b|\breport\b|\breports\b|\bprofit\b|\blav\b|\bdayend\b|\bclosing\b|\bpage\b|\bjao\b|\bkoto\b|\bajker\b|\bhisab\b|\bcheck\b|\border\b|\bcart\b|\bbill\b|\bcash\b|\btaka\b|\btk\b)/i;
 
-  // 2. Unit and quantity patterns across grocery, pharmacy, clothing, restaurant, hardware
-  const unitAndQtyRegex = /(\d+|এক|দুই|তিন|চার|পাঁচ|ছয়|সাত|আট|নয়|দশ|হাফ|দেড়|আড়াই|পোয়া)\s*(কেজি|কে\s*জি|গ্রাম|লিটার|মিলি|মিলিগ্রাম|এমজি|প্যাকেট|পিস|টা|টি|পাতা|ফাইল|স্ট্রিপ|বক্স|গজ|ফুট|মিটার|ইঞ্চি|প্লেট|বাটি|কাপ|গ্লাস|কার্টন|বস্তা|ডজন|হালি|জোড়া|রোল|বোতল|কৌটা|টিউব|জার)/i;
+  // 2. Unit and quantity patterns across grocery, pharmacy, clothing, restaurant, hardware (Bangla & English)
+  const unitAndQtyRegex = /(\d+|এক|দুই|তিন|চার|পাঁচ|ছয়|সাত|আট|নয়|দশ|হাফ|দেড়|আড়াই|পোয়া)\s*(কেজি|কে\s*জি|গ্রাম|লিটার|মিলি|মিলিগ্রাম|এমজি|প্যাকেট|পিস|টা|টি|পাতা|ফাইল|স্ট্রিপ|বক্স|গজ|ফুট|মিটার|ইঞ্চি|প্লেট|বাটি|কাপ|গ্লাস|কার্টন|বস্তা|ডজন|হালি|জোড়া|রোল|বোতল|কৌটা|টিউব|জার|kg|kgs|kilo|kilos|gm|gms|gram|grams|ltr|ltrs|liter|liters|pkt|packet|packets|pc|pcs|piece|pieces|box|boxes|bag|bags|strip|file|cup|plate|dozen|roll|bottle|tube|jar)/i;
 
-  // 3. Multi-industry products across retail categories:
-  // Pharmacy / Medicine, Grocery, Clothing, Restaurant/Food, Electronics, Hardware, Cosmetics, Stationery
-  const productKeywordRegex = /(চাল|ডাল|তেল|সয়াবিন|সরিষা|চিনি|লবণ|লবন|আটা|ময়দা|সুজি|পেঁয়াজ|রসুন|আদা|আলু|মরিচ|হলুদ|ধনে|জিরা|মসলা|সাবান|শ্যাম্পু|টুথপেস্ট|ব্রাশ|ডিটারজেন্ট|বিস্কুট|চানাচুর|চিপস|কেক|পাউরুটি|দুধ|ঘি|ডিম|চা|কফি|নাপা|প্যারাসিটামল|সারজেল|সেক্লো|ম্যাক্সপ্রো|মোনাস|এন্টাসিড|অ্যান্টিবায়োটিক|সিরাপ|ট্যাবলেট|ক্যাপসুল|ভিটামিন|ইনসুলিন|ওরস্যালাইন|ব্যান্ডেজ|ড্রপ|মলম|হিস্টাসিন|ফেক্সো|ওমিপ্রাজল|প্যানটোনিক্স|শার্ট|প্যান্ট|জিন্স|পাঞ্জাবি|শাড়ি|টি-শার্ট|লুঙ্গি|থ্রি-পিস|বোরকা|হিজাব|কাপড়|ফ্রক|গেঞ্জি|সোয়েটার|জ্যাকেট|পোলো|বিরিয়ানি|তেহারি|পোলাও|খিচুড়ি|পরোটা|নান|রুটি|গ্রিল|কাবাব|চিকেন|বার্গার|পিৎজা|রোল|সমুচা|সিঙ্গারা|স্যুপ|নুডলস|মিষ্টি|দই|কোক|পেপসি|স্প্রাইট|জুস|রড|সিমেন্ট|বালু|ইট|টিন|পাইপ|সুইচ|সকেট|তার|ক্যাবল|পেরেক|স্ক্রু|রং|পেইন্ট|তালা|বালতি|ফ্যান|লাইট|বাল্ব|এলইডি|চার্জার|ব্যাটারি|হেডফোন|খাতা|কলম|পেন্সিল|কাগজ|বই|ফাইল|ক্রিম|লোশন|পাউডার|পারফিউম|বডি\s*স্প্রে|আতর|লিপস্টিক|মেহেদি|টিস্যু|ডায়াপার)/i;
+  // 3. Multi-industry products across retail categories (Bangla & English/Banglish transliterations)
+  const productKeywordRegex = /(চাল|ডাল|তেল|সয়াবিন|সরিষা|চিনি|লবণ|লবন|আটা|ময়দা|সুজি|পেঁয়াজ|রসুন|আদা|আলু|মরিচ|হলুদ|ধনে|জিরা|মসলা|সাবান|শ্যাম্পু|টুথপেস্ট|ব্রাশ|ডিটারজেন্ট|বিস্কুট|চানাচুর|চিপস|কেক|পাউরুটি|দুধ|ঘি|ডিম|চা|কফি|নাপা|প্যারাসিটামল|সারজেল|সেক্লো|ম্যাক্সপ্রো|মোনাস|এন্টাসিড|অ্যান্টিবায়োটিক|সিরাপ|ট্যাবলেট|ক্যাপসুল|ভিটামিন|ইনসুলিন|ওরস্যালাইন|ব্যান্ডেজ|ড্রপ|মলম|হিস্টাসিন|ফেক্সো|ওমিপ্রাজল|প্যানটোনিক্স|শার্ট|প্যান্ট|জিন্স|পাঞ্জাবি|শাড়ি|টি-শার্ট|লুঙ্গি|থ্রি-পিস|বোরকা|হিজাব|কাপড়|ফ্রক|গেঞ্জি|সোয়েটার|জ্যাকেট|পোলো|বিরিয়ানি|তেহারি|পোলাও|খিচুড়ি|পরোটা|নান|রুটি|গ্রিল|কাবাব|চিকেন|বার্গার|পিৎজা|রোল|সমুচা|সিঙ্গারা|স্যুপ|নুডলস|মিষ্টি|দই|কোক|পেপসি|স্প্রাইট|জুস|রড|সিমেন্ট|বালু|ইট|টিন|পাইপ|সুইচ|সকেট|তার|ক্যাবল|পেরেক|স্ক্রু|রং|পেইন্ট|তালা|বালতি|ফ্যান|লাইট|বাল্ব|এলইডি|চার্জার|ব্যাটারি|হেডফোন|খাতা|কলম|পেন্সিল|কাগজ|বই|ফাইল|ক্রিম|লোশন|পাউডার|পারফিউম|বডি\s*স্প্রে|আতর|লিপস্টিক|মেহেদি|টিস্যু|ডায়াপার|\bchal\b|\bchaal\b|\bdal\b|\bdaal\b|\btel\b|\bchini\b|\blobon\b|\balu\b|\bpeyaj\b|\broshun\b|\bada\b|\bdim\b|\bdudh\b|\bcha\b|\bcoffee\b|\bnapa\b|\bace\b|\bseclo\b|\bmaxpro\b|\bshirt\b|\bpant\b|\bjeans\b|\blight\b|\bbulb\b|\bfan\b|\bpanjabi\b|\bsari\b)/i;
 
   // 4. Currency and numerical transaction phrases (e.g. "৫০ টাকা ক্যাশ", "২ টা দেন", "১০০ গ্রাম")
-  const numericItemRegex = /\d+\s*(টাকা|tk|\/-|টাকার|কেজি|গ্রাম|লিটার|পিস|পাতা|টা|টি|প্যাকেট)/i;
+  const numericItemRegex = /\d+\s*(টাকা|tk|\/-|টাকার|কেজি|গ্রাম|লিটার|পিস|পাতা|টা|টি|প্যাকেট|kg|gm|ltr|pc|pcs|box|bag)/i;
 
-  if (posActionRegex.test(t)) return true;
-  if (unitAndQtyRegex.test(t)) return true;
-  if (productKeywordRegex.test(t)) return true;
-  if (numericItemRegex.test(t)) return true;
+  if (posActionRegex.test(lower)) return true;
+  if (unitAndQtyRegex.test(lower)) return true;
+  if (productKeywordRegex.test(lower)) return true;
+  if (numericItemRegex.test(lower)) return true;
 
   return false;
 }

@@ -187,8 +187,8 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     let speakerRole: 'owner' | 'staff' = 'owner';
     let speakerName = 'দোকান মালিক';
 
-    // 🛡️ 1. Near-Field Acoustic Check: Only strictly enforced if strict pharmacy / TV shield mode is selected
-    if (voiceProximityManager.getMode() === 'strict_pharmacy' && !voiceProximityManager.isNearSpeechActive(3500)) {
+    // 🛡️ 1. Near-Field Acoustic Check: Only strictly enforced if strict pharmacy / TV shield mode is selected and active
+    if (voiceProximityManager.getState().isListening && voiceProximityManager.getMode() === 'strict_pharmacy' && !voiceProximityManager.isNearSpeechActive(3500)) {
       triggerHaptic?.('warning');
       playWarningSound();
       setFeedbackType('error');
@@ -407,7 +407,8 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'bn-BD';
-      recognition.continuous = true; // Continuous listening: don't abort on 1-second pause
+      // continuous: false gives instant sentence finalization on mobile Chrome and prevents event buffer lock
+      recognition.continuous = false;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
@@ -430,10 +431,12 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         setLiveTranscript(fullTranscript);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const waitMs = isFinal ? 400 : 850;
+        const waitMs = isFinal ? 350 : 750;
         silenceTimerRef.current = setTimeout(() => {
           if (latestTranscriptRef.current.trim()) {
-            executeCommand(latestTranscriptRef.current.trim());
+            const commandToRun = latestTranscriptRef.current.trim();
+            latestTranscriptRef.current = '';
+            executeCommand(commandToRun);
           }
         }, waitMs);
       };
@@ -462,7 +465,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
 
         if (err?.error === 'network') {
           if (latestTranscriptRef.current.trim()) {
-            executeCommand(latestTranscriptRef.current.trim());
+            const commandToRun = latestTranscriptRef.current.trim();
+            latestTranscriptRef.current = '';
+            executeCommand(commandToRun);
             return;
           }
           setFeedbackType('error');
@@ -475,7 +480,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         // If we received words, execute immediately on end!
         if (latestTranscriptRef.current.trim()) {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          executeCommand(latestTranscriptRef.current.trim());
+          const finalCommand = latestTranscriptRef.current.trim();
+          latestTranscriptRef.current = '';
+          executeCommand(finalCommand);
           return;
         }
 
@@ -488,7 +495,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
             restartCounterRef.current = 0;
           }, 4500);
 
-          if (restartCounterRef.current > 6) {
+          if (restartCounterRef.current > 10) {
             stopListeningOnly();
             setFeedbackType('error');
             setFeedbackText('কোনো কথা শোনা যায়নি। আবার মুখে বলুন।');
@@ -504,7 +511,7 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
             if (isListeningRef.current && !isProcessing) {
               spawnRecognitionRef.current?.();
             }
-          }, 60);
+          }, 80);
         }
       };
 
@@ -543,9 +550,12 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       return;
     }
 
-    // Start Near-Field Proximity Gate & Biometric Monitoring (filters TV & distant crowd)
-    ensureBiometricMonitoring().catch(() => {});
-    voiceProximityManager.start().catch(() => {});
+    // Start Near-Field Proximity Gate & Biometric Monitoring only on desktop/laptop
+    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+    if (!isMobile) {
+      ensureBiometricMonitoring().catch(() => {});
+      voiceProximityManager.start().catch(() => {});
+    }
 
     // Cancel active TTS output to avoid echo
     if (typeof window !== 'undefined') {

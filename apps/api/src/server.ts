@@ -3561,88 +3561,88 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 1. Guard against questions and financial inquiries being mistaken for navigation
   const isInquiry = (
-    /কত|কতটুকু|কতগুলো|কেমন|কি\s*অবস্থা|কী\s*অবস্থা|জানতে\s*চাই|বলো|বলুন|হিসাব\s*(কি|কী|বলো|দেন|দাও)|বলো\s*তো|আছে\s*কিনা|শেষ\s*কবে|কবে\s*আসছে|কে\s*কে|কোন\s*কোন|ঘাটতি|কম\s*আছে|সতর্কতা|ইনকোয়ারি|সামারি|সারসংক্ষেপ/.test(lower) ||
-    /আজকের\s*(বিক্রি|লাভ|খরচ|বাকি|হিসাব|ক্যাশ)|আজকে\s*(বিক্রি|লাভ|খরচ|বাকি|ক্যাশ)|মোট\s*বাকি|মার্কেট\s*বাকি|ক্যাশ\s*কত|নগদ\s*কত/.test(lower)
+    /কত|কতটুকু|কতগুলো|কেমন|কি\s*অবস্থা|কী\s*অবস্থা|জানতে\s*চাই|বলো|বলুন|হিসাব\s*(কি|কী|বলো|দেন|দাও)|বলো\s*তো|আছে\s*কিনা|শেষ\s*কবে|কবে\s*আসছে|কে\s*কে|কোন\s*কোন|ঘাটতি|কম\s*আছে|সতর্কতা|ইনকোয়ারি|সামারি|সারসংক্ষেপ|\bkoto\b|\bhow\s*much\b|\bstatus\b/i.test(lower) ||
+    /আজকের\s*(বিক্রি|লাভ|খরচ|বাকি|হিসাব|ক্যাশ)|আজকে\s*(বিক্রি|লাভ|খরচ|বাকি|ক্যাশ)|মোট\s*বাকি|মার্কেট\s*বাকি|ক্যাশ\s*কত|নগদ\s*কত|ajker\s*(bikri|lav|profit|hisab|khoroch|baki)|(bikri|hisab)\s*koto/i.test(lower)
   );
   if (isInquiry) return null;
 
   // 2. Guard against real business transactions being mistaken for navigation
   const isTransaction = (
-    (/\d+/.test(normalized) && /(টাকা|টাকার|কেজি|গ্রাম|পিস|পাতা|বস্তা|লিটার|বোতল|প্যাকেট|ডজন|হালি|জোড়া|ফুট|মিটার|গজ|ইঞ্চি|রোল|প্লেট|কাপ|গ্লাস|বাটি|শলা|রিম|সেট|থান|বক্স|পাউন্ড|বাকি|জমা|শোধ|খরচ|মাল|নামলো|আসছে|ঢুকলো|কিনলাম|বাড়াও|যোগ)/.test(rawText)) ||
-    /বিক্রি\s*(হলো|করলাম|হয়েছে|করছি)|বাকি\s*(নিল|দিল|জমা|শোধ|পরিশোধ|লেখো|লিখুন)|টাকা\s*(দিল|দিলো|জমা|পাইছি|পেয়েছি)|খরচ\s*(হলো|করলাম|হয়েছে|লেখো|লিখুন)|স্টক\s*(বাড়াও|বাড়া|তোলো)/.test(rawText)
+    (/\d+/.test(normalized) && /(টাকা|টাকার|কেজি|গ্রাম|পিস|পাতা|বস্তা|লিটার|বোতল|প্যাকেট|ডজন|হালি|জোড়া|ফুট|মিটার|গজ|ইঞ্চি|রোল|প্লেট|কাপ|গ্লাস|বাটি|শলা|রিম|সেট|থান|বক্স|পাউন্ড|বাকি|জমা|শোধ|খরচ|মাল|নামলো|আসছে|ঢুকলো|কিনলাম|বাড়াও|যোগ|kg|gm|ltr|pc|pcs)/i.test(rawText)) ||
+    /বিক্রি\s*(হলো|করলাম|হয়েছে|করছি)|বাকি\s*(নিল|দিল|জমা|শোধ|পরিশোধ|লেখো|লিখুন)|টাকা\s*(দিল|দিলো|জমা|পাইছি|পেয়েছি)|খরচ\s*(হলো|করলাম|হয়েছে|লেখো|লিখুন)|স্টক\s*(বাড়াও|বাড়া|তোলো)/i.test(rawText)
   );
   if (isTransaction) return null;
 
   // 1. POS / Cash Counter / Sales Memo
   if (
-    /মেমো\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|কাউন্টার|ক্যাশিয়ার|পিওএস|\bpos\b|বিক্রি\s*(পেজ|পাতা|যাও|যাব|চলো)|^মেমো$|^কাউন্টার$|^বিক্রি$/.test(lower) &&
-    !/বাকি|জমা|খরচ/.test(lower)
+    /(মেমো|কাউন্টার|ক্যাশিয়ার|পিওএস|\bpos\b|বিক্রি|\bbikri\b|\bsell\b|\bsale\b)\s*(পেজ|পেজে|পাতা|খোলো|খোল|যাও|যাব|চলো|page|jao|cholo)?/i.test(lower) &&
+    !/বাকি|জমা|খরচ|নিল|দিল|কত|koto/.test(lower)
   ) {
     return '/pos';
   }
 
   // 2. Customer Khata / Due Ledger
   if (
-    /খাতা\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|বাকির\s*খাতা|বাকি\s*(পেজ|পাতা|যাও|যাব|চলো)|কাস্টমার\s*খাতা|দেনাদার\s*(লিস্ট|তালিকা|খাতা)|খতিয়ান|খতিয়ান|\bkhata\b|\bbaki\b|^খাতা$|^বাকির\s*খাতা$/.test(lower) &&
-    !/নিল|দিল|টাকা|জমা|শোধ|খরচ/.test(lower)
+    /(খাতা|বাকির\s*খাতা|বাকি|কাস্টমার\s*খাতা|দেনাদার|\bkhata\b|\bbaki\b|\bdue\b)\s*(পেজ|পেজে|পাতা|খোলো|খোল|যাও|যাব|চলো|লিস্ট|তালিকা|খতিয়ান|page|jao)?/i.test(lower) &&
+    !/নিল|দিল|টাকা|জমা|শোধ|খরচ|কত|koto/.test(lower)
   ) {
     return '/khata';
   }
 
   // 3. Stock / Inventory / Warehouse
   if (
-    /স্টক\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|ইস্টক|ষ্টক|ইনভেন্টরি|গুদাম\s*(পেজ|দেখাও|যাও|যাব|চলো)|মালের\s*তালিকা|\bstock\b|\binventory\b|^স্টক$|^গুদাম$/.test(lower) &&
-    !/যোগ|বাড়াও|বাড়া|এসেছে|ঢুকলো|কিনলাম|বিক্রি/.test(lower)
+    /(স্টক|ইস্টক|ষ্টক|ইনভেন্টরি|গুদাম|মাল|পণ্য|\bstock\b|\binventory\b)\s*(পেজ|পেজে|পাতা|খোলো|খোল|যাও|যাব|চলো|দেখাও|page|jao)?/i.test(lower) &&
+    !/যোগ|বাড়াও|বাড়া|এসেছে|ঢুকলো|কিনলাম|বিক্রি|কত|koto/.test(lower)
   ) {
     return '/stock';
   }
 
   // 4. Expenses
   if (
-    /খরচ\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো)|খরচের\s*খাতা|ব্যয়\s*(পেজ|তালিকা)|\bkhoroch\b|\bexpense\b|^খরচ$|^খরচের\s*খাতা$/.test(lower) &&
-    !/লেখো|লিখুন|করলাম|হলো|\d+/.test(lower)
+    /(খরচ|খরচের\s*খাতা|ব্যয়|\bkhoroch\b|\bexpense\b|\bexpenses\b)\s*(পেজ|পেজে|পাতা|খোলো|খোল|যাও|যাব|চলো|তালিকা|page|jao)?/i.test(lower) &&
+    !/লেখো|লিখুন|করলাম|হলো|\d+|কত|koto/.test(lower)
   ) {
     return '/expenses';
   }
 
   // 5. Reports & Profit/Loss
   if (
-    /রিপোর্ট\s*(পেজ|পাতা|খোলো|খোল|যাও|যাব|চলো|দেখাও|দেখব)|রিপুর্ত|লাভ\s*ক্ষতির\s*পেজ|লাভ\s*লস\s*পেজ|\breport\b|\bprofit\b|^রিপোর্ট$/.test(lower)
+    /(রিপোর্ট|রিপুর্ত|লাভ\s*ক্ষতি|লাভ\s*লস|\breport\b|\breports\b|\bprofit\b)\s*(পেজ|পেজে|পাতা|খোলো|খোল|যাও|যাব|চলো|দেখাও|দেখব|page|jao)?/i.test(lower)
   ) {
     return '/reports';
   }
 
   // 6. Dealers & Suppliers / Mohajon
   if (
-    /মহাজন\s*(পেজ|খাতা|যাও|যাব|চলো)|ডিলার\s*(পেজ|খাতা|যাও|যাব|চলো)|সাপ্লায়ার|সাপ্লায়ার|মহাজনের\s*খাতা|\bdealer\b|\bsupplier\b|\bmohajon\b|^মহাজন$|^ডিলার$/.test(lower)
+    /(মহাজন|ডিলার|সাপ্লায়ার|সাপ্লায়ার|\bdealer\b|\bsupplier\b|\bmohajon\b)\s*(পেজ|পেজে|খাতা|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/dealers';
   }
 
   // 7. Expiry Tracker
   if (
-    /মেয়াদ\s*(পেজ|ট্র্যাকার|যাও|যাব|চলো)|মেয়াদোত্তীর্ণ|এক্সপায়ারি|এক্সপায়ার\s*পেজ|\bexpiry\b|^মেয়াদ$/.test(lower)
+    /(মেয়াদ|মেয়াদোত্তীর্ণ|এক্সপায়ারি|এক্সপায়ার|\bexpiry\b)\s*(পেজ|পেজে|ট্র্যাকার|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/expiry-tracker';
   }
 
   // 8. Day End / Cash Closing
   if (
-    /দিন\s*শেষ\s*(পেজ|যাও|যাব|চলো)|ক্যাশ\s*ক্লোজিং\s*(পেজ|যাও|যাব|চলো)|ক্লোজিং\s*পেজ|\bclosing\b|\bdayend\b|^দিন\s*শেষ$|^ক্লোজিং$/.test(lower)
+    /(দিন\s*শেষ|ক্যাশ\s*ক্লোজিং|ক্লোজিং|\bclosing\b|\bdayend\b|\bday-end\b)\s*(পেজ|পেজে|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/day-end';
   }
 
   // 9. Installments / Kisti
   if (
-    /কিস্তি\s*(পেজ|খাতা|যাও|যাব|চলো)|কিস্তির\s*খাতা|ইন্সটলমেন্ট|\binstallment\b|\bkisti\b|^কিস্তি$/.test(lower)
+    /(কিস্তি|কিস্তির\s*খাতা|ইন্সটলমেন্ট|\binstallment\b|\bkisti\b)\s*(পেজ|পেজে|খাতা|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/installments';
   }
 
   // 10. Products Catalog
   if (
-    /পণ্য\s*তালিকা|পণ্য\s*(পেজ|যাও|যাব|চলো)|প্রোডাক্ট\s*(লিস্ট|পেজ)|আইটেম\s*লিস্ট|\bproducts?\b|^পণ্য$|^প্রোডাক্ট$/.test(lower) &&
+    /(পণ্য\s*তালিকা|পণ্য|প্রোডাক্ট|\bproducts?\b)\s*(লিস্ট|পেজ|পেজে|যাও|যাব|চলো|page|jao)?/i.test(lower) &&
     !/যোগ|বাড়াও/.test(lower)
   ) {
     return '/products';
@@ -3650,14 +3650,14 @@ function matchNavigationIntent(rawText: string, normalized: string): string | nu
 
   // 11. Settings & Shop Profile
   if (
-    /সেটিংস|সেটিং\s*(পেজ|যাও|যাব|চলো)|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল|\bsettings?\b|\bprofile\b|^সেটিংস$/.test(lower)
+    /(সেটিংস|সেটিং|দোকানের\s*সেটিংস|দোকান\s*প্রোফাইল|\bsettings?\b|\bprofile\b)\s*(পেজ|পেজে|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/settings';
   }
 
   // 12. Home / Dashboard
   if (
-    /হোম\s*(পেজ|যাও|যাব|চলো)|ড্যাশবোর্ড\s*(পেজ|যাও|যাব|চলো)|প্রধান\s*পাতা|মেইন\s*পেজ|\bhome\b|\bdashboard\b|^হোম$|^ড্যাশবোর্ড$/.test(lower)
+    /(হোম|ড্যাশবোর্ড|প্রধান\s*পাতা|মেইন\s*পেজ|\bhome\b|\bdashboard\b)\s*(পেজ|পেজে|যাও|যাব|চলো|page|jao)?/i.test(lower)
   ) {
     return '/';
   }
@@ -4824,7 +4824,7 @@ export function executeAiShopCommand(tenantId: string, text: string, customAssis
   }
 
   // 5. Daily Live Report & Sales / Profit Narration
-  if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট/.test(rawText)) {
+  if (/ডেইলি\s*রিপোর্ট|আজকের\s*রিপোর্ট|আজকের\s*হিসাব|রিপোর্টে\s*যাও|রিপোর্ট\s*খোলো|রিপোর্ট\s*দেখাও|ক্লোজিং\s*রিপোর্ট|আজকের\s*বিক্রি|বিক্রি\s*কত|আজকের\s*লাভ|লাভ\s*কত|মুনাফা|প্রফিট|ajker\s*(bikri|hisab|lav|profit|report)|(bikri|hisab)\s*koto|daily\s*report/i.test(rawText)) {
     const todaySales = db.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as s, COALESCE(SUM(profit_amount), 0) as p, COALESCE(SUM(paid_amount), 0) as cash, COALESCE(SUM(due_amount), 0) as due
       FROM sales WHERE tenant_id = ? AND created_at LIKE ?

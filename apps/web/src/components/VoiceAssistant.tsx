@@ -383,7 +383,7 @@ export default function VoiceAssistant() {
               borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
               fontSize: '11px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none' }}>
                 <button
                   type="button"
                   onClick={() => setShowVoiceEnrollModal(true)}
@@ -391,22 +391,24 @@ export default function VoiceAssistant() {
                     background: isVoiceLockActive ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.2)',
                     border: isVoiceLockActive ? '1px solid rgba(52, 211, 153, 0.5)' : '1px solid rgba(245, 158, 11, 0.45)',
                     color: isVoiceLockActive ? '#34d399' : '#fbbf24',
-                    padding: '2px 8px',
+                    padding: '3px 8px',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontWeight: '800',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
                   }}
                   title="ভয়েস লক ও স্পিকার প্রোফাইল সেটিংস"
                 >
                   <span>{isVoiceLockActive ? '🔒' : '⚠️'}</span>
-                  <span>{isVoiceLockActive ? 'ভয়েস লক অন (মালিকের কণ্ঠ)' : 'ভয়েস লক অফ (এনরোল করুন)'}</span>
+                  <span>{isVoiceLockActive ? 'ভয়েস লক অন (মালিক)' : 'ভয়েস লক অফ'}</span>
                 </button>
 
                 {/* Proximity Distance Mode Switcher */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '6px', flexShrink: 0 }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -421,7 +423,8 @@ export default function VoiceAssistant() {
                       padding: '2px 5px',
                       fontSize: '9.5px',
                       fontWeight: '800',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                     title="কাউন্টার মোড (~৩০ সেমি) - সাধারণ দোকানের জন্য আদর্শ"
                   >
@@ -441,7 +444,8 @@ export default function VoiceAssistant() {
                       padding: '2px 5px',
                       fontSize: '9.5px',
                       fontWeight: '800',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
                     }}
                     title="টিভি শিল্ড মোড (~১৫ সেমি) - দোকান বা কাউন্টারে উচ্চ শব্দ ও টিভি থাকলে"
                   >
@@ -453,24 +457,26 @@ export default function VoiceAssistant() {
 
             {/* Header: Mode Badge & Dismiss button */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                <span style={{ fontSize: '16px', flexShrink: 0 }}>
                   {feedbackType === 'listening' ? '🎙️' : feedbackType === 'processing' ? '⚡' : feedbackType === 'success' ? '✅' : '⚠️'}
                 </span>
                 {currentMode && currentMode !== 'stranger' && feedbackType !== 'error' && (
                   <span style={{
-                    fontSize: '11px',
-                    padding: '2px 8px',
+                    fontSize: '10.5px',
+                    padding: '2px 7px',
                     borderRadius: '12px',
                     background: 'rgba(16, 185, 129, 0.2)',
                     border: '1px solid rgba(16, 185, 129, 0.4)',
                     color: '#34d399',
-                    fontWeight: '800'
+                    fontWeight: '800',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0
                   }}>
-                    {currentMode === 'owner' ? `👑 মালিক (${activeSpeaker?.name || 'মালিক'})` : `👔 কর্মচারী (${activeSpeaker?.name || 'স্টাফ'})`}
+                    {currentMode === 'owner' ? `👑 মালিক` : `👔 কর্মচারী`}
                   </span>
                 )}
-                <span style={{ fontSize: '13px' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {feedbackText || (isListening ? 'শুনছি... মুখে বলুন' : '')}
                 </span>
               </div>
@@ -483,8 +489,9 @@ export default function VoiceAssistant() {
                   color: '#fff',
                   cursor: 'pointer',
                   opacity: 0.8,
-                  fontSize: '14px',
-                  padding: '2px 6px'
+                  fontSize: '15px',
+                  padding: '2px 6px',
+                  flexShrink: 0
                 }}
               >
                 ✕
@@ -678,11 +685,14 @@ export default function VoiceAssistant() {
                   </div>
                 )}
 
-                {/* ⚡ Superpower 1-Tap Quick Action Chips */}
+                {/* ⚡ Superpower 1-Tap Quick Action Chips - Horizontally Swipeable */}
                 <div style={{
                   display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '5px',
+                  flexWrap: 'nowrap',
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  gap: '6px',
                   marginTop: '4px',
                   paddingTop: '6px',
                   borderTop: '1px solid rgba(255, 255, 255, 0.15)'
@@ -705,11 +715,12 @@ export default function VoiceAssistant() {
                         color: '#f8fafc',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '12px',
-                        padding: '4px 8px',
+                        padding: '5px 10px',
                         fontSize: '11px',
                         fontWeight: '700',
                         cursor: 'pointer',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
                       }}
                     >
                       {chip.label}
@@ -725,7 +736,7 @@ export default function VoiceAssistant() {
         <button
           type="button"
           onClick={() => {
-            if (feedbackType) {
+            if (isListening) {
               cancelVoice();
             } else {
               startListening();
