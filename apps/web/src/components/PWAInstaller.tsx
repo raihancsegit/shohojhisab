@@ -19,7 +19,7 @@ export default function PWAInstaller() {
     } catch (e) {}
 
     // Check if already installed & running in standalone mode
-    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true || localStorage.getItem('lbos_pwa_installed') === 'true') {
       setIsStandalone(true);
       return;
     }
@@ -48,6 +48,7 @@ export default function PWAInstaller() {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
+        localStorage.setItem('lbos_pwa_installed', 'true');
         setIsInstallable(false);
       }
       setDeferredPrompt(null);

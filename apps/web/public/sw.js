@@ -2,6 +2,7 @@
 const CACHE_NAME = 'shohoj-os-v2';
 const STATIC_ASSETS = [
   '/',
+  '/login',
   '/pos',
   '/khata',
   '/installments',

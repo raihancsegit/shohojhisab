@@ -88,16 +88,46 @@ export default function LandingPage() {
     }
   };
 
-  // Check PWA prompt availability
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  // Check if running inside installed standalone PWA app or if prompt available
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    const standalone = (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://') ||
+      window.location.search.includes('source=pwa') ||
+      localStorage.getItem('lbos_pwa_installed') === 'true'
+    );
+    setIsStandalone(standalone);
+
+    // If opened as installed app, seamlessly redirect straight to /login!
+    if (standalone) {
+      localStorage.setItem('lbos_pwa_installed', 'true');
+      router.replace('/login');
+      return;
+    }
+
     if ((window as any).__pwaInstallPrompt) {
       setIsPwaInstallable(true);
     }
     const readyListener = () => setIsPwaInstallable(true);
     window.addEventListener('lbos-pwa-ready', readyListener);
-    return () => window.removeEventListener('lbos-pwa-ready', readyListener);
-  }, []);
+
+    const appInstalledListener = () => {
+      localStorage.setItem('lbos_pwa_installed', 'true');
+      setIsStandalone(true);
+      setIsPwaInstallable(false);
+    };
+    window.addEventListener('appinstalled', appInstalledListener);
+
+    return () => {
+      window.removeEventListener('lbos-pwa-ready', readyListener);
+      window.removeEventListener('appinstalled', appInstalledListener);
+    };
+  }, [router]);
 
   const handleInstallAppClick = async () => {
     if (typeof window !== 'undefined') {
@@ -107,6 +137,7 @@ export default function LandingPage() {
           prompt.prompt();
           const { outcome } = await prompt.userChoice;
           if (outcome === 'accepted') {
+            localStorage.setItem('lbos_pwa_installed', 'true');
             (window as any).__pwaInstallPrompt = null;
             setIsPwaInstallable(false);
             setShowInstallModal(false);
@@ -618,30 +649,45 @@ export default function LandingPage() {
           </div>
 
           {/* Right Action Elements (App Install, Login, Primary CTA - Pure Text) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            
-            {/* Clean App Install Button */}
-            <button
-              type="button"
-              onClick={handleInstallAppClick}
-              className="landing-btn-install"
-              title="ফোনে বা কম্পিউটারে অ্যাপ ইনস্টল করুন"
-            >
-              অ্যাপ ইনস্টল
-            </button>
-
-            {/* Login Link */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {/* Login Link - ALWAYS Visible and Prominent on both Mobile and Desktop */}
             <Link
               href="/login"
-              className="landing-btn-login"
+              style={{
+                textDecoration: 'none',
+                color: '#059669',
+                background: '#ecfdf5',
+                border: '1.5px solid #a7f3d0',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '800',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                boxShadow: '0 2px 6px rgba(5, 150, 105, 0.08)',
+                transition: 'all 0.2s ease'
+              }}
             >
               লগইন
             </Link>
 
-            {/* Primary Action Button */}
+            {/* Clean App Install Button (Desktop Only in Navbar; Mobile users find it in drawer or hero) */}
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleInstallAppClick}
+                className="landing-btn-install desktop-only"
+                title="ফোনে বা কম্পিউটারে অ্যাপ ইনস্টল করুন"
+              >
+                অ্যাপ ইনস্টল
+              </button>
+            )}
+
+            {/* Primary Action Button (Desktop Only) */}
             <Link
               href="/login?tab=register"
-              className="landing-btn-primary"
+              className="landing-btn-primary desktop-only"
             >
               ফ্রি শুরু করুন
             </Link>
@@ -655,10 +701,11 @@ export default function LandingPage() {
                 background: '#f1f5f9',
                 border: '1px solid #cbd5e1',
                 borderRadius: '8px',
-                padding: '7px 10px',
+                padding: '7px 11px',
                 fontSize: '18px',
                 color: '#0f172a',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                lineHeight: 1
               }}
               aria-label="Open Mobile Menu"
             >

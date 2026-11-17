@@ -46,6 +46,33 @@ export default function ShopkeeperDashboard() {
   // 👑 Hisabpati-style Balance Cockpit, Dealers & Privacy Mode
   const [dealers, setDealers] = useState<any[]>([]);
   const [privacyMode, setPrivacyMode] = useState<boolean>(false);
+  const [isStandaloneApp, setIsStandaloneApp] = useState<boolean>(false);
+  const [authMounted, setAuthMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const standalone = (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://') ||
+      window.location.search.includes('source=pwa') ||
+      localStorage.getItem('lbos_pwa_installed') === 'true'
+    );
+    setIsStandaloneApp(standalone);
+    setAuthMounted(true);
+    if (standalone) {
+      localStorage.setItem('lbos_pwa_installed', 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authMounted && isStandaloneApp && !tenant && (userRole as any) !== 'admin') {
+      const hasStoredTenant = !!localStorage.getItem('lbos_active_tenant');
+      if (!hasStoredTenant) {
+        router.replace('/login');
+      }
+    }
+  }, [authMounted, isStandaloneApp, tenant, userRole, router]);
 
   useEffect(() => {
     const savedPrivacy = localStorage.getItem('lbos_privacy_mode');
@@ -291,11 +318,10 @@ export default function ShopkeeperDashboard() {
     );
   }
 
-  // Fast local storage check to instantly show Landing Page for guests without loader flash
-  const isGuest = typeof window !== 'undefined' && !localStorage.getItem('lbos_user_role') && !localStorage.getItem('lbos_active_tenant');
-  if (isGuest && !tenant && (userRole as any) !== 'admin') {
-    return <LandingPage />;
-  }
+  const hasSavedTenant = typeof window !== 'undefined' && (
+    !!localStorage.getItem('lbos_active_tenant') ||
+    !!localStorage.getItem('lbos_user_role')
+  );
 
   // If user is super admin, redirect to super admin panel immediately
   if ((userRole as any) === 'admin') {
@@ -314,7 +340,35 @@ export default function ShopkeeperDashboard() {
     );
   }
 
-  // If not logged in or no shop tenant loaded yet, show the full Bengali Landing Page!
+  // If a tenant session is stored in localStorage but still restoring in React state, show loader, NEVER landing page!
+  if (hasSavedTenant && !tenant) {
+    return (
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="দোকানের লাইভ হিসাব ও ড্যাশবোর্ড লোড হচ্ছে..."
+          subText="অনুগ্রহ করে অপেক্ষা করুন"
+          icon="🏪"
+        />
+      </div>
+    );
+  }
+
+  // If running inside installed standalone PWA app, NEVER show visitor landing page - route straight to /login
+  if (isStandaloneApp && !tenant) {
+    return (
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="সহজ হিসাব অ্যাপে স্বাগতম..."
+          subText="দোকান লগইন স্ক্রিনে নিয়ে যাওয়া হচ্ছে"
+          icon="📱"
+        />
+      </div>
+    );
+  }
+
+  // If not logged in and in regular web browser, show the full Bengali Landing Page for visitors!
   if (!tenant) {
     return <LandingPage />;
   }

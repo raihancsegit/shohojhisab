@@ -466,13 +466,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedRole === 'admin') {
         setUserRole('admin');
         setTenant(null);
-      } else if (savedRole === 'shopkeeper' && savedTenantRaw) {
-        const parsedTenant = JSON.parse(savedTenantRaw);
-        if (parsedTenant) {
-          parsedTenant.industryId = parsedTenant.industryId || parsedTenant.industry_category_id || parsedTenant.industryCategoryId || parsedTenant.category_id || (parsedTenant.shopName?.toLowerCase().includes('pharma') ? 'cat-pharmacy' : 'cat-grocery');
+      } else if (savedTenantRaw) {
+        let parsedTenant: any = null;
+        try {
+          parsedTenant = JSON.parse(savedTenantRaw);
+          if (parsedTenant) {
+            parsedTenant.industryId = parsedTenant.industryId || parsedTenant.industry_category_id || parsedTenant.industryCategoryId || parsedTenant.category_id || (parsedTenant.shopName?.toLowerCase().includes('pharma') ? 'cat-pharmacy' : 'cat-grocery');
+            setUserRole('shopkeeper');
+            setTenant(parsedTenant);
+          }
+        } catch (e) {
+          console.error('Failed to parse saved tenant', e);
         }
-        setUserRole('shopkeeper');
-        setTenant(parsedTenant);
 
         // Fetch fresh tenant metadata from live database to keep industry, shopName & status synced
         if (parsedTenant?.id) {
