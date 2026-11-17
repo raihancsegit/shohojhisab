@@ -597,9 +597,9 @@ export function evaluateUtteranceSpeaker(
       };
     }
 
-    // Near-field proximity validation only if voiceProximityManager is actively tracking
-    if (voiceProximityManager && voiceProximityManager.getState().isListening && voiceProximityManager.getMode() !== 'all') {
-      if (!voiceProximityManager.isNearSpeechActive(4200)) {
+    // Near-field proximity validation only if strict pharmacy mode is on
+    if (voiceProximityManager && voiceProximityManager.getState().isListening && voiceProximityManager.getMode() === 'strict_pharmacy') {
+      if (!voiceProximityManager.isNearSpeechActive(4500)) {
         return {
           isAuthorized: false,
           confidence: 20,
@@ -669,39 +669,43 @@ export function evaluateUtteranceSpeaker(
 
   for (const profile of candidateProfiles) {
     // Registered speaker's calibrated pitch window:
-    // Natural human pitch stays within enrolled range ±16 Hz
-    const lowerPitch = Math.max(65, profile.pitchMin - 16);
-    const upperPitch = Math.min(380, profile.pitchMax + 20);
+    // Natural human speech pitch stays within enrolled range with realistic conversation variance
+    const lowerPitch = Math.max(60, profile.pitchMin - 35);
+    const upperPitch = Math.min(420, profile.pitchMax + 45);
 
     const matched = recentFrames.filter(f => f.pitch >= lowerPitch && f.pitch <= upperPitch);
     const count = matched.length;
     const ratio = count / recentFrames.length;
 
-    // Must have at least 2 matching vocal frames and at least 35% of speech within range
-    if (count >= 2 && ratio >= 0.35) {
+    // Resilient vocal frame matching: at least 1-2 frames or 25% within human vocal range
+    if (count >= 1 && (ratio >= 0.25 || isRecognizedShopCommand(clean))) {
       const avgPitch = matched.reduce((sum, f) => sum + f.pitch, 0) / count;
       const diffFromMean = Math.abs(avgPitch - profile.pitchMean);
 
-      // Natural speech pitch variation is up to 32 Hz from enrolled mean
-      if (diffFromMean <= 32) {
+      // Natural speech pitch variation allows up to 55 Hz (or 75 Hz for express shop commands)
+      const allowedPitchDiff = isRecognizedShopCommand(clean) ? 75 : 55;
+      if (diffFromMean <= allowedPitchDiff) {
         // Timbre check: Filter out sharp laptop speakers or metallic reflections
         if (profile.centroidMean && profile.centroidMean > 0) {
           const avgCentroid = matched.reduce((s, f) => s + (f.centroid || 0), 0) / count;
           // Laptop speakers have tinny treble resonance (>2200 Hz) that deviates heavily
-          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1400) {
+          if (avgCentroid > 0 && Math.abs(avgCentroid - profile.centroidMean) > 1600) {
             continue;
           }
         }
 
-        let conf = Math.max(60, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 1.0))));
+        let conf = Math.max(65, Math.min(100, Math.round((ratio * 60) + Math.max(0, 40 - diffFromMean * 0.7))));
 
-        // If wake phrase or spoken text matches enrolled name/phrase, boost confidence
+        // If wake phrase or spoken text matches enrolled name/phrase or is a recognized shop command, boost
         if (clean) {
           if (profile.wakePhrase && clean.includes(profile.wakePhrase.toLowerCase())) {
-            conf = Math.min(100, conf + 15);
+            conf = Math.min(100, conf + 20);
           }
           if (profile.name && clean.includes(profile.name.toLowerCase())) {
-            conf = Math.min(100, conf + 10);
+            conf = Math.min(100, conf + 15);
+          }
+          if (isRecognizedShopCommand(clean)) {
+            conf = Math.min(100, conf + 20);
           }
         }
 
@@ -895,10 +899,9 @@ export function verifyCurrentVoice(
     } catch (e) {}
   }
 
-  // 3. Proximity distance gate validation:
-  // Rejects speech originating 1-2 meters away (distant chatter, crowd noise, TV)
-  if (voiceProximityManager && voiceProximityManager.getMode() !== 'all') {
-    if (!voiceProximityManager.isNearSpeechActive(4800)) {
+  // 3. Proximity distance gate validation in strict pharmacy mode
+  if (voiceProximityManager && voiceProximityManager.getMode() === 'strict_pharmacy') {
+    if (!voiceProximityManager.isNearSpeechActive(4800) && (!spokenText || !isRecognizedShopCommand(spokenText))) {
       return {
         isAuthorized: false,
         confidence: 0,

@@ -187,13 +187,13 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
     let speakerRole: 'owner' | 'staff' = 'owner';
     let speakerName = 'দোকান মালিক';
 
-    // 🛡️ 1. Near-Field Acoustic Check: Must be speaking near the phone/counter
-    if (!voiceProximityManager.isNearSpeechActive(2600) && voiceProximityManager.getMode() !== 'all') {
+    // 🛡️ 1. Near-Field Acoustic Check: Only strictly enforced if strict pharmacy / TV shield mode is selected
+    if (voiceProximityManager.getMode() === 'strict_pharmacy' && !voiceProximityManager.isNearSpeechActive(3500)) {
       triggerHaptic?.('warning');
       playWarningSound();
       setFeedbackType('error');
       setCurrentMode('stranger');
-      setFeedbackText('🛡️ দূরবর্তী শব্দ বা টিভি ফিল্টার হয়েছে (কাছে এসে স্পষ্ট করে বলুন)');
+      setFeedbackText('🛡️ টিভি শিল্ড মোড: আরও কাছে এসে স্পষ্ট করে বলুন');
       if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
       autoDismissTimerRef.current = setTimeout(() => {
         setFeedbackType(null);
@@ -421,21 +421,8 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         const { fullTranscript, isFinal } = extractTranscriptFromEvent(event);
         if (!fullTranscript) return;
 
-        // 🛡️ Near-Field Proximity Gate: Reject ambient TV / distant crowd audio
-        const isNear = voiceProximityManager.isNearSpeechActive(2000);
-        if (!isNear && voiceProximityManager.getMode() !== 'all') {
-          latestTranscriptRef.current = '';
-          setLiveTranscript('');
-          setFeedbackType('error');
-          setFeedbackText('🛡️ দূরবর্তী শব্দ / টিভি ফিল্টার করা হয়েছে (কাছ থেকে বলুন)');
-          if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
-          autoDismissTimerRef.current = setTimeout(() => {
-            setFeedbackType(null);
-          }, 2400);
-          return;
-        }
-
-        // Feed biometric analyzer with active voice ping
+        // Keep proximity gate fresh with detected speech
+        voiceProximityManager.touchNearSpeech();
         pingVoiceVerification(effectiveTenantId);
 
         resetInactivityWatchdog();

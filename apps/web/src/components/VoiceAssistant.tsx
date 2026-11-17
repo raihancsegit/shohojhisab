@@ -449,22 +449,6 @@ export default function VoiceAssistant() {
                   </button>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={cancelVoice}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  opacity: 0.8,
-                  fontSize: '14px',
-                  padding: '2px 6px'
-                }}
-              >
-                ✕
-              </button>
             </div>
 
             {/* Header: Mode Badge & Dismiss button */}
@@ -594,14 +578,15 @@ export default function VoiceAssistant() {
                       )}
                     </div>
                     <div style={{
-                      fontSize: liveTranscript ? '15px' : '13px',
-                      color: liveTranscript ? '#34d399' : 'rgba(255,255,255,0.75)',
+                      fontSize: liveTranscript ? '14px' : '12.5px',
+                      color: liveTranscript ? '#34d399' : 'rgba(255,255,255,0.85)',
                       fontWeight: '800',
                       marginTop: '3px',
                       wordBreak: 'break-word',
-                      minHeight: '22px'
+                      lineHeight: '1.4',
+                      minHeight: '20px'
                     }}>
-                      {liveTranscript || 'যেমন: "২ কেজি চিনি বিক্রি" বা "আজকের বিক্রি কত"'}
+                      {liveTranscript || 'যেমন: ২ কেজি চিনি বিক্রি / আজকের বিক্রি'}
                     </div>
                   </div>
                   {liveTranscript && (

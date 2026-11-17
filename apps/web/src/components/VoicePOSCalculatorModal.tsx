@@ -44,9 +44,21 @@ export default function VoicePOSCalculatorModal({
   const [lastActionMessage, setLastActionMessage] = useState<string>('মাইক চালু আছে। সরাসরি মুখে বলুন বা লিখুন...');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(false);
+  const [isVoiceLockOn, setIsVoiceLockOn] = useState<boolean>(() => {
+    try {
+      return isSpeakerLockEnabled(tenantKey);
+    } catch (e) {
+      return false;
+    }
+  });
   const [activeCatalog, setActiveCatalog] = useState<any[]>(products || []);
   const [unrecognizedSpokenItems, setUnrecognizedSpokenItems] = useState<ParsedVoiceItem[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVoiceLockOn(isSpeakerLockEnabled(tenantKey));
+    }
+  }, [isOpen, tenantKey]);
 
   useEffect(() => {
     if (isOpen && isVoiceLockOn) {
@@ -343,57 +355,38 @@ export default function VoicePOSCalculatorModal({
           });
         }
 
-        // If not in catalog, REJECT and announce!
-        if (!prod) {
-          notFoundNames.push(item.banglaName || item.name);
-          continue;
-        }
-
-        // Product found in catalog - check stock!
-        const currentStock = Number(prod.stock ?? 0);
-        if (currentStock <= 0) {
-          outOfStockNames.push(prod.banglaName || prod.name);
-          continue;
-        }
-
-        const resolvedUnitPrice = item.unitPrice && item.unitPrice > 0 ? item.unitPrice : (Number(prod.sellingPrice) || 0);
-        const resolvedTotalPrice = item.totalPrice && item.totalPrice > 0 ? item.totalPrice : Math.round(resolvedUnitPrice * item.quantity * 100) / 100;
+        const currentStock = prod ? Number(prod.stock ?? 0) : 0;
+        const resolvedUnitPrice = item.unitPrice && item.unitPrice > 0
+          ? item.unitPrice
+          : (prod ? (Number(prod.sellingPrice) || 50) : 50);
+        const resolvedTotalPrice = item.totalPrice && item.totalPrice > 0
+          ? item.totalPrice
+          : Math.round(resolvedUnitPrice * (item.quantity || 1) * 100) / 100;
 
         validInStockItems.push({
           ...item,
-          productId: prod.id,
-          name: prod.name,
-          banglaName: prod.banglaName || prod.name,
-          unit: item.unit || prod.unit || 'পিস',
+          productId: prod ? prod.id : ('custom-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6)),
+          name: prod ? prod.name : (item.name || item.banglaName),
+          banglaName: prod ? (prod.banglaName || prod.name) : (item.banglaName || item.name),
+          unit: item.unit || prod?.unit || 'পিস',
           unitPrice: resolvedUnitPrice,
           totalPrice: resolvedTotalPrice,
           stock: currentStock,
-          isExistingProduct: true
+          isExistingProduct: !!prod
         });
       }
 
-      // If no valid in-stock items could be added
+      // If no items parsed at all
       if (validInStockItems.length === 0) {
         playBeep(450);
         triggerHaptic('warning');
-
-        let alertMsg = '';
-        if (notFoundNames.length > 0 && outOfStockNames.length > 0) {
-          alertMsg = `${notFoundNames.join(', ')} এই প্রোডাক্ট নাই এবং ${outOfStockNames.join(', ')} স্টকে নাই।`;
-        } else if (notFoundNames.length > 0) {
-          alertMsg = `${notFoundNames.join(', ')} এই প্রোডাক্ট নাই।`;
-        } else if (outOfStockNames.length > 0) {
-          alertMsg = `${outOfStockNames.join(', ')} স্টকে নাই।`;
-        } else {
-          alertMsg = 'পণ্যটি স্টকে নাই বা দোকানে এই প্রোডাক্ট নাই।';
-        }
-
+        const alertMsg = 'কোনো পণ্য বুঝতে পারিনি। স্পষ্ট করে বলুন (যেমন: চিনি ১ কেজি ৫০ টাকা)।';
         setLastActionMessage(`⚠️ ${alertMsg}`);
         speakFeedback(alertMsg);
         return;
       }
 
-      // Valid in-stock items found - add to memo
+      // Valid items found - add to memo
       playBeep(1100);
       triggerHaptic('success');
       let nextTotal = 0;
@@ -965,6 +958,9 @@ export default function VoicePOSCalculatorModal({
                 const next = !isVoiceLockOn;
                 setIsVoiceLockOn(next);
                 setSpeakerLockEnabled(tenantKey, next);
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new Event('lbos-voice-profiles-updated'));
+                }
                 triggerHaptic('medium');
                 setLastActionMessage(next ? '🛡️ ভয়েস লক চালু: শুধু নথিভুক্ত কণ্ঠ গ্রহণ করা হবে।' : '🔓 ভয়েস লক বন্ধ: সবার কথা গ্রহণ করা হবে।');
               }}
@@ -1314,7 +1310,7 @@ export default function VoicePOSCalculatorModal({
             type="text"
             value={manualInputText}
             onChange={(e) => setManualInputText(e.target.value)}
-            placeholder="মুখে বলুন বা লিখুন (যেমন: চিনি ১ কেজি, নাপা ২ পাতা, মোট ৫০০ পরিশোধ)..."
+            placeholder="পণ্য ও দর বলুন বা লিখুন (যেমন: চিনি ১ কেজি ৬০)..."
             style={{
               flex: 1,
               padding: '8px 12px',
@@ -1369,19 +1365,21 @@ export default function VoicePOSCalculatorModal({
                 {voiceConfig.quickSaleSuggestions.map((sample, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => handleProcessVoiceInput(sample)}
                     style={{
-                      background: '#f8fafc',
-                      border: '1px solid #cbd5e1',
-                      color: '#059669',
-                      padding: '6px 10px',
+                      background: '#ffffff',
+                      border: '1.5px solid #a7f3d0',
+                      color: '#065f46',
+                      padding: '6px 12px',
                       borderRadius: '8px',
-                      fontSize: '11.5px',
+                      fontSize: '12px',
                       fontWeight: '800',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                     }}
                   >
-                    🗣️ &quot;{sample}&quot;
+                    🗣️ {sample}
                   </button>
                 ))}
               </div>
@@ -1587,33 +1585,45 @@ export default function VoicePOSCalculatorModal({
           flexShrink: 0
         }}>
           {/* Quick Voice Command Cheat Sheet Chips (Horizontal Scrollable) */}
-          <div className="voice-shortcuts-scroll" style={{ marginBottom: '10px', alignItems: 'center' }}>
-            <span style={{ fontSize: '10.5px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingRight: '4px' }}>
+          <div className="voice-shortcuts-scroll" style={{
+            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            overflowX: 'auto',
+            paddingBottom: '4px',
+            WebkitOverflowScrolling: 'touch'
+          }}>
+            <span style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingRight: '2px', flexShrink: 0 }}>
               শর্টকাট:
             </span>
             <button
+              type="button"
               onClick={() => handleProcessVoiceInput('নগদ বিক্রি')}
-              style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              🟢 &quot;নগদ বিক্রি&quot;
+              🟢 নগদ বিক্রি
             </button>
             <button
+              type="button"
               onClick={() => handleProcessVoiceInput('করিম ভাইয়ের বাকি')}
-              style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              🔴 &quot;করিম ভাইয়ের বাকি&quot;
+              🔴 করিম ভাইয়ের বাকি
             </button>
             <button
+              type="button"
               onClick={() => handleProcessVoiceInput('২০ টাকা ছাড়')}
-              style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#0f172a', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              🟡 &quot;২০ টাকা ছাড়&quot;
+              🟡 ২০ টাকা ছাড়
             </button>
             <button
+              type="button"
               onClick={() => handleProcessVoiceInput('নতুন মেমো')}
-              style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#334155', padding: '4px 10px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
-              🔄 &quot;নতুন মেমো&quot;
+              🔄 নতুন মেমো
             </button>
           </div>
 
@@ -1726,10 +1736,10 @@ export default function VoicePOSCalculatorModal({
                   padding: '0 12px',
                   borderRadius: '12px',
                   background: items.length === 0 || isSubmitting
-                    ? '#fca5a5'
+                    ? '#fee2e2'
                     : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
-                  border: 'none',
-                  color: '#ffffff',
+                  border: items.length === 0 ? '1.5px solid #fecaca' : 'none',
+                  color: items.length === 0 ? '#991b1b' : '#ffffff',
                   fontWeight: '900',
                   fontSize: '13px',
                   cursor: items.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
@@ -1757,14 +1767,14 @@ export default function VoicePOSCalculatorModal({
                   padding: '0 16px',
                   borderRadius: '12px',
                   background: items.length === 0 || isSubmitting
-                    ? '#a7f3d0'
-                    : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  border: 'none',
-                  color: '#ffffff',
+                    ? '#dcfce7'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: items.length === 0 ? '1.5px solid #bbf7d0' : 'none',
+                  color: items.length === 0 ? '#15803d' : '#ffffff',
                   fontWeight: '900',
                   fontSize: '14px',
                   cursor: items.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
-                  boxShadow: items.length === 0 ? 'none' : '0 4px 14px rgba(5, 150, 105, 0.35)',
+                  boxShadow: items.length === 0 ? 'none' : '0 4px 14px rgba(16, 185, 129, 0.35)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

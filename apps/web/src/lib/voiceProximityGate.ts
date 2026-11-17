@@ -32,12 +32,12 @@ class VoiceProximityManager {
   private isActive: boolean = false;
 
   // Calibrated RMS energy thresholds (0 - 100 scale)
-  // When speaking 10-30cm from mobile phone mic with AGC disabled, RMS is typically 22-80.
-  // Distant chatter (1-3 meters away) or background TV typically registers at 2-12.
+  // When speaking 10-30cm from mobile phone mic with AGC disabled, RMS is typically 15-80.
+  // Distant chatter (1-3 meters away) or background TV typically registers at 1-3.
   private readonly THRESHOLDS: Record<ProximityDistanceMode, number> = {
-    strict_pharmacy: 10, // একদম কাছে / ~১৫-২৫ সেমি (ফার্মেসি মাল্টি-কাউন্টার শিল্ড - পাশের কর্মী ও ভিড় বাদ)
-    near: 6,             // ১ হাত / ~৩০ সেমি - সাধারণ দোকান ভিড় ফিল্টার (ডিফল্ট)
-    medium: 3,           // ২ হাত / ~৬০ সেমি
+    strict_pharmacy: 8,  // একদম কাছে / ~১৫-২৫ সেমি (ফার্মেসি মাল্টি-কাউন্টার শিল্ড)
+    near: 4,             // ১ হাত / ~৩০ সেমি - সাধারণ দোকান ভিড় ফিল্টার (ডিফল্ট)
+    medium: 2,           // ২ হাত / ~৬০ সেমি
     all: 0               // ফিল্টার অফ (সব কথা গ্রহণ)
   };
 
@@ -241,12 +241,23 @@ class VoiceProximityManager {
   }
 
   /**
-   * Evaluates whether speech was spoken at close proximity to the phone
-   * Returns true if near speech was detected within the lookback window (default 4800ms)
+   * Manually register that the device microphone received valid speech audio
+   * Keeps proximity gate open when SpeechRecognition is actively transcribing
    */
-  public isNearSpeechActive(lookbackMs: number = 4800): boolean {
+  public touchNearSpeech() {
+    this.lastNearSpeechTime = Date.now();
+    this.isGateOpen = true;
+  }
+
+  /**
+   * Evaluates whether speech was spoken at close proximity to the phone
+   * Returns true if near speech was detected within the lookback window (default 5000ms)
+   */
+  public isNearSpeechActive(lookbackMs: number = 5000): boolean {
     if (this.mode === 'all') return true;
     if (!this.isActive) return true; // Handled via exclusive SpeechRecognition
+    // If AudioContext suspended or audio pipeline was not capturing, allow speech through
+    if (this.audioContext && this.audioContext.state === 'suspended') return true;
     if (this.lastNearSpeechTime === 0) return true;
     return (Date.now() - this.lastNearSpeechTime) <= lookbackMs;
   }
