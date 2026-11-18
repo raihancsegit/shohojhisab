@@ -104,6 +104,7 @@ export default function VoicePOSCalculatorModal({
   const accumulatedTranscriptRef = useRef<string>('');
   const isTTSActiveRef = useRef<boolean>(false);
   const ttsCooldownTimerRef = useRef<any>(null);
+  const isOfflineModeRef = useRef<boolean>(false);
 
   // Sound generator
   const playBeep = (freq = 880) => {
@@ -272,11 +273,19 @@ export default function VoicePOSCalculatorModal({
           setIsListening(false);
           setLastActionMessage('⚠️ মাইক্রোফোন ব্যবহারের অনুমতি দিন');
         } else if (event.error === 'network') {
-          setLastActionMessage('🎙️ শুনছি... মুখে বলুন বা নিচে টাইপ করে যোগ করুন');
+          isOfflineModeRef.current = true;
+          setIsListening(false);
+          setLastActionMessage('🟢 অফলাইন মোড: কীবোর্ড মাইকে মুখে বলুন বা নিচে পণ্যের নাম লিখুন');
         }
       };
 
       recognition.onend = () => {
+        // If network error occurred, do NOT restart speech recognition in a tight loop!
+        if (isOfflineModeRef.current) {
+          setIsListening(false);
+          return;
+        }
+
         // Automatically spawn a fresh recognition instance if still active and modal is open
         if (isComponentMounted.current && !isMuted) {
           setTimeout(() => {
@@ -711,6 +720,7 @@ export default function VoicePOSCalculatorModal({
       }
     }
     setIsMuted(false);
+    isOfflineModeRef.current = false;
     accumulatedTranscriptRef.current = '';
     setLiveTranscript('');
     setLastActionMessage('🎙️ শুনছি... এখন সরাসরি মুখে পণ্যের নাম ও পরিমাণ বলুন');

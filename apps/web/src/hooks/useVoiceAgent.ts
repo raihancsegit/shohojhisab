@@ -268,24 +268,31 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
 
       let data: any = null;
 
-      // 1. Try Online API if online
-      try {
-        const res = await fetch('/api/voice-action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tenantId: effectiveTenantId,
-            text: query,
-            assistantName: savedAssistantName,
-            speakerRole,
-            speakerName
-          })
-        });
-        if (res.ok) {
-          data = await res.json();
+      // 1. Try Online API only if device is actually online
+      const isDeviceOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (isDeviceOnline) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const res = await fetch('/api/voice-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              tenantId: effectiveTenantId,
+              text: query,
+              assistantName: savedAssistantName,
+              speakerRole,
+              speakerName
+            })
+          });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            data = await res.json();
+          }
+        } catch (e) {
+          console.log('[useVoiceAgent] Online fetch failed or timed out, executing offline AI command engine...');
         }
-      } catch (e) {
-        console.log('[useVoiceAgent] Running offline AI command engine...');
       }
 
       // 2. Offline AI Shop Command Engine Fallback
@@ -464,14 +471,26 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
         }
 
         if (err?.error === 'network') {
+          // Stop recognition restart loop immediately to avoid audio crash
+          isListeningRef.current = false;
+          setIsListening(false);
+          restartCounterRef.current = 0;
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
           if (latestTranscriptRef.current.trim()) {
             const commandToRun = latestTranscriptRef.current.trim();
             latestTranscriptRef.current = '';
             executeCommand(commandToRun);
             return;
           }
-          setFeedbackType('error');
-          setFeedbackText('ভয়েস নেটওয়ার্ক ড্রপ করেছে। আবার বলুন বা লিখে জানান।');
+
+          // Seamless transition into offline command mode - keep HUD active!
+          console.log('[useVoiceAgent] Offline network detected. Switching smoothly to offline mode...');
+          setFeedbackType('listening');
+          setFeedbackText('🟢 অফলাইন মোড: মুখে বলুন (কীবোর্ড মাইক) বা কমান্ড চাপুন');
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('lbos-voice-offline-mode', { detail: { isOffline: true } }));
+          }
           return;
         }
       };
@@ -483,6 +502,16 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
           const finalCommand = latestTranscriptRef.current.trim();
           latestTranscriptRef.current = '';
           executeCommand(finalCommand);
+          return;
+        }
+
+        // If device is offline, do not spin in restart loops
+        const isDeviceOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        if (!isDeviceOnline) {
+          isListeningRef.current = false;
+          setIsListening(false);
+          setFeedbackType('listening');
+          setFeedbackText('🟢 অফলাইন মোড: মুখে বলুন (কীবোর্ড মাইক) বা কমান্ড চাপুন');
           return;
         }
 
@@ -550,12 +579,9 @@ export function useVoiceAgent(options: VoiceAgentOptions = {}): VoiceAgentState 
       return;
     }
 
-    // Start Near-Field Proximity Gate & Biometric Monitoring only on desktop/laptop
-    const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
-    if (!isMobile) {
-      ensureBiometricMonitoring().catch(() => {});
-      voiceProximityManager.start().catch(() => {});
-    }
+    // Start Near-Field Proximity Gate & Biometric Monitoring
+    ensureBiometricMonitoring().catch(() => {});
+    voiceProximityManager.start().catch(() => {});
 
     // Cancel active TTS output to avoid echo
     if (typeof window !== 'undefined') {

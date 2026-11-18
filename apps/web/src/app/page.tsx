@@ -368,8 +368,30 @@ export default function ShopkeeperDashboard() {
     );
   }
 
-  // If not logged in and in regular web browser, show the full Bengali Landing Page for visitors!
+  // 1. Wait for AuthContext session restoration to complete
+  if (isLoading) {
+    return (
+      <div className="app-container">
+        <DataLoader
+          type="full"
+          text="দোকানের লাইভ হিসাব ও ড্যাশবোর্ড লোড হচ্ছে..."
+          subText="আজকের বিক্রয়, ক্যাশ ও খতিয়ান প্রস্তুত করা হচ্ছে"
+          icon="🏪"
+        />
+      </div>
+    );
+  }
+
+  // 2. If not logged in: If inside installed app (PWA), route directly to login; in browser, show LandingPage!
   if (!tenant) {
+    if (isStandaloneApp) {
+      router.replace('/login');
+      return (
+        <div className="app-container">
+          <DataLoader type="full" text="লগইন পেজে নিয়ে যাওয়া হচ্ছে..." icon="📱" />
+        </div>
+      );
+    }
     return <LandingPage />;
   }
 

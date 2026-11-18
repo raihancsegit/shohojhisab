@@ -119,6 +119,13 @@ export function executeOfflineAiShopCommand(
         { id: 'p-def-2', name: 'এলইডি বাল্ব ১২W', banglaName: 'এলইডি বাল্ব ১২W', sellingPrice: 150, purchasePrice: 110, stock: 40, unit: 'পিস' },
         { id: 'p-def-3', name: 'সিমেন্ট ফ্রেশ', banglaName: 'সিমেন্ট ফ্রেশ', sellingPrice: 520, purchasePrice: 480, stock: 50, unit: 'ব্যাগ' }
       ];
+    } else if (currentIndustry === 'cat-bookstore' || currentIndustry === 'cat-stationery') {
+      products = [
+        { id: 'p-def-1', name: 'বাংলা ব্যাকরণ ও নির্মিতি', banglaName: 'বাংলা ব্যাকরণ ও নির্মিতি', sellingPrice: 220, purchasePrice: 160, stock: 35, unit: 'কপি', author: 'ড. সুনীতি কুমার', publisher: 'অনন্যা প্রকাশনী' },
+        { id: 'p-def-2', name: 'উচ্চতর গণিত ১ম পত্র', banglaName: 'উচ্চতর গণিত ১ম পত্র', sellingPrice: 380, purchasePrice: 290, stock: 25, unit: 'কপি', author: 'এস. ইউ. আহাম্মদ', publisher: 'অক্ষরপত্র প্রকাশনী' },
+        { id: 'p-def-3', name: 'ম্যাটাডোর হাই-স্কুল বলপেন ১ ডজন', banglaName: 'ম্যাটাডোর বলপেন ডজন', sellingPrice: 60, purchasePrice: 44, stock: 50, unit: 'ডজন', brand: 'Matador' },
+        { id: 'p-def-4', name: 'এ-ফোর ৮০ জিএসএম কাগজ ১ রিম', banglaName: 'এ-ফোর কাগজ রিম', sellingPrice: 420, purchasePrice: 345, stock: 20, unit: 'রিম', brand: 'Double A' }
+      ];
     } else {
       // Default: Grocery / Super shop
       products = [
@@ -136,12 +143,28 @@ export function executeOfflineAiShopCommand(
   const todayExpenses = expenses.filter((e: any) => (e.date || e.createdAt || '').startsWith(todayStr));
 
   // 1. Comprehensive Navigation Commands (মুখে বলা মাত্র নির্ভুলভাবে সঠিক পেজে নিয়ে যাওয়া)
+  // 0. Home / Dashboard
+  if (
+    /^(হোম|হোম পেজ|ড্যাশবোর্ড|প্রধান পাতা|home|dashboard|home page)$/i.test(normalized) ||
+    /(হোম|ড্যাশবোর্ড|home|dashboard).*(যাও|যান|চল|খোল|পেজ|jao|page)/i.test(normalized) ||
+    /^(home page jao|home page e jao|home page a jao|home jao|হোম পেজে যাও|হোম পেজ এ যাও|হোমে যাও)$/i.test(normalized)
+  ) {
+    return {
+      success: true,
+      reply: 'দোকানের প্রধান হোম ড্যাশবোর্ডে নিয়ে যাচ্ছি...',
+      speech: 'হোম পেজে নিয়ে যাচ্ছি।',
+      navigateTo: '/',
+      actionLink: { text: 'হোম ড্যাশবোর্ড খুলুন →', href: '/' },
+      isOffline: true
+    };
+  }
+
   // A. POS / বিক্রি / মেমো / কাউন্টার পেজ
   if (
     /^(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos|bikri|counter|memo|sell)$/i.test(normalized) ||
-    /(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos|counter|memo|sell|bikri).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|পাতা|স্ক্রিন|jao|page|screen)/i.test(normalized) ||
+    /(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos|counter|memo|sell|bikri).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|পেইজ|পাতা|স্ক্রিন|jao|page|screen)/i.test(normalized) ||
     /(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|jao).*(পস|কাউন্টার|মেমো|বিক্রি|বিক্রয়|সেল|বিল|pos|bikri)/i.test(normalized) ||
-    /^(বিক্রি পেজ|বিক্রির পেজ|পস পেজ|মেমো পেজ|বিক্রি কাউন্টার|ক্যাশ কাউন্টার|বিক্রিতে যাও|বিক্রি পেজে যাও|বিক্রি পেজে যান|বিক্রি পেজ যান|বিক্রিতে যান|বিক্রি যান|bikri page|bikri page jao|bikri page e jao|bikri jao|pos page|pos page jao|pos page e jao|pos jao)$/i.test(normalized)
+    /^(বিক্রি পেজ|বিক্রির পেজ|পস পেজ|মেমো পেজ|বিক্রি কাউন্টার|ক্যাশ কাউন্টার|বিক্রিতে যাও|বিক্রি পেজে যাও|বিক্রি পেজ এ যাও|বিক্রি পেইজে যাও|বিক্রি পেইজ|বিক্রি পেজে যান|বিক্রি পেজ যান|বিক্রিতে যান|বিক্রি যান|bikri page|bikri page jao|bikri page e jao|bikri page a jao|bikri te jao|bikri jao|pos page|pos page jao|pos page e jao|pos page a jao|pos jao)$/i.test(normalized)
   ) {
     if (!/কত|লাভ|koto|profit|lav|কার্ট|টাকা|বাকি|নিল|দিল/i.test(normalized)) {
       return {
@@ -158,9 +181,9 @@ export function executeOfflineAiShopCommand(
   // B. বাকি / খাতা পেজ
   if (
     /^(খাতা|বাকি|বাকির খাতা|কাস্টমার|কাস্টমার খাতা|বাকির পেজ|khata|baki|due|customer khata)$/i.test(normalized) ||
-    /(খাতা|বাকি|কাস্টমার|দেনাদার|khata|baki|due).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|jao|page)/i.test(normalized) ||
+    /(খাতা|বাকি|কাস্টমার|দেনাদার|khata|baki|due).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|পেইজ|jao|page)/i.test(normalized) ||
     /(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|jao).*(খাতা|বাকি|কাস্টমার|khata|baki|due)/i.test(normalized) ||
-    /^(baki page|baki page jao|baki page e jao|khata page jao|khata jao|বাকির খাতায় যাও|বাকি পেজে যাও)$/i.test(normalized)
+    /^(baki page|baki page jao|baki page e jao|baki page a jao|khata page jao|khata page e jao|khata jao|বাকির খাতায় যাও|বাকির খাতা যাও|বাকি পেজে যাও|বাকি পেজ এ যাও|বাকি পেইজে যাও|খাতায় যাও|খাতা পেজে যাও)$/i.test(normalized)
   ) {
     if (!/টাকা|জমা|নিল|দিল|কত|লেখো|koto/i.test(normalized)) {
       return {
@@ -178,9 +201,9 @@ export function executeOfflineAiShopCommand(
   if (
     !/বিক্রি|সেল|কাউন্টার|মেমো|bikri/i.test(normalized) &&
     (/^(স্টক|মাল|পণ্য|ইনভেন্টরি|স্টক পেজ|stock|inventory|stock page)$/i.test(normalized) ||
-     /(স্টক|মাল|পণ্য|ইনভেন্টরি|stock|inventory).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|jao|page)/i.test(normalized) ||
+     /(স্টক|মাল|পণ্য|ইনভেন্টরি|stock|inventory).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|পেইজ|jao|page)/i.test(normalized) ||
      /(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|jao).*(স্টক|ইনভেন্টরি|stock|inventory)/i.test(normalized) ||
-     /^(stock page jao|stock page e jao|stock jao|stock e jao|স্টক পেজে যাও|স্টক পেজ যাও|স্টকে যাও)$/i.test(normalized))
+     /^(stock page jao|stock page e jao|stock page a jao|stock jao|stock e jao|স্টক পেজে যাও|স্টক পেজ এ যাও|স্টক পেইজে যাও|স্টক পেইজ|স্টক পেজ যাও|স্টকে যাও|স্টকে নিয়ে যাও)$/i.test(normalized))
   ) {
     if (!/কত|যোগ|তোল|কম|শেষ|কয়টা|কয়টা|koto/i.test(normalized)) {
       return {
@@ -197,9 +220,9 @@ export function executeOfflineAiShopCommand(
   // D. খরচ পেজ
   if (
     /^(খরচ|ব্যয়|খরচের খাতা|খরচ পেজ|khoroch|expense|expenses)$/i.test(normalized) ||
-    /(খরচ|ব্যয়|khoroch|expense).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|jao|page)/i.test(normalized) ||
+    /(খরচ|ব্যয়|khoroch|expense).*(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|করো|করুন|পেজ|পেইজ|jao|page)/i.test(normalized) ||
     /(যাও|যান|যাবেন|খোল|খুলুন|নিয়ে|চল|চলুন|দেখা|দেখান|ওপেন|jao).*(খরচ|ব্যয়|khoroch|expense)/i.test(normalized) ||
-    /^(khoroch page|khoroch page jao|expense page jao|খরচ পেজে যাও|খরচের খাতায় যাও)$/i.test(normalized)
+    /^(khoroch page|khoroch page jao|khoroch page e jao|expense page jao|খরচ পেজে যাও|খরচ পেজ এ যাও|খরচের খাতায় যাও|খরচ খাতায় যাও)$/i.test(normalized)
   ) {
     if (!/টাকা|লেখো|কত|koto/i.test(normalized)) {
       return {
@@ -287,7 +310,8 @@ export function executeOfflineAiShopCommand(
   // 2. Today's Sales & Profit Query (আজকের বিক্রি ও লাভ)
   if (
     (/আজকে|আজকের|ajke|ajker/i.test(normalized) && /বিক্রি|সেল|লাভ|ইনকাম|আয়|টাকা|bikri|sell|sale|profit|lav|hisab/i.test(normalized) && !/খরচ|বাকি|স্টক|khoroch/i.test(normalized)) ||
-    /^(bikri koto|ajker hisab|ajker bikri|ajker report|আজকের বিক্রি কত)$/i.test(normalized)
+    /^(bikri koto|ajker hisab|ajker bikri|ajker report|আজকের বিক্রি কত|বিক্রি কত|বিক্রি কত হলো|আজকে কত বিক্রি হলো|আজকের বিক্রি কত টাকা)$/i.test(normalized) ||
+    /^(বিক্রি\s*কত|কত\s*বিক্রি|bikri\s*koto)$/i.test(normalized)
   ) {
     // 🛡️ Staff mode restrictions on confidential profit calculations
     if (speakerRole === 'staff') {

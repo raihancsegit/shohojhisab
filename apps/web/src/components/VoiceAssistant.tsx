@@ -72,13 +72,25 @@ export default function VoiceAssistant() {
   useEffect(() => {
     setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
     const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowTypeInput(true);
+    };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Listen to offline voice mode switch
+  useEffect(() => {
+    const handleOfflineVoiceMode = () => {
+      setShowTypeInput(true);
+    };
+    window.addEventListener('lbos-voice-offline-mode', handleOfflineVoiceMode);
+    return () => window.removeEventListener('lbos-voice-offline-mode', handleOfflineVoiceMode);
   }, []);
 
   // Listen to global voice assistant triggers
@@ -102,11 +114,15 @@ export default function VoiceAssistant() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Superpower Action Chips
+  // Superpower Action Chips (Immediate 1-tap commands that work online & offline)
   const superpowerChips = [
+    { label: '📦 স্টক পেজে যাও', cmd: 'স্টক পেজে যাও' },
+    { label: '🛒 বিক্রি কাউন্টার', cmd: 'বিক্রি পেজে যাও' },
+    { label: '📒 বাকি খাতা', cmd: 'বাকি খাতায় যাও' },
+    { label: '💰 আজকের বিক্রি কত?', cmd: 'আজকের বিক্রি কত' },
+    { label: '💸 ৫০ টাকা খরচ', cmd: '৫০ টাকা দোকান খরচ' },
     { label: '🌅 সকালের ব্রিফিং', action: () => triggerBriefing('morning') },
     { label: '🌙 রাতের হিসাব', action: () => triggerBriefing('evening') },
-    { label: '📦 ডিলার অর্ডার', cmd: 'ডিলারের জন্য অর্ডারের লিস্ট বানাও' },
     { label: '📷 চালান স্ক্যান', isCamera: true },
     { label: '📊 আজকের লাভ-ক্ষতি', cmd: 'আজকের বিক্রি ও লাভ কত' },
     { label: '📖 বাজারে বাকি কত?', cmd: 'বাজারে মোট বাকি কত' }
@@ -617,8 +633,8 @@ export default function VoiceAssistant() {
                   )}
                 </div>
 
-                {/* Optional Manual Typing input */}
-                {showTypeInput ? (
+                {/* Manual or Voice Input (Auto-shown when offline or toggled) */}
+                {(showTypeInput || !isOnline) ? (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -626,7 +642,6 @@ export default function VoiceAssistant() {
                       if (q) {
                         executeCommand(q);
                         setManualText('');
-                        setShowTypeInput(false);
                       }
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -635,11 +650,12 @@ export default function VoiceAssistant() {
                       type="text"
                       value={manualText}
                       onChange={(e) => setManualText(e.target.value)}
-                      placeholder="হিসাব বা কমান্ড লিখে জানান..."
+                      placeholder={!isOnline ? "🎙️ কীবোর্ড মাইকে মুখে বলুন বা লিখুন..." : "হিসাব বা কমান্ড মুখে বলুন বা লিখুন..."}
+                      autoFocus={!isOnline || showTypeInput}
                       style={{
                         flex: 1,
                         background: 'rgba(255, 255, 255, 0.2)',
-                        border: '1px solid rgba(255, 255, 255, 0.35)',
+                        border: !isOnline ? '1.5px solid rgba(52, 211, 153, 0.6)' : '1px solid rgba(255, 255, 255, 0.35)',
                         borderRadius: '10px',
                         padding: '7px 12px',
                         color: '#ffffff',

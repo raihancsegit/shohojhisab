@@ -1211,10 +1211,14 @@ export default function KhataPage() {
                 background: '#f1f5f9',
                 color: '#0f172a',
                 border: '1px solid #e2e8f0',
-                textDecoration: 'none'
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                fontSize: '11px',
+                padding: '2px 8px',
+                flexShrink: 0
               }}
             >
-              {payableCount} জন ডিলার ➔
+              {payableCount} জন ➔
             </Link>
           </div>
           <div className="num-font" style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', margin: '4px 0', whiteSpace: 'nowrap' }}>
@@ -1244,7 +1248,11 @@ export default function KhataPage() {
             <span className="badge-pill" style={{
               background: netBalance >= 0 ? '#ecfdf5' : '#fff1f2',
               color: netBalance >= 0 ? '#065f46' : '#991b1b',
-              border: netBalance >= 0 ? '1px solid #a7f3d0' : '1px solid #fecaca'
+              border: netBalance >= 0 ? '1px solid #a7f3d0' : '1px solid #fecaca',
+              whiteSpace: 'nowrap',
+              fontSize: '11px',
+              padding: '2px 8px',
+              flexShrink: 0
             }}>
               {netBalance >= 0 ? 'পাওনা উদ্বৃত্ত' : 'দেনা অতিরিক্ত'}
             </span>
